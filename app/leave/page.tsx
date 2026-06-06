@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { db } from "@/lib/db";
 import { leaveRequests, employees, leaveTypes } from "@/lib/schema";
 
