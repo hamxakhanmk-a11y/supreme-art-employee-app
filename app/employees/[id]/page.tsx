@@ -5,8 +5,9 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-export default async function EmployeeDetailPage({ params }: { params: { id: string } }) {
-  const [employee] = await db.select().from(employees).where(eq(employees.id, parseInt(params.id)));
+export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [employee] = await db.select().from(employees).where(eq(employees.id, parseInt(id)));
 
   if (!employee) return notFound();
 
