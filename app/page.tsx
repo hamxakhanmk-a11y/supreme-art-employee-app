@@ -1,65 +1,70 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+const stats = [
+  { label: "Total Employees", value: "0", icon: "👥", color: "bg-blue-500", href: "/employees" },
+  { label: "Present Today", value: "0", icon: "✅", color: "bg-green-500", href: "/attendance" },
+  { label: "On Leave", value: "0", icon: "📅", color: "bg-yellow-500", href: "/leave" },
+  { label: "Pending Leaves", value: "0", icon: "⏳", color: "bg-orange-500", href: "/leave" },
+  { label: "This Month Payroll", value: "PKR 0", icon: "💰", color: "bg-purple-500", href: "/payroll" },
+  { label: "Expiring Contracts", value: "0", icon: "⚠️", color: "bg-red-500", href: "/compliance" },
+];
+
+const quickLinks = [
+  { href: "/employees/new", label: "Add Employee", icon: "➕", desc: "Register a new employee" },
+  { href: "/attendance", label: "Mark Attendance", icon: "⏰", desc: "Record today's attendance" },
+  { href: "/leave", label: "Approve Leaves", icon: "📋", desc: "Review pending leave requests" },
+  { href: "/payroll/generate", label: "Generate Payroll", icon: "💸", desc: "Process monthly salaries" },
+];
+
+export default function Dashboard() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-500 mt-1">Welcome to Supreme Art HR Management System</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {stats.map((stat) => (
+          <Link href={stat.href} key={stat.label}>
+            <div className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-100">
+              <div className={`${stat.color} text-white text-2xl w-14 h-14 rounded-xl flex items-center justify-center`}>
+                {stat.icon}
+              </div>
+              <div>
+                <p className="text-gray-500 text-sm">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickLinks.map((link) => (
+            <Link href={link.href} key={link.href}>
+              <div className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer border border-gray-100 text-center">
+                <div className="text-3xl mb-2">{link.icon}</div>
+                <p className="font-semibold text-gray-800">{link.label}</p>
+                <p className="text-gray-400 text-xs mt-1">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {/* Alerts */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">⚠️ Alerts & Notifications</h2>
+        <div className="text-gray-400 text-center py-8">
+          No alerts at the moment. Everything is up to date!
         </div>
-      </main>
+      </div>
     </div>
   );
 }
