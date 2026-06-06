@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { db } from "@/lib/db";
 import { attendance, employees } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import AttendanceTable from "@/components/AttendanceTable";
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
