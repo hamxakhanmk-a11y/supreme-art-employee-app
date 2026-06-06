@@ -8,6 +8,8 @@ const links = [
   { href: "/attendance", label: "Mark Attendance", icon: "⏰" },
   { href: "/attendance/history", label: "Attendance History", icon: "📋" },
   { href: "/leave", label: "Leave Management", icon: "📅" },
+  { href: "/leave/apply", label: "Apply Leave", icon: "✍️" },
+  { href: "/leave/types", label: "Leave Types", icon: "⚙️" },
 ];
 
 export default function Sidebar() {
