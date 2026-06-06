@@ -1,5 +1,5 @@
 export default {
-  schema: './src/lib/schema.ts',
+  schema: './lib/schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
