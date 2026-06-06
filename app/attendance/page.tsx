@@ -53,14 +53,16 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
           <h2 className="font-semibold text-gray-800">Mark Attendance</h2>
-          <form method="GET">
+          <form method="GET" className="flex gap-2">
             <input
               type="date"
               name="date"
               defaultValue={today}
-              onChange={(e) => (e.target.form as HTMLFormElement).submit()}
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+              Go
+            </button>
           </form>
         </div>
 
