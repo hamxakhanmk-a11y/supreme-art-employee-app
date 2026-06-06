@@ -3,17 +3,17 @@ import Link from "next/link";
 const stats = [
   { label: "Total Employees", value: "0", icon: "👥", color: "bg-blue-500", href: "/employees" },
   { label: "Present Today", value: "0", icon: "✅", color: "bg-green-500", href: "/attendance" },
+  { label: "Absent Today", value: "0", icon: "❌", color: "bg-red-500", href: "/attendance" },
   { label: "On Leave", value: "0", icon: "📅", color: "bg-yellow-500", href: "/leave" },
   { label: "Pending Leaves", value: "0", icon: "⏳", color: "bg-orange-500", href: "/leave" },
-  { label: "This Month Payroll", value: "PKR 0", icon: "💰", color: "bg-purple-500", href: "/payroll" },
-  { label: "Expiring Contracts", value: "0", icon: "⚠️", color: "bg-red-500", href: "/compliance" },
+  { label: "Late Today", value: "0", icon: "⏰", color: "bg-purple-500", href: "/attendance" },
 ];
 
 const quickLinks = [
   { href: "/employees/new", label: "Add Employee", icon: "➕", desc: "Register a new employee" },
   { href: "/attendance", label: "Mark Attendance", icon: "⏰", desc: "Record today's attendance" },
   { href: "/leave", label: "Approve Leaves", icon: "📋", desc: "Review pending leave requests" },
-  { href: "/payroll/generate", label: "Generate Payroll", icon: "💸", desc: "Process monthly salaries" },
+  { href: "/employees", label: "View All Employees", icon: "👥", desc: "Browse employee records" },
 ];
 
 export default function Dashboard() {
@@ -58,11 +58,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Alerts */}
+      {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">⚠️ Alerts & Notifications</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">📋 Recent Activity</h2>
         <div className="text-gray-400 text-center py-8">
-          No alerts at the moment. Everything is up to date!
+          No recent activity yet. Start by adding employees!
         </div>
       </div>
     </div>

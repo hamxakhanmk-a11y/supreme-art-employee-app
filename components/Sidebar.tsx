@@ -7,10 +7,6 @@ const links = [
   { href: "/employees", label: "Employees", icon: "👥" },
   { href: "/attendance", label: "Attendance", icon: "⏰" },
   { href: "/leave", label: "Leave Management", icon: "📅" },
-  { href: "/payroll", label: "Payroll", icon: "💰" },
-  { href: "/reports", label: "HR Reports", icon: "📊" },
-  { href: "/compliance", label: "Compliance", icon: "📋" },
-  { href: "/audit-logs", label: "Audit Logs", icon: "🔍" },
 ];
 
 export default function Sidebar() {
