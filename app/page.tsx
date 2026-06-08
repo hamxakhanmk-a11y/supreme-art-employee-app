@@ -45,24 +45,28 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Logo on the right inside hero */}
+        {/* Logo on the right — directly on the red, white-tinted via filter */}
         <div style={{
           position: "relative",
           zIndex: 2,
           flexShrink: 0,
-          background: "rgba(255,255,255,0.95)",
-          padding: "18px 24px",
-          borderRadius: 14,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          paddingRight: 12,
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
             alt="Supreme Art"
-            style={{ height: 90, width: "auto", display: "block" }}
+            style={{
+              height: 130,
+              width: "auto",
+              display: "block",
+              // Make the logo's white bg blend into red, and the dark text become light/visible
+              mixBlendMode: "screen",
+              opacity: 0.95,
+            }}
           />
         </div>
       </div>
