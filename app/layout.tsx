@@ -1,28 +1,20 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Supreme Art Employee",
-  description: "HR Management System",
+  title: "Supreme Art — Employee Management",
+  description: "Employee records and onboarding",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full`}>
-      <body className="min-h-full flex bg-gray-50">
+    <html lang="en">
+      <body>
         <Sidebar />
-        <main className="flex-1 ml-64 p-8 min-h-screen">
+        <main style={{ marginLeft: 210, padding: "1.75rem", minHeight: "100vh" }}>
           {children}
         </main>
       </body>

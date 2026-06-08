@@ -3,41 +3,63 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "Dashboard", icon: "🏠" },
-  { href: "/employees", label: "Employees", icon: "👥" },
-  { href: "/attendance", label: "Mark Attendance", icon: "⏰" },
-  { href: "/attendance/history", label: "Attendance History", icon: "📋" },
-  { href: "/leave", label: "Leave Management", icon: "📅" },
-  { href: "/leave/apply", label: "Apply Leave", icon: "✍️" },
-  { href: "/leave/types", label: "Leave Types", icon: "⚙️" },
+  { href: "/", label: "Dashboard", icon: "▦" },
+  { href: "/employees", label: "Employees", icon: "👤" },
+  { href: "/employees/new", label: "Add Employee", icon: "＋" },
+  { href: "/employees/form/print", label: "Blank Form (Print)", icon: "🖨" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col z-50">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-700">
-        <h1 className="text-xl font-bold text-white">Supreme Art</h1>
-        <p className="text-gray-400 text-sm mt-1">HR Management</p>
+    <aside
+      className="fixed left-0 top-0 h-screen flex flex-col"
+      style={{
+        width: 210,
+        background: "#fff",
+        borderRight: "1px solid var(--border)",
+        padding: "1rem 0",
+      }}
+    >
+      {/* Brand */}
+      <div style={{ padding: "0.25rem 1rem 1rem 1rem", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: "var(--primary)" }}>◆</span> Supreme Art
+        </div>
+        <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+          Employee Management
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "0.75rem 0", overflowY: "auto" }}>
         {links.map((link) => {
-          const isActive = pathname === link.href;
+          const active = isActive(link.href);
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              }`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 1rem",
+                fontSize: 13,
+                color: active ? "var(--primary)" : "#555",
+                background: active ? "var(--info-bg)" : "transparent",
+                borderLeft: `3px solid ${active ? "var(--primary)" : "transparent"}`,
+                fontWeight: active ? 600 : 500,
+                textDecoration: "none",
+                transition: "background 0.15s",
+              }}
             >
-              <span className="text-lg">{link.icon}</span>
+              <span style={{ width: 16, display: "inline-block", textAlign: "center" }}>{link.icon}</span>
               {link.label}
             </Link>
           );
@@ -45,8 +67,8 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-700">
-        <p className="text-gray-400 text-xs text-center">© 2026 Supreme Art</p>
+      <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid var(--border)", fontSize: 11, color: "#aaa", textAlign: "center" }}>
+        © 2026 Supreme Art
       </div>
     </aside>
   );

@@ -1,74 +1,95 @@
-export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
+import { desc } from "drizzle-orm";
+
+export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
-  const allEmployees = await db.select().from(employees);
+  let rows: (typeof employees.$inferSelect)[] = [];
+  let dbError: string | null = null;
+  try {
+    rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
+  } catch (e: any) {
+    dbError = e?.message ?? "DB error";
+  }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
-          <p className="text-gray-500 mt-1">{allEmployees.length} total employees</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Employees</h1>
+          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>{rows.length} record{rows.length !== 1 ? "s" : ""}</p>
         </div>
-        <Link href="/employees/new">
-          <button className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-            + Add Employee
-          </button>
-        </Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Link href="/employees/form/print" className="btn btn-print">🖨 Print Blank Form</Link>
+          <Link href="/employees/new" className="btn btn-primary">＋ Add Employee</Link>
+        </div>
       </div>
 
-      {allEmployees.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100">
-          <div className="text-5xl mb-4">👥</div>
-          <h3 className="text-xl font-semibold text-gray-700">No employees yet</h3>
-          <p className="text-gray-400 mt-2">Start by adding your first employee</p>
-          <Link href="/employees/new">
-            <button className="mt-6 bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-              + Add First Employee
-            </button>
-          </Link>
+      {dbError && (
+        <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 16 }}>
+          <strong>Database not ready:</strong> {dbError}
+          <div style={{ marginTop: 8, fontSize: 12, color: "#555" }}>
+            Run <code>npx drizzle-kit push</code> to create tables.
+          </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
+      )}
+
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        {rows.length === 0 && !dbError ? (
+          <div className="empty">
+            No employees yet. Click <strong>＋ Add Employee</strong> to create the first record.
+          </div>
+        ) : (
+          <table>
+            <thead>
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Employee ID</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Name</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Email</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Designation</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Status</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Actions</th>
+                <th style={{ width: 60 }}>Photo</th>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Designation</th>
+                <th>Department</th>
+                <th>CNIC</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {allEmployees.map((emp) => (
-                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-blue-600">{emp.employeeId}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{emp.firstName} {emp.lastName}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{emp.email}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{emp.designation || "-"}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      emp.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}>
-                      {emp.status}
+            <tbody>
+              {rows.map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    {e.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={e.photoUrl} alt={e.firstName} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                    ) : (
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#eee", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 12, fontWeight: 600 }}>
+                        {e.firstName[0]}{e.lastName[0]}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ fontWeight: 600, color: "var(--primary)" }}>{e.employeeId}</td>
+                  <td>{e.firstName} {e.lastName}</td>
+                  <td>{e.designation || "—"}</td>
+                  <td>{e.department || "—"}</td>
+                  <td style={{ fontFamily: "monospace", fontSize: 12 }}>{e.cnic || "—"}</td>
+                  <td>{e.phone || "—"}</td>
+                  <td>
+                    <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>
+                      {e.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <Link href={`/employees/${emp.id}`}>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
-                    </Link>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={`/employees/${e.id}`} className="btn" style={{ padding: "5px 10px", fontSize: 12 }}>View</Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

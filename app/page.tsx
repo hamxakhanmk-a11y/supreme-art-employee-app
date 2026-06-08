@@ -1,68 +1,62 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
+import { employees } from "@/lib/schema";
+import { sql, eq } from "drizzle-orm";
 
-const stats = [
-  { label: "Total Employees", value: "0", icon: "👥", color: "bg-blue-500", href: "/employees" },
-  { label: "Present Today", value: "0", icon: "✅", color: "bg-green-500", href: "/attendance" },
-  { label: "Absent Today", value: "0", icon: "❌", color: "bg-red-500", href: "/attendance" },
-  { label: "On Leave", value: "0", icon: "📅", color: "bg-yellow-500", href: "/leave" },
-  { label: "Pending Leaves", value: "0", icon: "⏳", color: "bg-orange-500", href: "/leave" },
-  { label: "Late Today", value: "0", icon: "⏰", color: "bg-purple-500", href: "/attendance" },
-];
+export const dynamic = "force-dynamic";
 
-const quickLinks = [
-  { href: "/employees/new", label: "Add Employee", icon: "➕", desc: "Register a new employee" },
-  { href: "/attendance", label: "Mark Attendance", icon: "⏰", desc: "Record today's attendance" },
-  { href: "/leave", label: "Approve Leaves", icon: "📋", desc: "Review pending leave requests" },
-  { href: "/employees", label: "View All Employees", icon: "👥", desc: "Browse employee records" },
-];
+export default async function Dashboard() {
+  let total = 0;
+  let active = 0;
+  let inactive = 0;
+  try {
+    const rows = await db.select({
+      total: sql<number>`count(*)::int`,
+    }).from(employees);
+    total = rows[0]?.total ?? 0;
 
-export default function Dashboard() {
+    const a = await db.select({ c: sql<number>`count(*)::int` })
+      .from(employees).where(eq(employees.status, "active"));
+    active = a[0]?.c ?? 0;
+
+    const i = await db.select({ c: sql<number>`count(*)::int` })
+      .from(employees).where(eq(employees.status, "inactive"));
+    inactive = i[0]?.c ?? 0;
+  } catch {
+    // DB not migrated yet — render zeros
+  }
+
+  const stats = [
+    { label: "Total Employees", value: total, sub: "All records", color: "var(--primary)" },
+    { label: "Active", value: active, sub: "Currently employed", color: "var(--success)" },
+    { label: "Inactive", value: inactive, sub: "Resigned / on hold", color: "var(--danger)" },
+  ];
+
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Welcome to Supreme Art HR Management System</p>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Dashboard</h1>
+        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Overview of employee records</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {stats.map((stat) => (
-          <Link href={stat.href} key={stat.label}>
-            <div className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-100">
-              <div className={`${stat.color} text-white text-2xl w-14 h-14 rounded-xl flex items-center justify-center`}>
-                {stat.icon}
-              </div>
-              <div>
-                <p className="text-gray-500 text-sm">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            </div>
-          </Link>
+      {/* Stat cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14, marginBottom: 24 }}>
+        {stats.map((s) => (
+          <div key={s.label} className="card">
+            <div className="form-label" style={{ marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{s.sub}</div>
+          </div>
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickLinks.map((link) => (
-            <Link href={link.href} key={link.href}>
-              <div className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer border border-gray-100 text-center">
-                <div className="text-3xl mb-2">{link.icon}</div>
-                <p className="font-semibold text-gray-800">{link.label}</p>
-                <p className="text-gray-400 text-xs mt-1">{link.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">📋 Recent Activity</h2>
-        <div className="text-gray-400 text-center py-8">
-          No recent activity yet. Start by adding employees!
+      {/* Quick actions */}
+      <div className="card">
+        <div className="section-title">Quick Actions</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <Link href="/employees/new" className="btn btn-primary">＋ Add New Employee</Link>
+          <Link href="/employees" className="btn">👤 View Employees</Link>
+          <Link href="/employees/form/print" className="btn btn-print">🖨 Print Blank Form</Link>
         </div>
       </div>
     </div>
