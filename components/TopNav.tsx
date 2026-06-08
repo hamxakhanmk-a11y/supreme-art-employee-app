@@ -12,8 +12,6 @@ const subNav: Record<string, { href: string; label: string; icon: string }[]> = 
   profile: [
     { href: "/", label: "Dashboard", icon: "▦" },
     { href: "/employees", label: "Employees", icon: "👥" },
-    { href: "/employees/new", label: "Add Employee", icon: "＋" },
-    { href: "/employees/form/print", label: "Print Blank Form", icon: "🖨" },
   ],
 };
 
