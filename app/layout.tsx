@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import TopNav from "@/components/TopNav";
 
 export const metadata: Metadata = {
   title: "Supreme Art — Employee Management",
@@ -13,8 +13,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Sidebar />
-        <main style={{ marginLeft: 210, padding: "1.75rem", minHeight: "100vh" }}>
+        <TopNav />
+        <main style={{ padding: "1.75rem", minHeight: "calc(100vh - 100px)", maxWidth: 1400, margin: "0 auto" }}>
           {children}
         </main>
       </body>
