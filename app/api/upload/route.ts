@@ -5,13 +5,6 @@ export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      return NextResponse.json(
-        { error: "BLOB_READ_WRITE_TOKEN is not configured. Add it in Vercel → Storage → Blob → Connect, then redeploy." },
-        { status: 500 }
-      );
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
