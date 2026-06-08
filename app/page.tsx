@@ -24,8 +24,8 @@ export default async function Dashboard() {
   return (
     <div className="fade-up">
       {/* Hero */}
-      <div className="hero" style={{ marginBottom: 24 }}>
-        <div style={{ position: "relative", zIndex: 2 }}>
+      <div className="hero" style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 24 }}>
+        <div style={{ position: "relative", zIndex: 2, flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, opacity: 0.85, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase" }}>
             {greeting}, Hamza 👋
           </div>
@@ -43,6 +43,27 @@ export default async function Dashboard() {
               👥 View All Employees
             </Link>
           </div>
+        </div>
+
+        {/* Logo on the right inside hero */}
+        <div style={{
+          position: "relative",
+          zIndex: 2,
+          flexShrink: 0,
+          background: "rgba(255,255,255,0.95)",
+          padding: "18px 24px",
+          borderRadius: 14,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Supreme Art"
+            style={{ height: 90, width: "auto", display: "block" }}
+          />
         </div>
       </div>
 
