@@ -35,17 +35,21 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
         <button className="btn btn-print" onClick={() => window.print()}>🖨 Print Form</button>
       </div>
 
-      <div className="print-page" style={{ background: "#fff", border: "1px solid var(--border)", padding: "28px 32px", maxWidth: 850, margin: "0 auto", color: "#000" }}>
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #000", paddingBottom: 12, marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.5 }}>SUPREME ART</div>
-            <div style={{ fontSize: 11, color: "#444", marginTop: 2 }}>Packaging Industry</div>
-          </div>
+      <div className="print-page" style={{ background: "#fff", border: "1px solid var(--border)", padding: "28px 32px", maxWidth: 850, margin: "0 auto", color: "#000", boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}>
+        {/* Header with logo */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2.5px solid #A32D2D", paddingBottom: 14, marginBottom: 16 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 64, width: "auto", objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Employee Information Form</div>
-            <div style={{ fontSize: 10, color: "#555", marginTop: 4 }}>Employee ID: <strong>{v(data.employeeId) || "____________"}</strong></div>
-            <div style={{ fontSize: 10, color: "#555" }}>Date: {fmt(new Date().toISOString()) || "____________"}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "#A32D2D" }}>
+              Employee Information Form
+            </div>
+            <div style={{ fontSize: 10, color: "#555", marginTop: 6 }}>
+              Employee ID: <strong style={{ color: "#000" }}>{v(data.employeeId) || "____________"}</strong>
+            </div>
+            <div style={{ fontSize: 10, color: "#555" }}>
+              Date: <strong style={{ color: "#000" }}>{fmt(new Date().toISOString()) || "____________"}</strong>
+            </div>
           </div>
         </div>
 
@@ -219,8 +223,8 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="print-section" style={{ border: "1px solid #999", borderRadius: 4, marginBottom: 8, padding: "6px 10px 8px" }}>
-      <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "#000", borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 6 }}>
+    <div className="print-section" style={{ border: "1px solid #bbb", borderRadius: 4, marginBottom: 8, padding: "6px 10px 8px" }}>
+      <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "#A32D2D", borderBottom: "1.5px solid #A32D2D", paddingBottom: 4, marginBottom: 6 }}>
         {title}
       </div>
       {children}
