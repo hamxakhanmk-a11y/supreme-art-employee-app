@@ -45,7 +45,7 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Logo on the right — directly on the red, white-tinted via filter */}
+        {/* Logo on the right — directly on red, white-tinted */}
         <div style={{
           position: "relative",
           zIndex: 2,
@@ -60,12 +60,12 @@ export default async function Dashboard() {
             src="/logo.png"
             alt="Supreme Art"
             style={{
-              height: 130,
+              height: 150,
               width: "auto",
               display: "block",
-              // Make the logo's white bg blend into red, and the dark text become light/visible
-              mixBlendMode: "screen",
-              opacity: 0.95,
+              // Forces the entire logo (incl. white bg) to become white silhouette on red
+              filter: "brightness(0) invert(1)",
+              opacity: 0.92,
             }}
           />
         </div>
