@@ -57,15 +57,14 @@ export default async function Dashboard() {
         }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo.png"
+            src="/logo-transparent.png"
             alt="Supreme Art"
             style={{
               height: 150,
               width: "auto",
               display: "block",
-              // Forces the entire logo (incl. white bg) to become white silhouette on red
+              // White silhouette on the red hero
               filter: "brightness(0) invert(1)",
-              opacity: 0.92,
             }}
           />
         </div>
