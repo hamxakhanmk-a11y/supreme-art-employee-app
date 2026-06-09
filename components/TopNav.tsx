@@ -109,7 +109,7 @@ export default function TopNav() {
                   fontWeight: 600,
                   textDecoration: "none",
                   color: active ? "var(--primary)" : "#555",
-                  background: active ? "linear-gradient(180deg, #fff 0%, #fdecec 100%)" : "transparent",
+                  background: active ? "linear-gradient(180deg, #fff 0%, #e8f1fb 100%)" : "transparent",
                   borderBottom: `3px solid ${active ? "var(--primary)" : "transparent"}`,
                   transition: "all 0.15s",
                 }}
@@ -162,7 +162,7 @@ export default function TopNav() {
                   background: active ? "var(--primary)" : "transparent",
                   borderRadius: 6,
                   transition: "all 0.15s",
-                  boxShadow: active ? "0 2px 6px rgba(163,45,45,0.25)" : "none",
+                  boxShadow: active ? "0 2px 6px rgba(24,95,165,0.25)" : "none",
                 }}
               >
                 <span style={{ fontSize: 13, opacity: 0.9 }}>{link.icon}</span> {link.label}
