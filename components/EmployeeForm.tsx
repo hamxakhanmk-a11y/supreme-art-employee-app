@@ -6,6 +6,7 @@ type Education = { degree: string; institution: string; yearCompleted: string; g
 type Experience = { company: string; position: string; fromDate: string; toDate: string; description: string; };
 
 export type EmployeePayload = {
+  employeeId: string;
   firstName: string; lastName: string; fatherName: string; dob: string;
   gender: string; maritalStatus: string; nationality: string; religion: string; bloodGroup: string;
   cnic: string; cnicExpiry: string; passportNumber: string; passportExpiry: string;
@@ -24,6 +25,7 @@ export type EmployeePayload = {
 };
 
 const empty: EmployeePayload = {
+  employeeId: "",
   firstName: "", lastName: "", fatherName: "", dob: "",
   gender: "", maritalStatus: "", nationality: "Pakistani", religion: "", bloodGroup: "",
   cnic: "", cnicExpiry: "", passportNumber: "", passportExpiry: "",
@@ -125,6 +127,7 @@ export default function EmployeeForm({
       <div className="card">
         <div className="section-title">Personal Information</div>
         <Row>
+          <Field label="Employee ID *"><input required value={form.employeeId} onChange={e => set("employeeId", e.target.value)} placeholder="e.g. EMP-001" /></Field>
           <Field label="First Name *"><input required value={form.firstName} onChange={e => set("firstName", e.target.value)} /></Field>
           <Field label="Last Name *"><input required value={form.lastName} onChange={e => set("lastName", e.target.value)} /></Field>
           <Field label="Father's Name"><input value={form.fatherName} onChange={e => set("fatherName", e.target.value)} /></Field>
