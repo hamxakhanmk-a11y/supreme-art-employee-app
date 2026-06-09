@@ -124,8 +124,8 @@ body > * { position: relative; z-index: 1; }
   letter-spacing: 0.4px;
 }
 
-.input, input[type=text], input[type=email], input[type=tel], input[type=date],
-input[type=number], input[type=password], select, textarea {
+/* Style all inputs by default (covers <input> with no type attribute too) */
+input, select, textarea {
   width: 100%;
   padding: 9px 12px;
   border-radius: 8px;
@@ -135,16 +135,27 @@ input[type=number], input[type=password], select, textarea {
   font-size: 13px;
   font-family: inherit;
   transition: all 0.15s;
+  box-sizing: border-box;
 }
+
+input:hover, select:hover, textarea:hover {
+  border-color: #b8b3aa;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(163,45,45,0.10);
 }
 
-input[type=checkbox] {
+/* Override for special types that shouldn't get the default styling */
+input[type=checkbox],
+input[type=radio] {
   width: 16px;
   height: 16px;
+  padding: 0;
+  border: none;
+  box-shadow: none;
   accent-color: var(--primary);
 }
 
@@ -152,6 +163,11 @@ input[type=file] {
   padding: 6px;
   font-size: 12px;
   cursor: pointer;
+}
+
+/* Date inputs sometimes render the picker icon awkwardly — keep them tidy */
+input[type=date] {
+  font-family: inherit;
 }
 
 .badge {
