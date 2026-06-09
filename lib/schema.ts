@@ -97,6 +97,20 @@ export const educationRecords = pgTable("education_records", {
 });
 
 // =====================
+// ATTENDANCE
+// =====================
+export const attendance = pgTable("attendance", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("present"), // present | absent | leave
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
 // EXPERIENCE (one-to-many)
 // =====================
 export const experienceRecords = pgTable("experience_records", {

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const modules = [
   { key: "profile", label: "Profile", icon: "👤" },
-  // Future modules: Attendance, Payroll, Reports…
+  { key: "attendance", label: "Attendance", icon: "📋" },
 ];
 
 const subNav: Record<string, { href: string; label: string; icon: string }[]> = {
@@ -13,9 +13,13 @@ const subNav: Record<string, { href: string; label: string; icon: string }[]> = 
     { href: "/", label: "Dashboard", icon: "▦" },
     { href: "/employees", label: "Employees", icon: "👥" },
   ],
+  attendance: [
+    { href: "/attendance", label: "Attendance", icon: "📋" },
+  ],
 };
 
 function pathToModule(path: string): string {
+  if (path.startsWith("/attendance")) return "attendance";
   if (path === "/" || path.startsWith("/employees")) return "profile";
   return "profile";
 }
@@ -27,9 +31,8 @@ export default function TopNav() {
 
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    if (href === "/employees") {
-      return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    }
+    if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
+    if (href === "/attendance") return pathname.startsWith("/attendance");
     return pathname === href;
   };
 
