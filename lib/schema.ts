@@ -70,6 +70,8 @@ export const employees = pgTable("employees", {
   cnicFrontUrl: text("cnic_front_url"),
   cnicBackUrl: text("cnic_back_url"),
   passportUrl: text("passport_url"),
+  ssiUrl: text("ssi_url"),
+  ubiUrl: text("ubi_url"),
 
   // Notes
   notes: text("notes"),

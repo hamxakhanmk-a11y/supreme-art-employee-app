@@ -57,6 +57,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       cnicFrontUrl: body.cnicFrontUrl || null,
       cnicBackUrl: body.cnicBackUrl || null,
       passportUrl: body.passportUrl || null,
+      ssiUrl: body.ssiUrl || null,
+      ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
       updatedAt: new Date(),
     }).where(eq(employees.id, empId)).returning();

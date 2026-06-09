@@ -95,6 +95,8 @@ export default function EmployeeProfileTabs({
             <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
             <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
             <DocCard label="Passport" url={employee.passportUrl} />
+            <DocCard label="SSI" url={employee.ssiUrl} />
+            <DocCard label="UBI" url={employee.ubiUrl} />
           </div>
         )}
 
