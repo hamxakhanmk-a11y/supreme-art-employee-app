@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  /* Background gets a faint warm tint */
-  --bg: #f7f5f2;
-  --bg-grad: linear-gradient(180deg, #faf8f5 0%, #f4f1ec 100%);
+  /* Light blue theme */
+  --bg: #eef5fb;
+  --bg-grad: linear-gradient(180deg, #f0f7fd 0%, #e4f0f9 100%);
   --fg: #1a1a1a;
-  --muted: #8a8580;
-  --border: #ebe7e0;
-  --border-strong: #d8d3cc;
+  --muted: #6b8aaa;
+  --border: #c9dff0;
+  --border-strong: #a8c8e8;
   --card: #ffffff;
 
   /* Brand */
@@ -45,8 +45,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 0%, rgba(163,45,45,0.04) 0%, transparent 40%),
-    radial-gradient(circle at 80% 100%, rgba(24,95,165,0.03) 0%, transparent 40%);
+    radial-gradient(circle at 20% 0%, rgba(24,95,165,0.06) 0%, transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(24,95,165,0.04) 0%, transparent 40%);
   pointer-events: none;
   z-index: 0;
 }
@@ -193,16 +193,16 @@ th {
   border-bottom: 1px solid var(--border);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: #faf9f6;
+  background: #f0f7fd;
 }
 td {
   padding: 14px;
-  border-bottom: 1px solid #f3f0eb;
+  border-bottom: 1px solid #ddeef8;
   color: var(--fg);
   vertical-align: middle;
   font-size: 13px;
 }
-tr:hover td { background: #fdfbf7; }
+tr:hover td { background: #e8f3fb; }
 
 .section-title {
   font-size: 11px;
