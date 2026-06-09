@@ -64,6 +64,27 @@ export default function AttendancePage() {
     unmarked: employees.filter(e => e.status === null).length,
   };
 
+  const downloadCSV = () => {
+    const headers = ["Employee ID", "Name", "Designation", "Department", "Status"];
+    const rows = employees.map(e => [
+      e.employeeId,
+      `${e.firstName} ${e.lastName}`,
+      e.designation || "",
+      e.department || "",
+      e.status ? STATUS_CONFIG[e.status].label : "Unmarked",
+    ]);
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       {/* Header */}
@@ -72,12 +93,27 @@ export default function AttendancePage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Attendance</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>{employees.length} employee{employees.length !== 1 ? "s" : ""}</p>
         </div>
-        <input
-          type="date"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          style={{ width: "auto", fontSize: 13, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-strong)" }}
-        />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            style={{ width: "auto", fontSize: 13, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-strong)" }}
+          />
+          <button
+            onClick={downloadCSV}
+            disabled={employees.length === 0}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+              background: "var(--primary)", color: "#fff", border: "none",
+              cursor: employees.length === 0 ? "not-allowed" : "pointer",
+              opacity: employees.length === 0 ? 0.5 : 1,
+            }}
+          >
+            ⬇ Download CSV
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}
