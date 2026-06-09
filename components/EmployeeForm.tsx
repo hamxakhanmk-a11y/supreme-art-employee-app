@@ -17,6 +17,7 @@ export type EmployeePayload = {
   basicSalary: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
   photoUrl: string; cnicFrontUrl: string; cnicBackUrl: string; passportUrl: string;
+  ssiUrl: string; ubiUrl: string;
   notes: string;
   education: Education[];
   experience: Experience[];
@@ -34,6 +35,7 @@ const empty: EmployeePayload = {
   basicSalary: "",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
   photoUrl: "", cnicFrontUrl: "", cnicBackUrl: "", passportUrl: "",
+  ssiUrl: "", ubiUrl: "",
   notes: "",
   education: [],
   experience: [],
@@ -242,6 +244,8 @@ export default function EmployeeForm({
         <Row>
           <FileField label="CNIC (Back)" url={form.cnicBackUrl} onUpload={f => handleFile("cnicBackUrl", f)} onClear={() => set("cnicBackUrl", "")} accept="image/*" />
           <FileField label="Passport" url={form.passportUrl} onUpload={f => handleFile("passportUrl", f)} onClear={() => set("passportUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="SSI" url={form.ssiUrl} onUpload={f => handleFile("ssiUrl", f)} onClear={() => set("ssiUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="UBI" url={form.ubiUrl} onUpload={f => handleFile("ubiUrl", f)} onClear={() => set("ubiUrl", "")} accept="image/*,application/pdf" />
         </Row>
       </div>
 

@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
       cnicFrontUrl: body.cnicFrontUrl || null,
       cnicBackUrl: body.cnicBackUrl || null,
       passportUrl: body.passportUrl || null,
+      ssiUrl: body.ssiUrl || null,
+      ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
     }).returning();
 
