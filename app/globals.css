@@ -11,18 +11,18 @@
   --card: #ffffff;
 
   /* Brand */
-  --primary: #A32D2D;        /* logo red */
-  --primary-dark: #7C1F1F;
-  --primary-soft: #fdecec;
-  --accent: #185FA5;          /* secondary blue (for info / links) */
+  --primary: #185FA5;        /* blue */
+  --primary-dark: #0C447C;
+  --primary-soft: #e6f0fb;
+  --accent: #1a7fd4;          /* lighter blue (for info / links) */
 
   /* Status */
   --success: #2d6a10;
   --success-bg: #eaf3de;
   --warning: #854F0B;
   --warning-bg: #faeeda;
-  --danger: #A32D2D;
-  --danger-bg: #fcebeb;
+  --danger: #c0392b;
+  --danger-bg: #fdecea;
   --info-bg: #f0f4fb;
 
   /* Effects */
@@ -86,9 +86,9 @@ body > * { position: relative; z-index: 1; }
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
-  box-shadow: 0 2px 6px rgba(163,45,45,0.2);
+  box-shadow: 0 2px 6px rgba(24,95,165,0.2);
 }
-.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); box-shadow: 0 4px 12px rgba(163,45,45,0.3); }
+.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); box-shadow: 0 4px 12px rgba(24,95,165,0.3); }
 .btn-accent {
   background: var(--accent);
   color: #fff;
@@ -241,11 +241,11 @@ tr:hover td { background: #e8f3fb; }
 
 /* Hero card for dashboard */
 .hero {
-  background: linear-gradient(135deg, #A32D2D 0%, #7C1F1F 100%);
+  background: linear-gradient(135deg, #185FA5 0%, #0C447C 100%);
   color: #fff;
   border-radius: 14px;
   padding: 1.75rem;
-  box-shadow: 0 8px 24px rgba(163,45,45,0.25);
+  box-shadow: 0 8px 24px rgba(24,95,165,0.25);
   position: relative;
   overflow: hidden;
 }
