@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords } from "@/lib/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 
 export async function GET() {
   const rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
@@ -12,13 +12,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Auto-generate next employee ID
-    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(employees);
-    const nextNum = (count ?? 0) + 1;
-    const employeeId = `EMP-${String(nextNum).padStart(4, "0")}`;
-
     const [created] = await db.insert(employees).values({
-      employeeId,
+      employeeId: body.employeeId,
       firstName: body.firstName,
       lastName: body.lastName,
       fatherName: body.fatherName || null,
