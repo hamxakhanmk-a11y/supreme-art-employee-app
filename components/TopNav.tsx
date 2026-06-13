@@ -14,7 +14,8 @@ const subNav: Record<string, { href: string; label: string; icon: string }[]> = 
     { href: "/employees", label: "Employees", icon: "👥" },
   ],
   attendance: [
-    { href: "/attendance", label: "Attendance", icon: "📋" },
+    { href: "/attendance", label: "Mark Today", icon: "✓" },
+    { href: "/attendance/history", label: "History", icon: "📋" },
   ],
 };
 
@@ -32,7 +33,8 @@ export default function TopNav() {
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    if (href === "/attendance") return pathname.startsWith("/attendance");
+    if (href === "/attendance") return pathname === "/attendance";
+    if (href === "/attendance/history") return pathname.startsWith("/attendance/history");
     return pathname === href;
   };
 

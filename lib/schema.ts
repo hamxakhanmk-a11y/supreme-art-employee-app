@@ -107,9 +107,19 @@ export const attendance = pgTable("attendance", {
     .notNull()
     .references(() => employees.id, { onDelete: "cascade" }),
   date: date("date").notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("present"), // present | absent | leave
+  status: varchar("status", { length: 20 }).notNull().default("present"), // present | absent | leave | half-day | late
+  checkIn: varchar("check_in", { length: 8 }),    // HH:MM
+  checkOut: varchar("check_out", { length: 8 }),  // HH:MM
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tracks which dates have been "closed" by admin
+export const attendanceDays = pgTable("attendance_days", {
+  date: date("date").primaryKey(),
+  closedAt: timestamp("closed_at").defaultNow().notNull(),
+  closedBy: varchar("closed_by", { length: 80 }),
 });
 
 // =====================
