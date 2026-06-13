@@ -131,13 +131,13 @@ export default function TopNav() {
         </div>
       </div>
 
-      {/* Sub-navigation row */}
+      {/* Sub-navigation row — flush left */}
       {links.length > 0 && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "0 1.75rem",
+            padding: "0 0.5rem 0 0.5rem",
             height: 44,
             gap: 4,
             background: "#fbf9f6",

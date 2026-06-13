@@ -106,59 +106,46 @@ export default async function Dashboard() {
         />
       </div>
 
-      {/* Two columns */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16 }}>
-        {/* Recently added */}
-        <div className="card">
-          <div className="section-title">Recently Added</div>
-          {recent.length === 0 ? (
-            <div className="empty" style={{ padding: "2rem 1rem" }}>
-              No employees yet. Add your first one!
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {recent.map((e) => (
-                <Link
-                  key={e.id}
-                  href={`/employees/${e.id}`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "10px 12px", borderRadius: 10, background: "#fafaf6",
-                    textDecoration: "none", color: "var(--fg)",
-                    transition: "all 0.15s", border: "1px solid transparent",
-                  }}
-                  className="hover-row"
-                >
-                  {e.photoUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={e.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
-                  ) : (
-                    <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>
-                      {e.firstName[0]}{e.lastName[0]}
-                    </div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{e.firstName} {e.lastName}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>
-                      {e.designation || "—"} • {e.employeeId}
-                    </div>
-                  </div>
-                  <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>{e.status}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div className="card">
-          <div className="section-title">Quick Actions</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <ActionLink href="/employees/new" icon="＋" label="Add New Employee" desc="Register a new team member" color="var(--primary)" />
-            <ActionLink href="/employees" icon="👥" label="View All Employees" desc="Browse the employee directory" color="var(--accent)" />
-            <ActionLink href="/employees/form/print" icon="🖨" label="Print Blank Form" desc="Get the onboarding form for new hires" color="#444" />
+      {/* Recently added — full width */}
+      <div className="card">
+        <div className="section-title">Recently Added</div>
+        {recent.length === 0 ? (
+          <div className="empty" style={{ padding: "2rem 1rem" }}>
+            No employees yet. Add your first one!
           </div>
-        </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {recent.map((e) => (
+              <Link
+                key={e.id}
+                href={`/employees/${e.id}`}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 12px", borderRadius: 10, background: "#fafaf6",
+                  textDecoration: "none", color: "var(--fg)",
+                  transition: "all 0.15s", border: "1px solid transparent",
+                }}
+                className="hover-row"
+              >
+                {e.photoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={e.photoUrl} alt="" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                ) : (
+                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>
+                    {e.firstName[0]}{e.lastName[0]}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{e.firstName} {e.lastName}</div>
+                  <div style={{ fontSize: 11, color: "#888" }}>
+                    {e.designation || "—"} • {e.employeeId}
+                  </div>
+                </div>
+                <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>{e.status}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -185,30 +172,3 @@ function StatCard({ label, value, icon, color, bg, sub }: { label: string; value
   );
 }
 
-function ActionLink({ href, icon, label, desc, color }: { href: string; icon: string; label: string; desc: string; color: string }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "12px 14px", borderRadius: 10,
-        background: "#fafaf6", border: "1px solid var(--border)",
-        textDecoration: "none", color: "var(--fg)", transition: "all 0.15s",
-      }}
-    >
-      <div style={{
-        width: 36, height: 36, borderRadius: 8,
-        background: color, color: "#fff",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 16, fontWeight: 700, flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: 11, color: "#888" }}>{desc}</div>
-      </div>
-      <span style={{ color: "#bbb" }}>→</span>
-    </Link>
-  );
-}
