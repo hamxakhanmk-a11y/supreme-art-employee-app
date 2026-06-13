@@ -32,6 +32,8 @@ export const employees = pgTable("employees", {
   cnicExpiry: date("cnic_expiry"),
   passportNumber: varchar("passport_number", { length: 30 }),
   passportExpiry: date("passport_expiry"),
+  ssiNumber: varchar("ssi_number", { length: 40 }),
+  ubiNumber: varchar("ubi_number", { length: 40 }),
 
   // Contact
   phone: varchar("phone", { length: 25 }),

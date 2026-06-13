@@ -5,6 +5,7 @@ type Data = {
   firstName?: string; lastName?: string; fatherName?: string; dob?: string;
   gender?: string; maritalStatus?: string; nationality?: string; religion?: string; bloodGroup?: string;
   cnic?: string; cnicExpiry?: string; passportNumber?: string; passportExpiry?: string;
+  ssiNumber?: string; ubiNumber?: string;
   phone?: string; altPhone?: string; email?: string;
   currentAddress?: string; permanentAddress?: string; city?: string;
   emergencyName?: string; emergencyRelation?: string; emergencyPhone?: string;
@@ -88,6 +89,10 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
           <PairRow>
             <Pair label="Passport Number" value={data.passportNumber} flex />
             <Pair label="Passport Expiry" value={fmt(data.passportExpiry)} flex />
+          </PairRow>
+          <PairRow>
+            <Pair label="SSI Number" value={data.ssiNumber} flex />
+            <Pair label="UBI Number" value={data.ubiNumber} flex />
           </PairRow>
         </Section>
 

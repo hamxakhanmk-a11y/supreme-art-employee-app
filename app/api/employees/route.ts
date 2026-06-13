@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
       cnicExpiry: body.cnicExpiry || null,
       passportNumber: body.passportNumber || null,
       passportExpiry: body.passportExpiry || null,
+      ssiNumber: body.ssiNumber || null,
+      ubiNumber: body.ubiNumber || null,
       phone: body.phone || null,
       altPhone: body.altPhone || null,
       email: body.email || null,

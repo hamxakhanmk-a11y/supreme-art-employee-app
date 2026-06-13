@@ -10,6 +10,7 @@ export type EmployeePayload = {
   firstName: string; lastName: string; fatherName: string; dob: string;
   gender: string; maritalStatus: string; nationality: string; religion: string; bloodGroup: string;
   cnic: string; cnicExpiry: string; passportNumber: string; passportExpiry: string;
+  ssiNumber: string; ubiNumber: string;
   phone: string; altPhone: string; email: string;
   currentAddress: string; permanentAddress: string; city: string;
   emergencyName: string; emergencyRelation: string; emergencyPhone: string;
@@ -29,6 +30,7 @@ const empty: EmployeePayload = {
   firstName: "", lastName: "", fatherName: "", dob: "",
   gender: "", maritalStatus: "", nationality: "Pakistani", religion: "", bloodGroup: "",
   cnic: "", cnicExpiry: "", passportNumber: "", passportExpiry: "",
+  ssiNumber: "", ubiNumber: "",
   phone: "", altPhone: "", email: "",
   currentAddress: "", permanentAddress: "", city: "",
   emergencyName: "", emergencyRelation: "", emergencyPhone: "",
@@ -164,6 +166,10 @@ export default function EmployeeForm({
           <Field label="CNIC Expiry"><input type="date" value={form.cnicExpiry} onChange={e => set("cnicExpiry", e.target.value)} /></Field>
           <Field label="Passport No"><input value={form.passportNumber} onChange={e => set("passportNumber", e.target.value)} /></Field>
           <Field label="Passport Expiry"><input type="date" value={form.passportExpiry} onChange={e => set("passportExpiry", e.target.value)} /></Field>
+        </Row>
+        <Row>
+          <Field label="SSI No"><input value={form.ssiNumber} onChange={e => set("ssiNumber", e.target.value)} placeholder="Social Security number" /></Field>
+          <Field label="UBI No"><input value={form.ubiNumber} onChange={e => set("ubiNumber", e.target.value)} placeholder="UBI number" /></Field>
         </Row>
       </div>
 
