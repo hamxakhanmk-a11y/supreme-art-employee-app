@@ -20,6 +20,7 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
   const [from, setFrom] = useState(monthAgo);
   const [to, setTo] = useState(today);
   const [employeeId, setEmployeeId] = useState<string>("");
+  const [query, setQuery] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +41,19 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
 
   const empById = new Map(employees.map(e => [e.id, e]));
 
-  const sorted = [...rows].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sorted = [...rows]
+    .filter(r => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      const e = empById.get(r.employeeId);
+      const fields = [
+        e?.firstName, e?.lastName, e?.employeeId,
+        `${e?.firstName ?? ""} ${e?.lastName ?? ""}`,
+        r.status, r.notes,
+      ];
+      return fields.some(f => f && String(f).toLowerCase().includes(q));
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const totals = {
     present: rows.filter(r => r.status === "present").length,
@@ -66,6 +79,28 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
 
   return (
     <>
+      {/* Search bar */}
+      <div className="no-print" style={{ marginBottom: 12, position: "relative" }}>
+        <input
+          type="text"
+          placeholder="🔍  Quick search by employee name, ID, status, or note…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: "100%", padding: "11px 16px", fontSize: 13 }}
+        />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            style={{
+              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+              background: "transparent", border: "none", color: "#888", cursor: "pointer",
+              fontSize: 14, padding: 4,
+            }}
+            title="Clear search"
+          >✕</button>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="card no-print" style={{ marginBottom: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, alignItems: "end" }}>
