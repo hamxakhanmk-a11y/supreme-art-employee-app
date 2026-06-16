@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const modules = [
   { key: "profile", label: "Profile", icon: "👤" },
   { key: "attendance", label: "Attendance", icon: "📋" },
+  { key: "leave", label: "Leave", icon: "🌴" },
 ];
 
 const subNav: Record<string, { href: string; label: string; icon: string }[]> = {
@@ -17,9 +18,16 @@ const subNav: Record<string, { href: string; label: string; icon: string }[]> = 
     { href: "/attendance", label: "Mark Today", icon: "✓" },
     { href: "/attendance/history", label: "History", icon: "📋" },
   ],
+  leave: [
+    { href: "/leave", label: "Requests", icon: "📥" },
+    { href: "/leave/apply", label: "Apply Leave", icon: "✍" },
+    { href: "/leave/history", label: "History", icon: "📋" },
+    { href: "/leave/types", label: "Leave Types", icon: "⚙" },
+  ],
 };
 
 function pathToModule(path: string): string {
+  if (path.startsWith("/leave")) return "leave";
   if (path.startsWith("/attendance")) return "attendance";
   if (path === "/" || path.startsWith("/employees")) return "profile";
   return "profile";
@@ -35,6 +43,10 @@ export default function TopNav() {
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
     if (href === "/attendance") return pathname === "/attendance";
     if (href === "/attendance/history") return pathname.startsWith("/attendance/history");
+    if (href === "/leave") return pathname === "/leave";
+    if (href === "/leave/history") return pathname.startsWith("/leave/history");
+    if (href === "/leave/types") return pathname.startsWith("/leave/types");
+    if (href === "/leave/apply") return pathname.startsWith("/leave/apply");
     return pathname === href;
   };
 

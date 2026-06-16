@@ -123,6 +123,42 @@ export const attendanceDays = pgTable("attendance_days", {
 });
 
 // =====================
+// LEAVE TYPES
+// =====================
+export const leaveTypes = pgTable("leave_types", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 60 }).notNull().unique(),
+  daysAllowed: integer("days_allowed").notNull().default(0),
+  isPaid: boolean("is_paid").notNull().default(true),
+  color: varchar("color", { length: 16 }).default("#185FA5"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// LEAVE REQUESTS
+// =====================
+export const leaveRequests = pgTable("leave_requests", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  leaveTypeId: integer("leave_type_id")
+    .notNull()
+    .references(() => leaveTypes.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  days: integer("days").notNull(),
+  reason: text("reason"),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | approved | rejected
+  decidedAt: timestamp("decided_at"),
+  decidedBy: varchar("decided_by", { length: 80 }),
+  decisionNote: text("decision_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
 // EXPERIENCE (one-to-many)
 // =====================
 export const experienceRecords = pgTable("experience_records", {

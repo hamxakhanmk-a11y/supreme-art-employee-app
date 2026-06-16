@@ -109,7 +109,8 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="no-print" style={{ textAlign: "right" }}>
                     <div style={{ display: "inline-flex", gap: 6 }}>
-                      <Link href={`/employees/${e.id}/attendance`} className="btn" title="Attendance history" style={{ padding: "5px 10px", fontSize: 12 }}>📋 History</Link>
+                      <Link href={`/employees/${e.id}/attendance`} className="btn" title="Attendance history" style={{ padding: "5px 10px", fontSize: 12 }}>📋</Link>
+                      <Link href={`/employees/${e.id}/leave`} className="btn" title="Leave history" style={{ padding: "5px 10px", fontSize: 12 }}>🌴</Link>
                       <Link href={`/employees/${e.id}`} className="btn btn-primary" style={{ padding: "5px 10px", fontSize: 12 }}>View</Link>
                     </div>
                   </td>

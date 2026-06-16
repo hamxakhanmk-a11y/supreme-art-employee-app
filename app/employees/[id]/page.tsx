@@ -49,7 +49,8 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link href={`/employees/${emp.id}/attendance`} className="btn">📋 Attendance History</Link>
+          <Link href={`/employees/${emp.id}/attendance`} className="btn">📋 Attendance</Link>
+          <Link href={`/employees/${emp.id}/leave`} className="btn">🌴 Leaves</Link>
           <ProfileExportButton employee={emp} />
           <Link href={`/employees/${emp.id}/print`} className="btn btn-print">🖨 Print Profile</Link>
           <Link href={`/employees/${emp.id}/edit`} className="btn">✏️ Edit</Link>
