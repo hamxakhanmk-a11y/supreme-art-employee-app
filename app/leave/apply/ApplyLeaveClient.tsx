@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string; designation: string | null; department: string | null };
 type LT = { id: number; name: string; daysAllowed: number; isPaid: boolean; color: string | null };
 
-export default function ApplyLeaveClient({ employees, leaveTypes }: { employees: Emp[]; leaveTypes: LT[] }) {
+export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }: { employees: Emp[]; leaveTypes: LT[] }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
+
+  const [leaveTypes, setLeaveTypes] = useState<LT[]>(initialTypes);
   const [form, setForm] = useState({
     employeeId: "", leaveTypeId: "",
     startDate: today, endDate: today,
@@ -17,6 +19,11 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
+  // Inline "add new type" UI state
+  const [showAddType, setShowAddType] = useState(false);
+  const [newType, setNewType] = useState({ name: "", daysAllowed: "0", isPaid: true });
+  const [addingType, setAddingType] = useState(false);
+
   const days = useMemo(() => {
     if (!form.startDate || !form.endDate) return 0;
     const s = new Date(form.startDate), e = new Date(form.endDate);
@@ -24,7 +31,6 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
   }, [form.startDate, form.endDate]);
 
   const selectedEmp = employees.find(e => String(e.id) === form.employeeId);
-  const selectedType = leaveTypes.find(t => String(t.id) === form.leaveTypeId);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +47,37 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
     finally { setSaving(false); }
   };
 
+  const addType = async () => {
+    if (!newType.name.trim()) return;
+    setAddingType(true); setErr(null);
+    try {
+      const res = await fetch("/api/leave/types", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newType),
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
+      const data = await res.json();
+      setLeaveTypes(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewType({ name: "", daysAllowed: "0", isPaid: true });
+      setShowAddType(false);
+      router.refresh();
+    } catch (e: any) { setErr(e.message); }
+    finally { setAddingType(false); }
+  };
+
+  const deleteType = async (t: LT) => {
+    if (!confirm(`Delete "${t.name}"? Existing requests of this type will keep their reference but may not display correctly.`)) return;
+    const res = await fetch(`/api/leave/types/${t.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setLeaveTypes(prev => prev.filter(x => x.id !== t.id));
+      if (form.leaveTypeId === String(t.id)) setForm(f => ({ ...f, leaveTypeId: "" }));
+      router.refresh();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      alert(j.error || "Cannot delete (it may be referenced by existing requests).");
+    }
+  };
+
   return (
     <>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, justifyContent: "flex-end" }}>
@@ -48,7 +85,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
       </div>
 
       <div className="card" style={{ maxWidth: 760, margin: "0 auto" }}>
-        {/* Printable header */}
+        {/* Letterhead */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--primary)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" style={{ height: 48 }} />
@@ -64,6 +101,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
           {err && <div style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
           {ok && <div style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
 
+          {/* Employee */}
           <div>
             <label className="form-label">Employee *</label>
             <select required value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })}>
@@ -78,12 +116,76 @@ export default function ApplyLeaveClient({ employees, leaveTypes }: { employees:
             </div>
           )}
 
+          {/* Leave type — dropdown with inline management */}
           <div>
-            <label className="form-label">Type of Leave *</label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <label className="form-label">Type of Leave *</label>
+              <button type="button"
+                onClick={() => setShowAddType(v => !v)}
+                className="no-print"
+                style={{ background: "transparent", border: "none", color: "var(--primary)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "0 0 5px" }}>
+                {showAddType ? "✕ Close" : "＋ Add custom type"}
+              </button>
+            </div>
             <select required value={form.leaveTypeId} onChange={e => setForm({ ...form, leaveTypeId: e.target.value })}>
               <option value="">— Select Leave Type —</option>
               {leaveTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.daysAllowed} days · {t.isPaid ? "Paid" : "Unpaid"})</option>)}
             </select>
+
+            {/* Existing types with delete buttons */}
+            {leaveTypes.length > 0 && (
+              <div className="no-print" style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {leaveTypes.map(t => (
+                  <div key={t.id}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      padding: "4px 8px 4px 10px", borderRadius: 999,
+                      background: "#fafaf6", border: "1px solid var(--border)",
+                      fontSize: 11, color: "#555",
+                    }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.color || "#185FA5" }} />
+                    <span>{t.name}</span>
+                    <button type="button" onClick={() => deleteType(t)}
+                      title={`Delete ${t.name}`}
+                      style={{
+                        background: "transparent", border: "none", color: "#aaa", cursor: "pointer",
+                        padding: "0 4px", fontSize: 13, lineHeight: 1, transition: "color 0.15s",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--danger)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "#aaa")}>
+                      🗑
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inline add-new-type form */}
+            {showAddType && (
+              <div className="no-print" style={{ marginTop: 10, padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "#fafafa" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--primary)", marginBottom: 8 }}>Add a new leave type</div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "end" }}>
+                  <div>
+                    <label className="form-label">Name *</label>
+                    <input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="e.g. Maternity Leave" />
+                  </div>
+                  <div>
+                    <label className="form-label">Days/Year</label>
+                    <input type="number" value={newType.daysAllowed} onChange={e => setNewType({ ...newType, daysAllowed: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="form-label">&nbsp;</label>
+                    <button type="button" onClick={addType} disabled={addingType || !newType.name.trim()} className="btn btn-primary">
+                      {addingType ? "Adding…" : "Add"}
+                    </button>
+                  </div>
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#555", marginTop: 8, cursor: "pointer" }}>
+                  <input type="checkbox" checked={newType.isPaid} onChange={e => setNewType({ ...newType, isPaid: e.target.checked })} />
+                  Paid leave
+                </label>
+              </div>
+            )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>

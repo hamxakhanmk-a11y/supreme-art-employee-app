@@ -22,7 +22,6 @@ const subNav: Record<string, { href: string; label: string; icon: string }[]> = 
     { href: "/leave", label: "Requests", icon: "📥" },
     { href: "/leave/apply", label: "Apply Leave", icon: "✍" },
     { href: "/leave/history", label: "History", icon: "📋" },
-    { href: "/leave/types", label: "Leave Types", icon: "⚙" },
   ],
 };
 
