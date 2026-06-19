@@ -274,6 +274,9 @@ tr:hover td { background: #e8f3fb; }
 .print-only { display: none !important; }
 .print-watermark { display: none; }
 
+/* Force browsers to keep the watermark when printing (even with "Background graphics" off) */
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
+
 /* ---------- Branded print header ---------- */
 .print-header { width: 100%; }
 .print-header-inner {
@@ -323,7 +326,7 @@ tr:hover td { background: #e8f3fb; }
   /* Reveal print-only helpers */
   .print-only { display: block !important; }
 
-  /* Big faded watermark — fixed so it repeats on every printed page */
+  /* Big faded angled watermark — fixed so it repeats on every printed page */
   .print-watermark {
     display: flex !important;
     position: fixed;
@@ -332,17 +335,22 @@ tr:hover td { background: #e8f3fb; }
     justify-content: center;
     pointer-events: none;
     z-index: 0;
+    overflow: hidden;
   }
   .print-watermark img {
-    width: 65%;
-    max-width: 480px;
+    /* Full diagonal coverage — rotated like an official document stamp */
+    width: 92%;
+    max-width: 900px;
     height: auto;
-    opacity: 0.07;
-    filter: grayscale(0.2);
+    opacity: 0.10;
+    transform: rotate(-30deg);
+    transform-origin: center center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Keep content above the watermark */
-  main > * { position: relative; z-index: 1; }
+  main, main > *, .card { position: relative; z-index: 1; }
 
   /* Drop colorful interactive table backgrounds for clean print */
   table th { background: #f3f3f3 !important; color: #333 !important; }
