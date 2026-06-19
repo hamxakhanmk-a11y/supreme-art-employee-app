@@ -285,8 +285,9 @@ tr:hover td { background: #e8f3fb; }
   margin-bottom: 18px;
 }
 .print-header-inner img {
-  height: 56px;
+  height: 110px;
   width: auto;
+  max-width: 320px;
   object-fit: contain;
 }
 .print-header-title {

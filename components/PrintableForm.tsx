@@ -40,7 +40,7 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
         {/* Header with logo */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2.5px solid #A32D2D", paddingBottom: 14, marginBottom: 16 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 64, width: "auto", objectFit: "contain" }} />
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 110, width: "auto", maxWidth: 320, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "#A32D2D" }}>
               Employee Information Form

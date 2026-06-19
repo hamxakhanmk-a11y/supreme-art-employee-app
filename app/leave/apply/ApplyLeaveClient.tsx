@@ -88,7 +88,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
         {/* Letterhead */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--primary)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 48 }} />
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 110, width: "auto", maxWidth: 320, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--primary)" }}>Leave Application Form</div>
             <div style={{ fontSize: 10, color: "#666", marginTop: 4 }}>
