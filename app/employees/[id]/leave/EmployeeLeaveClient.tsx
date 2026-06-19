@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
+import PrintHeader from "@/components/PrintHeader";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null; daysAllowed: number };
@@ -71,6 +72,11 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
 
   return (
     <>
+      <PrintHeader
+        title="Leave History"
+        subtitle={`${employee.firstName} ${employee.lastName} (${employee.employeeId})`}
+        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+      />
       <div className="card no-print" style={{ marginBottom: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, alignItems: "end" }}>
           <div>

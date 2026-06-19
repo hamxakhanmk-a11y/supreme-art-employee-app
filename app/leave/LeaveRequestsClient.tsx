@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PrintHeader from "@/components/PrintHeader";
 
 type Req = {
   id: number; employeeId: number; leaveTypeId: number;
@@ -65,6 +66,7 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
 
   return (
     <>
+      <PrintHeader title="Leave Requests" subtitle={`${filtered.length} request${filtered.length !== 1 ? "s" : ""}`} />
       {/* Stat strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 16 }}>
         {Object.entries(STATUS).map(([k, v]) => (

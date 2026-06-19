@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
+import PrintHeader from "@/components/PrintHeader";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type Row = { id: number; employeeId: number; date: string; status: string; checkIn: string | null; checkOut: string | null; notes: string | null };
@@ -77,8 +78,18 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
     );
   };
 
+  const empMeta = employeeId ? (() => {
+    const e = empById.get(parseInt(employeeId));
+    return e ? `Employee: ${e.firstName} ${e.lastName} (${e.employeeId})` : undefined;
+  })() : undefined;
+
   return (
     <>
+      <PrintHeader
+        title="Attendance History"
+        subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+        meta={empMeta}
+      />
       {/* Search bar */}
       <div className="no-print" style={{ marginBottom: 12, position: "relative" }}>
         <input

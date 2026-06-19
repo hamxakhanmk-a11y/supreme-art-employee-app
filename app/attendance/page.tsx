@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
+import PrintHeader from "@/components/PrintHeader";
 
 type Row = {
   id: number;
@@ -125,6 +126,7 @@ export default function AttendancePage() {
 
   return (
     <div className="fade-up">
+      <PrintHeader title="Daily Attendance" subtitle={new Date(date).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} meta={closed ? "Status: CLOSED" : "Status: Open for marking"} />
       {/* Header */}
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, gap: 14, flexWrap: "wrap" }}>
         <div>

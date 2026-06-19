@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import EmployeesToolbar from "./EmployeesToolbar";
+import PrintHeader from "@/components/PrintHeader";
 
 type Row = {
   id: number; employeeId: string;
@@ -32,6 +33,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
 
   return (
     <>
+      <PrintHeader title="Employee Directory" subtitle={`${filtered.length} record${filtered.length !== 1 ? "s" : ""}`} />
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Employees</h1>

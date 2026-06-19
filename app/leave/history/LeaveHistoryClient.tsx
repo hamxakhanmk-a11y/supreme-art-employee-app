@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
+import PrintHeader from "@/components/PrintHeader";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null };
@@ -83,8 +84,18 @@ export default function LeaveHistoryClient({ employees, leaveTypes }: { employee
     );
   };
 
+  const empMeta = employeeId ? (() => {
+    const e = empById.get(parseInt(employeeId));
+    return e ? `Employee: ${e.firstName} ${e.lastName} (${e.employeeId})` : undefined;
+  })() : undefined;
+
   return (
     <>
+      <PrintHeader
+        title="Leave History"
+        subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+        meta={empMeta}
+      />
       <div className="no-print" style={{ marginBottom: 12, position: "relative" }}>
         <input type="text" placeholder="🔍  Search by employee, leave type, status, reason…"
           value={query} onChange={e => setQuery(e.target.value)}

@@ -270,11 +270,80 @@ tr:hover td { background: #e8f3fb; }
   background: rgba(255,255,255,0.04);
 }
 
+/* ---------- Print-only / screen-only helpers ---------- */
+.print-only { display: none !important; }
+.print-watermark { display: none; }
+
+/* ---------- Branded print header ---------- */
+.print-header { width: 100%; }
+.print-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2.5px solid var(--primary);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+.print-header-inner img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+.print-header-title {
+  font-size: 14pt;
+  font-weight: 800;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  line-height: 1.1;
+}
+.print-header-sub {
+  font-size: 10pt;
+  color: #555;
+  margin-top: 3px;
+  font-weight: 600;
+}
+.print-header-meta {
+  font-size: 9pt;
+  color: #777;
+  margin-top: 2px;
+}
+
 /* ---------- Print ---------- */
 @media print {
+  @page { margin: 14mm 10mm; }
+
   body { background: #fff !important; font-size: 11pt; }
   body::before { display: none !important; }
   header, .no-print { display: none !important; }
   main { padding: 0 !important; max-width: none !important; }
   .print-page { box-shadow: none !important; }
+
+  /* Reveal print-only helpers */
+  .print-only { display: block !important; }
+
+  /* Big faded watermark — fixed so it repeats on every printed page */
+  .print-watermark {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .print-watermark img {
+    width: 65%;
+    max-width: 480px;
+    height: auto;
+    opacity: 0.07;
+    filter: grayscale(0.2);
+  }
+
+  /* Keep content above the watermark */
+  main > * { position: relative; z-index: 1; }
+
+  /* Drop colorful interactive table backgrounds for clean print */
+  table th { background: #f3f3f3 !important; color: #333 !important; }
+  tr:hover td { background: transparent !important; }
 }

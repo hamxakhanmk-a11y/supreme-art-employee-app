@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
+import PrintHeader from "@/components/PrintHeader";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type Row = { id: number; date: string; status: string; checkIn: string | null; checkOut: string | null; notes: string | null };
@@ -57,6 +58,11 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
 
   return (
     <>
+      <PrintHeader
+        title="Attendance History"
+        subtitle={`${employee.firstName} ${employee.lastName} (${employee.employeeId})`}
+        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+      />
       {/* Filters */}
       <div className="card no-print" style={{ marginBottom: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, alignItems: "end" }}>
