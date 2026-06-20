@@ -33,7 +33,9 @@ export const employees = pgTable("employees", {
   passportNumber: varchar("passport_number", { length: 30 }),
   passportExpiry: date("passport_expiry"),
   ssiNumber: varchar("ssi_number", { length: 40 }),
+  ssiExpiry: date("ssi_expiry"),
   ubiNumber: varchar("ubi_number", { length: 40 }),
+  ubiExpiry: date("ubi_expiry"),
 
   // Contact
   phone: varchar("phone", { length: 25 }),
@@ -57,6 +59,7 @@ export const employees = pgTable("employees", {
   workLocation: varchar("work_location", { length: 80 }),
   shift: varchar("shift", { length: 30 }),
   status: varchar("status", { length: 20 }).notNull().default("active"),
+  contractExpiry: date("contract_expiry"),
 
   // Compensation
   basicSalary: integer("basic_salary"),

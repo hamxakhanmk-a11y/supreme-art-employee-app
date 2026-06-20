@@ -10,12 +10,13 @@ export type EmployeePayload = {
   firstName: string; lastName: string; fatherName: string; dob: string;
   gender: string; maritalStatus: string; nationality: string; religion: string; bloodGroup: string;
   cnic: string; cnicExpiry: string; passportNumber: string; passportExpiry: string;
-  ssiNumber: string; ubiNumber: string;
+  ssiNumber: string; ssiExpiry: string; ubiNumber: string; ubiExpiry: string;
   phone: string; altPhone: string; email: string;
   currentAddress: string; permanentAddress: string; city: string;
   emergencyName: string; emergencyRelation: string; emergencyPhone: string;
   designation: string; department: string; joiningDate: string; employmentType: string;
   reportingManager: string; workLocation: string; shift: string; status: string;
+  contractExpiry: string;
   basicSalary: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
   photoUrl: string; cnicFrontUrl: string; cnicBackUrl: string; passportUrl: string;
@@ -30,12 +31,13 @@ const empty: EmployeePayload = {
   firstName: "", lastName: "", fatherName: "", dob: "",
   gender: "", maritalStatus: "", nationality: "Pakistani", religion: "", bloodGroup: "",
   cnic: "", cnicExpiry: "", passportNumber: "", passportExpiry: "",
-  ssiNumber: "", ubiNumber: "",
+  ssiNumber: "", ssiExpiry: "", ubiNumber: "", ubiExpiry: "",
   phone: "", altPhone: "", email: "",
   currentAddress: "", permanentAddress: "", city: "",
   emergencyName: "", emergencyRelation: "", emergencyPhone: "",
   designation: "", department: "", joiningDate: "", employmentType: "Full-time",
   reportingManager: "", workLocation: "", shift: "", status: "active",
+  contractExpiry: "",
   basicSalary: "",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
   photoUrl: "", cnicFrontUrl: "", cnicBackUrl: "", passportUrl: "",
@@ -169,7 +171,9 @@ export default function EmployeeForm({
         </Row>
         <Row>
           <Field label="SSI No"><input value={form.ssiNumber} onChange={e => set("ssiNumber", e.target.value)} placeholder="Social Security number" /></Field>
+          <Field label="SSI Expiry"><input type="date" value={form.ssiExpiry} onChange={e => set("ssiExpiry", e.target.value)} /></Field>
           <Field label="UBI No"><input value={form.ubiNumber} onChange={e => set("ubiNumber", e.target.value)} placeholder="UBI number" /></Field>
+          <Field label="UBI Expiry"><input type="date" value={form.ubiExpiry} onChange={e => set("ubiExpiry", e.target.value)} /></Field>
         </Row>
       </div>
 
@@ -227,6 +231,9 @@ export default function EmployeeForm({
             </select>
           </Field>
           <Field label="Basic Salary (PKR)"><input type="number" value={form.basicSalary} onChange={e => set("basicSalary", e.target.value)} /></Field>
+        </Row>
+        <Row>
+          <Field label="Contract Expiry"><input type="date" value={form.contractExpiry} onChange={e => set("contractExpiry", e.target.value)} /></Field>
         </Row>
       </div>
 
