@@ -4,9 +4,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const modules = [
-  { key: "profile", label: "Profile" },
+  { key: "profile",    label: "Profile" },
   { key: "attendance", label: "Attendance" },
-  { key: "leave", label: "Leave" },
+  { key: "forms",      label: "Forms" },
+  { key: "reports",    label: "Reports" },
 ];
 
 const subNav: Record<string, { href: string; label: string }[]> = {
@@ -16,18 +17,27 @@ const subNav: Record<string, { href: string; label: string }[]> = {
   ],
   attendance: [
     { href: "/attendance", label: "Mark Today" },
-    { href: "/attendance/history", label: "History" },
   ],
-  leave: [
-    { href: "/leave", label: "Requests" },
-    { href: "/leave/apply", label: "Apply Leave" },
-    { href: "/leave/history", label: "History" },
+  forms: [
+    { href: "/forms", label: "Overview" },
+    { href: "/forms/leave", label: "Leave Form" },
+    { href: "/forms/half-day", label: "Half-Day Form" },
+    { href: "/forms/approvals", label: "Pending Approvals" },
+  ],
+  reports: [
+    { href: "/reports", label: "Overview" },
+    { href: "/reports/attendance", label: "Attendance Register" },
+    { href: "/reports/leaves", label: "Leave History" },
+    { href: "/reports/half-day", label: "Half-Day History" },
   ],
 };
 
 function pathToModule(path: string): string {
-  if (path.startsWith("/leave")) return "leave";
+  if (path.startsWith("/forms")) return "forms";
+  if (path.startsWith("/reports")) return "reports";
   if (path.startsWith("/attendance")) return "attendance";
+  // Legacy leave routes resolve to forms module.
+  if (path.startsWith("/leave")) return "forms";
   return "profile";
 }
 
@@ -39,6 +49,8 @@ export default function TopNav() {
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
+    if (href === "/forms") return pathname === "/forms";
+    if (href === "/reports") return pathname === "/reports";
     return pathname.startsWith(href);
   };
 
@@ -62,7 +74,6 @@ export default function TopNav() {
           gap: 16,
         }}
       >
-        {/* Brand: small logo + "Supreme Art Portal" */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" }}>
           <Image src="/logo.png" alt="Supreme Art" width={28} height={28} priority style={{ width: 28, height: 28, objectFit: "contain" }} />
           <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
@@ -70,7 +81,6 @@ export default function TopNav() {
           </span>
         </Link>
 
-        {/* Module switcher (tracker mode-switch pill) */}
         <div className="mode-switch" style={{ marginLeft: "1rem" }}>
           {modules.map((m) => {
             const active = m.key === activeModule;
@@ -88,7 +98,6 @@ export default function TopNav() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Date — two-line maroon stack */}
         <div style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.18em", opacity: 0.85, textTransform: "uppercase" }}>
             {new Date().toLocaleDateString("en-GB", { weekday: "short" })}
@@ -99,7 +108,7 @@ export default function TopNav() {
         </div>
       </div>
 
-      {/* Sub-nav — chip-style tabs flush left */}
+      {/* Sub-nav row */}
       {links.length > 0 && (
         <div
           style={{

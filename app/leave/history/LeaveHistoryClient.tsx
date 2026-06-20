@@ -9,6 +9,7 @@ type Req = {
   id: number; employeeId: number; leaveTypeId: number;
   startDate: string; endDate: string; days: number;
   reason: string | null; status: string;
+  halfSegment: string | null;
   decidedBy: string | null; decisionNote: string | null;
 };
 
@@ -18,7 +19,9 @@ const STATUS = {
   rejected: { label: "Rejected", color: "var(--danger)",  bg: "var(--danger-bg)"  },
 };
 
-export default function LeaveHistoryClient({ employees, leaveTypes }: { employees: Emp[]; leaveTypes: LT[] }) {
+export default function LeaveHistoryClient({
+  employees, leaveTypes, excludeHalfDay = false, onlyHalfDay = false,
+}: { employees: Emp[]; leaveTypes: LT[]; excludeHalfDay?: boolean; onlyHalfDay?: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
   const yearAgo = new Date(Date.now() - 365 * 86400 * 1000).toISOString().slice(0, 10);
 
@@ -50,6 +53,8 @@ export default function LeaveHistoryClient({ employees, leaveTypes }: { employee
   const typeById = new Map(leaveTypes.map(t => [t.id, t]));
 
   const filtered = rows.filter(r => {
+    if (excludeHalfDay && r.halfSegment) return false;
+    if (onlyHalfDay && !r.halfSegment) return false;
     const q = query.trim().toLowerCase();
     if (!q) return true;
     const e = empById.get(r.employeeId);
