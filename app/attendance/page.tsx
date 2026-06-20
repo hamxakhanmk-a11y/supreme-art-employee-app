@@ -12,18 +12,20 @@ type Row = {
   designation: string | null;
   department: string | null;
   photoUrl: string | null;
-  status: "present" | "absent" | "leave" | "half-day" | "late" | null;
+  status: "present" | "absent" | "leave" | "half-day" | "late" | "holiday" | "week-off" | null;
   checkIn: string | null;
   checkOut: string | null;
   notes: string | null;
 };
 
 const STATUS = {
-  present:    { label: "Present",  color: "#15803D", bg: "#e3f5e3" },
-  absent:     { label: "Absent",   color: "#DC2626", bg: "#fde2e2" },
-  leave:      { label: "Leave",    color: "#D97706", bg: "#fdebd0" },
-  "half-day": { label: "Half-day", color: "#1D4ED8", bg: "#dfe8fc" },
-  late:       { label: "Late",     color: "#EA580C", bg: "#fde2cf" },
+  present:    { label: "Present",   color: "#15803D", bg: "#e3f5e3" },
+  absent:     { label: "Absent",    color: "#DC2626", bg: "#fde2e2" },
+  leave:      { label: "Leave",     color: "#D97706", bg: "#fdebd0" },
+  "half-day": { label: "Half-day",  color: "#1D4ED8", bg: "#dfe8fc" },
+  late:       { label: "Late",      color: "#EA580C", bg: "#fde2cf" },
+  holiday:    { label: "Holiday",   color: "#0E7490", bg: "#cffafe" },
+  "week-off": { label: "Week Off",  color: "#475569", bg: "#e2e8f0" },
 } as const;
 
 export default function AttendancePage() {
