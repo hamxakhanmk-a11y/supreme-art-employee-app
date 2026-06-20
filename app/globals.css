@@ -172,16 +172,17 @@ input[type=date] {
 
 .badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 999px;
   letter-spacing: 0.3px;
   text-transform: capitalize;
+  color: #fff;
 }
-.badge-active { background: var(--success-bg); color: var(--success); }
-.badge-inactive { background: var(--danger-bg); color: var(--danger); }
-.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-active   { background: #15803D; box-shadow: 0 1px 3px rgba(21,128,61,0.35); }
+.badge-inactive { background: #6B7280; box-shadow: 0 1px 3px rgba(107,114,128,0.35); }
+.badge-warning  { background: #D97706; box-shadow: 0 1px 3px rgba(217,119,6,0.35); }
 
 table { width: 100%; border-collapse: collapse; }
 th {

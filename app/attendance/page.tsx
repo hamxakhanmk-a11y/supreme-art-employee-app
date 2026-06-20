@@ -19,11 +19,11 @@ type Row = {
 };
 
 const STATUS = {
-  present:    { label: "Present",  color: "var(--success)", bg: "var(--success-bg)" },
-  absent:     { label: "Absent",   color: "var(--danger)",  bg: "var(--danger-bg)"  },
-  leave:      { label: "Leave",    color: "var(--warning)", bg: "var(--warning-bg)" },
-  "half-day": { label: "Half-day", color: "#0C447C",        bg: "var(--info-bg)"    },
-  late:       { label: "Late",     color: "#7C1F1F",        bg: "#fdecec"           },
+  present:    { label: "Present",  color: "#15803D", bg: "#e3f5e3" },
+  absent:     { label: "Absent",   color: "#DC2626", bg: "#fde2e2" },
+  leave:      { label: "Leave",    color: "#D97706", bg: "#fdebd0" },
+  "half-day": { label: "Half-day", color: "#1D4ED8", bg: "#dfe8fc" },
+  late:       { label: "Late",     color: "#EA580C", bg: "#fde2cf" },
 } as const;
 
 export default function AttendancePage() {
@@ -150,12 +150,12 @@ export default function AttendancePage() {
 
       {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 18 }}>
-        <StatChip label="Present"  count={summary.present}  color="var(--success)" bg="var(--success-bg)" />
-        <StatChip label="Absent"   count={summary.absent}   color="var(--danger)"  bg="var(--danger-bg)"  />
-        <StatChip label="Leave"    count={summary.leave}    color="var(--warning)" bg="var(--warning-bg)" />
-        <StatChip label="Half-day" count={summary.halfday}  color="#0C447C"        bg="var(--info-bg)"    />
-        <StatChip label="Late"     count={summary.late}     color="#7C1F1F"        bg="#fdecec"           />
-        <StatChip label="Unmarked" count={summary.unmarked} color="#888"           bg="#f3f3f3"           />
+        <StatChip label="Present"  count={summary.present}  color="#15803D" bg="#e3f5e3" />
+        <StatChip label="Absent"   count={summary.absent}   color="#DC2626" bg="#fde2e2" />
+        <StatChip label="Leave"    count={summary.leave}    color="#D97706" bg="#fdebd0" />
+        <StatChip label="Half-day" count={summary.halfday}  color="#1D4ED8" bg="#dfe8fc" />
+        <StatChip label="Late"     count={summary.late}     color="#EA580C" bg="#fde2cf" />
+        <StatChip label="Unmarked" count={summary.unmarked} color="#888"    bg="#f3f3f3" />
       </div>
 
       {error && (
@@ -202,24 +202,29 @@ export default function AttendancePage() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      {(Object.keys(STATUS) as (keyof typeof STATUS)[]).map(s => (
-                        <button
-                          key={s}
-                          disabled={closed || savingId === r.id}
-                          onClick={() => mark(r, s)}
-                          style={{
-                            padding: "4px 9px", borderRadius: 6, fontSize: 11, fontWeight: r.status === s ? 700 : 500,
-                            background: r.status === s ? STATUS[s].bg : "#fff",
-                            color: STATUS[s].color,
-                            border: `1px solid ${r.status === s ? STATUS[s].color : "var(--border)"}`,
-                            cursor: closed ? "not-allowed" : "pointer",
-                            opacity: closed ? 0.6 : 1,
-                            transition: "all 0.15s",
-                          }}
-                        >
-                          {STATUS[s].label}
-                        </button>
-                      ))}
+                      {(Object.keys(STATUS) as (keyof typeof STATUS)[]).map(s => {
+                        const active = r.status === s;
+                        return (
+                          <button
+                            key={s}
+                            disabled={closed || savingId === r.id}
+                            onClick={() => mark(r, s)}
+                            style={{
+                              padding: "5px 11px", borderRadius: 6, fontSize: 11.5,
+                              fontWeight: 700, letterSpacing: 0.3,
+                              background: active ? STATUS[s].color : "#fff",
+                              color: active ? "#fff" : STATUS[s].color,
+                              border: `1.5px solid ${STATUS[s].color}`,
+                              boxShadow: active ? `0 2px 6px ${STATUS[s].color}55` : "none",
+                              cursor: closed ? "not-allowed" : "pointer",
+                              opacity: closed ? 0.6 : 1,
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {STATUS[s].label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </td>
                   <td>

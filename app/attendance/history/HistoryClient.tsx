@@ -7,11 +7,11 @@ type Emp = { id: number; employeeId: string; firstName: string; lastName: string
 type Row = { id: number; employeeId: number; date: string; status: string; checkIn: string | null; checkOut: string | null; notes: string | null };
 
 const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
-  present:    { label: "Present",  color: "var(--success)", bg: "var(--success-bg)" },
-  absent:     { label: "Absent",   color: "var(--danger)",  bg: "var(--danger-bg)"  },
-  leave:      { label: "Leave",    color: "var(--warning)", bg: "var(--warning-bg)" },
-  "half-day": { label: "Half-day", color: "#0C447C",        bg: "var(--info-bg)"    },
-  late:       { label: "Late",     color: "#7C1F1F",        bg: "#fdecec"           },
+  present:    { label: "Present",  color: "#15803D", bg: "#e3f5e3" },
+  absent:     { label: "Absent",   color: "#DC2626", bg: "#fde2e2" },
+  leave:      { label: "Leave",    color: "#D97706", bg: "#fdebd0" },
+  "half-day": { label: "Half-day", color: "#1D4ED8", bg: "#dfe8fc" },
+  late:       { label: "Late",     color: "#EA580C", bg: "#fde2cf" },
 };
 
 export default function HistoryClient({ employees }: { employees: Emp[] }) {
@@ -177,7 +177,7 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
                       <div style={{ fontSize: 11, color: "#888" }}>{e?.employeeId}</div>
                     </td>
                     <td>
-                      {s ? <span className="badge" style={{ background: s.bg, color: s.color }}>{s.label}</span> : r.status}
+                      {s ? <span style={{ display: "inline-block", padding: "4px 12px", fontSize: 11, fontWeight: 700, borderRadius: 999, letterSpacing: 0.3, background: s.color, color: "#fff", boxShadow: `0 1px 3px ${s.color}55` }}>{s.label}</span> : r.status}
                     </td>
                     <td>{r.checkIn || "—"}</td>
                     <td>{r.checkOut || "—"}</td>
