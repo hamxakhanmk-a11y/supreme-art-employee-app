@@ -341,6 +341,21 @@ th.num, th.num-strong { text-align: right; }
 .print-watermark { display: none; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
 
+/* Avatar — keeps its perfect circle even in cramped table cells. Tailwind's
+   reset puts max-width:100% on img which can squish the width while explicit
+   height stays fixed, making the photo look oval. .avatar locks both axes. */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  border: 2px solid var(--brand);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+  max-width: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .print-header { width: 100%; }
 .print-header-inner { display: flex; align-items: center; justify-content: space-between; border-bottom: 2.5px solid var(--brand); padding-bottom: 12px; margin-bottom: 18px; }
 .print-header-inner img { height: 110px; width: auto; max-width: 320px; object-fit: contain; }
