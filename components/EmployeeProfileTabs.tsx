@@ -22,23 +22,32 @@ export default function EmployeeProfileTabs({
 
   return (
     <div className="card" style={{ padding: 0 }}>
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", padding: "0 1rem", overflowX: "auto" }}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: "12px 16px", border: "none", background: "transparent", cursor: "pointer",
-              fontSize: 13, fontWeight: 600,
-              color: tab === t.key ? "var(--primary)" : "#666",
-              borderBottom: `2px solid ${tab === t.key ? "var(--primary)" : "transparent"}`,
-              marginBottom: -1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: 6, padding: "12px 14px", overflowX: "auto", background: "var(--bg2)", borderBottom: "1px solid var(--border)", borderTopLeftRadius: "var(--radius)", borderTopRightRadius: "var(--radius)" }}>
+        {tabs.map(t => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "8px 16px",
+                border: `1px solid ${active ? "#185FA5" : "transparent"}`,
+                background: active ? "#185FA5" : "transparent",
+                color: active ? "#fff" : "var(--text2)",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 0.3,
+                borderRadius: 999,
+                whiteSpace: "nowrap",
+                boxShadow: active ? "0 2px 6px rgba(24,95,165,0.30)" : "none",
+                transition: "all 0.15s",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ padding: "1.25rem" }}>

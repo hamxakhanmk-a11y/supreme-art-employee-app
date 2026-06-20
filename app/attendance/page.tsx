@@ -60,15 +60,19 @@ export default function AttendancePage() {
 
   const persist = async (emp: Row, patch: Partial<Row>) => {
     if (closed) return;
+    const merged = { ...emp, ...patch };
+    // Don't auto-mark anyone. Only save once the admin has explicitly
+    // picked a status pill — typing a check-in time or note before
+    // choosing a status does nothing.
+    if (!merged.status) return;
     setSavingId(emp.id);
     try {
-      const merged = { ...emp, ...patch };
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employeeId: emp.id, date,
-          status: merged.status || "present",
+          status: merged.status,
           checkIn: merged.checkIn || null,
           checkOut: merged.checkOut || null,
           notes: merged.notes || null,
@@ -143,9 +147,30 @@ export default function AttendancePage() {
           <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
           <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
           {!closed ? (
-            <button onClick={closeDay} className="btn btn-primary" disabled={!rows.length}>🔒 Close Day</button>
+            <button onClick={closeDay} disabled={!rows.length}
+              style={{
+                padding: "8px 16px", borderRadius: 8,
+                border: "1px solid #B45309",
+                background: "#F59E0B", color: "#1f1300",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                boxShadow: "0 2px 6px rgba(245,158,11,0.35)",
+                cursor: rows.length ? "pointer" : "not-allowed",
+                opacity: rows.length ? 1 : 0.6,
+              }}>
+              🔒 Close Day
+            </button>
           ) : (
-            <button onClick={reopenDay} className="btn btn-danger-soft">🔓 Reopen Day</button>
+            <button onClick={reopenDay}
+              style={{
+                padding: "8px 16px", borderRadius: 8,
+                border: "1px solid #991B1B",
+                background: "#DC2626", color: "#fff",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                boxShadow: "0 2px 6px rgba(220,38,38,0.35)",
+                cursor: "pointer",
+              }}>
+              🔓 Day Closed — Reopen
+            </button>
           )}
         </div>
       </div>
