@@ -210,18 +210,18 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
             <textarea rows={3} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
           </div>
 
-          {/* Signature lines (visible for print) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 28 }}>
-            <div>
-              <div style={{ borderTop: "1px solid #000", paddingTop: 6, fontSize: 11, textAlign: "center", color: "#555" }}>
-                Employee Signature & Date
-              </div>
-            </div>
-            <div>
-              <div style={{ borderTop: "1px solid #000", paddingTop: 6, fontSize: 11, textAlign: "center", color: "#555" }}>
-                Approving Manager Signature & Date
-              </div>
-            </div>
+          {/* Declaration */}
+          <div style={{ marginTop: 24, fontSize: 10.5, lineHeight: 1.55, color: "#333", borderTop: "1px solid #999", paddingTop: 10 }}>
+            <strong>Declaration:</strong> I confirm that the information provided above is accurate and I undertake to resume duty
+            on the date specified. Approval of this leave is subject to my work being adequately handed over and to the approval
+            of my reporting manager and the HR department.
+          </div>
+
+          {/* 3-block official signature panel — tall sign-here boxes + Name / Sign / Date lines */}
+          <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
+            <SignBlock title="Employee" />
+            <SignBlock title="Approving Manager" />
+            <SignBlock title="HR / Authorized" />
           </div>
 
           <div className="no-print" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
@@ -233,5 +233,34 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
         </form>
       </div>
     </>
+  );
+}
+
+function SignBlock({ title }: { title: string }) {
+  return (
+    <div style={{ border: "1px solid #999", borderRadius: 6, padding: "10px 12px 12px", background: "#fff" }}>
+      <div style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "#A32D2D", marginBottom: 8 }}>
+        {title}
+      </div>
+      {/* Tall blank space for the actual pen signature */}
+      <div style={{ height: 70, borderBottom: "1.5px solid #000", marginBottom: 14 }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <SignLine label="Name" />
+        <SignLine label="Designation" />
+        <SignLine label="Signature" />
+        <SignLine label="Date" />
+      </div>
+    </div>
+  );
+}
+
+function SignLine({ label }: { label: string }) {
+  return (
+    <div>
+      <div style={{ borderBottom: "1px solid #555", height: 18 }} />
+      <div style={{ fontSize: 8.5, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4, marginTop: 3 }}>
+        {label}
+      </div>
+    </div>
   );
 }
