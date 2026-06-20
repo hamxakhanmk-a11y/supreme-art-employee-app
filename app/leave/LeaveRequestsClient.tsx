@@ -122,9 +122,9 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {e?.photoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={e.photoUrl} alt="" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                          <img src={e.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
                         ) : e ? (
-                          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                             {e.firstName[0]}{e.lastName[0]}
                           </div>
                         ) : null}
@@ -152,15 +152,15 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
                       )}
                     </td>
                     <td className="no-print" style={{ textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: 4 }}>
+                      <div style={{ display: "inline-flex", gap: 6 }}>
                         {r.status === "pending" && (
                           <>
-                            <button onClick={() => decide(r, "approved")} className="btn btn-success" style={{ padding: "4px 10px", fontSize: 12 }}>✓ Approve</button>
-                            <button onClick={() => decide(r, "rejected")} className="btn btn-danger-soft" style={{ padding: "4px 10px", fontSize: 12 }}>✕ Reject</button>
+                            <button onClick={() => decide(r, "approved")} className="btn btn-success btn-sm">Approve</button>
+                            <button onClick={() => decide(r, "rejected")} className="btn btn-danger-soft btn-sm">Reject</button>
                           </>
                         )}
-                        {e && <Link href={`/employees/${e.id}/leave`} className="btn" style={{ padding: "4px 10px", fontSize: 12 }}>📋</Link>}
-                        <button onClick={() => remove(r)} className="btn btn-danger-soft" style={{ padding: "4px 10px", fontSize: 12 }}>🗑</button>
+                        {e && <Link href={`/employees/${e.id}/leave`} className="btn btn-sm">History</Link>}
+                        <button onClick={() => remove(r)} className="btn btn-danger-soft btn-sm">Delete</button>
                       </div>
                     </td>
                   </tr>

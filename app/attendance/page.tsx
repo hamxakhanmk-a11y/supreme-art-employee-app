@@ -189,9 +189,9 @@ export default function AttendancePage() {
                   <td>
                     {r.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.photoUrl} alt="" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                      <img src={r.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
                     ) : (
-                      <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                         {r.firstName[0]}{r.lastName[0]}
                       </div>
                     )}

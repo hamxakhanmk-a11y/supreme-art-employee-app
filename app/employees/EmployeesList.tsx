@@ -97,9 +97,9 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                   <td>
                     {e.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={e.photoUrl} alt={e.firstName} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                      <img src={e.photoUrl} alt={e.firstName} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
                     ) : (
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                         {e.firstName[0]}{e.lastName[0]}
                       </div>
                     )}
