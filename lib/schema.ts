@@ -195,3 +195,44 @@ export const experienceRecords = pgTable("experience_records", {
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// =====================
+// AUTH: USERS
+// =====================
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 160 }).notNull().unique(),
+  name: varchar("name", { length: 120 }).notNull(),
+  role: varchar("role", { length: 20 }).notNull().default("hr"), // admin | hr | ceo
+  passwordHash: text("password_hash"),
+  active: boolean("active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
+// AUTH: SESSIONS
+// =====================
+export const sessions = pgTable("sessions", {
+  token: varchar("token", { length: 80 }).primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// AUTH: SETUP / RESET TOKENS
+// =====================
+export const setupTokens = pgTable("setup_tokens", {
+  token: varchar("token", { length: 80 }).primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  purpose: varchar("purpose", { length: 20 }).notNull(), // invite | reset
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

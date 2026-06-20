@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const modules = [
   { key: "profile",    label: "Profile" },
@@ -42,10 +43,32 @@ function pathToModule(path: string): string {
   return "profile";
 }
 
+const HIDE_ON = ["/login", "/setup", "/set-password"];
+
+interface MeUser { id: number; email: string; name: string; role: "admin" | "hr" | "ceo" }
+
 export default function TopNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [me, setMe] = useState<MeUser | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hidden = HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"));
+
+  useEffect(() => {
+    if (hidden) return;
+    fetch("/api/auth/me").then(r => r.json()).then(d => {
+      if (d.authenticated) setMe(d.user);
+    }).catch(() => {});
+  }, [hidden, pathname]);
+
+  if (hidden) return null;
   const activeModule = pathToModule(pathname);
   const links = subNav[activeModule] || [];
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+  }
 
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -99,7 +122,57 @@ export default function TopNav() {
 
         <div style={{ flex: 1 }} />
 
-        <div style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700 }}>
+        {me && (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: "var(--bg2)", border: "1px solid var(--border)",
+                borderRadius: 999, padding: "5px 12px 5px 5px",
+                cursor: "pointer", color: "var(--text)", fontWeight: 600, fontSize: 13,
+              }}
+              title={me.email}
+            >
+              <span style={{
+                width: 26, height: 26, borderRadius: "50%",
+                background: "var(--brand)", color: "#fff",
+                fontSize: 12, fontWeight: 800,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {me.name.split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase()}
+              </span>
+              {me.name.split(/\s+/)[0]}
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.3, color: "var(--brand)", textTransform: "uppercase" }}>{me.role}</span>
+            </button>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 60 }} />
+                <div style={{
+                  position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 61,
+                  background: "var(--bg)", border: "1px solid var(--border)",
+                  borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                  minWidth: 200, padding: 6,
+                }}>
+                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>{me.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--text2)" }}>{me.email}</div>
+                  </div>
+                  {me.role === "admin" && (
+                    <Link href="/admin/users" onClick={() => setMenuOpen(false)} style={menuItem}>
+                      👥 Manage users
+                    </Link>
+                  )}
+                  <button onClick={signOut} style={{ ...menuItem, border: "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
+                    ↪ Sign out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        <div style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700, marginLeft: 14 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.18em", opacity: 0.85, textTransform: "uppercase" }}>
             {new Date().toLocaleDateString("en-GB", { weekday: "short" })}
           </div>
@@ -138,3 +211,13 @@ export default function TopNav() {
     </header>
   );
 }
+
+const menuItem: React.CSSProperties = {
+  display: "block",
+  padding: "8px 12px",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--text)",
+  textDecoration: "none",
+  borderRadius: 6,
+};
