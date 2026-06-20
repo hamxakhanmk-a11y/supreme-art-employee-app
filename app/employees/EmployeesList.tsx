@@ -77,10 +77,10 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
             {query ? <>No employees match "<strong>{query}</strong>".</> : <>No employees yet.</>}
           </div>
         ) : (
-          <table>
+          <table className="emp-dir-table">
             <thead>
               <tr>
-                <th style={{ width: 60 }}>Photo</th>
+                <th className="col-photo" style={{ width: 60 }}>Photo</th>
                 <th>Employee ID</th>
                 <th>Name</th>
                 <th>Designation</th>
@@ -94,7 +94,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
             <tbody>
               {filtered.map((e) => (
                 <tr key={e.id}>
-                  <td>
+                  <td className="col-photo">
                     {e.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={e.photoUrl} alt={e.firstName} className="avatar" style={{ width: 52, height: 52 }} />
@@ -114,20 +114,16 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                     <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>{e.status}</span>
                   </td>
                   <td className="no-print" style={{ textAlign: "right" }}>
-                    <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                      <TextPill href={`/employees/${e.id}/attendance`} color="#1D4ED8">Attendance</TextPill>
-                      <TextPill href={`/employees/${e.id}/leave`} color="#D97706">Leave</TextPill>
-                      <Link href={`/employees/${e.id}`}
-                        style={{
-                          padding: "7px 16px", fontSize: 12, fontWeight: 700,
-                          background: "var(--primary)", color: "#fff",
-                          borderRadius: 8, textDecoration: "none",
-                          boxShadow: "0 2px 6px rgba(163,45,45,0.25)",
-                          letterSpacing: 0.3,
-                        }}>
-                        View →
-                      </Link>
-                    </div>
+                    <Link href={`/employees/${e.id}`}
+                      style={{
+                        padding: "7px 16px", fontSize: 12, fontWeight: 700,
+                        background: "var(--primary)", color: "#fff",
+                        borderRadius: 8, textDecoration: "none",
+                        boxShadow: "0 2px 6px rgba(163,45,45,0.25)",
+                        letterSpacing: 0.3,
+                      }}>
+                      View →
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -135,23 +131,20 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
           </table>
         )}
       </div>
+
+      <style jsx global>{`
+        @media print {
+          /* Employee directory prints landscape so all columns fit on one row.
+             Drop the photo column and shrink padding so CNIC / Phone / Status
+             don't get clipped at the right edge. */
+          @page { size: A4 landscape; margin: 10mm 8mm; }
+          .emp-dir-table { font-size: 9.5pt; table-layout: fixed; width: 100%; }
+          .emp-dir-table .col-photo { display: none !important; }
+          .emp-dir-table th, .emp-dir-table td { padding: 5px 6px !important; word-break: break-word; }
+          .emp-dir-table th { font-size: 8pt !important; letter-spacing: 0.04em; }
+        }
+      `}</style>
     </>
   );
 }
 
-function TextPill({ href, color, children }: { href: string; color: string; children: React.ReactNode }) {
-  return (
-    <Link href={href}
-      style={{
-        display: "inline-flex", alignItems: "center",
-        padding: "7px 14px", borderRadius: 8,
-        background: color, color: "#fff",
-        fontSize: 12, fontWeight: 700, letterSpacing: 0.3,
-        boxShadow: `0 2px 6px ${color}55`,
-        textDecoration: "none",
-        whiteSpace: "nowrap",
-      }}>
-      {children}
-    </Link>
-  );
-}

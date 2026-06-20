@@ -249,8 +249,10 @@ export default function AttendancePage() {
                       style={{ padding: "5px 8px", fontSize: 12 }} />
                   </td>
                   <td className="no-print" style={{ textAlign: "center" }}>
-                    <Link href={`/employees/${r.id}/attendance`} title="View history"
-                      style={{ color: "var(--primary)", textDecoration: "none", fontSize: 14 }}>📋</Link>
+                    <Link href={`/employees/${r.id}/attendance`}
+                      style={{ color: "var(--brand)", textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
+                      History
+                    </Link>
                   </td>
                 </tr>
               ))}
