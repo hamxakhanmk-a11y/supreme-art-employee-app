@@ -4,31 +4,30 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const modules = [
-  { key: "profile", label: "Profile", icon: "👤" },
-  { key: "attendance", label: "Attendance", icon: "📋" },
-  { key: "leave", label: "Leave", icon: "📅" },
+  { key: "profile", label: "Profile" },
+  { key: "attendance", label: "Attendance" },
+  { key: "leave", label: "Leave" },
 ];
 
-const subNav: Record<string, { href: string; label: string; icon: string }[]> = {
+const subNav: Record<string, { href: string; label: string }[]> = {
   profile: [
-    { href: "/", label: "Dashboard", icon: "▦" },
-    { href: "/employees", label: "Employees", icon: "👥" },
+    { href: "/", label: "Dashboard" },
+    { href: "/employees", label: "Employees" },
   ],
   attendance: [
-    { href: "/attendance", label: "Mark Today", icon: "✓" },
-    { href: "/attendance/history", label: "History", icon: "📋" },
+    { href: "/attendance", label: "Mark Today" },
+    { href: "/attendance/history", label: "History" },
   ],
   leave: [
-    { href: "/leave", label: "Requests", icon: "📥" },
-    { href: "/leave/apply", label: "Apply Leave", icon: "✍" },
-    { href: "/leave/history", label: "History", icon: "📋" },
+    { href: "/leave", label: "Requests" },
+    { href: "/leave/apply", label: "Apply Leave" },
+    { href: "/leave/history", label: "History" },
   ],
 };
 
 function pathToModule(path: string): string {
   if (path.startsWith("/leave")) return "leave";
   if (path.startsWith("/attendance")) return "attendance";
-  if (path === "/" || path.startsWith("/employees")) return "profile";
   return "profile";
 }
 
@@ -40,13 +39,7 @@ export default function TopNav() {
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    if (href === "/attendance") return pathname === "/attendance";
-    if (href === "/attendance/history") return pathname.startsWith("/attendance/history");
-    if (href === "/leave") return pathname === "/leave";
-    if (href === "/leave/history") return pathname.startsWith("/leave/history");
-    if (href === "/leave/types") return pathname.startsWith("/leave/types");
-    if (href === "/leave/apply") return pathname.startsWith("/leave/apply");
-    return pathname === href;
+    return pathname.startsWith(href);
   };
 
   return (
@@ -55,105 +48,66 @@ export default function TopNav() {
         position: "sticky",
         top: 0,
         zIndex: 50,
-        background: "#fff",
+        background: "var(--bg)",
         borderBottom: "1px solid var(--border)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
       }}
     >
-      {/* Top row: brand + primary tabs */}
+      {/* Top row — 56px slim topbar */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          padding: "0 1.75rem",
-          height: 68,
-          gap: 32,
+          padding: "0 1.5rem",
+          height: 56,
+          gap: 16,
         }}
       >
-        {/* Brand with real logo */}
-        <Link
-          href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            textDecoration: "none",
-            color: "var(--fg)",
-          }}
-        >
-          <Image
-            src="/logo.png"
-            alt="Supreme Art"
-            width={140}
-            height={48}
-            priority
-            style={{ height: 48, width: "auto", objectFit: "contain" }}
-          />
-          <div style={{
-            paddingLeft: 12,
-            borderLeft: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            lineHeight: 1.2,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.3 }}>
-              HR Portal
-            </div>
-            <div style={{ fontSize: 10, color: "#888", marginTop: 2, letterSpacing: 0.4, textTransform: "uppercase" }}>
-              Employee Management
-            </div>
-          </div>
+        {/* Brand: small logo + "Supreme Art Portal" */}
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" }}>
+          <Image src="/logo.png" alt="Supreme Art" width={28} height={28} priority style={{ width: 28, height: 28, objectFit: "contain" }} />
+          <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
+            Supreme Art <span style={{ color: "var(--brand)" }}>HR Portal</span>
+          </span>
         </Link>
 
-        {/* Primary module tabs */}
-        <nav style={{ display: "flex", gap: 4, height: "100%", alignItems: "stretch", marginLeft: 12 }}>
+        {/* Module switcher (tracker mode-switch pill) */}
+        <div className="mode-switch" style={{ marginLeft: "1rem" }}>
           {modules.map((m) => {
             const active = m.key === activeModule;
             return (
               <Link
                 key={m.key}
                 href={subNav[m.key]?.[0]?.href || "/"}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "0 20px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  color: active ? "var(--primary)" : "#555",
-                  background: active ? "linear-gradient(180deg, #fff 0%, #fdecec 100%)" : "transparent",
-                  borderBottom: `3px solid ${active ? "var(--primary)" : "transparent"}`,
-                  transition: "all 0.15s",
-                }}
+                className={`mode-btn ${active ? "active" : ""}`}
               >
-                <span style={{ fontSize: 15 }}>{m.icon}</span> {m.label}
+                {m.label}
               </Link>
             );
           })}
-        </nav>
+        </div>
 
         <div style={{ flex: 1 }} />
 
-        {/* Right slot — date */}
-        <div style={{ fontSize: 11, color: "#888", textAlign: "right", lineHeight: 1.3 }}>
-          <div style={{ fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: 0.4 }}>
+        {/* Date — two-line maroon stack */}
+        <div style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", opacity: 0.85, textTransform: "uppercase" }}>
             {new Date().toLocaleDateString("en-GB", { weekday: "short" })}
           </div>
-          <div>{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+          <div style={{ fontSize: 13, letterSpacing: "0.04em", marginTop: 2 }}>
+            {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+          </div>
         </div>
       </div>
 
-      {/* Sub-navigation row — flush left */}
+      {/* Sub-nav — chip-style tabs flush left */}
       {links.length > 0 && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "0 0.5rem 0 0.5rem",
-            height: 44,
-            gap: 4,
-            background: "#fbf9f6",
+            padding: "8px 1.5rem",
+            gap: 6,
+            background: "var(--bg2)",
             borderTop: "1px solid var(--border)",
           }}
         >
@@ -163,22 +117,9 @@ export default function TopNav() {
               <Link
                 key={link.href}
                 href={link.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "7px 14px",
-                  fontSize: 12.5,
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  color: active ? "#fff" : "#666",
-                  background: active ? "var(--primary)" : "transparent",
-                  borderRadius: 6,
-                  transition: "all 0.15s",
-                  boxShadow: active ? "0 2px 6px rgba(163,45,45,0.25)" : "none",
-                }}
+                className={`tab ${active ? "active" : ""}`}
               >
-                <span style={{ fontSize: 13, opacity: 0.9 }}>{link.icon}</span> {link.label}
+                {link.label}
               </Link>
             );
           })}

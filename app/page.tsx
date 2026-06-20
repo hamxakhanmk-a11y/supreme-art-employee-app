@@ -88,44 +88,29 @@ export default async function Dashboard() {
 
   return (
     <div className="fade-up">
-      {/* Hero */}
-      <div className="hero" style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 24 }}>
-        <div style={{ position: "relative", zIndex: 2, flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, opacity: 0.85, fontWeight: 500, letterSpacing: 0.5, textTransform: "uppercase" }}>
-            {greeting}, Hamza 👋
-          </div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: "8px 0 4px", letterSpacing: -0.3 }}>
-            Welcome to Supreme Art HR Portal
-          </h1>
-          <p style={{ opacity: 0.9, fontSize: 13, maxWidth: 600 }}>
-            Manage your team's records, onboard new employees, and keep everything organized — all in one place.
-          </p>
-          <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link href="/employees/new" className="btn" style={{ background: "#fff", color: "var(--primary)", borderColor: "#fff", fontWeight: 600 }}>
-              ＋ Add New Employee
-            </Link>
-            <Link href="/employees" className="btn" style={{ background: "rgba(255,255,255,0.15)", color: "#fff", borderColor: "rgba(255,255,255,0.3)" }}>
-              👥 View All Employees
-            </Link>
+      {/* Slim hero — tracker style */}
+      <div className="hero">
+        <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 2 }}>
+          <div className="hero-greet">{greeting}, Hamza 👋</div>
+          <div className="hero-cta">
+            <Link href="/employees/new" className="hero-btn hero-btn-light">＋ Add Employee</Link>
+            <Link href="/employees" className="hero-btn hero-btn-dark">View Employees</Link>
           </div>
         </div>
 
-        <div style={{
-          position: "relative", zIndex: 2, flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 12,
-        }}>
+        <div className="hero-mark">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-transparent.png" alt="Supreme Art"
-            style={{ height: 150, width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
+          <img src="/logo-urdu.png" alt="Supreme Art" className="hero-mark-img" />
+          <div className="hero-mark-text">Supreme Art (Pvt) Ltd</div>
         </div>
       </div>
 
       {/* Stat cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14, marginBottom: 24 }}>
-        <StatCard label="Total Employees" value={total} icon="👥" color="var(--primary)" bg="#fdecec" sub="All records on file" />
-        <StatCard label="Active" value={active} icon="✓" color="var(--success)" bg="var(--success-bg)" sub="Currently employed" />
-        <StatCard label="Inactive" value={inactive} icon="○" color="#888" bg="#f3f0eb" sub="Resigned or on hold" />
-        <StatCard label="Open Alerts" value={alerts.length} icon="⚠" color="#854F0B" bg="#faeeda" sub="Documents needing attention" />
+        <StatCard label="Total Employees" value={total} sub="All records on file" />
+        <StatCard label="Active" value={active} sub="Currently employed" color="#15803D" />
+        <StatCard label="Inactive" value={inactive} sub="Resigned or on hold" color="var(--text2)" />
+        <StatCard label="Open Alerts" value={alerts.length} sub="Documents needing attention" warn={alerts.length > 0} />
       </div>
 
       {/* Alerts */}
@@ -211,23 +196,12 @@ function AlertGroup({ title, rows }: { title: string; rows: Alert[] }) {
   );
 }
 
-function StatCard({ label, value, icon, color, bg, sub }: { label: string; value: number; icon: string; color: string; bg: string; sub: string }) {
+function StatCard({ label, value, color, sub, warn }: { label: string; value: number; icon?: string; color?: string; bg?: string; sub?: string; warn?: boolean }) {
   return (
-    <div className="card card-hover">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div className="form-label" style={{ marginBottom: 4 }}>{label}</div>
-          <div style={{ fontSize: 32, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
-          <div style={{ fontSize: 11, color: "#aaa", marginTop: 6 }}>{sub}</div>
-        </div>
-        <div style={{
-          width: 44, height: 44, borderRadius: 10, background: bg, color,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, fontWeight: 700,
-        }}>
-          {icon}
-        </div>
-      </div>
+    <div className="stat">
+      <div className="stat-label">{label}</div>
+      <div className={`stat-value ${warn ? "warn" : ""}`} style={color && !warn ? { color } : undefined}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
