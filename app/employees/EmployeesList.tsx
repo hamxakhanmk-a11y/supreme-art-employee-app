@@ -67,6 +67,10 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
         )}
       </div>
 
+      <div className="table-summary no-print">
+        <strong>{filtered.length}</strong> rows · <strong>{rows.filter(r => r.status === "active").length}</strong> active · <strong>{rows.filter(r => r.status === "inactive").length}</strong> inactive
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {filtered.length === 0 ? (
           <div className="empty">

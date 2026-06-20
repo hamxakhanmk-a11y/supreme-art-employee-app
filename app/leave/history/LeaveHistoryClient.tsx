@@ -149,6 +149,10 @@ export default function LeaveHistoryClient({ employees, leaveTypes }: { employee
         <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
       </div>
 
+      <div className="table-summary no-print">
+        <strong>{totals.total}</strong> rows · <strong>{totals.days}</strong> days total · <strong>{totals.approved}</strong> approved · <strong>{totals.pending}</strong> pending · <strong>{totals.rejected}</strong> rejected
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {loading ? <div className="empty">Loading…</div>
           : filtered.length === 0 ? <div className="empty">No leave records match.</div>
@@ -158,7 +162,7 @@ export default function LeaveHistoryClient({ employees, leaveTypes }: { employee
               <tr>
                 <th>From</th>
                 <th>To</th>
-                <th>Days</th>
+                <th className="num-strong">Days</th>
                 <th>Employee</th>
                 <th>Type</th>
                 <th>Status</th>
@@ -174,7 +178,7 @@ export default function LeaveHistoryClient({ employees, leaveTypes }: { employee
                   <tr key={r.id}>
                     <td>{new Date(r.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
                     <td>{new Date(r.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                    <td><strong>{r.days}</strong></td>
+                    <td className="num-strong">{r.days}</td>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{e ? `${e.firstName} ${e.lastName}` : `#${r.employeeId}`}</div>
                       <div style={{ fontSize: 11, color: "#888" }}>{e?.employeeId}</div>

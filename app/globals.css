@@ -184,26 +184,40 @@ input[type=date] {
 .badge-inactive { background: #6B7280; box-shadow: 0 1px 3px rgba(107,114,128,0.35); }
 .badge-warning  { background: #D97706; box-shadow: 0 1px 3px rgba(217,119,6,0.35); }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
 th {
   text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  color: #888;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #f0f7fd;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1a1a1a;
+  padding: 12px 16px;
+  border-bottom: 2px solid #d8c79d;
+  background: #f6ecd1;
+  white-space: nowrap;
 }
 td {
-  padding: 14px;
-  border-bottom: 1px solid #ddeef8;
-  color: var(--fg);
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee2c4;
+  color: #1a1a1a;
   vertical-align: middle;
   font-size: 13px;
+  background: #fbf4e0;
 }
-tr:hover td { background: #e8f3fb; }
+tr:hover td { background: #f6ecd1; }
+
+/* Right-aligned numeric column (tabular figures so digits line up) */
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.num-strong { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+th.num, th.num-strong { text-align: right; }
+
+/* Summary line shown above tables: "X rows · Y items · ..." */
+.table-summary {
+  font-size: 12px;
+  color: #6b5a2f;
+  margin-bottom: 8px;
+  letter-spacing: 0.2px;
+}
+.table-summary strong { color: #1a1a1a; font-weight: 700; }
 
 .section-title {
   font-size: 11px;

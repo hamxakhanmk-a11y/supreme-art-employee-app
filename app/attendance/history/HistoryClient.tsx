@@ -150,6 +150,10 @@ export default function HistoryClient({ employees }: { employees: Emp[] }) {
         })}
       </div>
 
+      <div className="table-summary no-print">
+        <strong>{sorted.length}</strong> rows · <strong>{totals.present}</strong> present · <strong>{totals.absent}</strong> absent · <strong>{totals.leave}</strong> leave · <strong>{totals.halfday}</strong> half-day · <strong>{totals.late}</strong> late
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         {loading ? <div className="empty">Loading…</div>
           : sorted.length === 0 ? <div className="empty">No records match these filters.</div>
