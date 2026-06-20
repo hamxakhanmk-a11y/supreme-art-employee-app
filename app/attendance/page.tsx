@@ -12,7 +12,7 @@ type Row = {
   designation: string | null;
   department: string | null;
   photoUrl: string | null;
-  status: "present" | "absent" | "leave" | "half-day" | "holiday" | "week-off" | null;
+  status: "present" | "absent" | "leave" | "half-day" | "holiday" | null;
   checkIn: string | null;
   checkOut: string | null;
   notes: string | null;
@@ -39,7 +39,6 @@ export default function AttendancePage() {
   const [showOffPicker, setShowOffPicker] = useState(false);
   const [offFrom, setOffFrom] = useState(tomorrow);
   const [offTo, setOffTo] = useState("");
-  const [offStatus, setOffStatus] = useState<"holiday" | "week-off">("holiday");
   const [offBusy, setOffBusy] = useState(false);
 
   const applyOffDays = async () => {
@@ -54,7 +53,7 @@ export default function AttendancePage() {
     try {
       const res = await fetch("/api/attendance/bulk-off", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dates, status: offStatus }),
+        body: JSON.stringify({ dates, status: "holiday" }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
       setShowOffPicker(false);
@@ -219,12 +218,12 @@ export default function AttendancePage() {
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>🌙 Mark OFF for all employees</div>
               <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>
-                Stamps every active employee as {offStatus === "holiday" ? "Holiday" : "Week Off"} for the selected date(s).
+                Stamps every active employee as Holiday for the selected date(s).
               </div>
             </div>
             <button onClick={() => setShowOffPicker(false)} className="btn btn-sm">Cancel</button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, alignItems: "end" }}>
             <div>
               <label className="form-label">From *</label>
               <input type="date" value={offFrom} onChange={e => setOffFrom(e.target.value)} />
@@ -232,13 +231,6 @@ export default function AttendancePage() {
             <div>
               <label className="form-label">To (optional)</label>
               <input type="date" value={offTo} onChange={e => setOffTo(e.target.value)} />
-            </div>
-            <div>
-              <label className="form-label">Type</label>
-              <select value={offStatus} onChange={e => setOffStatus(e.target.value as "holiday" | "week-off")}>
-                <option value="holiday">Holiday</option>
-                <option value="week-off">Week Off</option>
-              </select>
             </div>
             <button onClick={applyOffDays} disabled={offBusy || !offFrom}
               style={{

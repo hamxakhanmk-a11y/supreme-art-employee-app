@@ -20,17 +20,14 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-// Status code (short) + colors. Sundays without a record auto-render as WO.
-// Half-day shows as "P" (still Present) with a tiny ½ corner marker —
-// employees on half-day are credited as present, just flagged.
+// Status code (short) + colors. Half-day shows as "P" (still Present)
+// with a tiny ½ corner marker — half-day employees are credited as present.
 const CODE = {
   present:    { code: "P",  marker: "",  color: "#15803D", bg: "#dcf5dc" },
   absent:     { code: "A",  marker: "",  color: "#DC2626", bg: "#fcdada" },
   leave:      { code: "L",  marker: "",  color: "#D97706", bg: "#fdebd0" },
   "half-day": { code: "P",  marker: "½", color: "#15803D", bg: "#dcf5dc" },
-  late:       { code: "P",  marker: "*", color: "#EA580C", bg: "#dcf5dc" },
   holiday:    { code: "H",  marker: "",  color: "#0E7490", bg: "#cffafe" },
-  "week-off": { code: "WO", marker: "",  color: "#475569", bg: "#e2e8f0" },
 } as const;
 
 type Code = keyof typeof CODE;
@@ -56,28 +53,23 @@ export default function MonthlyRegisterClient({
 
   const cellFor = (emp: Emp, day: number) => {
     const stored = byKey.get(`${emp.id}-${day}`) as Code | undefined;
-    if (stored) return stored;
-    // Auto: Sunday → Week Off when nothing was recorded
-    const d = new Date(year, month - 1, day);
-    if (d.getDay() === 0) return "week-off" as Code;
-    return null;
+    return stored ?? null;
   };
 
   // Per-employee tallies. Half-day counts as a full P (the employee was
   // present) but is also tracked in `Half` so HR can see how many half-days.
   const tally = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, WO = 0, Half = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const c = cellFor(emp, day);
       if (!c) continue;
-      if (c === "present" || c === "late") P++;
+      if (c === "present") P++;
       else if (c === "half-day") { P++; Half++; }
       else if (c === "absent") A++;
       else if (c === "leave") L++;
       else if (c === "holiday") H++;
-      else if (c === "week-off") WO++;
     }
-    return { P, A, L, H, WO, Half, net: P };
+    return { P, A, L, H, Half, net: P };
   };
 
   const changeMonth = (delta: number) => {
@@ -98,7 +90,7 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "WO", "Net Days"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Net Days"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
@@ -109,7 +101,7 @@ export default function MonthlyRegisterClient({
       });
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
-        ...cells, t.P, t.Half, t.A, t.L, t.WO, t.net,
+        ...cells, t.P, t.Half, t.A, t.L, t.H, t.net,
       ];
     });
     downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
@@ -147,9 +139,7 @@ export default function MonthlyRegisterClient({
         <LegendChip code="A"  label="Absent"   c="#DC2626" />
         <LegendChip code="L"  label="Leave"    c="#D97706" />
         <LegendChip code="H"  label="Holiday"  c="#0E7490" />
-        <LegendChip code="WO" label="Week Off" c="#475569" />
         <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
-        <LegendChip code="P" marker="*" label="Late (present)"     c="#EA580C" />
       </div>
 
       {/* Register table */}
@@ -177,7 +167,7 @@ export default function MonthlyRegisterClient({
               <th className="tot-h" style={{ color: "#1D4ED8" }}>½</th>
               <th className="tot-h" style={{ color: "#DC2626" }}>A</th>
               <th className="tot-h" style={{ color: "#D97706" }}>L</th>
-              <th className="tot-h" style={{ color: "#475569" }}>WO</th>
+              <th className="tot-h" style={{ color: "#0E7490" }}>H</th>
               <th className="tot-h">Net</th>
             </tr>
           </thead>
@@ -208,7 +198,7 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#1D4ED8" }}>{t.Half || ""}</td>
                   <td className="tot-c" style={{ color: "#DC2626" }}>{t.A}</td>
                   <td className="tot-c" style={{ color: "#D97706" }}>{t.L}</td>
-                  <td className="tot-c" style={{ color: "#475569" }}>{t.WO}</td>
+                  <td className="tot-c" style={{ color: "#0E7490" }}>{t.H || ""}</td>
                   <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
                 </tr>
               );
