@@ -45,6 +45,8 @@ export async function POST(req: NextRequest) {
       endDate: body.endDate,
       days,
       reason: body.reason || null,
+      dutiesAssignedTo: body.dutiesAssignedTo || null,
+      medicalCertAttached: body.medicalCertAttached || null,
       status: "pending",
     }).returning();
     return NextResponse.json(c, { status: 201 });

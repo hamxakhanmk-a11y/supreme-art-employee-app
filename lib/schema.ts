@@ -153,6 +153,8 @@ export const leaveRequests = pgTable("leave_requests", {
   endDate: date("end_date").notNull(),
   days: integer("days").notNull(),
   reason: text("reason"),
+  dutiesAssignedTo: text("duties_assigned_to"),
+  medicalCertAttached: varchar("medical_cert_attached", { length: 4 }), // yes | no | null
   status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | approved | rejected
   decidedAt: timestamp("decided_at"),
   decidedBy: varchar("decided_by", { length: 80 }),

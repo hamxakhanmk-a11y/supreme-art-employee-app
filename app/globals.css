@@ -341,6 +341,14 @@ th.num, th.num-strong { text-align: right; }
 .print-watermark { display: none; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
 
+/* Urdu text — right-to-left Nastaliq script for bilingual labels */
+.urdu {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+  direction: rtl;
+  unicode-bidi: embed;
+  line-height: 1.8;
+}
+
 /* Avatar — keeps its perfect circle even in cramped table cells. Tailwind's
    reset puts max-width:100% on img which can squish the width while explicit
    height stays fixed, making the photo look oval. .avatar locks both axes. */

@@ -14,6 +14,9 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
     employeeId: "", leaveTypeId: "",
     startDate: today, endDate: today,
     reason: "",
+    dutiesAssignedTo: "",
+    medicalCertAttached: "" as "" | "yes" | "no",
+    department: "",
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -94,46 +97,53 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
         <button onClick={() => window.print()} className="btn btn-print">🖨 Print Form</button>
       </div>
 
-      <div className="card" style={{ maxWidth: 760, margin: "0 auto" }}>
+      <div className="card" style={{ maxWidth: 780, margin: "0 auto" }}>
         {/* Letterhead */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--primary)", paddingBottom: 12, marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 110, width: "auto", maxWidth: 320, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 100, width: "auto", maxWidth: 320, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--primary)" }}>Leave Application Form</div>
-            <div style={{ fontSize: 10, color: "#666", marginTop: 4 }}>
-              Date: <strong>{new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</strong>
-            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--brand)" }}>Leave Application Form</div>
+            <div className="urdu" style={{ fontSize: 17, color: "var(--brand)", fontWeight: 600, marginTop: 4 }}>رخصت کی درخواست فارم</div>
           </div>
         </div>
 
         <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
-          {err && <div style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
-          {ok && <div style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
+          {err && <div className="no-print" style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
+          {ok && <div className="no-print" style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
 
-          {/* Employee */}
-          <div>
-            <label className="form-label">Employee *</label>
-            <select required value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })}>
+          {/* === Employee block === */}
+          <Field en="Employee Name" ur="ملازم نام">
+            <select required value={form.employeeId} onChange={e => {
+              const id = e.target.value;
+              const emp = employees.find(x => String(x.id) === id);
+              setForm({ ...form, employeeId: id, department: emp?.department || "" });
+            }}>
               <option value="">— Select Employee —</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId}) — {e.designation || "—"}</option>)}
+              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
             </select>
-          </div>
+          </Field>
 
-          {selectedEmp && (
-            <div style={{ background: "#fafaf6", padding: 12, borderRadius: 8, fontSize: 12, color: "#555" }}>
-              <strong>{selectedEmp.firstName} {selectedEmp.lastName}</strong> · {selectedEmp.designation || "—"} · {selectedEmp.department || "—"}
-            </div>
-          )}
+          <Field en="Designation" ur="عہدہ">
+            <input value={selectedEmp?.designation || ""} readOnly placeholder=" " />
+          </Field>
 
-          {/* Leave type — dropdown with inline management */}
+          <Field en="Employee ID" ur="ملازم ای ڈی">
+            <input value={selectedEmp?.employeeId || ""} readOnly placeholder=" " />
+          </Field>
+
+          <Field en="Department" ur="ڈیپارٹمنٹ یا شعبہ">
+            <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder=" " />
+          </Field>
+
+          {/* === Type of Leave (with inline manager) === */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <label className="form-label">Type of Leave *</label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+              <BiLabel en="Type of Leave" ur="" />
               <button type="button"
                 onClick={() => setShowAddType(v => !v)}
                 className="no-print"
-                style={{ background: "transparent", border: "none", color: "var(--primary)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "0 0 5px" }}>
+                style={{ background: "transparent", border: "none", color: "var(--brand)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>
                 {showAddType ? "✕ Close" : "＋ Add custom type"}
               </button>
             </div>
@@ -142,99 +152,159 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               {leaveTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.daysAllowed} days · {t.isPaid ? "Paid" : "Unpaid"})</option>)}
             </select>
 
-            {/* Existing types with delete buttons */}
             {leaveTypes.length > 0 && (
               <div className="no-print" style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {leaveTypes.map(t => (
-                  <div key={t.id}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 6,
-                      padding: "4px 8px 4px 10px", borderRadius: 999,
-                      background: "#fafaf6", border: "1px solid var(--border)",
-                      fontSize: 11, color: "#555",
-                    }}>
+                  <div key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px 4px 10px", borderRadius: 999, background: "var(--bg2)", border: "1px solid var(--border)", fontSize: 11, color: "var(--text2)" }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.color || "#185FA5" }} />
                     <span>{t.name}</span>
-                    <button type="button" onClick={() => deleteType(t)}
-                      title={`Delete ${t.name}`}
-                      style={{
-                        background: "transparent", border: "none", color: "#aaa", cursor: "pointer",
-                        padding: "0 4px", fontSize: 13, lineHeight: 1, transition: "color 0.15s",
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "var(--danger)")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "#aaa")}>
-                      🗑
-                    </button>
+                    <button type="button" onClick={() => deleteType(t)} title={`Delete ${t.name}`}
+                      style={{ background: "transparent", border: "none", color: "#aaa", cursor: "pointer", padding: "0 4px", fontSize: 13, lineHeight: 1 }}>🗑</button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Inline add-new-type form */}
             {showAddType && (
-              <div className="no-print" style={{ marginTop: 10, padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "#fafafa" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--primary)", marginBottom: 8 }}>Add a new leave type</div>
+              <div className="no-print" style={{ marginTop: 10, padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "var(--bg2)" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 8 }}>Add a new leave type</div>
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "end" }}>
-                  <div>
-                    <label className="form-label">Name *</label>
-                    <input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="e.g. Maternity Leave" />
-                  </div>
-                  <div>
-                    <label className="form-label">Days/Year</label>
-                    <input type="number" value={newType.daysAllowed} onChange={e => setNewType({ ...newType, daysAllowed: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="form-label">&nbsp;</label>
-                    <button type="button" onClick={addType} disabled={addingType || !newType.name.trim()} className="btn btn-primary">
-                      {addingType ? "Adding…" : "Add"}
-                    </button>
-                  </div>
+                  <div><label className="form-label">Name *</label><input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="e.g. Maternity Leave" /></div>
+                  <div><label className="form-label">Days/Year</label><input type="number" value={newType.daysAllowed} onChange={e => setNewType({ ...newType, daysAllowed: e.target.value })} /></div>
+                  <div><label className="form-label">&nbsp;</label><button type="button" onClick={addType} disabled={addingType || !newType.name.trim()} className="btn btn-primary">{addingType ? "Adding…" : "Add"}</button></div>
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#555", marginTop: 8, cursor: "pointer" }}>
-                  <input type="checkbox" checked={newType.isPaid} onChange={e => setNewType({ ...newType, isPaid: e.target.checked })} />
-                  Paid leave
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", marginTop: 8, cursor: "pointer" }}>
+                  <input type="checkbox" checked={newType.isPaid} onChange={e => setNewType({ ...newType, isPaid: e.target.checked })} />Paid leave
                 </label>
               </div>
             )}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div>
-              <label className="form-label">From *</label>
+          {/* === Leave Duration === */}
+          <BiLabel en="Leave Duration" ur="رخصت کی مدت" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: -6 }}>
+            <Field en="From" ur="کب سے" compact>
               <input type="date" required value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
-            </div>
-            <div>
-              <label className="form-label">To *</label>
+            </Field>
+            <Field en="To" ur="کب تک" compact>
               <input type="date" required value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+            </Field>
+            <Field en="Total Days" ur="کل دنوں کی تعداد" compact>
+              <div className="calc-readout" style={{ padding: "8px 11px", border: "1px solid var(--border2)", borderRadius: 7, background: "var(--bg2)", fontWeight: 700, color: "var(--brand)" }}>{days}</div>
+            </Field>
+          </div>
+
+          {/* === Reason === */}
+          <Field en="Reason for Leave" ur="رخصت کی وجہ">
+            <textarea rows={3} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
+          </Field>
+
+          {/* === Sick leave medical cert === */}
+          <div>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                If Sick Leave, is a medical certificate attached?
+              </span>
+              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>اگر طبی رخصت ھو تو میڈیکل سرٹیفیکیٹ منسلک کریں۔</div>
             </div>
-            <div>
-              <label className="form-label">Total Days</label>
-              <div className="calc-readout" style={{ padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "#fafafa", fontWeight: 700, color: "var(--primary)" }}>
-                {days}
+            <div style={{ display: "flex", gap: 22 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.medicalCertAttached === "yes"} onChange={e => setForm({ ...form, medicalCertAttached: e.target.checked ? "yes" : "" })} />
+                Yes <span className="urdu" style={{ fontSize: 14, color: "var(--text2)" }}>ھاں</span>
+              </label>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.medicalCertAttached === "no"} onChange={e => setForm({ ...form, medicalCertAttached: e.target.checked ? "no" : "" })} />
+                No <span className="urdu" style={{ fontSize: 14, color: "var(--text2)" }}>نہیں</span>
+              </label>
+            </div>
+          </div>
+
+          {/* === Duties assigned to === */}
+          <div>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                Duties assigned to ____________ when on leave
+              </span>
+              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>رخصت کی صورت میں ذمہ داریاں جن کے سپرد کی گئیں ھوں۔</div>
+            </div>
+            <input value={form.dutiesAssignedTo} onChange={e => setForm({ ...form, dutiesAssignedTo: e.target.value })} placeholder=" " />
+          </div>
+
+          {/* === Employee signature + date === */}
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
+            <Field en="Employee Signature" ur="ملازم دستخط">
+              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="Date" ur="تاریخ">
+              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
+                ____  /  ____  /  ______
               </div>
+            </Field>
+          </div>
+
+          {/* === FOR OFFICE USE ONLY === */}
+          <div style={{ marginTop: 24, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 1.2 }}>For Office Use Only</span>
+            <span className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600 }}>صرف دفتری استعمال کے لیے</span>
+          </div>
+
+          {/* Supervisor comments — blank for handwriting */}
+          <div>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                Supervisor / Manager&apos;s Comments
+              </span>
+              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>سپروائزر یا مینیجر کی رائے</div>
+            </div>
+            <BlankLines count={3} />
+          </div>
+
+          {/* Approval status */}
+          <div>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Approval Status</span>
+              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>منظوری کی حیثیت</div>
+            </div>
+            <div style={{ display: "flex", gap: 28 }}>
+              <CheckLabel en="Approved" ur="منظور" />
+              <CheckLabel en="Not Approved" ur="نا منظور" />
             </div>
           </div>
 
           <div>
-            <label className="form-label">Reason</label>
-            <textarea rows={3} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Reason (if not approved)</span>
+              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>وجہ اگر منظور نہ ھو</div>
+            </div>
+            <BlankLines count={2} />
           </div>
 
-          {/* Declaration */}
-          <div style={{ marginTop: 24, fontSize: 10.5, lineHeight: 1.55, color: "#333", borderTop: "1px solid #999", paddingTop: 10 }}>
-            <strong>Declaration:</strong> I confirm that the information provided above is accurate and I undertake to resume duty
-            on the date specified. Approval of this leave is subject to my work being adequately handed over and to the approval
-            of my reporting manager and the HR department.
+          <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
+            <Field en="Admin Assistant Signature" ur="">
+              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="Date" ur="تاریخ">
+              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
+                ____  /  ____  /  ______
+              </div>
+            </Field>
           </div>
 
-          {/* 3-block official signature panel — tall sign-here boxes + Name / Sign / Date lines */}
-          <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
-            <SignBlock title="Employee" />
-            <SignBlock title="Approving Manager" />
-            <SignBlock title="HR / Authorized" />
+          {/* Final approval */}
+          <div style={{ marginTop: 18, padding: "10px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.8 }}>
+              Final Approval by HEAD HR &amp; ADMINISTRATION
+            </div>
+            <div className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600, marginTop: 2 }}>حتمی منظوری برائے سربراہ ایچ آر</div>
           </div>
 
-          <div className="no-print" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+          <div style={{ marginTop: 4 }}>
+            <Field en="Signature" ur="دستخط">
+              <div style={{ height: 50, borderBottom: "1.5px solid #000" }} />
+            </Field>
+          </div>
+
+          <div className="no-print" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
             <button type="button" onClick={() => router.push("/leave")} className="btn">Cancel</button>
             <button type="submit" disabled={saving || !form.employeeId || !form.leaveTypeId || days <= 0} className="btn btn-primary">
               {saving ? "Submitting…" : "Submit Request"}
@@ -246,31 +316,47 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
   );
 }
 
-function SignBlock({ title }: { title: string }) {
+/* Bilingual label: bold English on the left, Nastaliq Urdu on the right */
+function BiLabel({ en, ur }: { en: string; ur: string }) {
   return (
-    <div style={{ border: "1px solid #999", borderRadius: 6, padding: "10px 12px 12px", background: "#fff" }}>
-      <div style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "#A32D2D", marginBottom: 8 }}>
-        {title}
-      </div>
-      {/* Tall blank space for the actual pen signature */}
-      <div style={{ height: 70, borderBottom: "1.5px solid #000", marginBottom: 14 }} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <SignLine label="Name" />
-        <SignLine label="Designation" />
-        <SignLine label="Signature" />
-        <SignLine label="Date" />
-      </div>
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>{en}</span>
+      {ur && <span className="urdu" style={{ fontSize: 15, color: "var(--text2)" }}>{ur}</span>}
     </div>
   );
 }
 
-function SignLine({ label }: { label: string }) {
+/* A labelled form field: bilingual label above, input below */
+function Field({ en, ur, children, compact }: { en: string; ur: string; children: React.ReactNode; compact?: boolean }) {
   return (
     <div>
-      <div style={{ borderBottom: "1px solid #555", height: 18 }} />
-      <div style={{ fontSize: 8.5, color: "#555", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4, marginTop: 3 }}>
-        {label}
+      <div style={{ marginBottom: compact ? 4 : 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>{en}</span>
+        {ur && <span className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginLeft: 10 }}>{ur}</span>}
       </div>
+      {children}
     </div>
+  );
+}
+
+/* Empty dotted lines for handwriting blocks */
+function BlankLines({ count }: { count: number }) {
+  return (
+    <div>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ borderBottom: "1px dotted #555", height: 22, marginTop: i === 0 ? 0 : 4 }} />
+      ))}
+    </div>
+  );
+}
+
+/* Checkbox + bilingual label, blank by default for handwriting in print */
+function CheckLabel({ en, ur }: { en: string; ur: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+      <span style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid #000", borderRadius: 2 }} />
+      <span style={{ fontWeight: 600 }}>{en}</span>
+      <span className="urdu" style={{ fontSize: 14, color: "var(--text2)" }}>{ur}</span>
+    </span>
   );
 }
