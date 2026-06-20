@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveTypes } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const body = await req.json();
@@ -21,6 +24,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     await db.delete(leaveTypes).where(eq(leaveTypes.id, parseInt(id)));

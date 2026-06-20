@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { guardWrite } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

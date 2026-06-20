@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const [u] = await db.insert(users).values({
     email: emailT.toLowerCase(),
     name: nameT,
-    role: "admin",
+    role: "superadmin",
     passwordHash: hash,
     active: true,
   }).returning({ id: users.id, email: users.email, name: users.name, role: users.role });

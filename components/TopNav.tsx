@@ -45,7 +45,7 @@ function pathToModule(path: string): string {
 
 const HIDE_ON = ["/login", "/setup", "/set-password"];
 
-interface MeUser { id: number; email: string; name: string; role: "admin" | "hr" | "ceo" }
+interface MeUser { id: number; email: string; name: string; role: "superadmin" | "admin" | "hr" | "ceo" }
 
 export default function TopNav() {
   const pathname = usePathname();
@@ -143,7 +143,9 @@ export default function TopNav() {
                 {me.name.split(/\s+/).slice(0, 2).map(s => s[0]).join("").toUpperCase()}
               </span>
               {me.name.split(/\s+/)[0]}
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.3, color: "var(--brand)", textTransform: "uppercase" }}>{me.role}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.3, color: "var(--brand)", textTransform: "uppercase" }}>
+                {me.role === "superadmin" ? "Owner" : me.role}
+              </span>
             </button>
             {menuOpen && (
               <>
@@ -158,7 +160,7 @@ export default function TopNav() {
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{me.name}</div>
                     <div style={{ fontSize: 12, color: "var(--text2)" }}>{me.email}</div>
                   </div>
-                  {me.role === "admin" && (
+                  {me.role === "superadmin" && (
                     <Link href="/admin/users" onClick={() => setMenuOpen(false)} style={menuItem}>
                       👥 Manage users
                     </Link>

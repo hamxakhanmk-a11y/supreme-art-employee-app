@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveTypes } from "@/lib/schema";
 import { asc } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function GET() {
   const rows = await db.select().from(leaveTypes).orderBy(asc(leaveTypes.name));
@@ -9,6 +10,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
     const [c] = await db.insert(leaveTypes).values({

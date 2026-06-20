@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { otherDocuments } from "@/lib/schema";
 import { desc, eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // GET — list all documents for an employee (optionally filtered by category)
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -17,6 +18,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // POST — append a single document. Used by the quick "File Form" upload flow.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
 // DELETE /api/employees/[id]/documents?docId=N — delete a single document
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     await ctx.params;
     const docId = parseInt(req.nextUrl.searchParams.get("docId") || "");

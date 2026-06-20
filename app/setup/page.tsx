@@ -42,9 +42,9 @@ export default function SetupPage() {
 
   return (
     <AuthShell>
-      <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--text)" }}>Create admin account</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "var(--text)" }}>Create owner account</h1>
       <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-        First-time setup — you'll be the first admin of this Supreme Art HR portal.
+        First-time setup — you'll be the <b>Super Admin</b> of this Supreme Art HR portal. Only you will be able to invite or manage other users.
       </p>
 
       <form onSubmit={onSubmit} style={{ marginTop: 22, display: "grid", gap: 12 }}>
@@ -66,7 +66,7 @@ export default function SetupPage() {
         </label>
         {error && <div style={{ color: "#7C1F1F", fontSize: 13 }}>{error}</div>}
         <button type="submit" disabled={submitting} className="auth-btn-primary">
-          {submitting ? "Creating…" : "Create admin account"}
+          {submitting ? "Creating…" : "Create Super Admin account"}
         </button>
       </form>
     </AuthShell>

@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { attendanceDays } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // POST /api/attendance/close   { date }
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { date } = await req.json();
     if (!date) return NextResponse.json({ error: "date required" }, { status: 400 });
@@ -21,6 +24,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/attendance/close?date=YYYY-MM-DD  -> reopen
 export async function DELETE(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const date = req.nextUrl.searchParams.get("date");
     if (!date) return NextResponse.json({ error: "date required" }, { status: 400 });

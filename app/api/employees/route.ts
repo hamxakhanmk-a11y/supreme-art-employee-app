@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { desc } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function GET() {
   const rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
@@ -9,6 +10,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
 

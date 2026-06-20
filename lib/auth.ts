@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { eq, sql, and, gt } from "drizzle-orm";
 import { db } from "./db";
 import { users, sessions } from "./schema";
@@ -8,10 +9,15 @@ import { users, sessions } from "./schema";
 export const COOKIE_NAME = "sae_session";
 export const SESSION_DAYS = 30;
 
-export type Role = "admin" | "hr" | "ceo";
-export const ROLES: Role[] = ["admin", "hr", "ceo"];
-export const WRITE_ROLES: Role[] = ["admin", "hr"];
-export const ADMIN_ROLES: Role[] = ["admin"];
+export type Role = "superadmin" | "admin" | "hr" | "ceo";
+export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo"];
+// Roles that can perform any write (create/update/delete) action in the app.
+// CEO is view-only.
+export const WRITE_ROLES: Role[] = ["superadmin", "admin", "hr"];
+// Roles that can manage / invite users.
+export const USER_MGMT_ROLES: Role[] = ["superadmin"];
+// Backwards-compat alias (older code may import ADMIN_ROLES).
+export const ADMIN_ROLES: Role[] = USER_MGMT_ROLES;
 
 export interface SessionUser {
   id: number;
@@ -101,6 +107,19 @@ export class AuthError extends Error {
     this.status = status;
   }
 }
+
+// Returns the user, or a NextResponse you should return immediately.
+// Usage: const guard = await guardWrite(); if (guard instanceof NextResponse) return guard;
+export async function guardAuth(allowedRoles?: Role[]): Promise<SessionUser | NextResponse> {
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return NextResponse.json({ error: "You don't have permission to perform this action" }, { status: 403 });
+  }
+  return user;
+}
+export const guardWrite = () => guardAuth(WRITE_ROLES);
+export const guardSuperAdmin = () => guardAuth(USER_MGMT_ROLES);
 
 export async function countUsers(): Promise<number> {
   const rows = await db.select({ c: sql<number>`count(*)::int` }).from(users);

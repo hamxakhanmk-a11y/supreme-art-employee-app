@@ -1,19 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 
+type Role = "superadmin" | "admin" | "hr" | "ceo";
 interface User {
   id: number;
   email: string;
   name: string;
-  role: "admin" | "hr" | "ceo";
+  role: Role;
   active: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   hasPassword: boolean;
 }
 
-const ROLE_LABEL: Record<string, string> = { admin: "Admin", hr: "HR", ceo: "CEO" };
-const ROLE_COLOR: Record<string, string> = { admin: "#A32D2D", hr: "#185FA5", ceo: "#0F766E" };
+const ROLE_LABEL: Record<string, string> = { superadmin: "Super Admin", admin: "Admin", hr: "HR", ceo: "CEO" };
+const ROLE_COLOR: Record<string, string> = { superadmin: "#5B21B6", admin: "#A32D2D", hr: "#185FA5", ceo: "#0F766E" };
 
 export default function AdminUsersClient({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,7 +25,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   const [inviteOpen, setInviteOpen] = useState(false);
   const [iName, setIName] = useState("");
   const [iEmail, setIEmail] = useState("");
-  const [iRole, setIRole] = useState<"admin" | "hr" | "ceo">("hr");
+  const [iRole, setIRole] = useState<Role>("hr");
   const [inviting, setInviting] = useState(false);
   const [inviteResult, setInviteResult] = useState<{ url: string; emailSent: boolean } | null>(null);
 
@@ -131,10 +132,10 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
               <Field label="Email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} /></Field>
               <Field label="Role">
-                <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as any)}>
-                  <option value="admin">Admin</option>
-                  <option value="hr">HR</option>
-                  <option value="ceo">CEO (view-only)</option>
+                <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as Role)}>
+                  <option value="admin">Admin (full access)</option>
+                  <option value="hr">HR (full access)</option>
+                  <option value="ceo">CEO (view & print only)</option>
                 </select>
               </Field>
               <div style={{ display: "flex", gap: 8 }}>
@@ -169,17 +170,24 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                     <Td><b>{u.name}</b>{isSelf && <span style={{ color: "var(--text2)", fontWeight: 400 }}> (you)</span>}</Td>
                     <Td>{u.email}</Td>
                     <Td>
-                      <select disabled={isSelf} value={u.role}
-                        onChange={e => patch(u.id, { role: e.target.value })}
-                        style={{
-                          padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700,
-                          border: `1px solid ${ROLE_COLOR[u.role]}`, color: ROLE_COLOR[u.role],
-                          background: "transparent", cursor: isSelf ? "not-allowed" : "pointer",
-                        }}>
-                        <option value="admin">Admin</option>
-                        <option value="hr">HR</option>
-                        <option value="ceo">CEO</option>
-                      </select>
+                      {u.role === "superadmin" ? (
+                        <span style={{
+                          padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 800,
+                          background: ROLE_COLOR.superadmin, color: "#fff", display: "inline-block",
+                        }}>Super Admin</span>
+                      ) : (
+                        <select disabled={isSelf} value={u.role}
+                          onChange={e => patch(u.id, { role: e.target.value })}
+                          style={{
+                            padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700,
+                            border: `1px solid ${ROLE_COLOR[u.role]}`, color: ROLE_COLOR[u.role],
+                            background: "transparent", cursor: isSelf ? "not-allowed" : "pointer",
+                          }}>
+                          <option value="admin">Admin</option>
+                          <option value="hr">HR</option>
+                          <option value="ceo">CEO</option>
+                        </select>
+                      )}
                     </Td>
                     <Td>
                       {u.active
@@ -190,10 +198,12 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                       {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                     </Td>
                     <Td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      <button onClick={() => reInvite(u.id, u.name)} style={btnLink}>Send invite</button>
-                      {" · "}
-                      {!isSelf && (
+                      {u.role !== "superadmin" && (
+                        <button onClick={() => reInvite(u.id, u.name)} style={btnLink}>Send invite</button>
+                      )}
+                      {!isSelf && u.role !== "superadmin" && (
                         <>
+                          {" · "}
                           <button onClick={() => patch(u.id, { active: !u.active })} style={btnLink}>
                             {u.active ? "Disable" : "Enable"}
                           </button>

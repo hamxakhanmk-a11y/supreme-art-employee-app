@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { attendance, attendanceDays, employees } from "@/lib/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // GET /api/attendance?date=YYYY-MM-DD         -> rows for a day with employee join (for marking form)
 // GET /api/attendance?from=&to=&employeeId=   -> filtered range (for history)
@@ -53,6 +54,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/attendance  { employeeId, date, status, checkIn?, checkOut?, notes? }
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
     const { employeeId, date, status, checkIn, checkOut, notes } = body;

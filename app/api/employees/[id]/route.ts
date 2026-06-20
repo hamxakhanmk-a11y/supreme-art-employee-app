@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -12,6 +13,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);
@@ -117,6 +120,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);

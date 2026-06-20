@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
   if (!ROLES.includes(role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  if (role === "superadmin") return NextResponse.json({ error: "Super Admin role cannot be assigned via invite" }, { status: 400 });
 
   // Check if user already exists
   const existing = await db.select().from(users).where(sql`LOWER(${users.email}) = ${emailT}`).limit(1);

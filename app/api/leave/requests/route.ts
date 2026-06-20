@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveRequests } from "@/lib/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // GET /api/leave/requests?employeeId=&status=&from=&to=
 export async function GET(req: NextRequest) {
@@ -30,6 +31,8 @@ function daysBetween(start: string, end: string): number {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
     if (!body.employeeId || !body.leaveTypeId || !body.startDate || !body.endDate) {

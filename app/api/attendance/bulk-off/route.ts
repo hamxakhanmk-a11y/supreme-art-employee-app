@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { attendance, attendanceDays, employees } from "@/lib/schema";
 import { and, eq, inArray } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // POST /api/attendance/bulk-off
 // Body: { dates: string[], status?: "holiday" | "week-off" }
@@ -9,6 +10,8 @@ import { and, eq, inArray } from "drizzle-orm";
 // Skips dates that are already closed. Upserts (replaces) existing rows
 // for the same (employee_id, date).
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
     const dates: string[] = Array.isArray(body.dates) ? body.dates : [];

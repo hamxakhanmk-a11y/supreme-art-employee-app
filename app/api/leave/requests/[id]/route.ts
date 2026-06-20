@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveRequests, attendance, leaveTypes } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 // PUT — approve/reject or edit request
 // On approval of a half-day request, auto-stamp attendance for that date
 // with status="half-day" so the Monthly Register shows P with the ½ marker.
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const reqId = parseInt(id);
@@ -52,6 +55,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     await db.delete(leaveRequests).where(eq(leaveRequests.id, parseInt(id)));
