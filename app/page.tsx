@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
-import { sql, eq } from "drizzle-orm";
+// no drizzle ops needed at top level — we run a single select
 
 export const dynamic = "force-dynamic";
 
@@ -66,17 +66,13 @@ function severity(daysLeft: number): { label: string; color: string; bg: string;
 }
 
 export default async function Dashboard() {
-  let total = 0, active = 0, inactive = 0;
   let allEmployees: Emp[] = [];
   try {
-    const [t] = await db.select({ c: sql<number>`count(*)::int` }).from(employees);
-    total = t?.c ?? 0;
-    const [a] = await db.select({ c: sql<number>`count(*)::int` }).from(employees).where(eq(employees.status, "active"));
-    active = a?.c ?? 0;
-    const [i] = await db.select({ c: sql<number>`count(*)::int` }).from(employees).where(eq(employees.status, "inactive"));
-    inactive = i?.c ?? 0;
     allEmployees = await db.select().from(employees);
   } catch {}
+  const total = allEmployees.length;
+  const active = allEmployees.filter(e => e.status === "active").length;
+  const inactive = allEmployees.filter(e => e.status === "inactive").length;
 
   const alerts = buildAlerts(allEmployees);
   const expired = alerts.filter(a => a.daysLeft < 0);

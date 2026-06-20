@@ -11,11 +11,13 @@ export default async function PrintEmployee({ params }: { params: Promise<{ id: 
   const empId = parseInt(id);
   if (isNaN(empId)) notFound();
 
-  const [emp] = await db.select().from(employees).where(eq(employees.id, empId));
+  const [empArr, edu, exp] = await Promise.all([
+    db.select().from(employees).where(eq(employees.id, empId)),
+    db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId)),
+    db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
+  ]);
+  const emp = empArr[0];
   if (!emp) notFound();
-
-  const edu = await db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId));
-  const exp = await db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId));
 
   const data: any = {
     ...emp,

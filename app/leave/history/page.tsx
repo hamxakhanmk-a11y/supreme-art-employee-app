@@ -6,11 +6,13 @@ import LeaveHistoryClient from "./LeaveHistoryClient";
 export const dynamic = "force-dynamic";
 
 export default async function LeaveHistoryPage() {
-  const emps = await db.select({
-    id: employees.id, employeeId: employees.employeeId,
-    firstName: employees.firstName, lastName: employees.lastName,
-  }).from(employees).orderBy(asc(employees.firstName));
-  const types = await db.select().from(leaveTypes).orderBy(asc(leaveTypes.name));
+  const [emps, types] = await Promise.all([
+    db.select({
+      id: employees.id, employeeId: employees.employeeId,
+      firstName: employees.firstName, lastName: employees.lastName,
+    }).from(employees).orderBy(asc(employees.firstName)),
+    db.select().from(leaveTypes).orderBy(asc(leaveTypes.name)),
+  ]);
   return (
     <div className="fade-up">
       <div className="no-print" style={{ marginBottom: 16 }}>

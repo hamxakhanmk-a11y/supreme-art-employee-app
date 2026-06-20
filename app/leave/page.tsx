@@ -7,13 +7,15 @@ import LeaveRequestsClient from "./LeaveRequestsClient";
 export const dynamic = "force-dynamic";
 
 export default async function LeavePage() {
-  const requests = await db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt));
-  const emps = await db.select({
-    id: employees.id, employeeId: employees.employeeId,
-    firstName: employees.firstName, lastName: employees.lastName,
-    designation: employees.designation, photoUrl: employees.photoUrl,
-  }).from(employees);
-  const types = await db.select().from(leaveTypes).orderBy(asc(leaveTypes.name));
+  const [requests, emps, types] = await Promise.all([
+    db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt)),
+    db.select({
+      id: employees.id, employeeId: employees.employeeId,
+      firstName: employees.firstName, lastName: employees.lastName,
+      designation: employees.designation, photoUrl: employees.photoUrl,
+    }).from(employees),
+    db.select().from(leaveTypes).orderBy(asc(leaveTypes.name)),
+  ]);
 
   return (
     <div className="fade-up">

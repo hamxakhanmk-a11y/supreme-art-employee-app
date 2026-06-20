@@ -12,12 +12,14 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
   const empId = parseInt(id);
   if (isNaN(empId)) notFound();
 
-  const [emp] = await db.select().from(employees).where(eq(employees.id, empId));
+  const [empArr, edu, exp, others] = await Promise.all([
+    db.select().from(employees).where(eq(employees.id, empId)),
+    db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId)),
+    db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
+    db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
+  ]);
+  const emp = empArr[0];
   if (!emp) notFound();
-
-  const edu = await db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId));
-  const exp = await db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId));
-  const others = await db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId));
 
   const initial: any = {
     ...emp,

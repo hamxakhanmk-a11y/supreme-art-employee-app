@@ -12,9 +12,12 @@ export default async function EmployeeLeavePage({ params }: { params: Promise<{ 
   const empId = parseInt(id);
   if (isNaN(empId)) notFound();
 
-  const [emp] = await db.select().from(employees).where(eq(employees.id, empId));
+  const [empArr, types] = await Promise.all([
+    db.select().from(employees).where(eq(employees.id, empId)),
+    db.select().from(leaveTypes).orderBy(asc(leaveTypes.name)),
+  ]);
+  const emp = empArr[0];
   if (!emp) notFound();
-  const types = await db.select().from(leaveTypes).orderBy(asc(leaveTypes.name));
 
   return (
     <div className="fade-up">
