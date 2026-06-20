@@ -17,6 +17,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
     dutiesAssignedTo: "",
     medicalCertAttached: "" as "" | "yes" | "no",
     department: "",
+    halfSegment: "" as "" | "first" | "second",
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -27,11 +28,15 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
   const [newType, setNewType] = useState({ name: "", daysAllowed: "0", isPaid: true });
   const [addingType, setAddingType] = useState(false);
 
+  const selectedType = leaveTypes.find(t => String(t.id) === form.leaveTypeId);
+  const isHalfDay = selectedType?.name?.toLowerCase() === "half day";
+
   const days = useMemo(() => {
+    if (isHalfDay) return 0.5;
     if (!form.startDate || !form.endDate) return 0;
     const s = new Date(form.startDate), e = new Date(form.endDate);
     return Math.max(0, Math.floor((e.getTime() - s.getTime()) / 86400000) + 1);
-  }, [form.startDate, form.endDate]);
+  }, [form.startDate, form.endDate, isHalfDay]);
 
   const selectedEmp = employees.find(e => String(e.id) === form.employeeId);
 
@@ -193,6 +198,24 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               <div className="calc-readout" style={{ padding: "8px 11px", border: "1px solid var(--border2)", borderRadius: 7, background: "var(--bg2)", fontWeight: 700, color: "var(--brand)" }}>{days}</div>
             </Field>
           </div>
+
+          {/* === Half-day segment — only for Half Day leave type === */}
+          {isHalfDay && (
+            <Field en="Which half of the day?" ur="دن کا کونسا حصہ؟">
+              <div style={{ display: "flex", gap: 22 }}>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                  <input type="radio" name="halfSegment" checked={form.halfSegment === "first"} onChange={() => setForm({ ...form, halfSegment: "first", endDate: form.startDate })} />
+                  First half <span className="urdu" style={{ fontSize: 14, color: "var(--text2)" }}>پہلا حصہ</span>
+                  <span style={{ fontSize: 11, color: "var(--text3)" }}>(morning)</span>
+                </label>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                  <input type="radio" name="halfSegment" checked={form.halfSegment === "second"} onChange={() => setForm({ ...form, halfSegment: "second", endDate: form.startDate })} />
+                  Second half <span className="urdu" style={{ fontSize: 14, color: "var(--text2)" }}>دوسرا حصہ</span>
+                  <span style={{ fontSize: 11, color: "var(--text3)" }}>(afternoon)</span>
+                </label>
+              </div>
+            </Field>
+          )}
 
           {/* === Reason === */}
           <Field en="Reason for Leave" ur="رخصت کی وجہ">

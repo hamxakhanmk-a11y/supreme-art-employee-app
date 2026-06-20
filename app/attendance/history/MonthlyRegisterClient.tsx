@@ -21,14 +21,16 @@ const MONTHS = [
 ];
 
 // Status code (short) + colors. Sundays without a record auto-render as WO.
+// Half-day shows as "P" (still Present) with a tiny ½ corner marker —
+// employees on half-day are credited as present, just flagged.
 const CODE = {
-  present:    { code: "P",   color: "#15803D", bg: "#dcf5dc" },
-  absent:     { code: "A",   color: "#DC2626", bg: "#fcdada" },
-  leave:      { code: "L",   color: "#D97706", bg: "#fdebd0" },
-  "half-day": { code: "P½",  color: "#1D4ED8", bg: "#dfe8fc" },
-  late:       { code: "P*",  color: "#EA580C", bg: "#fde2cf" },
-  holiday:    { code: "H",   color: "#0E7490", bg: "#cffafe" },
-  "week-off": { code: "WO",  color: "#475569", bg: "#e2e8f0" },
+  present:    { code: "P",  marker: "",  color: "#15803D", bg: "#dcf5dc" },
+  absent:     { code: "A",  marker: "",  color: "#DC2626", bg: "#fcdada" },
+  leave:      { code: "L",  marker: "",  color: "#D97706", bg: "#fdebd0" },
+  "half-day": { code: "P",  marker: "½", color: "#15803D", bg: "#dcf5dc" },
+  late:       { code: "P",  marker: "*", color: "#EA580C", bg: "#dcf5dc" },
+  holiday:    { code: "H",  marker: "",  color: "#0E7490", bg: "#cffafe" },
+  "week-off": { code: "WO", marker: "",  color: "#475569", bg: "#e2e8f0" },
 } as const;
 
 type Code = keyof typeof CODE;
@@ -61,20 +63,21 @@ export default function MonthlyRegisterClient({
     return null;
   };
 
-  // Per-employee tallies
+  // Per-employee tallies. Half-day counts as a full P (the employee was
+  // present) but is also tracked in `Half` so HR can see how many half-days.
   const tally = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, WO = 0;
+    let P = 0, A = 0, L = 0, H = 0, WO = 0, Half = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const c = cellFor(emp, day);
       if (!c) continue;
       if (c === "present" || c === "late") P++;
-      else if (c === "half-day") { P += 0.5; A += 0.5; }
+      else if (c === "half-day") { P++; Half++; }
       else if (c === "absent") A++;
       else if (c === "leave") L++;
       else if (c === "holiday") H++;
       else if (c === "week-off") WO++;
     }
-    return { P, A, L, H, WO, net: P };
+    return { P, A, L, H, WO, Half, net: P };
   };
 
   const changeMonth = (delta: number) => {
@@ -95,16 +98,18 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "A", "L", "WO", "Net Days"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "WO", "Net Days"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
         const c = cellFor(e, i + 1);
-        return c ? CODE[c as Code].code : "";
+        if (!c) return "";
+        const v = CODE[c as Code];
+        return v.marker ? `${v.code}${v.marker}` : v.code;
       });
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
-        ...cells, t.P, t.A, t.L, t.WO, t.net,
+        ...cells, t.P, t.Half, t.A, t.L, t.WO, t.net,
       ];
     });
     downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
@@ -143,8 +148,8 @@ export default function MonthlyRegisterClient({
         <LegendChip code="L"  label="Leave"    c="#D97706" />
         <LegendChip code="H"  label="Holiday"  c="#0E7490" />
         <LegendChip code="WO" label="Week Off" c="#475569" />
-        <LegendChip code="P½" label="Half-day" c="#1D4ED8" />
-        <LegendChip code="P*" label="Late"     c="#EA580C" />
+        <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
+        <LegendChip code="P" marker="*" label="Late (present)"     c="#EA580C" />
       </div>
 
       {/* Register table */}
@@ -153,7 +158,7 @@ export default function MonthlyRegisterClient({
           <thead>
             {/* Top banner row — print only / accent */}
             <tr className="register-banner">
-              <th colSpan={4 + daysInMonth + 5} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
+              <th colSpan={4 + daysInMonth + 6} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
@@ -169,6 +174,7 @@ export default function MonthlyRegisterClient({
                 </th>
               ))}
               <th className="tot-h" style={{ color: "#15803D" }}>P</th>
+              <th className="tot-h" style={{ color: "#1D4ED8" }}>½</th>
               <th className="tot-h" style={{ color: "#DC2626" }}>A</th>
               <th className="tot-h" style={{ color: "#D97706" }}>L</th>
               <th className="tot-h" style={{ color: "#475569" }}>WO</th>
@@ -177,7 +183,7 @@ export default function MonthlyRegisterClient({
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + daysInMonth + 5} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + daysInMonth + 6} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = tally(emp);
@@ -192,16 +198,18 @@ export default function MonthlyRegisterClient({
                     if (!c) return <td key={day} className={`day-c ${isSunday(day) ? "day-sun-c" : ""}`} />;
                     const v = CODE[c as Code];
                     return (
-                      <td key={day} className="day-c" style={{ background: v.bg, color: v.color, fontWeight: 700 }}>
+                      <td key={day} className="day-c" style={{ background: v.bg, color: v.color, fontWeight: 700, position: "relative" }} title={c.replace("-", " ")}>
                         {v.code}
+                        {v.marker && <span className="day-marker">{v.marker}</span>}
                       </td>
                     );
                   })}
-                  <td className="tot-c" style={{ color: "#15803D" }}>{fmt(t.P)}</td>
-                  <td className="tot-c" style={{ color: "#DC2626" }}>{fmt(t.A)}</td>
+                  <td className="tot-c" style={{ color: "#15803D" }}>{t.P}</td>
+                  <td className="tot-c" style={{ color: "#1D4ED8" }}>{t.Half || ""}</td>
+                  <td className="tot-c" style={{ color: "#DC2626" }}>{t.A}</td>
                   <td className="tot-c" style={{ color: "#D97706" }}>{t.L}</td>
                   <td className="tot-c" style={{ color: "#475569" }}>{t.WO}</td>
-                  <td className="tot-c" style={{ color: "var(--brand)" }}>{fmt(t.net)}</td>
+                  <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
                 </tr>
               );
             })}
@@ -240,6 +248,15 @@ export default function MonthlyRegisterClient({
         .register-table .tot-h { background: #f3eee4; min-width: 38px; }
         .register-table .day-c { width: 26px; min-width: 26px; padding: 4px 2px; font-size: 10.5px; }
         .register-table .day-c.day-sun-c { background: #f1f5f9; }
+        /* Half-day / Late corner marker on a Present cell */
+        .register-table .day-marker {
+          position: absolute;
+          top: 1px; right: 2px;
+          font-size: 7.5px;
+          font-weight: 800;
+          color: #1D4ED8;
+          line-height: 1;
+        }
         .register-table .tot-c { font-weight: 700; font-size: 12px; background: #fdf8ee; }
         .register-table .emp-id  { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .register-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
@@ -267,15 +284,25 @@ function fmt(n: number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
-function LegendChip({ code, label, c }: { code: string; label: string; c: string }) {
+function LegendChip({ code, marker, label, c }: { code: string; marker?: string; label: string; c: string }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
       <span style={{
+        position: "relative",
         display: "inline-flex", alignItems: "center", justifyContent: "center",
         minWidth: 22, height: 18, padding: "0 4px",
         borderRadius: 4, background: `${c}22`, color: c,
         fontSize: 10, fontWeight: 800, letterSpacing: 0.2,
-      }}>{code}</span>
+      }}>
+        {code}
+        {marker && (
+          <span style={{
+            position: "absolute", top: -2, right: -3,
+            fontSize: 8, fontWeight: 800, color: marker === "*" ? "#EA580C" : "#1D4ED8",
+            lineHeight: 1,
+          }}>{marker}</span>
+        )}
+      </span>
       <span style={{ fontSize: 11 }}>= {label}</span>
     </span>
   );

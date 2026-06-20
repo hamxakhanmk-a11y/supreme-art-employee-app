@@ -35,15 +35,18 @@ export async function POST(req: NextRequest) {
     if (!body.employeeId || !body.leaveTypeId || !body.startDate || !body.endDate) {
       return NextResponse.json({ error: "employeeId, leaveTypeId, startDate, endDate required" }, { status: 400 });
     }
-    const days = daysBetween(body.startDate, body.endDate);
+    // Half-day requests are always 1 calendar day (counted as 0.5 elsewhere)
+    const isHalfDay = !!body.halfSegment;
+    const days = isHalfDay ? 1 : daysBetween(body.startDate, body.endDate);
     if (days <= 0) return NextResponse.json({ error: "End date must be after start date" }, { status: 400 });
 
     const [c] = await db.insert(leaveRequests).values({
       employeeId: parseInt(body.employeeId),
       leaveTypeId: parseInt(body.leaveTypeId),
       startDate: body.startDate,
-      endDate: body.endDate,
+      endDate: isHalfDay ? body.startDate : body.endDate,
       days,
+      halfSegment: body.halfSegment || null,
       reason: body.reason || null,
       dutiesAssignedTo: body.dutiesAssignedTo || null,
       medicalCertAttached: body.medicalCertAttached || null,

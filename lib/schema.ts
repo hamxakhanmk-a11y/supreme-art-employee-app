@@ -152,6 +152,7 @@ export const leaveRequests = pgTable("leave_requests", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   days: integer("days").notNull(),
+  halfSegment: varchar("half_segment", { length: 20 }), // 'first' | 'second' | null
   reason: text("reason"),
   dutiesAssignedTo: text("duties_assigned_to"),
   medicalCertAttached: varchar("medical_cert_attached", { length: 4 }), // yes | no | null
