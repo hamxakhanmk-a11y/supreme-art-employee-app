@@ -22,6 +22,7 @@ const subNav: Record<string, { href: string; label: string }[]> = {
     { href: "/forms", label: "Overview" },
     { href: "/forms/leave", label: "Leave Form" },
     { href: "/forms/half-day", label: "Half-Day Form" },
+    { href: "/forms/file", label: "File Signed Form" },
     { href: "/forms/approvals", label: "Pending Approvals" },
   ],
   reports: [

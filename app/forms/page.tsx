@@ -14,11 +14,24 @@ export default async function FormsLanding() {
 
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: 22 }}>
+      <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Forms</h1>
-        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Fill, print, and submit company forms. Approve incoming requests from HR.</p>
+        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Fill, print, submit, and file company forms. Approve incoming requests from HR.</p>
       </div>
 
+      {/* Quick shortcuts row — most common actions */}
+      <div className="card" style={{ background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", color: "#fff", padding: "16px 18px", marginBottom: 18, border: "none" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", opacity: 0.85, marginBottom: 10 }}>
+          Quick actions
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <ShortcutBtn href="/forms/leave"    icon="📝" label="Submit Leave Form" />
+          <ShortcutBtn href="/forms/half-day" icon="½"  label="Submit Half-Day Form" />
+          <ShortcutBtn href="/forms/file"     icon="📎" label="File Signed Form" />
+        </div>
+      </div>
+
+      {/* Detail cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         <FormCard
           href="/forms/leave"
@@ -33,6 +46,12 @@ export default async function FormsLanding() {
           desc="Single-day permission to leave after 1 PM (per policy)."
         />
         <FormCard
+          href="/forms/file"
+          title="File Signed Form"
+          urdu="دستخط شدہ فارم درج کریں"
+          desc="Upload a scan or photo of a signed paper form against an employee."
+        />
+        <FormCard
           href="/forms/approvals"
           title="Pending Approvals"
           urdu="منظوری کے درخواستیں"
@@ -42,6 +61,24 @@ export default async function FormsLanding() {
         />
       </div>
     </div>
+  );
+}
+
+function ShortcutBtn({ href, icon, label }: { href: string; icon: string; label: string }) {
+  return (
+    <Link href={href}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "10px 16px", borderRadius: 8,
+        background: "rgba(255,255,255,0.15)", color: "#fff",
+        border: "1px solid rgba(255,255,255,0.35)",
+        fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+        textDecoration: "none",
+        transition: "background 0.15s",
+      }}>
+      <span style={{ fontSize: 16 }}>{icon}</span>
+      {label}
+    </Link>
   );
 }
 

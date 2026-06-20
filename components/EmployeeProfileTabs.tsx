@@ -3,7 +3,7 @@ import { useState } from "react";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
 type Exp = { id: number; company: string; position: string | null; fromDate: string | null; toDate: string | null; description: string | null; };
-type OtherDoc = { id: number; label: string; url: string };
+type OtherDoc = { id: number; label: string; url: string; category?: string | null; formDate?: string | null };
 
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
@@ -101,30 +101,48 @@ export default function EmployeeProfileTabs({
           ["IBAN", employee.iban],
         ]} />}
 
-        {tab === "documents" && (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>Identity Documents</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-              <DocCard label="Profile Photo" url={employee.photoUrl} />
-              <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
-              <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
-              <DocCard label="Passport" url={employee.passportUrl} />
-              <DocCard label="SSI" url={employee.ssiUrl} />
-              <DocCard label="UBI" url={employee.ubiUrl} />
-            </div>
-
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 22, marginBottom: 10 }}>
-              Other Documents {otherDocuments.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({otherDocuments.length})</span>}
-            </div>
-            {otherDocuments.length === 0 ? (
-              <div className="empty" style={{ padding: "1.5rem" }}>No additional documents uploaded.</div>
-            ) : (
+        {tab === "documents" && (() => {
+          const filed = otherDocuments.filter(d => d.category === "leave-form" || d.category === "half-day-form");
+          const misc = otherDocuments.filter(d => !d.category || d.category === "misc");
+          return (
+            <>
+              <DocSectionHeader>Identity Documents</DocSectionHeader>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-                {otherDocuments.map(d => <DocCard key={d.id} label={d.label} url={d.url} />)}
+                <DocCard label="Profile Photo" url={employee.photoUrl} />
+                <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
+                <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
+                <DocCard label="Passport" url={employee.passportUrl} />
+                <DocCard label="SSI" url={employee.ssiUrl} />
+                <DocCard label="UBI" url={employee.ubiUrl} />
               </div>
-            )}
-          </>
-        )}
+
+              <DocSectionHeader action={<a href={`/forms/file`} className="btn btn-sm btn-primary">📎 File Form</a>}>
+                Filed Forms {filed.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({filed.length})</span>}
+              </DocSectionHeader>
+              {filed.length === 0 ? (
+                <div className="empty" style={{ padding: "1.5rem" }}>No signed forms filed yet. Click <strong>📎 File Form</strong> to upload one.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                  {filed.map(d => (
+                    <DocCard key={d.id} label={d.label} url={d.url}
+                      caption={d.category === "leave-form" ? "Leave Form" : d.category === "half-day-form" ? "Half-Day Form" : "Form"} />
+                  ))}
+                </div>
+              )}
+
+              <DocSectionHeader>
+                Other Documents {misc.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({misc.length})</span>}
+              </DocSectionHeader>
+              {misc.length === 0 ? (
+                <div className="empty" style={{ padding: "1.5rem" }}>No additional documents uploaded.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                  {misc.map(d => <DocCard key={d.id} label={d.label} url={d.url} />)}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {tab === "education" && (
           education.length === 0 ? <div className="empty">No education records.</div> :
@@ -181,9 +199,22 @@ function Grid({ items }: { items: ([string, any] | [string, any, boolean])[] }) 
   );
 }
 
-function DocCard({ label, url }: { label: string; url: string | null }) {
+function DocSectionHeader({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      marginTop: 22, marginBottom: 10,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6 }}>{children}</div>
+      {action}
+    </div>
+  );
+}
+
+function DocCard({ label, url, caption }: { label: string; url: string | null; caption?: string }) {
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 8, padding: 12, background: "#fafafa" }}>
+      {caption && <div style={{ fontSize: 9, fontWeight: 800, color: "#185FA5", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>{caption}</div>}
       <div className="form-label" style={{ marginBottom: 8 }}>{label}</div>
       {url ? (
         /\.(png|jpe?g|gif|webp)$/i.test(url) ? (

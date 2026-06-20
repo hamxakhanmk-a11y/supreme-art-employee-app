@@ -174,6 +174,9 @@ export const otherDocuments = pgTable("other_documents", {
     .references(() => employees.id, { onDelete: "cascade" }),
   label: varchar("label", { length: 120 }).notNull(),
   url: text("url").notNull(),
+  category: varchar("category", { length: 20 }), // 'leave-form' | 'half-day-form' | 'misc' | null
+  formDate: date("form_date"),                    // when the form was filed (signed)
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
