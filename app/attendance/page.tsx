@@ -12,7 +12,7 @@ type Row = {
   designation: string | null;
   department: string | null;
   photoUrl: string | null;
-  status: "present" | "absent" | "leave" | "half-day" | "late" | "holiday" | "week-off" | null;
+  status: "present" | "absent" | "leave" | "half-day" | "holiday" | "week-off" | null;
   checkIn: string | null;
   checkOut: string | null;
   notes: string | null;
@@ -23,9 +23,6 @@ const STATUS = {
   absent:     { label: "Absent",    color: "#DC2626", bg: "#fde2e2" },
   leave:      { label: "Leave",     color: "#D97706", bg: "#fdebd0" },
   "half-day": { label: "Half-day",  color: "#1D4ED8", bg: "#dfe8fc" },
-  late:       { label: "Late",      color: "#EA580C", bg: "#fde2cf" },
-  holiday:    { label: "Holiday",   color: "#0E7490", bg: "#cffafe" },
-  "week-off": { label: "Week Off",  color: "#475569", bg: "#e2e8f0" },
 } as const;
 
 export default function AttendancePage() {
@@ -36,6 +33,36 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // "Mark OFF Day" inline panel
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const [showOffPicker, setShowOffPicker] = useState(false);
+  const [offFrom, setOffFrom] = useState(tomorrow);
+  const [offTo, setOffTo] = useState("");
+  const [offStatus, setOffStatus] = useState<"holiday" | "week-off">("holiday");
+  const [offBusy, setOffBusy] = useState(false);
+
+  const applyOffDays = async () => {
+    if (!offFrom) return;
+    const dates: string[] = [];
+    const start = new Date(offFrom);
+    const end = offTo ? new Date(offTo) : start;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    setOffBusy(true); setError(null);
+    try {
+      const res = await fetch("/api/attendance/bulk-off", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dates, status: offStatus }),
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
+      setShowOffPicker(false);
+      // Refresh in case one of the marked dates is the current view
+      fetchData(date);
+    } catch (e: any) { setError(e.message); }
+    finally { setOffBusy(false); }
+  };
 
   const fetchData = useCallback(async (d: string) => {
     setLoading(true);
@@ -115,7 +142,7 @@ export default function AttendancePage() {
       ["Employee ID", "Name", "Designation", "Department", "Status", "Check-in", "Check-out", "Notes"],
       rows.map(r => [
         r.employeeId, `${r.firstName} ${r.lastName}`, r.designation || "", r.department || "",
-        r.status ? STATUS[r.status].label : "Unmarked",
+        r.status ? ((STATUS as any)[r.status]?.label ?? r.status) : "Unmarked",
         r.checkIn || "", r.checkOut || "", r.notes || "",
       ])
     );
@@ -126,7 +153,6 @@ export default function AttendancePage() {
     absent:  rows.filter(r => r.status === "absent").length,
     leave:   rows.filter(r => r.status === "leave").length,
     halfday: rows.filter(r => r.status === "half-day").length,
-    late:    rows.filter(r => r.status === "late").length,
     unmarked:rows.filter(r => r.status === null).length,
   };
 
@@ -144,6 +170,17 @@ export default function AttendancePage() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: "auto" }} />
+          <button onClick={() => setShowOffPicker(v => !v)}
+            style={{
+              padding: "8px 16px", borderRadius: 8,
+              border: "1px solid #475569",
+              background: "#475569", color: "#fff",
+              fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+              boxShadow: "0 2px 6px rgba(71,85,105,0.30)",
+              cursor: "pointer",
+            }}>
+            🌙 Mark OFF Day
+          </button>
           <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
           <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
           {!closed ? (
@@ -175,13 +212,54 @@ export default function AttendancePage() {
         </div>
       </div>
 
+      {/* Mark OFF Day inline panel */}
+      {showOffPicker && (
+        <div className="no-print card" style={{ marginBottom: 14, borderColor: "#475569", borderWidth: 2, background: "#f8fafc" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>🌙 Mark OFF for all employees</div>
+              <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>
+                Stamps every active employee as {offStatus === "holiday" ? "Holiday" : "Week Off"} for the selected date(s).
+              </div>
+            </div>
+            <button onClick={() => setShowOffPicker(false)} className="btn btn-sm">Cancel</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
+            <div>
+              <label className="form-label">From *</label>
+              <input type="date" value={offFrom} onChange={e => setOffFrom(e.target.value)} />
+            </div>
+            <div>
+              <label className="form-label">To (optional)</label>
+              <input type="date" value={offTo} onChange={e => setOffTo(e.target.value)} />
+            </div>
+            <div>
+              <label className="form-label">Type</label>
+              <select value={offStatus} onChange={e => setOffStatus(e.target.value as "holiday" | "week-off")}>
+                <option value="holiday">Holiday</option>
+                <option value="week-off">Week Off</option>
+              </select>
+            </div>
+            <button onClick={applyOffDays} disabled={offBusy || !offFrom}
+              style={{
+                padding: "9px 20px", borderRadius: 8,
+                border: "1px solid #475569", background: "#475569", color: "#fff",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                cursor: offBusy ? "wait" : "pointer",
+                opacity: offBusy ? 0.7 : 1,
+              }}>
+              {offBusy ? "Marking…" : "Apply"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 18 }}>
         <StatChip label="Present"  count={summary.present}  color="#15803D" bg="#e3f5e3" />
         <StatChip label="Absent"   count={summary.absent}   color="#DC2626" bg="#fde2e2" />
         <StatChip label="Leave"    count={summary.leave}    color="#D97706" bg="#fdebd0" />
         <StatChip label="Half-day" count={summary.halfday}  color="#1D4ED8" bg="#dfe8fc" />
-        <StatChip label="Late"     count={summary.late}     color="#EA580C" bg="#fde2cf" />
         <StatChip label="Unmarked" count={summary.unmarked} color="#888"    bg="#f3f3f3" />
       </div>
 
