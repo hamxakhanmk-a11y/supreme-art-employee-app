@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import EmployeeForm from "@/components/EmployeeForm";
 
@@ -17,6 +17,7 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
 
   const edu = await db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId));
   const exp = await db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId));
+  const others = await db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId));
 
   const initial: any = {
     ...emp,
@@ -39,6 +40,7 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
       toDate: e.toDate || "",
       description: e.description || "",
     })),
+    otherDocuments: others.map(d => ({ label: d.label, url: d.url })),
   };
 
   return (

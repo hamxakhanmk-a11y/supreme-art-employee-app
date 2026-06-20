@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 type Education = { degree: string; institution: string; yearCompleted: string; grade: string; certificateUrl: string; };
 type Experience = { company: string; position: string; fromDate: string; toDate: string; description: string; };
+type OtherDoc = { label: string; url: string; };
 
 export type EmployeePayload = {
   employeeId: string;
@@ -24,6 +25,7 @@ export type EmployeePayload = {
   notes: string;
   education: Education[];
   experience: Experience[];
+  otherDocuments: OtherDoc[];
 };
 
 const empty: EmployeePayload = {
@@ -45,6 +47,7 @@ const empty: EmployeePayload = {
   notes: "",
   education: [],
   experience: [],
+  otherDocuments: [],
 };
 
 export default function EmployeeForm({
@@ -92,6 +95,12 @@ export default function EmployeeForm({
     const next = [...form.experience]; (next[i] as any)[k] = v; set("experience", next);
   };
   const rmExperience = (i: number) => set("experience", form.experience.filter((_, idx) => idx !== i));
+
+  const addOtherDoc = () => set("otherDocuments", [...form.otherDocuments, { label: "", url: "" }]);
+  const updOtherDoc = (i: number, k: keyof OtherDoc, v: string) => {
+    const next = [...form.otherDocuments]; (next[i] as any)[k] = v; set("otherDocuments", next);
+  };
+  const rmOtherDoc = (i: number) => set("otherDocuments", form.otherDocuments.filter((_, idx) => idx !== i));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +272,37 @@ export default function EmployeeForm({
           <FileField label="SSI" url={form.ssiUrl} onUpload={f => handleFile("ssiUrl", f)} onClear={() => set("ssiUrl", "")} accept="image/*,application/pdf" />
           <FileField label="UBI" url={form.ubiUrl} onUpload={f => handleFile("ubiUrl", f)} onClear={() => set("ubiUrl", "")} accept="image/*,application/pdf" />
         </Row>
+
+        {/* Other Documents — flexible list */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px dashed var(--border)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+              Other Documents
+            </div>
+            <button type="button" className="btn btn-sm" onClick={addOtherDoc}>＋ Add Document</button>
+          </div>
+          {form.otherDocuments.length === 0 && (
+            <div style={{ fontSize: 12, color: "var(--text3)", padding: "8px 0" }}>
+              Driving license, contract copy, NDA, medical certificate, training certs, joining letter — anything else goes here.
+            </div>
+          )}
+          {form.otherDocuments.map((d, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr auto", gap: 10, alignItems: "end", padding: "10px 0", borderTop: i === 0 ? "none" : "1px dashed var(--border)" }}>
+              <div>
+                <label className="form-label">Label</label>
+                <input value={d.label} placeholder="e.g. Driving License" onChange={e => updOtherDoc(i, "label", e.target.value)} />
+              </div>
+              <FileField
+                label="File"
+                url={d.url}
+                onUpload={async f => { const url = await uploadFile(f); updOtherDoc(i, "url", url); }}
+                onClear={() => updOtherDoc(i, "url", "")}
+                accept="image/*,application/pdf"
+              />
+              <button type="button" className="btn btn-danger-soft btn-sm" onClick={() => rmOtherDoc(i)}>Remove</button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* === Education === */}

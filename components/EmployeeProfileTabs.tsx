@@ -3,10 +3,11 @@ import { useState } from "react";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
 type Exp = { id: number; company: string; position: string | null; fromDate: string | null; toDate: string | null; description: string | null; };
+type OtherDoc = { id: number; label: string; url: string };
 
 export default function EmployeeProfileTabs({
-  employee, education, experience,
-}: { employee: any; education: Edu[]; experience: Exp[]; }) {
+  employee, education, experience, otherDocuments = [],
+}: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
   const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
@@ -92,14 +93,28 @@ export default function EmployeeProfileTabs({
         ]} />}
 
         {tab === "documents" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-            <DocCard label="Profile Photo" url={employee.photoUrl} />
-            <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
-            <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
-            <DocCard label="Passport" url={employee.passportUrl} />
-            <DocCard label="SSI" url={employee.ssiUrl} />
-            <DocCard label="UBI" url={employee.ubiUrl} />
-          </div>
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10 }}>Identity Documents</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+              <DocCard label="Profile Photo" url={employee.photoUrl} />
+              <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
+              <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
+              <DocCard label="Passport" url={employee.passportUrl} />
+              <DocCard label="SSI" url={employee.ssiUrl} />
+              <DocCard label="UBI" url={employee.ubiUrl} />
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 22, marginBottom: 10 }}>
+              Other Documents {otherDocuments.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({otherDocuments.length})</span>}
+            </div>
+            {otherDocuments.length === 0 ? (
+              <div className="empty" style={{ padding: "1.5rem" }}>No additional documents uploaded.</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                {otherDocuments.map(d => <DocCard key={d.id} label={d.label} url={d.url} />)}
+              </div>
+            )}
+          </>
         )}
 
         {tab === "education" && (

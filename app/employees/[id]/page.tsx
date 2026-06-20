@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import EmployeeProfileTabs from "@/components/EmployeeProfileTabs";
 import DeleteEmployeeButton from "@/components/DeleteEmployeeButton";
@@ -19,6 +19,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
 
   const edu = await db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId));
   const exp = await db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId));
+  const others = await db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId));
 
   return (
     <div>
@@ -58,7 +59,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} />
+      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} otherDocuments={others} />
     </div>
   );
 }

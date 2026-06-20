@@ -162,6 +162,19 @@ export const leaveRequests = pgTable("leave_requests", {
 });
 
 // =====================
+// OTHER DOCUMENTS (one-to-many)
+// =====================
+export const otherDocuments = pgTable("other_documents", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  label: varchar("label", { length: 120 }).notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
 // EXPERIENCE (one-to-many)
 // =====================
 export const experienceRecords = pgTable("experience_records", {

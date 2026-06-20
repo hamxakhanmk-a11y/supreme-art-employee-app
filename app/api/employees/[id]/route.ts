@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -98,6 +98,15 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
           description: e.description || null,
         }));
       if (rows.length) await db.insert(experienceRecords).values(rows);
+    }
+
+    // Replace other documents
+    await db.delete(otherDocuments).where(eq(otherDocuments.employeeId, empId));
+    if (Array.isArray(body.otherDocuments) && body.otherDocuments.length) {
+      const rows = body.otherDocuments
+        .filter((d: any) => d.label?.trim() && d.url?.trim())
+        .map((d: any) => ({ employeeId: empId, label: d.label.trim(), url: d.url.trim() }));
+      if (rows.length) await db.insert(otherDocuments).values(rows);
     }
 
     return NextResponse.json(updated);
