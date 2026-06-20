@@ -70,6 +70,9 @@ html, body {
 }
 .card-hover:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 
+/* Forms-overview cards — red header lifts on hover */
+.form-card:hover { box-shadow: 0 8px 20px rgba(124,31,31,0.18) !important; transform: translateY(-2px); }
+
 /* ---------- Buttons ---------- */
 .btn {
   padding: 7px 16px;
