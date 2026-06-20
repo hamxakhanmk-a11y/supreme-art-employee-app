@@ -326,7 +326,9 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   /* Reveal print-only helpers */
   .print-only { display: block !important; }
 
-  /* Big faded angled watermark — fixed so it repeats on every printed page */
+  /* Big faded angled watermark — fixed so it repeats on every printed page,
+     and rendered ABOVE content so it shows through white cards.
+     Low opacity + pointer-events:none keeps text fully readable / interactive. */
   .print-watermark {
     display: flex !important;
     position: fixed;
@@ -334,23 +336,19 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    z-index: 0;
+    z-index: 9999;
     overflow: hidden;
   }
   .print-watermark img {
-    /* Full diagonal coverage — rotated like an official document stamp */
     width: 92%;
     max-width: 900px;
     height: auto;
-    opacity: 0.10;
+    opacity: 0.08;
     transform: rotate(-30deg);
     transform-origin: center center;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-
-  /* Keep content above the watermark */
-  main, main > *, .card { position: relative; z-index: 1; }
 
   /* Drop colorful interactive table backgrounds for clean print */
   table th { background: #f3f3f3 !important; color: #333 !important; }
