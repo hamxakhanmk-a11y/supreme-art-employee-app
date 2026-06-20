@@ -32,6 +32,15 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
   const selectedEmp = employees.find(e => String(e.id) === form.employeeId);
 
+  const printBlank = () => {
+    document.body.classList.add("print-blank");
+    // Let the class apply, then trigger print. Cleanup after print dialog closes.
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => document.body.classList.remove("print-blank"), 200);
+    }, 30);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true); setErr(null); setOk(false);
@@ -81,6 +90,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
   return (
     <>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, justifyContent: "flex-end" }}>
+        <button onClick={printBlank} className="btn">🖨 Print Blank</button>
         <button onClick={() => window.print()} className="btn btn-print">🖨 Print Form</button>
       </div>
 
@@ -199,7 +209,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
             </div>
             <div>
               <label className="form-label">Total Days</label>
-              <div style={{ padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "#fafafa", fontWeight: 700, color: "var(--primary)" }}>
+              <div className="calc-readout" style={{ padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "#fafafa", fontWeight: 700, color: "var(--primary)" }}>
                 {days}
               </div>
             </div>

@@ -376,4 +376,51 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
+
+  /* Print form inputs as clean blank boxes — for printing the form
+     empty and filling by hand. Drops UI chrome (dropdown arrows,
+     calendar icons, focus rings) and keeps just a ruled box that
+     shows whatever the user already typed/selected (or stays blank). */
+  input, select, textarea {
+    border: 1px solid #555 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: none !important;
+    padding: 6px 10px !important;
+    border-radius: 4px !important;
+  }
+  /* Hide native picker/dropdown indicators */
+  select { background-image: none !important; padding-right: 10px !important; }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    display: none !important;
+    -webkit-appearance: none;
+  }
+  input[type="date"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { display: none !important; }
+  /* Hide placeholder text in print so empty fields stay truly blank */
+  input::placeholder, textarea::placeholder { color: transparent !important; }
+  /* Give textareas room for handwriting */
+  textarea { min-height: 70px !important; resize: none !important; }
+  /* When a required select has no value, it's :invalid — hide the
+     "— Select Employee —" placeholder text so the box prints empty. */
+  select:invalid { color: transparent !important; }
+  /* Empty out date / number inputs that have no value, otherwise some
+     browsers print the placeholder ("dd/mm/yyyy") in light grey. */
+  input[type="date"]:placeholder-shown,
+  input[type="number"]:placeholder-shown { color: transparent !important; }
+
+  /* Print-Blank mode — set body.print-blank before window.print() to force
+     every input / select / textarea to render with no text, so the page
+     comes out as a clean unfilled form ready for handwriting. The on-screen
+     values are untouched. */
+  body.print-blank input,
+  body.print-blank select,
+  body.print-blank textarea,
+  body.print-blank .calc-readout { color: transparent !important; }
 }
