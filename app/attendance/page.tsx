@@ -25,6 +25,9 @@ const STATUS = {
   "half-day": { label: "Half-day",  color: "#1D4ED8", bg: "#dfe8fc" },
 } as const;
 
+// Statuses shown as inline pills in each row (Half-day is its own button).
+const ROW_PILLS = ["present", "absent", "leave"] as const;
+
 export default function AttendancePage() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
@@ -118,6 +121,36 @@ export default function AttendancePage() {
   const mark = (emp: Row, status: Row["status"]) => {
     updateRow(emp.id, { status });
     persist(emp, { status });
+  };
+
+  // Half-day works even on closed days — employees often file the form
+  // after HR has already locked the day. The server allows status='half-day'
+  // through the day-closed gate.
+  const markHalfDay = async (emp: Row) => {
+    setSavingId(emp.id);
+    setError(null);
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: emp.id, date,
+          status: "half-day",
+          checkIn: emp.checkIn || null,
+          checkOut: emp.checkOut || null,
+          notes: emp.notes || "Half-day (filed after day close)",
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Save failed");
+      }
+      updateRow(emp.id, { status: "half-day" });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const closeDay = async () => {
@@ -298,8 +331,8 @@ export default function AttendancePage() {
                     <div style={{ fontSize: 11, color: "#888" }}>{r.employeeId} · {r.designation || "—"}</div>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      {(Object.keys(STATUS) as (keyof typeof STATUS)[]).map(s => {
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      {ROW_PILLS.map(s => {
                         const active = r.status === s;
                         return (
                           <button
@@ -322,6 +355,34 @@ export default function AttendancePage() {
                           </button>
                         );
                       })}
+                      {/* Half-day stands alone: always enabled, works even on closed days. */}
+                      {(() => {
+                        const s = "half-day" as const;
+                        const active = r.status === s;
+                        return (
+                          <button
+                            key={s}
+                            disabled={savingId === r.id}
+                            onClick={() => markHalfDay(r)}
+                            title={closed
+                              ? "Half-day filed late — allowed even though day is closed"
+                              : "Mark Half-day"}
+                            style={{
+                              marginLeft: 4,
+                              padding: "5px 11px", borderRadius: 6, fontSize: 11.5,
+                              fontWeight: 700, letterSpacing: 0.3,
+                              background: active ? STATUS[s].color : "#fff",
+                              color: active ? "#fff" : STATUS[s].color,
+                              border: `1.5px dashed ${STATUS[s].color}`,
+                              boxShadow: active ? `0 2px 6px ${STATUS[s].color}55` : "none",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            ½ Half-day
+                          </button>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td>

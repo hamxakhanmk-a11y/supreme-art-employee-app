@@ -60,8 +60,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "employeeId, date, status required" }, { status: 400 });
     }
 
-    const [closed] = await db.select().from(attendanceDays).where(eq(attendanceDays.date, date));
-    if (closed) return NextResponse.json({ error: "Day is closed and cannot be modified" }, { status: 423 });
+    // Half-day requests can come in after a day has already been closed
+    // (employee files the form late). Allow status="half-day" through;
+    // everything else still requires the day to be open.
+    if (status !== "half-day") {
+      const [closed] = await db.select().from(attendanceDays).where(eq(attendanceDays.date, date));
+      if (closed) return NextResponse.json({ error: "Day is closed and cannot be modified" }, { status: 423 });
+    }
 
     const existing = await db.select().from(attendance)
       .where(and(eq(attendance.employeeId, employeeId), eq(attendance.date, date)));
