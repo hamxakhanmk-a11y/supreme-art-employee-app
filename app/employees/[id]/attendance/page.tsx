@@ -24,7 +24,7 @@ export default async function EmployeeAttendancePage({ params }: { params: Promi
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
         {emp.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={emp.photoUrl} alt="" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} />
+          <img src={emp.photoUrl} alt="" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", objectPosition: "center top", border: "2px solid var(--brand)", boxShadow: "0 2px 6px rgba(0,0,0,0.10)" }} />
         ) : (
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, var(--primary), var(--primary-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700 }}>
             {emp.firstName[0]}{emp.lastName[0]}

@@ -122,9 +122,9 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {e?.photoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={e.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
+                          <img src={e.photoUrl} alt="" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", objectPosition: "center top", border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
                         ) : e ? (
-                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+                          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, border: "2px solid var(--brand)", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
                             {e.firstName[0]}{e.lastName[0]}
                           </div>
                         ) : null}

@@ -30,7 +30,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 16 }}>
         {emp.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={emp.photoUrl} alt="" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} />
+          <img src={emp.photoUrl} alt="" style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", objectPosition: "center top", border: "2px solid var(--brand)", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} />
         ) : (
           <div style={{ width: 84, height: 84, borderRadius: "50%", background: "#eee", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 28, fontWeight: 600 }}>
             {emp.firstName[0]}{emp.lastName[0]}
