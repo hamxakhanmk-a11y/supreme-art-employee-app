@@ -110,10 +110,30 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                     <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>{e.status}</span>
                   </td>
                   <td className="no-print" style={{ textAlign: "right" }}>
-                    <div style={{ display: "inline-flex", gap: 6 }}>
-                      <Link href={`/employees/${e.id}/attendance`} className="btn" title="Attendance history" style={{ padding: "5px 10px", fontSize: 12 }}>📋</Link>
-                      <Link href={`/employees/${e.id}/leave`} className="btn" title="Leave history" style={{ padding: "5px 10px", fontSize: 12 }}>🌴</Link>
-                      <Link href={`/employees/${e.id}`} className="btn btn-primary" style={{ padding: "5px 10px", fontSize: 12 }}>View</Link>
+                    <div style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                      <IconTile href={`/employees/${e.id}/attendance`} title="Attendance history" color="#1D4ED8">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                          <path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                      </IconTile>
+                      <IconTile href={`/employees/${e.id}/leave`} title="Leave history" color="#D97706">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                          <path d="M16 2v4M8 2v4M3 10h18" />
+                          <path d="m9 16 2 2 4-4" />
+                        </svg>
+                      </IconTile>
+                      <Link href={`/employees/${e.id}`}
+                        style={{
+                          padding: "8px 16px", fontSize: 12, fontWeight: 700,
+                          background: "var(--primary)", color: "#fff",
+                          borderRadius: 8, textDecoration: "none",
+                          boxShadow: "0 2px 6px rgba(163,45,45,0.25)",
+                          letterSpacing: 0.3,
+                        }}>
+                        View →
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -123,5 +143,21 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
         )}
       </div>
     </>
+  );
+}
+
+function IconTile({ href, title, color, children }: { href: string; title: string; color: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} title={title}
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 34, height: 34, borderRadius: 8,
+        background: color, color: "#fff",
+        boxShadow: `0 2px 6px ${color}55`,
+        textDecoration: "none",
+        transition: "transform 0.15s",
+      }}>
+      {children}
+    </Link>
   );
 }

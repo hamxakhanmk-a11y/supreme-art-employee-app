@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const modules = [
   { key: "profile", label: "Profile", icon: "👤" },
   { key: "attendance", label: "Attendance", icon: "📋" },
-  { key: "leave", label: "Leave", icon: "🌴" },
+  { key: "leave", label: "Leave", icon: "📅" },
 ];
 
 const subNav: Record<string, { href: string; label: string; icon: string }[]> = {
