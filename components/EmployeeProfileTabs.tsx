@@ -3,10 +3,11 @@ import { useState } from "react";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
 type Exp = { id: number; company: string; position: string | null; fromDate: string | null; toDate: string | null; description: string | null; };
+type OtherDoc = { id: number; label: string; url: string; category?: string | null; formDate?: string | null };
 
 export default function EmployeeProfileTabs({
-  employee, education, experience,
-}: { employee: any; education: Edu[]; experience: Exp[]; }) {
+  employee, education, experience, otherDocuments = [],
+}: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
   const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
@@ -21,23 +22,32 @@ export default function EmployeeProfileTabs({
 
   return (
     <div className="card" style={{ padding: 0 }}>
-      <div style={{ display: "flex", borderBottom: "1px solid var(--border)", padding: "0 1rem", overflowX: "auto" }}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: "12px 16px", border: "none", background: "transparent", cursor: "pointer",
-              fontSize: 13, fontWeight: 600,
-              color: tab === t.key ? "var(--primary)" : "#666",
-              borderBottom: `2px solid ${tab === t.key ? "var(--primary)" : "transparent"}`,
-              marginBottom: -1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: 6, padding: "12px 14px", overflowX: "auto", background: "var(--bg2)", borderBottom: "1px solid var(--border)", borderTopLeftRadius: "var(--radius)", borderTopRightRadius: "var(--radius)" }}>
+        {tabs.map(t => {
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "8px 16px",
+                border: `1px solid ${active ? "#185FA5" : "transparent"}`,
+                background: active ? "#185FA5" : "transparent",
+                color: active ? "#fff" : "var(--text2)",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 700,
+                letterSpacing: 0.3,
+                borderRadius: 999,
+                whiteSpace: "nowrap",
+                boxShadow: active ? "0 2px 6px rgba(24,95,165,0.30)" : "none",
+                transition: "all 0.15s",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ padding: "1.25rem" }}>
@@ -55,6 +65,8 @@ export default function EmployeeProfileTabs({
           ["CNIC Expiry", fmtDate(employee.cnicExpiry)],
           ["Passport No", employee.passportNumber],
           ["Passport Expiry", fmtDate(employee.passportExpiry)],
+          ["SSI No", employee.ssiNumber],
+          ["UBI No", employee.ubiNumber],
         ]} />}
 
         {tab === "contact" && <Grid items={[
@@ -89,14 +101,48 @@ export default function EmployeeProfileTabs({
           ["IBAN", employee.iban],
         ]} />}
 
-        {tab === "documents" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
-            <DocCard label="Profile Photo" url={employee.photoUrl} />
-            <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
-            <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
-            <DocCard label="Passport" url={employee.passportUrl} />
-          </div>
-        )}
+        {tab === "documents" && (() => {
+          const filed = otherDocuments.filter(d => d.category === "leave-form" || d.category === "half-day-form");
+          const misc = otherDocuments.filter(d => !d.category || d.category === "misc");
+          return (
+            <>
+              <DocSectionHeader>Identity Documents</DocSectionHeader>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                <DocCard label="Profile Photo" url={employee.photoUrl} />
+                <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
+                <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
+                <DocCard label="Passport" url={employee.passportUrl} />
+                <DocCard label="SSI" url={employee.ssiUrl} />
+                <DocCard label="UBI" url={employee.ubiUrl} />
+              </div>
+
+              <DocSectionHeader action={<a href={`/forms/file`} className="btn btn-sm btn-primary">📎 File Form</a>}>
+                Filed Forms {filed.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({filed.length})</span>}
+              </DocSectionHeader>
+              {filed.length === 0 ? (
+                <div className="empty" style={{ padding: "1.5rem" }}>No signed forms filed yet. Click <strong>📎 File Form</strong> to upload one.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                  {filed.map(d => (
+                    <DocCard key={d.id} label={d.label} url={d.url}
+                      caption={d.category === "leave-form" ? "Leave Form" : d.category === "half-day-form" ? "Half-Day Form" : "Form"} />
+                  ))}
+                </div>
+              )}
+
+              <DocSectionHeader>
+                Other Documents {misc.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 500 }}>({misc.length})</span>}
+              </DocSectionHeader>
+              {misc.length === 0 ? (
+                <div className="empty" style={{ padding: "1.5rem" }}>No additional documents uploaded.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14 }}>
+                  {misc.map(d => <DocCard key={d.id} label={d.label} url={d.url} />)}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {tab === "education" && (
           education.length === 0 ? <div className="empty">No education records.</div> :
@@ -153,9 +199,22 @@ function Grid({ items }: { items: ([string, any] | [string, any, boolean])[] }) 
   );
 }
 
-function DocCard({ label, url }: { label: string; url: string | null }) {
+function DocSectionHeader({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      marginTop: 22, marginBottom: 10,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6 }}>{children}</div>
+      {action}
+    </div>
+  );
+}
+
+function DocCard({ label, url, caption }: { label: string; url: string | null; caption?: string }) {
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 8, padding: 12, background: "#fafafa" }}>
+      {caption && <div style={{ fontSize: 9, fontWeight: 800, color: "#185FA5", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>{caption}</div>}
       <div className="form-label" style={{ marginBottom: 8 }}>{label}</div>
       {url ? (
         /\.(png|jpe?g|gif|webp)$/i.test(url) ? (

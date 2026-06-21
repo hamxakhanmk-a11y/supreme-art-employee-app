@@ -32,6 +32,10 @@ export const employees = pgTable("employees", {
   cnicExpiry: date("cnic_expiry"),
   passportNumber: varchar("passport_number", { length: 30 }),
   passportExpiry: date("passport_expiry"),
+  ssiNumber: varchar("ssi_number", { length: 40 }),
+  ssiExpiry: date("ssi_expiry"),
+  ubiNumber: varchar("ubi_number", { length: 40 }),
+  ubiExpiry: date("ubi_expiry"),
 
   // Contact
   phone: varchar("phone", { length: 25 }),
@@ -55,6 +59,7 @@ export const employees = pgTable("employees", {
   workLocation: varchar("work_location", { length: 80 }),
   shift: varchar("shift", { length: 30 }),
   status: varchar("status", { length: 20 }).notNull().default("active"),
+  contractExpiry: date("contract_expiry"),
 
   // Compensation
   basicSalary: integer("basic_salary"),
@@ -70,6 +75,8 @@ export const employees = pgTable("employees", {
   cnicFrontUrl: text("cnic_front_url"),
   cnicBackUrl: text("cnic_back_url"),
   passportUrl: text("passport_url"),
+  ssiUrl: text("ssi_url"),
+  ubiUrl: text("ubi_url"),
 
   // Notes
   notes: text("notes"),
@@ -95,6 +102,85 @@ export const educationRecords = pgTable("education_records", {
 });
 
 // =====================
+// ATTENDANCE
+// =====================
+export const attendance = pgTable("attendance", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("present"), // present | absent | leave | half-day | late
+  checkIn: varchar("check_in", { length: 8 }),    // HH:MM
+  checkOut: varchar("check_out", { length: 8 }),  // HH:MM
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tracks which dates have been "closed" by admin
+export const attendanceDays = pgTable("attendance_days", {
+  date: date("date").primaryKey(),
+  closedAt: timestamp("closed_at").defaultNow().notNull(),
+  closedBy: varchar("closed_by", { length: 80 }),
+});
+
+// =====================
+// LEAVE TYPES
+// =====================
+export const leaveTypes = pgTable("leave_types", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 60 }).notNull().unique(),
+  daysAllowed: integer("days_allowed").notNull().default(0),
+  isPaid: boolean("is_paid").notNull().default(true),
+  color: varchar("color", { length: 16 }).default("#185FA5"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// LEAVE REQUESTS
+// =====================
+export const leaveRequests = pgTable("leave_requests", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  leaveTypeId: integer("leave_type_id")
+    .notNull()
+    .references(() => leaveTypes.id),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  days: integer("days").notNull(),
+  halfSegment: varchar("half_segment", { length: 20 }), // 'first' | 'second' | null
+  reason: text("reason"),
+  dutiesAssignedTo: text("duties_assigned_to"),
+  medicalCertAttached: varchar("medical_cert_attached", { length: 4 }), // yes | no | null
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | approved | rejected
+  decidedAt: timestamp("decided_at"),
+  decidedBy: varchar("decided_by", { length: 80 }),
+  decisionNote: text("decision_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
+// OTHER DOCUMENTS (one-to-many)
+// =====================
+export const otherDocuments = pgTable("other_documents", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  label: varchar("label", { length: 120 }).notNull(),
+  url: text("url").notNull(),
+  category: varchar("category", { length: 20 }), // 'leave-form' | 'half-day-form' | 'misc' | null
+  formDate: date("form_date"),                    // when the form was filed (signed)
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
 // EXPERIENCE (one-to-many)
 // =====================
 export const experienceRecords = pgTable("experience_records", {
@@ -107,5 +193,46 @@ export const experienceRecords = pgTable("experience_records", {
   fromDate: date("from_date"),
   toDate: date("to_date"),
   description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// AUTH: USERS
+// =====================
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 160 }).notNull().unique(),
+  name: varchar("name", { length: 120 }).notNull(),
+  role: varchar("role", { length: 20 }).notNull().default("hr"), // admin | hr | ceo
+  passwordHash: text("password_hash"),
+  active: boolean("active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
+// AUTH: SESSIONS
+// =====================
+export const sessions = pgTable("sessions", {
+  token: varchar("token", { length: 80 }).primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// AUTH: SETUP / RESET TOKENS
+// =====================
+export const setupTokens = pgTable("setup_tokens", {
+  token: varchar("token", { length: 80 }).primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  purpose: varchar("purpose", { length: 20 }).notNull(), // invite | reset
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -4,39 +4,50 @@ import { useRouter } from "next/navigation";
 
 type Education = { degree: string; institution: string; yearCompleted: string; grade: string; certificateUrl: string; };
 type Experience = { company: string; position: string; fromDate: string; toDate: string; description: string; };
+type OtherDoc = { label: string; url: string; };
 
 export type EmployeePayload = {
+  employeeId: string;
   firstName: string; lastName: string; fatherName: string; dob: string;
   gender: string; maritalStatus: string; nationality: string; religion: string; bloodGroup: string;
   cnic: string; cnicExpiry: string; passportNumber: string; passportExpiry: string;
+  ssiNumber: string; ssiExpiry: string; ubiNumber: string; ubiExpiry: string;
   phone: string; altPhone: string; email: string;
   currentAddress: string; permanentAddress: string; city: string;
   emergencyName: string; emergencyRelation: string; emergencyPhone: string;
   designation: string; department: string; joiningDate: string; employmentType: string;
   reportingManager: string; workLocation: string; shift: string; status: string;
+  contractExpiry: string;
   basicSalary: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
   photoUrl: string; cnicFrontUrl: string; cnicBackUrl: string; passportUrl: string;
+  ssiUrl: string; ubiUrl: string;
   notes: string;
   education: Education[];
   experience: Experience[];
+  otherDocuments: OtherDoc[];
 };
 
 const empty: EmployeePayload = {
+  employeeId: "",
   firstName: "", lastName: "", fatherName: "", dob: "",
   gender: "", maritalStatus: "", nationality: "Pakistani", religion: "", bloodGroup: "",
   cnic: "", cnicExpiry: "", passportNumber: "", passportExpiry: "",
+  ssiNumber: "", ssiExpiry: "", ubiNumber: "", ubiExpiry: "",
   phone: "", altPhone: "", email: "",
   currentAddress: "", permanentAddress: "", city: "",
   emergencyName: "", emergencyRelation: "", emergencyPhone: "",
   designation: "", department: "", joiningDate: "", employmentType: "Full-time",
   reportingManager: "", workLocation: "", shift: "", status: "active",
+  contractExpiry: "",
   basicSalary: "",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
   photoUrl: "", cnicFrontUrl: "", cnicBackUrl: "", passportUrl: "",
+  ssiUrl: "", ubiUrl: "",
   notes: "",
   education: [],
   experience: [],
+  otherDocuments: [],
 };
 
 export default function EmployeeForm({
@@ -85,6 +96,12 @@ export default function EmployeeForm({
   };
   const rmExperience = (i: number) => set("experience", form.experience.filter((_, idx) => idx !== i));
 
+  const addOtherDoc = () => set("otherDocuments", [...form.otherDocuments, { label: "", url: "" }]);
+  const updOtherDoc = (i: number, k: keyof OtherDoc, v: string) => {
+    const next = [...form.otherDocuments]; (next[i] as any)[k] = v; set("otherDocuments", next);
+  };
+  const rmOtherDoc = (i: number) => set("otherDocuments", form.otherDocuments.filter((_, idx) => idx !== i));
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -123,6 +140,7 @@ export default function EmployeeForm({
       <div className="card">
         <div className="section-title">Personal Information</div>
         <Row>
+          <Field label="Employee ID *"><input required value={form.employeeId} onChange={e => set("employeeId", e.target.value)} placeholder="e.g. EMP-001" /></Field>
           <Field label="First Name *"><input required value={form.firstName} onChange={e => set("firstName", e.target.value)} /></Field>
           <Field label="Last Name *"><input required value={form.lastName} onChange={e => set("lastName", e.target.value)} /></Field>
           <Field label="Father's Name"><input value={form.fatherName} onChange={e => set("fatherName", e.target.value)} /></Field>
@@ -159,6 +177,12 @@ export default function EmployeeForm({
           <Field label="CNIC Expiry"><input type="date" value={form.cnicExpiry} onChange={e => set("cnicExpiry", e.target.value)} /></Field>
           <Field label="Passport No"><input value={form.passportNumber} onChange={e => set("passportNumber", e.target.value)} /></Field>
           <Field label="Passport Expiry"><input type="date" value={form.passportExpiry} onChange={e => set("passportExpiry", e.target.value)} /></Field>
+        </Row>
+        <Row>
+          <Field label="SSI No"><input value={form.ssiNumber} onChange={e => set("ssiNumber", e.target.value)} placeholder="Social Security number" /></Field>
+          <Field label="SSI Expiry"><input type="date" value={form.ssiExpiry} onChange={e => set("ssiExpiry", e.target.value)} /></Field>
+          <Field label="UBI No"><input value={form.ubiNumber} onChange={e => set("ubiNumber", e.target.value)} placeholder="UBI number" /></Field>
+          <Field label="UBI Expiry"><input type="date" value={form.ubiExpiry} onChange={e => set("ubiExpiry", e.target.value)} /></Field>
         </Row>
       </div>
 
@@ -217,6 +241,9 @@ export default function EmployeeForm({
           </Field>
           <Field label="Basic Salary (PKR)"><input type="number" value={form.basicSalary} onChange={e => set("basicSalary", e.target.value)} /></Field>
         </Row>
+        <Row>
+          <Field label="Contract Expiry"><input type="date" value={form.contractExpiry} onChange={e => set("contractExpiry", e.target.value)} /></Field>
+        </Row>
       </div>
 
       {/* === Banking === */}
@@ -242,7 +269,40 @@ export default function EmployeeForm({
         <Row>
           <FileField label="CNIC (Back)" url={form.cnicBackUrl} onUpload={f => handleFile("cnicBackUrl", f)} onClear={() => set("cnicBackUrl", "")} accept="image/*" />
           <FileField label="Passport" url={form.passportUrl} onUpload={f => handleFile("passportUrl", f)} onClear={() => set("passportUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="SSI" url={form.ssiUrl} onUpload={f => handleFile("ssiUrl", f)} onClear={() => set("ssiUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="UBI" url={form.ubiUrl} onUpload={f => handleFile("ubiUrl", f)} onClear={() => set("ubiUrl", "")} accept="image/*,application/pdf" />
         </Row>
+
+        {/* Other Documents — flexible list */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px dashed var(--border)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+              Other Documents
+            </div>
+            <button type="button" className="btn btn-sm" onClick={addOtherDoc}>＋ Add Document</button>
+          </div>
+          {form.otherDocuments.length === 0 && (
+            <div style={{ fontSize: 12, color: "var(--text3)", padding: "8px 0" }}>
+              Driving license, contract copy, NDA, medical certificate, training certs, joining letter — anything else goes here.
+            </div>
+          )}
+          {form.otherDocuments.map((d, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr auto", gap: 10, alignItems: "end", padding: "10px 0", borderTop: i === 0 ? "none" : "1px dashed var(--border)" }}>
+              <div>
+                <label className="form-label">Label</label>
+                <input value={d.label} placeholder="e.g. Driving License" onChange={e => updOtherDoc(i, "label", e.target.value)} />
+              </div>
+              <FileField
+                label="File"
+                url={d.url}
+                onUpload={async f => { const url = await uploadFile(f); updOtherDoc(i, "url", url); }}
+                onClear={() => updOtherDoc(i, "url", "")}
+                accept="image/*,application/pdf"
+              />
+              <button type="button" className="btn btn-danger-soft btn-sm" onClick={() => rmOtherDoc(i)}>Remove</button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* === Education === */}

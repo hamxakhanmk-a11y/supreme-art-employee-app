@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -12,6 +13,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);
@@ -31,6 +34,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       cnicExpiry: body.cnicExpiry || null,
       passportNumber: body.passportNumber || null,
       passportExpiry: body.passportExpiry || null,
+      ssiNumber: body.ssiNumber || null,
+      ssiExpiry: body.ssiExpiry || null,
+      ubiNumber: body.ubiNumber || null,
+      ubiExpiry: body.ubiExpiry || null,
       phone: body.phone || null,
       altPhone: body.altPhone || null,
       email: body.email || null,
@@ -48,6 +55,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       workLocation: body.workLocation || null,
       shift: body.shift || null,
       status: body.status || "active",
+      contractExpiry: body.contractExpiry || null,
       basicSalary: body.basicSalary ? parseInt(body.basicSalary) : null,
       bankName: body.bankName || null,
       accountTitle: body.accountTitle || null,
@@ -57,6 +65,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       cnicFrontUrl: body.cnicFrontUrl || null,
       cnicBackUrl: body.cnicBackUrl || null,
       passportUrl: body.passportUrl || null,
+      ssiUrl: body.ssiUrl || null,
+      ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
       updatedAt: new Date(),
     }).where(eq(employees.id, empId)).returning();
@@ -93,6 +103,15 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       if (rows.length) await db.insert(experienceRecords).values(rows);
     }
 
+    // Replace other documents
+    await db.delete(otherDocuments).where(eq(otherDocuments.employeeId, empId));
+    if (Array.isArray(body.otherDocuments) && body.otherDocuments.length) {
+      const rows = body.otherDocuments
+        .filter((d: any) => d.label?.trim() && d.url?.trim())
+        .map((d: any) => ({ employeeId: empId, label: d.label.trim(), url: d.url.trim() }));
+      if (rows.length) await db.insert(otherDocuments).values(rows);
+    }
+
     return NextResponse.json(updated);
   } catch (e: any) {
     console.error(e);
@@ -101,6 +120,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);

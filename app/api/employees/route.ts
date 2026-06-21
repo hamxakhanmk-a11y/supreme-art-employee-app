@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
-import { desc, sql } from "drizzle-orm";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
+import { desc } from "drizzle-orm";
+import { guardWrite } from "@/lib/auth";
 
 export async function GET() {
   const rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
@@ -9,16 +10,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
 
-    // Auto-generate next employee ID
-    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(employees);
-    const nextNum = (count ?? 0) + 1;
-    const employeeId = `EMP-${String(nextNum).padStart(4, "0")}`;
-
     const [created] = await db.insert(employees).values({
-      employeeId,
+      employeeId: body.employeeId,
       firstName: body.firstName,
       lastName: body.lastName,
       fatherName: body.fatherName || null,
@@ -32,6 +30,10 @@ export async function POST(req: NextRequest) {
       cnicExpiry: body.cnicExpiry || null,
       passportNumber: body.passportNumber || null,
       passportExpiry: body.passportExpiry || null,
+      ssiNumber: body.ssiNumber || null,
+      ssiExpiry: body.ssiExpiry || null,
+      ubiNumber: body.ubiNumber || null,
+      ubiExpiry: body.ubiExpiry || null,
       phone: body.phone || null,
       altPhone: body.altPhone || null,
       email: body.email || null,
@@ -49,6 +51,7 @@ export async function POST(req: NextRequest) {
       workLocation: body.workLocation || null,
       shift: body.shift || null,
       status: body.status || "active",
+      contractExpiry: body.contractExpiry || null,
       basicSalary: body.basicSalary ? parseInt(body.basicSalary) : null,
       bankName: body.bankName || null,
       accountTitle: body.accountTitle || null,
@@ -58,6 +61,8 @@ export async function POST(req: NextRequest) {
       cnicFrontUrl: body.cnicFrontUrl || null,
       cnicBackUrl: body.cnicBackUrl || null,
       passportUrl: body.passportUrl || null,
+      ssiUrl: body.ssiUrl || null,
+      ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
     }).returning();
 
@@ -91,6 +96,13 @@ export async function POST(req: NextRequest) {
             description: e.description || null,
           }))
       );
+    }
+
+    if (Array.isArray(body.otherDocuments) && body.otherDocuments.length) {
+      const rows = body.otherDocuments
+        .filter((d: any) => d.label?.trim() && d.url?.trim())
+        .map((d: any) => ({ employeeId: created.id, label: d.label.trim(), url: d.url.trim() }));
+      if (rows.length) await db.insert(otherDocuments).values(rows);
     }
 
     return NextResponse.json(created, { status: 201 });

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { employees, educationRecords, experienceRecords } from "@/lib/schema";
+import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import EmployeeProfileTabs from "@/components/EmployeeProfileTabs";
 import DeleteEmployeeButton from "@/components/DeleteEmployeeButton";
+import ProfileExportButton from "@/components/ProfileExportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +14,14 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
   const empId = parseInt(id);
   if (isNaN(empId)) notFound();
 
-  const [emp] = await db.select().from(employees).where(eq(employees.id, empId));
+  const [empArr, edu, exp, others] = await Promise.all([
+    db.select().from(employees).where(eq(employees.id, empId)),
+    db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId)),
+    db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
+    db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
+  ]);
+  const emp = empArr[0];
   if (!emp) notFound();
-
-  const edu = await db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId));
-  const exp = await db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId));
 
   return (
     <div>
@@ -29,9 +33,9 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 16 }}>
         {emp.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={emp.photoUrl} alt="" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} />
+          <img src={emp.photoUrl} alt="" className="avatar" style={{ width: 96, height: 96, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }} />
         ) : (
-          <div style={{ width: 84, height: 84, borderRadius: "50%", background: "#eee", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: 28, fontWeight: 600 }}>
+          <div className="avatar" style={{ width: 96, height: 96, background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 28, fontWeight: 700, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
             {emp.firstName[0]}{emp.lastName[0]}
           </div>
         )}
@@ -48,13 +52,16 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href={`/employees/${emp.id}/attendance`} className="btn">📋 Attendance</Link>
+          <Link href={`/employees/${emp.id}/leave`} className="btn">📅 Leaves</Link>
+          <ProfileExportButton employee={emp} />
           <Link href={`/employees/${emp.id}/print`} className="btn btn-print">🖨 Print Profile</Link>
           <Link href={`/employees/${emp.id}/edit`} className="btn">✏️ Edit</Link>
           <DeleteEmployeeButton id={emp.id} />
         </div>
       </div>
 
-      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} />
+      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} otherDocuments={others} />
     </div>
   );
 }
