@@ -11,7 +11,7 @@ type Alert = {
   empCode: string;
   name: string;
   designation: string | null;
-  docType: "CNIC" | "Passport" | "Contract" | "SSI" | "UBI";
+  docType: "CNIC" | "Passport" | "Contract" | "EOBI" | "ESSI";
   date: string; // ISO date
   daysLeft: number; // negative = expired
 };
@@ -20,8 +20,8 @@ const DOC_ACCENT: Record<Alert["docType"], string> = {
   CNIC: "#A32D2D",
   Passport: "#185FA5",
   Contract: "#7C1F1F",
-  SSI: "#0F766E",
-  UBI: "#854F0B",
+  EOBI: "#0F766E",
+  ESSI: "#854F0B",
 };
 
 function daysBetween(future: string): number {
@@ -47,8 +47,8 @@ function buildAlerts(rows: Emp[]): Alert[] {
     push("CNIC", e.cnicExpiry as any);
     push("Passport", e.passportExpiry as any);
     push("Contract", e.contractExpiry as any);
-    push("SSI", e.ssiExpiry as any);
-    push("UBI", e.ubiExpiry as any);
+    push("EOBI", e.ssiExpiry as any);
+    push("ESSI", e.ubiExpiry as any);
   }
   // Most urgent first (expired, then nearest)
   return out.sort((a, b) => a.daysLeft - b.daysLeft);

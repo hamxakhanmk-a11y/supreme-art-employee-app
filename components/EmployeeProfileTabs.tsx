@@ -65,8 +65,8 @@ export default function EmployeeProfileTabs({
           ["CNIC Expiry", fmtDate(employee.cnicExpiry)],
           ["Passport No", employee.passportNumber],
           ["Passport Expiry", fmtDate(employee.passportExpiry)],
-          ["SSI No", employee.ssiNumber],
-          ["UBI No", employee.ubiNumber],
+          ["EOBI No", employee.ssiNumber],
+          ["ESSI No", employee.ubiNumber],
         ]} />}
 
         {tab === "contact" && <Grid items={[
@@ -112,8 +112,8 @@ export default function EmployeeProfileTabs({
                 <DocCard label="CNIC (Front)" url={employee.cnicFrontUrl} />
                 <DocCard label="CNIC (Back)" url={employee.cnicBackUrl} />
                 <DocCard label="Passport" url={employee.passportUrl} />
-                <DocCard label="SSI" url={employee.ssiUrl} />
-                <DocCard label="UBI" url={employee.ubiUrl} />
+                <DocCard label="EOBI" url={employee.ssiUrl} />
+                <DocCard label="ESSI" url={employee.ubiUrl} />
               </div>
 
               <DocSectionHeader action={<a href={`/forms/file`} className="btn btn-sm btn-primary">📎 File Form</a>}>

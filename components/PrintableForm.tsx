@@ -41,8 +41,8 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
     if (data.cnicFrontUrl)   list.push({ id: "cnic-front",  label: "CNIC (Front)",        url: data.cnicFrontUrl });
     if (data.cnicBackUrl)    list.push({ id: "cnic-back",   label: "CNIC (Back)",         url: data.cnicBackUrl });
     if (data.passportUrl)    list.push({ id: "passport",    label: "Passport",            url: data.passportUrl });
-    if (data.ssiUrl)         list.push({ id: "ssi",         label: "SSI Document",        url: data.ssiUrl });
-    if (data.ubiUrl)         list.push({ id: "ubi",         label: "UBI Document",        url: data.ubiUrl });
+    if (data.ssiUrl)         list.push({ id: "eobi",        label: "EOBI Document",       url: data.ssiUrl });
+    if (data.ubiUrl)         list.push({ id: "essi",        label: "ESSI Document",       url: data.ubiUrl });
     (data.education || []).forEach((e, i) => {
       if (e.certificateUrl) list.push({ id: `edu-${i}`, label: `Education Certificate — ${e.degree || ("Record " + (i + 1))}`, url: e.certificateUrl });
     });
@@ -155,8 +155,8 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
             <Pair label="Passport Expiry" value={fmt(data.passportExpiry)} flex />
           </PairRow>
           <PairRow>
-            <Pair label="SSI Number" value={data.ssiNumber} flex />
-            <Pair label="UBI Number" value={data.ubiNumber} flex />
+            <Pair label="EOBI Number" value={data.ssiNumber} flex />
+            <Pair label="ESSI Number" value={data.ubiNumber} flex />
           </PairRow>
         </Section>
 

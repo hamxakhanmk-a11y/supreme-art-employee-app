@@ -179,10 +179,10 @@ export default function EmployeeForm({
           <Field label="Passport Expiry"><input type="date" value={form.passportExpiry} onChange={e => set("passportExpiry", e.target.value)} /></Field>
         </Row>
         <Row>
-          <Field label="SSI No"><input value={form.ssiNumber} onChange={e => set("ssiNumber", e.target.value)} placeholder="Social Security number" /></Field>
-          <Field label="SSI Expiry"><input type="date" value={form.ssiExpiry} onChange={e => set("ssiExpiry", e.target.value)} /></Field>
-          <Field label="UBI No"><input value={form.ubiNumber} onChange={e => set("ubiNumber", e.target.value)} placeholder="UBI number" /></Field>
-          <Field label="UBI Expiry"><input type="date" value={form.ubiExpiry} onChange={e => set("ubiExpiry", e.target.value)} /></Field>
+          <Field label="EOBI No"><input value={form.ssiNumber} onChange={e => set("ssiNumber", e.target.value)} placeholder="EOBI number" /></Field>
+          <Field label="EOBI Expiry"><input type="date" value={form.ssiExpiry} onChange={e => set("ssiExpiry", e.target.value)} /></Field>
+          <Field label="ESSI No"><input value={form.ubiNumber} onChange={e => set("ubiNumber", e.target.value)} placeholder="ESSI number" /></Field>
+          <Field label="ESSI Expiry"><input type="date" value={form.ubiExpiry} onChange={e => set("ubiExpiry", e.target.value)} /></Field>
         </Row>
       </div>
 
@@ -269,8 +269,8 @@ export default function EmployeeForm({
         <Row>
           <FileField label="CNIC (Back)" url={form.cnicBackUrl} onUpload={f => handleFile("cnicBackUrl", f)} onClear={() => set("cnicBackUrl", "")} accept="image/*" />
           <FileField label="Passport" url={form.passportUrl} onUpload={f => handleFile("passportUrl", f)} onClear={() => set("passportUrl", "")} accept="image/*,application/pdf" />
-          <FileField label="SSI" url={form.ssiUrl} onUpload={f => handleFile("ssiUrl", f)} onClear={() => set("ssiUrl", "")} accept="image/*,application/pdf" />
-          <FileField label="UBI" url={form.ubiUrl} onUpload={f => handleFile("ubiUrl", f)} onClear={() => set("ubiUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="EOBI" url={form.ssiUrl} onUpload={f => handleFile("ssiUrl", f)} onClear={() => set("ssiUrl", "")} accept="image/*,application/pdf" />
+          <FileField label="ESSI" url={form.ubiUrl} onUpload={f => handleFile("ubiUrl", f)} onClear={() => set("ubiUrl", "")} accept="image/*,application/pdf" />
         </Row>
 
         {/* Other Documents — flexible list */}
