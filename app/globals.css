@@ -376,9 +376,11 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
 @media print {
   @page { margin: 8mm 8mm; size: A4 portrait; }
-  body { background: #fff !important; font-size: 8.5pt; }
+  /* Force every container white — no cream/beige leak from any ancestor */
+  html, body, main, .fade-up, .card { background: #fff !important; }
+  body { font-size: 8.5pt; }
   header, .no-print { display: none !important; }
-  main { padding: 0 !important; max-width: none !important; }
+  main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
   .print-page { box-shadow: none !important; border: none !important; padding: 0 !important; }
   /* Force main employee form onto a single page */
   .print-page:first-of-type { page-break-after: avoid; break-after: avoid; }
@@ -449,10 +451,18 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
     break-inside: avoid;
     page-break-after: avoid;
     break-after: avoid;
+    /* Stretch the form to use the full printable width so we lose the
+       grey side-margins inside the A4 sheet. Body zoom 0.56 scales it
+       back down so 1300px intrinsic → ~728px printed (≈ A4 portrait
+       printable width). */
+    max-width: 1300px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 18px !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
   }
   body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
-  /* Forms are portrait; cancel any landscape rule injected by a previous page in the same tab */
-  body.print-scaled { /* portrait — explicit */ }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,
