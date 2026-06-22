@@ -145,6 +145,26 @@ export const leaveTypes = pgTable("leave_types", {
 });
 
 // =====================
+// SALARY RECORDS
+// =====================
+export const salaryRecords = pgTable("salary_records", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  month: varchar("month", { length: 20 }).notNull(),
+  year: integer("year").notNull(),
+  basicSalary: integer("basic_salary").notNull().default(0),
+  conveyance: integer("conveyance").notNull().default(6000),
+  overtime: integer("overtime").notNull().default(0),
+  daysPresent: integer("days_present").notNull().default(0),
+  daysAbsent: integer("days_absent").notNull().default(0),
+  daysLeave: integer("days_leave").notNull().default(0),
+  weekOffs: integer("week_offs").notNull().default(0),
+  otherDeduction: integer("other_deduction").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
 // LEAVE REQUESTS
 // =====================
 export const leaveRequests = pgTable("leave_requests", {
