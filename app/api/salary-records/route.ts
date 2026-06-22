@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sql as rawSql } from "drizzle-orm";
 import { salaryRecords } from "@/lib/schema";
 import { and, eq, desc } from "drizzle-orm";
+
+async function ensureTable() {
+  await db.execute(rawSql`CREATE TABLE IF NOT EXISTS salary_records (
+    id serial PRIMARY KEY,
+    employee_id integer NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    month varchar(20) NOT NULL,
+    year integer NOT NULL,
+    basic_salary integer NOT NULL DEFAULT 0,
+    conveyance integer NOT NULL DEFAULT 6000,
+    overtime integer NOT NULL DEFAULT 0,
+    days_present integer NOT NULL DEFAULT 0,
+    days_absent integer NOT NULL DEFAULT 0,
+    days_leave integer NOT NULL DEFAULT 0,
+    week_offs integer NOT NULL DEFAULT 0,
+    other_deduction integer NOT NULL DEFAULT 0,
+    notes text,
+    created_at timestamp DEFAULT now() NOT NULL
+  )`);
+}
 
 // GET /api/salary-records?employeeId=1
 export async function GET(req: NextRequest) {
   const employeeId = req.nextUrl.searchParams.get("employeeId");
   if (!employeeId) return NextResponse.json({ error: "employeeId required" }, { status: 400 });
   try {
+    await ensureTable();
     const rows = await db.select().from(salaryRecords)
       .where(eq(salaryRecords.employeeId, parseInt(employeeId)))
       .orderBy(desc(salaryRecords.year), desc(salaryRecords.id));
@@ -20,6 +41,7 @@ export async function GET(req: NextRequest) {
 // POST /api/salary-records  — upsert by employeeId + month + year
 export async function POST(req: NextRequest) {
   try {
+    await ensureTable();
     const body = await req.json();
     const { employeeId, month, year } = body;
     if (!employeeId || !month || !year) return NextResponse.json({ error: "employeeId, month, year required" }, { status: 400 });
