@@ -9,6 +9,7 @@ const modules = [
   { key: "attendance", label: "Attendance" },
   { key: "forms",      label: "Forms" },
   { key: "reports",    label: "Reports" },
+  { key: "salary",     label: "Salary" },
 ];
 
 const subNav: Record<string, { href: string; label: string }[]> = {
@@ -32,11 +33,15 @@ const subNav: Record<string, { href: string; label: string }[]> = {
     { href: "/reports/leaves", label: "Leave History" },
     { href: "/reports/half-day", label: "Half-Day History" },
   ],
+  salary: [
+    { href: "/salary", label: "Salary Slip" },
+  ],
 };
 
 function pathToModule(path: string): string {
   if (path.startsWith("/forms")) return "forms";
   if (path.startsWith("/reports")) return "reports";
+  if (path.startsWith("/salary")) return "salary";
   if (path.startsWith("/attendance")) return "attendance";
   // Legacy leave routes resolve to forms module.
   if (path.startsWith("/leave")) return "forms";
