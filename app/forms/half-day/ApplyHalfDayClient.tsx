@@ -61,13 +61,17 @@ export default function ApplyHalfDayClient({ employees, halfDayTypeId }: { emplo
       </div>
 
       <div className="card leave-form-wrap print-page-bg" style={{ maxWidth: 780, margin: "0 auto", position: "relative" }}>
-        {/* Letterhead */}
-        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
+        {/* Letterhead — logo + title + approval checkboxes (top-right office stamp) */}
+        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid var(--brand)", paddingBottom: 12, marginBottom: 14, gap: 12 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" style={{ height: 120, width: "auto", maxWidth: 380, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
             <div className="lf-title" style={{ fontSize: 22, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--brand)", lineHeight: 1.1 }}>Half Day Leave Application Form</div>
-            <div className="urdu lf-title-ur" style={{ fontSize: 22, color: "var(--brand)", fontWeight: 600, marginTop: 6 }}>آدھے دن کی رخصت کا درخواست فارم</div>
+            <div className="urdu lf-title-ur" style={{ fontSize: 22, color: "var(--brand)", fontWeight: 600, marginTop: 4, marginBottom: 8 }}>آدھے دن کی رخصت کا درخواست فارم</div>
+            <div style={{ display: "inline-flex", gap: 14, padding: "5px 10px", border: "1.5px solid var(--brand)", borderRadius: 6, background: "var(--brand-soft)", marginTop: 2 }}>
+              <CheckLabel en="Approved" ur="منظور" />
+              <CheckLabel en="Not Approved" ur="نا منظور" />
+            </div>
           </div>
         </div>
 
@@ -127,20 +131,8 @@ export default function ApplyHalfDayClient({ employees, halfDayTypeId }: { emplo
             <textarea className="lf-reason" rows={5} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason…" />
           </Field>
 
-          {/* === Employee signature + date === */}
-          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
-            <Field en="Employee Signature" ur="ملازم کے دستخط">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
-            </Field>
-            <Field en="Date" ur="تاریخ">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
-                ____  /  ____  /  ______
-              </div>
-            </Field>
-          </div>
-
           {/* === FOR OFFICE USE ONLY === */}
-          <div className="lf-office-banner" style={{ marginTop: 24, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="lf-office-banner" style={{ marginTop: 12, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 1.2 }}>For Office Use Only</span>
             <span className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600 }}>دفتری استعمال کے لیے</span>
           </div>
@@ -151,44 +143,32 @@ export default function ApplyHalfDayClient({ employees, halfDayTypeId }: { emplo
               <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Supervisor / Manager&apos;s Comments</span>
               <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>سپروائزر یا مینیجر کی رائے</div>
             </div>
-            <BlankLines count={6} />
+            <BlankLines count={4} />
           </div>
 
-          {/* Approval status */}
-          <div>
-            <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Approval Status</span>
-              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>منظوری کی حیثیت</div>
-            </div>
-            <div style={{ display: "flex", gap: 28 }}>
-              <CheckLabel en="Approved" ur="منظور" />
-              <CheckLabel en="Not Approved" ur="نا منظور" />
-            </div>
-          </div>
-
-          {/* Admin assistant */}
-          <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
-            <Field en="Admin Assistant Signature" ur="">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
-            </Field>
-            <Field en="Date" ur="تاریخ">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
-                ____  /  ____  /  ______
-              </div>
-            </Field>
-          </div>
-
-          {/* Final approval */}
-          <div className="lf-final-banner" style={{ marginTop: 18, padding: "10px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
+          {/* Final approval banner */}
+          <div className="lf-final-banner" style={{ marginTop: 6, padding: "8px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.8 }}>
               Final Approval by HEAD HR &amp; ADMINISTRATION
             </div>
             <div className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600, marginTop: 2 }}>حتمی منظوری برائے سربراہ ایچ آر</div>
           </div>
 
-          <div style={{ marginTop: 4 }}>
-            <Field en="Signature" ur="دستخط">
-              <div style={{ height: 50, borderBottom: "1.5px solid #000" }} />
+          {/* === All signatures on ONE row === */}
+          <div className="lf-sign-row" style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.85fr", gap: 16 }}>
+            <Field en="Employee Sig." ur="ملازم دستخط">
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="Admin Asst. Sig." ur="">
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="HR Head Sig." ur="ایچ آر دستخط">
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="Date" ur="تاریخ">
+              <div style={{ height: 36, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 13 }}>
+                __ / __ / ____
+              </div>
             </Field>
           </div>
 

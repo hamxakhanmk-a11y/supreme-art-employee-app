@@ -443,6 +443,18 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
     grid-template-columns: 1fr 1fr !important;
     gap: 16px !important;
   }
+  /* Type-of-Leave row: 4 columns on one line (Type | From | To | Total Days) */
+  body.print-scaled .leave-form .lf-4col {
+    display: grid !important;
+    grid-template-columns: 1.4fr 1fr 1fr 0.8fr !important;
+    gap: 14px !important;
+  }
+  /* All signatures on one row at the bottom */
+  body.print-scaled .leave-form .lf-sign-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 0.85fr !important;
+    gap: 16px !important;
+  }
   body.print-scaled .lf-letterhead { padding-bottom: 14px !important; margin-bottom: 16px !important; }
   body.print-scaled .lf-letterhead img { height: 175px !important; max-width: 520px !important; }
   body.print-scaled .lf-title { font-size: 28px !important; }
