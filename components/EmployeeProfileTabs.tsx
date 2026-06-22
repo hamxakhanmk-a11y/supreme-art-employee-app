@@ -8,12 +8,13 @@ type OtherDoc = { id: number; label: string; url: string; category?: string | nu
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
 }: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
-  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking">("personal");
+  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "personal", label: "Personal" },
     { key: "contact", label: "Contact" },
     { key: "job", label: "Job" },
+    { key: "salary", label: "Salary" },
     { key: "banking", label: "Banking" },
     { key: "documents", label: "Documents" },
     { key: "education", label: "Education" },
@@ -91,8 +92,24 @@ export default function EmployeeProfileTabs({
           ["Work Location", employee.workLocation],
           ["Shift", employee.shift],
           ["Status", employee.status],
-          ["Basic Salary", employee.basicSalary ? `PKR ${Number(employee.basicSalary).toLocaleString()}` : null],
         ]} />}
+
+        {tab === "salary" && (() => {
+          const basic = Number(employee.basicSalary || 0);
+          const conv = Number(employee.conveyance || 0);
+          const hr = Math.round(basic * (Number(employee.houseRentPercent || 0) / 100));
+          const med = Math.round(basic * (Number(employee.medicalPercent || 0) / 100));
+          const fmtPKR = (n: number) => n ? `PKR ${n.toLocaleString()}` : "—";
+          return <Grid items={[
+            ["Basic Salary", fmtPKR(basic)],
+            ["Conveyance", fmtPKR(conv)],
+            [`House Rent (${employee.houseRentPercent || 0}%)`, fmtPKR(hr)],
+            [`Medical (${employee.medicalPercent || 0}%)`, fmtPKR(med)],
+            ["Income Tax %", `${employee.incomeTaxPercent || 0}%`],
+            ["EOBI Employee %", `${employee.eobiEmployeePercent || 0}%`],
+            ["EOBI Employer %", `${employee.eobiEmployerPercent || 0}%`],
+          ]} />;
+        })()}
 
         {tab === "banking" && <Grid items={[
           ["Bank Name", employee.bankName],

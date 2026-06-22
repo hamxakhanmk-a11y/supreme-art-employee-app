@@ -19,6 +19,12 @@ export type EmployeePayload = {
   reportingManager: string; workLocation: string; shift: string; status: string;
   contractExpiry: string;
   basicSalary: string;
+  conveyance: string;
+  houseRentPercent: string;
+  medicalPercent: string;
+  incomeTaxPercent: string;
+  eobiEmployeePercent: string;
+  eobiEmployerPercent: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
   photoUrl: string; cnicFrontUrl: string; cnicBackUrl: string; passportUrl: string;
   ssiUrl: string; ubiUrl: string;
@@ -41,6 +47,12 @@ const empty: EmployeePayload = {
   reportingManager: "", workLocation: "", shift: "", status: "active",
   contractExpiry: "",
   basicSalary: "",
+  conveyance: "0",
+  houseRentPercent: "0",
+  medicalPercent: "0",
+  incomeTaxPercent: "0",
+  eobiEmployeePercent: "0",
+  eobiEmployerPercent: "0",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
   photoUrl: "", cnicFrontUrl: "", cnicBackUrl: "", passportUrl: "",
   ssiUrl: "", ubiUrl: "",
@@ -239,10 +251,28 @@ export default function EmployeeForm({
               <option value="active">Active</option><option value="inactive">Inactive</option>
             </select>
           </Field>
+          <Field label="Contract Expiry"><input type="date" value={form.contractExpiry} onChange={e => set("contractExpiry", e.target.value)} /></Field>
+        </Row>
+      </div>
+
+      {/* === Salary Structure === */}
+      <div className="card">
+        <div className="section-title">Salary Structure</div>
+        <div style={{ fontSize: 12, color: "var(--text2)", marginTop: -4, marginBottom: 12 }}>
+          These values are reused every month when generating this employee's salary slips.
+        </div>
+        <Row>
           <Field label="Basic Salary (PKR)"><input type="number" value={form.basicSalary} onChange={e => set("basicSalary", e.target.value)} /></Field>
+          <Field label="Conveyance (PKR)"><input type="number" value={form.conveyance} onChange={e => set("conveyance", e.target.value)} /></Field>
         </Row>
         <Row>
-          <Field label="Contract Expiry"><input type="date" value={form.contractExpiry} onChange={e => set("contractExpiry", e.target.value)} /></Field>
+          <Field label="House Rent %"><PercentSelect value={form.houseRentPercent} onChange={v => set("houseRentPercent", v)} /></Field>
+          <Field label="Medical %"><PercentSelect value={form.medicalPercent} onChange={v => set("medicalPercent", v)} /></Field>
+          <Field label="Income Tax %"><PercentSelect value={form.incomeTaxPercent} onChange={v => set("incomeTaxPercent", v)} /></Field>
+        </Row>
+        <Row>
+          <Field label="EOBI Employee %"><PercentSelect value={form.eobiEmployeePercent} onChange={v => set("eobiEmployeePercent", v)} /></Field>
+          <Field label="EOBI Employer %"><PercentSelect value={form.eobiEmployerPercent} onChange={v => set("eobiEmployerPercent", v)} /></Field>
         </Row>
       </div>
 
@@ -381,6 +411,17 @@ function Field({ label, children, wide }: { label: string; children: React.React
       <label className="form-label">{label}</label>
       {children}
     </div>
+  );
+}
+
+function PercentSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // 0..100 in steps of 1
+  return (
+    <select value={value || "0"} onChange={e => onChange(e.target.value)}>
+      {Array.from({ length: 101 }, (_, i) => (
+        <option key={i} value={String(i)}>{i}%</option>
+      ))}
+    </select>
   );
 }
 
