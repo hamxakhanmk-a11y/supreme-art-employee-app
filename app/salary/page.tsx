@@ -44,6 +44,7 @@ export default function SalaryGeneratorPage() {
   const [search, setSearch] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [rows, setRows] = useState<RowState[]>([]);
+  const [printSelected, setPrintSelected] = useState<Set<number>>(new Set());
   const [loadingAtt, setLoadingAtt] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,8 +160,11 @@ export default function SalaryGeneratorPage() {
       const saved: any[] = Array.isArray(data?.slips) ? data.slips : [data];
       const byEmp = new Map<number, number>();
       for (const s of saved) if (s?.employeeId && s?.id) byEmp.set(s.employeeId, s.id);
-      setRows(prev => prev.map(r => ({ ...r, slipId: byEmp.get(r.emp.id) ?? r.slipId })));
-      setSuccess(`Generated ${rows.length} slip${rows.length === 1 ? "" : "s"} for ${month} ${year}. View or print each below.`);
+      const updated = rows.map(r => ({ ...r, slipId: byEmp.get(r.emp.id) ?? r.slipId }));
+      setRows(updated);
+      // Auto-tick all newly-saved slips for printing
+      setPrintSelected(new Set(updated.map(r => r.slipId).filter((x): x is number => !!x)));
+      setSuccess(`Generated ${rows.length} slip${rows.length === 1 ? "" : "s"} for ${month} ${year}. Tick the ones you want and click Print Selected.`);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -255,6 +259,14 @@ export default function SalaryGeneratorPage() {
             <table style={{ minWidth: 1100 }}>
               <thead>
                 <tr>
+                  <th style={{ width: 30, textAlign: "center" }} title="Tick to include in bulk print">
+                    <input type="checkbox"
+                      checked={rows.length > 0 && rows.every(r => r.slipId && printSelected.has(r.slipId))}
+                      onChange={e => {
+                        if (e.target.checked) setPrintSelected(new Set(rows.map(r => r.slipId).filter((x): x is number => !!x)));
+                        else setPrintSelected(new Set());
+                      }} />
+                  </th>
                   <th>Employee</th>
                   <th style={{ textAlign: "right" }}>Basic</th>
                   <th style={{ textAlign: "center" }}>Present</th>
@@ -273,6 +285,17 @@ export default function SalaryGeneratorPage() {
                   const c = computeRow(r);
                   return (
                     <tr key={r.emp.id}>
+                      <td style={{ textAlign: "center" }}>
+                        {r.slipId ? (
+                          <input type="checkbox" checked={printSelected.has(r.slipId)} onChange={() => {
+                            const next = new Set(printSelected);
+                            next.has(r.slipId!) ? next.delete(r.slipId!) : next.add(r.slipId!);
+                            setPrintSelected(next);
+                          }} />
+                        ) : (
+                          <span style={{ color: "var(--text3)", fontSize: 11 }}>—</span>
+                        )}
+                      </td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{r.emp.firstName} {r.emp.lastName}</div>
                         <div style={{ fontSize: 11, color: "var(--text2)" }}>{r.emp.employeeId}</div>
@@ -288,7 +311,7 @@ export default function SalaryGeneratorPage() {
                       <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(c.netPay)}</td>
                       <td>
                         {r.slipId ? (
-                          <Link href={`/salary/${r.slipId}`} className="btn btn-sm btn-primary">View / Print</Link>
+                          <Link href={`/salary/${r.slipId}`} className="btn btn-sm btn-primary">View</Link>
                         ) : (
                           <span style={{ fontSize: 11, color: "var(--text2)" }}>Not generated</span>
                         )}
@@ -299,10 +322,25 @@ export default function SalaryGeneratorPage() {
               </tbody>
             </table>
           </div>
-          <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <button className="btn btn-primary" onClick={generate} disabled={saving}>
-              {saving ? "Generating…" : `💾 Generate ${rows.length} Slip${rows.length === 1 ? "" : "s"}`}
-            </button>
+          <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--text2)" }}>
+              {printSelected.size > 0 ? <>{printSelected.size} ticked for print</> : <>Tip: tick the slips you want to print, then click Print Selected</>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary" onClick={generate} disabled={saving}>
+                {saving ? "Generating…" : `💾 Generate ${rows.length} Slip${rows.length === 1 ? "" : "s"}`}
+              </button>
+              <button
+                className="btn btn-print"
+                disabled={printSelected.size === 0}
+                onClick={() => {
+                  const ids = Array.from(printSelected).join(",");
+                  window.location.href = `/salary/print?ids=${ids}`;
+                }}
+              >
+                🖨 Print Selected ({printSelected.size})
+              </button>
+            </div>
           </div>
         </div>
       )}

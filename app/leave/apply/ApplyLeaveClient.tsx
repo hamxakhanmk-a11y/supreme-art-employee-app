@@ -104,13 +104,17 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
       </div>
 
       <div className="card leave-form-wrap print-page-bg" style={{ maxWidth: 780, margin: "0 auto", position: "relative" }}>
-        {/* Letterhead */}
-        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
+        {/* Letterhead — logo + title + approval checkboxes (top-right office stamp) */}
+        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid var(--brand)", paddingBottom: 12, marginBottom: 14, gap: 12 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 100, width: "auto", maxWidth: 320, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 120, width: "auto", maxWidth: 380, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--brand)" }}>Leave Application Form</div>
-            <div className="urdu" style={{ fontSize: 17, color: "var(--brand)", fontWeight: 600, marginTop: 4 }}>رخصت کی درخواست فارم</div>
+            <div className="lf-title" style={{ fontSize: 22, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--brand)", lineHeight: 1.1 }}>Leave Application Form</div>
+            <div className="urdu lf-title-ur" style={{ fontSize: 22, color: "var(--brand)", fontWeight: 600, marginTop: 4, marginBottom: 8 }}>رخصت کی درخواست فارم</div>
+            <div style={{ display: "inline-flex", gap: 14, padding: "5px 10px", border: "1.5px solid var(--brand)", borderRadius: 6, background: "var(--brand-soft)", marginTop: 2 }}>
+              <CheckLabel en="Approved" ur="منظور" />
+              <CheckLabel en="Not Approved" ur="نا منظور" />
+            </div>
           </div>
         </div>
 
@@ -118,87 +122,83 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           {err && <div className="no-print" style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
           {ok && <div className="no-print" style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
 
-          {/* === Employee block === */}
-          <Field en="Employee Name" ur="ملازم نام">
-            <select required value={form.employeeId} onChange={e => {
-              const id = e.target.value;
-              const emp = employees.find(x => String(x.id) === id);
-              setForm({ ...form, employeeId: id, department: emp?.department || "" });
-            }}>
-              <option value="">— Select Employee —</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-            </select>
-          </Field>
-
-          <Field en="Designation" ur="عہدہ">
-            <input value={selectedEmp?.designation || ""} readOnly placeholder=" " />
-          </Field>
-
-          <Field en="Employee ID" ur="ملازم ای ڈی">
-            <input value={selectedEmp?.employeeId || ""} readOnly placeholder=" " />
-          </Field>
-
-          <Field en="Department" ur="ڈیپارٹمنٹ یا شعبہ">
-            <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder=" " />
-          </Field>
-
-          {/* === Type of Leave (with inline manager) === */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-              <BiLabel en="Type of Leave" ur="" />
-              <button type="button"
-                onClick={() => setShowAddType(v => !v)}
-                className="no-print"
-                style={{ background: "transparent", border: "none", color: "var(--brand)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>
-                {showAddType ? "✕ Close" : "＋ Add custom type"}
-              </button>
-            </div>
-            <select required value={form.leaveTypeId} onChange={e => setForm({ ...form, leaveTypeId: e.target.value })}>
-              <option value="">— Select Leave Type —</option>
-              {leaveTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.daysAllowed} days · {t.isPaid ? "Paid" : "Unpaid"})</option>)}
-            </select>
-
-            {leaveTypes.length > 0 && (
-              <div className="no-print" style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {leaveTypes.map(t => (
-                  <div key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px 4px 10px", borderRadius: 999, background: "var(--bg2)", border: "1px solid var(--border)", fontSize: 11, color: "var(--text2)" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.color || "#185FA5" }} />
-                    <span>{t.name}</span>
-                    <button type="button" onClick={() => deleteType(t)} title={`Delete ${t.name}`}
-                      style={{ background: "transparent", border: "none", color: "#aaa", cursor: "pointer", padding: "0 4px", fontSize: 13, lineHeight: 1 }}>🗑</button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {showAddType && (
-              <div className="no-print" style={{ marginTop: 10, padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "var(--bg2)" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 8 }}>Add a new leave type</div>
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "end" }}>
-                  <div><label className="form-label">Name *</label><input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="e.g. Maternity Leave" /></div>
-                  <div><label className="form-label">Days/Year</label><input type="number" value={newType.daysAllowed} onChange={e => setNewType({ ...newType, daysAllowed: e.target.value })} /></div>
-                  <div><label className="form-label">&nbsp;</label><button type="button" onClick={addType} disabled={addingType || !newType.name.trim()} className="btn btn-primary">{addingType ? "Adding…" : "Add"}</button></div>
-                </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", marginTop: 8, cursor: "pointer" }}>
-                  <input type="checkbox" checked={newType.isPaid} onChange={e => setNewType({ ...newType, isPaid: e.target.checked })} />Paid leave
-                </label>
-              </div>
-            )}
+          {/* === Employee block === two-column to use horizontal space */}
+          <div className="lf-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Field en="Employee Name" ur="ملازم نام">
+              <select required value={form.employeeId} onChange={e => {
+                const id = e.target.value;
+                const emp = employees.find(x => String(x.id) === id);
+                setForm({ ...form, employeeId: id, department: emp?.department || "" });
+              }}>
+                <option value="">— Select Employee —</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
+              </select>
+            </Field>
+            <Field en="Employee ID" ur="ملازم ای ڈی">
+              <input value={selectedEmp?.employeeId || ""} readOnly placeholder=" " />
+            </Field>
+          </div>
+          <div className="lf-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Field en="Designation" ur="عہدہ">
+              <input value={selectedEmp?.designation || ""} readOnly placeholder=" " />
+            </Field>
+            <Field en="Department" ur="ڈیپارٹمنٹ یا شعبہ">
+              <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder=" " />
+            </Field>
           </div>
 
-          {/* === Leave Duration === */}
-          <BiLabel en="Leave Duration" ur="رخصت کی مدت" />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: -6 }}>
+          {/* === Type of Leave + Duration (4 columns on one row) === */}
+          <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: -6 }}>
+            <button type="button"
+              onClick={() => setShowAddType(v => !v)}
+              style={{ background: "transparent", border: "none", color: "var(--brand)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>
+              {showAddType ? "✕ Close" : "＋ Add custom type"}
+            </button>
+          </div>
+          <div className="lf-4col" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 12 }}>
+            <Field en="Type of Leave" ur="رخصت کی قسم" compact>
+              <select required value={form.leaveTypeId} onChange={e => setForm({ ...form, leaveTypeId: e.target.value })}>
+                <option value="">— Select Leave Type —</option>
+                {leaveTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </Field>
             <Field en="From" ur="کب سے" compact>
               <input type="date" required value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
             </Field>
             <Field en="To" ur="کب تک" compact>
               <input type="date" required value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
             </Field>
-            <Field en="Total Days" ur="کل دنوں کی تعداد" compact>
-              <div className="calc-readout" style={{ padding: "8px 11px", border: "1px solid var(--border2)", borderRadius: 7, background: "var(--bg2)", fontWeight: 700, color: "var(--brand)" }}>{days}</div>
+            <Field en="Total Days" ur="کل دن" compact>
+              <div className="calc-readout" style={{ padding: "8px 11px", border: "1px solid var(--border2)", borderRadius: 7, background: "var(--bg2)", fontWeight: 700, color: "var(--brand)", textAlign: "center" }}>{days}</div>
             </Field>
           </div>
+
+          {leaveTypes.length > 0 && (
+            <div className="no-print" style={{ marginTop: -4, display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {leaveTypes.map(t => (
+                <div key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px 4px 10px", borderRadius: 999, background: "var(--bg2)", border: "1px solid var(--border)", fontSize: 11, color: "var(--text2)" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.color || "#185FA5" }} />
+                  <span>{t.name}</span>
+                  <button type="button" onClick={() => deleteType(t)} title={`Delete ${t.name}`}
+                    style={{ background: "transparent", border: "none", color: "#aaa", cursor: "pointer", padding: "0 4px", fontSize: 13, lineHeight: 1 }}>🗑</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showAddType && (
+            <div className="no-print" style={{ padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "var(--bg2)" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 8 }}>Add a new leave type</div>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "end" }}>
+                <div><label className="form-label">Name *</label><input value={newType.name} onChange={e => setNewType({ ...newType, name: e.target.value })} placeholder="e.g. Maternity Leave" /></div>
+                <div><label className="form-label">Days/Year</label><input type="number" value={newType.daysAllowed} onChange={e => setNewType({ ...newType, daysAllowed: e.target.value })} /></div>
+                <div><label className="form-label">&nbsp;</label><button type="button" onClick={addType} disabled={addingType || !newType.name.trim()} className="btn btn-primary">{addingType ? "Adding…" : "Add"}</button></div>
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", marginTop: 8, cursor: "pointer" }}>
+                <input type="checkbox" checked={newType.isPaid} onChange={e => setNewType({ ...newType, isPaid: e.target.checked })} />Paid leave
+              </label>
+            </div>
+          )}
 
           {/* === Half-day segment — only for Half Day leave type === */}
           {isHalfDay && (
@@ -220,7 +220,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
           {/* === Reason === */}
           <Field en="Reason for Leave" ur="رخصت کی وجہ">
-            <textarea rows={3} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
+            <textarea className="lf-reason" rows={5} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
           </Field>
 
           {/* === Sick leave medical cert === */}
@@ -254,20 +254,8 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
             <input value={form.dutiesAssignedTo} onChange={e => setForm({ ...form, dutiesAssignedTo: e.target.value })} placeholder=" " />
           </div>
 
-          {/* === Employee signature + date === */}
-          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
-            <Field en="Employee Signature" ur="ملازم دستخط">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
-            </Field>
-            <Field en="Date" ur="تاریخ">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
-                ____  /  ____  /  ______
-              </div>
-            </Field>
-          </div>
-
           {/* === FOR OFFICE USE ONLY === */}
-          <div className="lf-office-banner" style={{ marginTop: 24, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="lf-office-banner" style={{ marginTop: 12, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 1.2 }}>For Office Use Only</span>
             <span className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600 }}>صرف دفتری استعمال کے لیے</span>
           </div>
@@ -280,19 +268,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               </span>
               <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>سپروائزر یا مینیجر کی رائے</div>
             </div>
-            <BlankLines count={3} />
-          </div>
-
-          {/* Approval status */}
-          <div>
-            <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Approval Status</span>
-              <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>منظوری کی حیثیت</div>
-            </div>
-            <div style={{ display: "flex", gap: 28 }}>
-              <CheckLabel en="Approved" ur="منظور" />
-              <CheckLabel en="Not Approved" ur="نا منظور" />
-            </div>
+            <BlankLines count={4} />
           </div>
 
           <div>
@@ -300,31 +276,24 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Reason (if not approved)</span>
               <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>وجہ اگر منظور نہ ھو</div>
             </div>
-            <BlankLines count={2} />
+            <BlankLines count={3} />
           </div>
 
-          <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
-            <Field en="Admin Assistant Signature" ur="">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000" }} />
+          {/* === All signatures on ONE row === */}
+          <div className="lf-sign-row" style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.85fr", gap: 16 }}>
+            <Field en="Employee Sig." ur="ملازم دستخط" compact>
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
             </Field>
-            <Field en="Date" ur="تاریخ">
-              <div style={{ height: 38, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 14 }}>
-                ____  /  ____  /  ______
+            <Field en="Admin Asst. Sig." ur="" compact>
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="HR Head Sig." ur="ایچ آر دستخط" compact>
+              <div style={{ height: 36, borderBottom: "1.5px solid #000" }} />
+            </Field>
+            <Field en="Date" ur="تاریخ" compact>
+              <div style={{ height: 36, borderBottom: "1.5px solid #000", display: "flex", alignItems: "flex-end", padding: "0 4px 6px", fontFamily: "monospace", color: "#555", fontSize: 13 }}>
+                __ / __ / ____
               </div>
-            </Field>
-          </div>
-
-          {/* Final approval */}
-          <div className="lf-final-banner" style={{ marginTop: 18, padding: "10px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-              Final Approval by HEAD HR &amp; ADMINISTRATION
-            </div>
-            <div className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600, marginTop: 2 }}>حتمی منظوری برائے سربراہ ایچ آر</div>
-          </div>
-
-          <div style={{ marginTop: 4 }}>
-            <Field en="Signature" ur="دستخط">
-              <div style={{ height: 50, borderBottom: "1.5px solid #000" }} />
             </Field>
           </div>
 

@@ -433,35 +433,59 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   /* Drop any min-width hint that was forcing horizontal scroll on screen */
   table[style*="min-width"] { min-width: 0 !important; }
 
-  /* ── Leave & Half-Day forms: scale body so content fits one page ── */
-  body.print-scaled { zoom: 0.56 !important; }
-  body.print-scaled .leave-form { gap: 8px !important; }
-  body.print-scaled .lf-letterhead { padding-bottom: 8px !important; margin-bottom: 10px !important; }
-  body.print-scaled .lf-letterhead img { height: 180px !important; max-width: 460px !important; }
-  body.print-scaled .lf-letterhead { padding-bottom: 14px !important; margin-bottom: 14px !important; }
-  body.print-scaled .lf-office-banner { margin-top: 12px !important; padding: 5px 10px !important; }
-  body.print-scaled .lf-final-banner { margin-top: 10px !important; padding: 6px 10px !important; }
-  body.print-scaled .lf-blank-line { height: 16px !important; }
-  body.print-scaled .lf-policy-box { padding: 8px 10px !important; }
-  body.print-scaled .lf-field-label { margin-bottom: 3px !important; }
-  body.print-scaled textarea { min-height: 50px !important; }
-  /* Avoid breaking inside the form — keep it as one block */
+  /* ── Leave & Half-Day forms: bigger text + fill the page bottom ── */
+  body.print-scaled { zoom: 0.75 !important; }
+  body.print-scaled .leave-form { gap: 11px !important; }
+  /* Hard-force 2-column rows so Employee Name + ID and Designation + Department
+     share a single line even if intrinsic styles get overridden somewhere. */
+  body.print-scaled .leave-form .lf-2col {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+  }
+  /* Type-of-Leave row: 4 columns on one line (Type | From | To | Total Days) */
+  body.print-scaled .leave-form .lf-4col {
+    display: grid !important;
+    grid-template-columns: 1.4fr 1fr 1fr 0.8fr !important;
+    gap: 14px !important;
+  }
+  /* All signatures on one row at the bottom */
+  body.print-scaled .leave-form .lf-sign-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr 0.85fr !important;
+    gap: 16px !important;
+  }
+  body.print-scaled .lf-letterhead { padding-bottom: 14px !important; margin-bottom: 16px !important; }
+  body.print-scaled .lf-letterhead img { height: 175px !important; max-width: 520px !important; }
+  body.print-scaled .lf-title { font-size: 28px !important; }
+  body.print-scaled .lf-title-ur { font-size: 26px !important; }
+  body.print-scaled .lf-field-label span:first-child,
+  body.print-scaled .leave-form label,
+  body.print-scaled .leave-form .form-label { font-size: 13px !important; }
+  body.print-scaled input,
+  body.print-scaled select,
+  body.print-scaled textarea { font-size: 14px !important; padding: 9px 12px !important; }
+  body.print-scaled .lf-office-banner { margin-top: 16px !important; padding: 9px 14px !important; font-size: 14px !important; }
+  body.print-scaled .lf-final-banner { margin-top: 14px !important; padding: 10px 14px !important; font-size: 14px !important; }
+  body.print-scaled .lf-blank-line { height: 30px !important; }
+  body.print-scaled .lf-policy-box { padding: 11px 14px !important; }
+  body.print-scaled .lf-field-label { margin-bottom: 4px !important; }
+  body.print-scaled textarea { min-height: 80px !important; }
+  body.print-scaled textarea.lf-reason { min-height: 150px !important; }
+  /* Form wrap — full printable width but DON'T force the whole block onto
+     a single page break: that rule was pushing the entire form to page 2
+     whenever the browser estimated even a 1-pixel overflow. */
   body.print-scaled .leave-form-wrap {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    page-break-after: avoid;
-    break-after: avoid;
-    /* Stretch the form to use the full printable width so we lose the
-       grey side-margins inside the A4 sheet. Body zoom 0.56 scales it
-       back down so 1300px intrinsic → ~728px printed (≈ A4 portrait
-       printable width). */
-    max-width: 1300px !important;
+    /* zoom 0.75 → 985px intrinsic prints at ~739px ≈ A4 portrait printable */
+    max-width: 985px !important;
     width: 100% !important;
     margin: 0 auto !important;
     padding: 18px !important;
     box-shadow: none !important;
-    border: 1px solid #ccc !important;
+    border: 1.5px solid #999 !important;
   }
+  /* Keep individual rows from splitting mid-row — but allow the FORM
+     itself to flow naturally on page 1. */
   body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
 
   /* Print form inputs as clean blank boxes — for printing the form
