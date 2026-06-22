@@ -398,18 +398,17 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   .print-page-bg {
     background-image: url('/logo-urdu.png');
     background-repeat: no-repeat;
-    background-position: center 55%;
-    background-size: 70% auto;
-    background-attachment: local;
+    background-position: center center;
+    background-size: 55% auto;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .print-page-bg > * { position: relative; }
+  .print-page-bg > * { position: relative; z-index: 1; }
   /* Fade the watermark via a pseudo overlay — keeps text crisp on top */
   .print-page-bg::before {
     content: "";
     position: absolute; inset: 0;
-    background: rgba(255,255,255,0.88);
+    background: rgba(255,255,255,0.90);
     pointer-events: none;
     z-index: 0;
   }
@@ -421,7 +420,7 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   body.print-scaled { zoom: 0.56 !important; }
   body.print-scaled .leave-form { gap: 8px !important; }
   body.print-scaled .lf-letterhead { padding-bottom: 8px !important; margin-bottom: 10px !important; }
-  body.print-scaled .lf-letterhead img { height: 80px !important; }
+  body.print-scaled .lf-letterhead img { height: 140px !important; max-width: 380px !important; }
   body.print-scaled .lf-office-banner { margin-top: 12px !important; padding: 5px 10px !important; }
   body.print-scaled .lf-final-banner { margin-top: 10px !important; padding: 6px 10px !important; }
   body.print-scaled .lf-blank-line { height: 16px !important; }

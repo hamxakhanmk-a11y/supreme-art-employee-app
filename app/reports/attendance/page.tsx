@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { employees, attendance } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
 import MonthlyRegisterClient from "@/app/attendance/history/MonthlyRegisterClient";
-import PrintHeader from "@/components/PrintHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +38,8 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),
   ]);
 
-  const monthName = first.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-
   return (
     <div className="fade-up">
-      <PrintHeader title="Monthly Attendance Register" subtitle={monthName} />
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Monthly Attendance Register</h1>
