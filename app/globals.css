@@ -434,8 +434,8 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   table[style*="min-width"] { min-width: 0 !important; }
 
   /* ── Leave & Half-Day forms: bigger text + fill the page bottom ── */
-  body.print-scaled { zoom: 0.80 !important; }
-  body.print-scaled .leave-form { gap: 13px !important; }
+  body.print-scaled { zoom: 0.75 !important; }
+  body.print-scaled .leave-form { gap: 11px !important; }
   /* Hard-force 2-column rows so Employee Name + ID and Designation + Department
      share a single line even if intrinsic styles get overridden somewhere. */
   body.print-scaled .leave-form .lf-2col {
@@ -472,22 +472,20 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   body.print-scaled .lf-field-label { margin-bottom: 4px !important; }
   body.print-scaled textarea { min-height: 80px !important; }
   body.print-scaled textarea.lf-reason { min-height: 150px !important; }
-  /* Avoid breaking inside the form — keep it as one block */
+  /* Form wrap — full printable width but DON'T force the whole block onto
+     a single page break: that rule was pushing the entire form to page 2
+     whenever the browser estimated even a 1-pixel overflow. */
   body.print-scaled .leave-form-wrap {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    page-break-after: avoid;
-    break-after: avoid;
-    /* Stretch the form to use the full printable width so we lose the
-       grey side-margins inside the A4 sheet. Body zoom 0.80 → intrinsic
-       920px renders at ~736px printed (≈ A4 portrait printable width). */
-    max-width: 920px !important;
+    /* zoom 0.75 → 985px intrinsic prints at ~739px ≈ A4 portrait printable */
+    max-width: 985px !important;
     width: 100% !important;
     margin: 0 auto !important;
-    padding: 22px !important;
+    padding: 18px !important;
     box-shadow: none !important;
     border: 1.5px solid #999 !important;
   }
+  /* Keep individual rows from splitting mid-row — but allow the FORM
+     itself to flow naturally on page 1. */
   body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
 
   /* Print form inputs as clean blank boxes — for printing the form
