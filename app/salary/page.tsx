@@ -32,6 +32,7 @@ type RowState = {
   daysLeave: number;
   weekOffs: number;
   attLoaded: boolean;
+  slipId?: number;
 };
 
 const fmt = (n: number) => n.toLocaleString("en-PK");
@@ -153,7 +154,13 @@ export default function SalaryGeneratorPage() {
         body: JSON.stringify({ slips }),
       });
       if (!res.ok) { const j = await res.json(); throw new Error(j.error || "Failed to save"); }
-      setSuccess(`Generated ${rows.length} slip${rows.length === 1 ? "" : "s"} for ${month} ${year}.`);
+      const data = await res.json();
+      // API returns either a single object (1 slip) or { slips: [...] } (bulk)
+      const saved: any[] = Array.isArray(data?.slips) ? data.slips : [data];
+      const byEmp = new Map<number, number>();
+      for (const s of saved) if (s?.employeeId && s?.id) byEmp.set(s.employeeId, s.id);
+      setRows(prev => prev.map(r => ({ ...r, slipId: byEmp.get(r.emp.id) ?? r.slipId })));
+      setSuccess(`Generated ${rows.length} slip${rows.length === 1 ? "" : "s"} for ${month} ${year}. View or print each below.`);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -166,14 +173,11 @@ export default function SalaryGeneratorPage() {
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Generate Salary Slips</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Pick a month, select employees, and generate. Slips use each employee's salary structure from their profile.
-          </p>
-        </div>
-        <Link href="/reports/salary" className="btn">📊 Salary Records</Link>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Generate Salary Slips</h1>
+        <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
+          Pick a month, select employees, and generate. Slips use each employee's salary structure from their profile.
+        </p>
       </div>
 
       {/* Period + employee selector */}
@@ -261,6 +265,7 @@ export default function SalaryGeneratorPage() {
                   <th style={{ textAlign: "right" }}>Gross</th>
                   <th style={{ textAlign: "right" }}>Deductions</th>
                   <th style={{ textAlign: "right", color: "var(--brand)" }}>Net Pay</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -281,6 +286,13 @@ export default function SalaryGeneratorPage() {
                       <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(c.grossEarnings)}</td>
                       <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(c.totalDeductions)}</td>
                       <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(c.netPay)}</td>
+                      <td>
+                        {r.slipId ? (
+                          <Link href={`/salary/${r.slipId}`} target="_blank" className="btn btn-sm btn-primary">View / Print</Link>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "var(--text2)" }}>Not generated</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
