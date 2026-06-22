@@ -58,7 +58,7 @@ export default function ApplyHalfDayClient({ employees, halfDayTypeId }: { emplo
         <button onClick={() => window.print()} className="btn btn-print">🖨 Print Form</button>
       </div>
 
-      <div className="card" style={{ maxWidth: 780, margin: "0 auto" }}>
+      <div className="card leave-form-wrap" style={{ maxWidth: 780, margin: "0 auto" }}>
         {/* Letterhead */}
         <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
