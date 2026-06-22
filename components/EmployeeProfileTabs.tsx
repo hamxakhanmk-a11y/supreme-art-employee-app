@@ -271,6 +271,7 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attLoading, setAttLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     month: MONTHS[new Date().getMonth()], year: THIS_YEAR,
@@ -288,9 +289,37 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
       .finally(() => setLoading(false));
   };
 
+  const fetchAttendance = async (month: string, year: number) => {
+    const monthIdx = MONTHS.indexOf(month);
+    const from = `${year}-${String(monthIdx + 1).padStart(2, "0")}-01`;
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+    const to = `${year}-${String(monthIdx + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+    setAttLoading(true);
+    try {
+      const res = await fetch(`/api/attendance?from=${from}&to=${to}&employeeId=${employeeDbId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        let present = 0, absent = 0, leave = 0;
+        data.forEach((r: any) => {
+          if (r.status === "present" || r.status === "half-day") present++;
+          else if (r.status === "absent") absent++;
+          else if (r.status === "leave") leave++;
+        });
+        setForm(p => ({ ...p, daysPresent: present, daysAbsent: absent, daysLeave: leave }));
+      }
+    } catch { /* silently ignore */ }
+    finally { setAttLoading(false); }
+  };
+
   useEffect(() => { load(); }, [employeeDbId]);
 
   const sf = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleMonthYear = (k: "month" | "year", v: any) => {
+    const next = { ...form, [k]: v };
+    setForm(next);
+    fetchAttendance(next.month, next.year);
+  };
 
   const save = async () => {
     setSaving(true); setError(null);
@@ -317,23 +346,27 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} record{records.length !== 1 ? "s" : ""}</div>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(s => !s)}>
+        <button className="btn btn-primary btn-sm" onClick={() => {
+          if (!showForm) fetchAttendance(form.month, form.year);
+          setShowForm(s => !s);
+        }}>
           {showForm ? "✕ Cancel" : "＋ Add Salary Record"}
         </button>
       </div>
 
       {showForm && (
         <div className="card" style={{ marginBottom: 16, background: "var(--bg2)" }}>
-          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 13 }}>New Salary Record</div>
+          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>New Salary Record</div>
+          <div style={{ fontSize: 11, color: "var(--text2)", marginBottom: 10 }}>Days present/absent/leave are auto-filled from attendance. You can adjust if needed.</div>
           {error && <div style={{ color: "var(--danger)", marginBottom: 10, fontSize: 12 }}>{error}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
             <div><label className="form-label">Month</label>
-              <select value={form.month} onChange={e => sf("month", e.target.value)}>
+              <select value={form.month} onChange={e => handleMonthYear("month", e.target.value)}>
                 {MONTHS.map(m => <option key={m}>{m}</option>)}
               </select>
             </div>
             <div><label className="form-label">Year</label>
-              <select value={form.year} onChange={e => sf("year", parseInt(e.target.value))}>
+              <select value={form.year} onChange={e => handleMonthYear("year", parseInt(e.target.value))}>
                 {YEARS.map(y => <option key={y}>{y}</option>)}
               </select>
             </div>
@@ -346,17 +379,17 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
             <div><label className="form-label">Overtime / Bonus</label>
               <input type="number" value={form.overtime} onChange={e => sf("overtime", Number(e.target.value))} />
             </div>
-            <div><label className="form-label">Days Present</label>
-              <input type="number" value={form.daysPresent} onChange={e => sf("daysPresent", Number(e.target.value))} />
+            <div>
+              <label className="form-label">Days Present {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
+              <input type="number" value={form.daysPresent} onChange={e => sf("daysPresent", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
             </div>
-            <div><label className="form-label">Days Absent</label>
-              <input type="number" value={form.daysAbsent} onChange={e => sf("daysAbsent", Number(e.target.value))} />
+            <div>
+              <label className="form-label">Days Absent {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
+              <input type="number" value={form.daysAbsent} onChange={e => sf("daysAbsent", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
             </div>
-            <div><label className="form-label">Days on Leave</label>
-              <input type="number" value={form.daysLeave} onChange={e => sf("daysLeave", Number(e.target.value))} />
-            </div>
-            <div><label className="form-label">Week Offs</label>
-              <input type="number" value={form.weekOffs} onChange={e => sf("weekOffs", Number(e.target.value))} />
+            <div>
+              <label className="form-label">Days on Leave {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
+              <input type="number" value={form.daysLeave} onChange={e => sf("daysLeave", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
             </div>
             <div><label className="form-label">Other Deduction</label>
               <input type="number" value={form.otherDeduction} onChange={e => sf("otherDeduction", Number(e.target.value))} />
