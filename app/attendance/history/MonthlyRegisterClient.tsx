@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
+import PrintLandscape from "@/components/PrintLandscape";
 
 type Emp = {
   id: number;
@@ -112,6 +113,7 @@ export default function MonthlyRegisterClient({
 
   return (
     <>
+      <PrintLandscape />
       <PrintHeader
         title="Monthly Attendance Register"
         subtitle={`${MONTHS[month - 1]} ${year}`}

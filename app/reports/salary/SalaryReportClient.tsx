@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MONTHS } from "@/lib/salary";
+import PrintLandscape from "@/components/PrintLandscape";
 
 type Slip = {
   id: number;
@@ -63,6 +64,7 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
 
   return (
     <div className="fade-up">
+      <PrintLandscape />
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Salary Records</h1>

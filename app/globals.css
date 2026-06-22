@@ -416,6 +416,21 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
 
+  /* Tables in print: compact + flow within page width without right-edge crop */
+  table { font-size: 8pt !important; border-collapse: collapse; width: 100% !important; }
+  th, td { padding: 4px 6px !important; word-wrap: break-word; overflow-wrap: anywhere; }
+  /* Containers that hold tables: lift overflow:auto so all columns show on paper
+     instead of being clipped to a horizontal scrollbar */
+  .card,
+  .card[style*="overflow-x"],
+  .card[style*="overflow:auto"],
+  div[style*="overflow-x: auto"],
+  div[style*="overflowX"] {
+    overflow: visible !important;
+  }
+  /* Drop any min-width hint that was forcing horizontal scroll on screen */
+  table[style*="min-width"] { min-width: 0 !important; }
+
   /* ── Leave & Half-Day forms: scale body so content fits one page ── */
   body.print-scaled { zoom: 0.56 !important; }
   body.print-scaled .leave-form { gap: 8px !important; }
@@ -429,7 +444,15 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   body.print-scaled .lf-field-label { margin-bottom: 3px !important; }
   body.print-scaled textarea { min-height: 50px !important; }
   /* Avoid breaking inside the form — keep it as one block */
-  body.print-scaled .leave-form-wrap { page-break-inside: avoid; break-inside: avoid; }
+  body.print-scaled .leave-form-wrap {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
+  /* Forms are portrait; cancel any landscape rule injected by a previous page in the same tab */
+  body.print-scaled { /* portrait — explicit */ }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,

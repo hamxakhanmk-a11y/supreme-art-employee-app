@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
+import PrintLandscape from "@/components/PrintLandscape";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null };
@@ -96,6 +97,7 @@ export default function LeaveHistoryClient({
 
   return (
     <>
+      <PrintLandscape />
       <PrintHeader
         title="Leave History"
         subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
