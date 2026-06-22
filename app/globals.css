@@ -397,15 +397,12 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
   /* ── Leave & Half-Day forms: scale entire form to fit one page ── */
   .leave-form-wrap {
-    zoom: 0.72;
-    /* Firefox fallback */
-    transform: scale(0.72);
-    transform-origin: top left;
-    width: 139%;
+    zoom: 0.62 !important;
     max-width: none !important;
-    margin: 0 !important;
+    width: 161% !important;   /* 100 / 0.62 ≈ 161 — keeps readable width */
+    margin: 0 auto !important;
     box-shadow: none !important;
-    border: none !important;
+    border: 1px solid #ddd !important;
   }
 
   /* Print form inputs as clean blank boxes — for printing the form
