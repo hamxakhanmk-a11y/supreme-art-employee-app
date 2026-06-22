@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { MONTHS, computeSlip } from "@/lib/salary";
 
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
 
@@ -12,363 +13,307 @@ type Employee = {
   lastName: string;
   designation: string | null;
   department: string | null;
-  phone: string | null;
-  email: string | null;
-  cnic: string | null;
-  joiningDate: string | null;
   status: string | null;
   basicSalary: number | null;
+  conveyance: number | null;
+  houseRentPercent: number | null;
+  medicalPercent: number | null;
+  incomeTaxPercent: number | null;
+  eobiEmployeePercent: number | null;
+  eobiEmployerPercent: number | null;
 };
 
-type Slip = {
-  // inputs
-  employeeId: string;
-  month: string;
-  year: number;
-  // employee info (auto-filled)
-  name: string;
-  designation: string;
-  department: string;
-  phone: string;
-  email: string;
-  cnic: string;
-  joiningDate: string;
-  empStatus: string;
-  basicSalary: number;
-  // attendance (auto-filled / editable)
+type RowState = {
+  emp: Employee;
+  overtime: string;
+  otherDeduction: string;
   daysPresent: number;
   daysAbsent: number;
   daysLeave: number;
   weekOffs: number;
-  // earnings overrides
-  conveyance: number;
-  overtime: number;
-  // deductions overrides
-  otherDeduction: number;
+  attLoaded: boolean;
+  slipId?: number;
 };
-
-const emptySlip = (): Slip => ({
-  employeeId: "",
-  month: MONTHS[new Date().getMonth()],
-  year: CURRENT_YEAR,
-  name: "", designation: "", department: "", phone: "", email: "", cnic: "", joiningDate: "", empStatus: "",
-  basicSalary: 0,
-  daysPresent: 0, daysAbsent: 0, daysLeave: 0, weekOffs: 0,
-  conveyance: 6000, overtime: 0, otherDeduction: 0,
-});
-
-// ── Formulas (mirrors Excel) ──────────────────────────────────────────────────
-const houseRent     = (basic: number) => Math.round(basic * 0.40);
-const medicalAllow  = (basic: number) => Math.round(basic * 0.10);
-const grossEarnings = (s: Slip) =>
-  s.basicSalary + houseRent(s.basicSalary) + medicalAllow(s.basicSalary) + s.conveyance + s.overtime;
-
-const incomeTax     = (basic: number) => Math.round(basic * 0.05);
-const eobiEmployee  = (basic: number) => Math.round(basic * 0.01);
-const eobiEmployer  = (basic: number) => Math.round(basic * 0.02);
-const absentDeduct  = (s: Slip) => {
-  const workingDays = s.daysPresent + s.daysAbsent + s.daysLeave;
-  if (workingDays === 0 || s.daysAbsent === 0) return 0;
-  return Math.round((grossEarnings(s) / workingDays) * s.daysAbsent);
-};
-const totalDeductions = (s: Slip) =>
-  incomeTax(s.basicSalary) + eobiEmployee(s.basicSalary) + eobiEmployer(s.basicSalary) + absentDeduct(s) + s.otherDeduction;
-const netPay = (s: Slip) => grossEarnings(s) - totalDeductions(s);
-// ─────────────────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => n.toLocaleString("en-PK");
 
-export default function SalaryPage() {
+export default function SalaryGeneratorPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [slip, setSlip] = useState<Slip>(emptySlip());
-  const [loading, setLoading] = useState(false);
+  const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
+  const [year, setYear] = useState<number>(CURRENT_YEAR);
+  const [search, setSearch] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [rows, setRows] = useState<RowState[]>([]);
+  const [loadingAtt, setLoadingAtt] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/employees").then(r => r.json()).then(setEmployees).catch(() => {});
+    fetch("/api/employees").then(r => r.json()).then(d => Array.isArray(d) ? setEmployees(d) : null).catch(() => {});
   }, []);
 
-  const set = (k: keyof Slip, v: any) => setSlip(p => ({ ...p, [k]: v }));
+  const activeEmployees = useMemo(() => employees.filter(e => (e.status || "active") === "active"), [employees]);
 
-  const loadEmployee = async (empId: string, month?: string, year?: number) => {
-    const emp = employees.find(e => e.employeeId === empId);
-    if (!emp) return;
-    setLoading(true);
-    setError(null);
-    const m = month ?? slip.month;
-    const y = year ?? slip.year;
+  const filtered = useMemo(() => {
+    if (!search.trim()) return activeEmployees;
+    const q = search.toLowerCase();
+    return activeEmployees.filter(e =>
+      `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
+      e.employeeId.toLowerCase().includes(q) ||
+      (e.department || "").toLowerCase().includes(q)
+    );
+  }, [activeEmployees, search]);
+
+  const toggleSelect = (id: number) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedIds(next);
+  };
+  const selectAll = () => setSelectedIds(new Set(filtered.map(e => e.id)));
+  const clearAll = () => setSelectedIds(new Set());
+
+  const loadAttendance = async (empDbId: number, mIdx: number, y: number): Promise<{present:number;absent:number;leave:number;weekOffs:number}> => {
+    const from = `${y}-${String(mIdx + 1).padStart(2, "0")}-01`;
+    const last = new Date(y, mIdx + 1, 0).getDate();
+    const to = `${y}-${String(mIdx + 1).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
     try {
-      const recRes = await fetch(`/api/salary-records?employeeId=${emp.id}`);
-      const records: any[] = await recRes.json();
-      const rec = Array.isArray(records) ? records.find((r: any) => r.month === m && r.year === y) : null;
+      const res = await fetch(`/api/attendance?from=${from}&to=${to}&employeeId=${empDbId}`);
+      const data = await res.json();
+      if (!Array.isArray(data)) return { present: 0, absent: 0, leave: 0, weekOffs: 0 };
+      let present = 0, absent = 0, leave = 0, weekOffs = 0;
+      for (const r of data) {
+        if (r.status === "present" || r.status === "half-day") present++;
+        else if (r.status === "absent") absent++;
+        else if (r.status === "leave") leave++;
+        else if (r.status === "week-off") weekOffs++;
+      }
+      return { present, absent, leave, weekOffs };
+    } catch { return { present: 0, absent: 0, leave: 0, weekOffs: 0 }; }
+  };
 
-      setSlip(p => ({
-        ...p,
-        employeeId: empId,
-        name: `${emp.firstName} ${emp.lastName}`,
-        designation: emp.designation || "",
-        department: emp.department || "",
-        phone: emp.phone || "",
-        email: emp.email || "",
-        cnic: emp.cnic || "",
-        joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
-        empStatus: emp.status || "Active",
-        basicSalary: rec ? rec.basicSalary : (emp.basicSalary || 0),
-        conveyance: rec ? rec.conveyance : 6000,
-        overtime: rec ? rec.overtime : 0,
-        daysPresent: rec ? rec.daysPresent : 0,
-        daysAbsent: rec ? rec.daysAbsent : 0,
-        daysLeave: rec ? rec.daysLeave : 0,
-        weekOffs: rec ? rec.weekOffs : 0,
-        otherDeduction: rec ? rec.otherDeduction : 0,
-        _noRecord: !rec,
-      } as any));
+  const buildRows = async () => {
+    setError(null); setSuccess(null);
+    if (selectedIds.size === 0) { setError("Select at least one employee."); return; }
+    setLoadingAtt(true);
+    const mIdx = MONTHS.indexOf(month);
+    const selectedEmps = activeEmployees.filter(e => selectedIds.has(e.id));
+    const newRows: RowState[] = [];
+    for (const emp of selectedEmps) {
+      const att = await loadAttendance(emp.id, mIdx, year);
+      newRows.push({
+        emp,
+        overtime: "0",
+        otherDeduction: "0",
+        daysPresent: att.present,
+        daysAbsent: att.absent,
+        daysLeave: att.leave,
+        weekOffs: att.weekOffs,
+        attLoaded: true,
+      });
+    }
+    setRows(newRows);
+    setLoadingAtt(false);
+  };
+
+  const updateRow = (i: number, key: keyof RowState, value: any) => {
+    setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [key]: value } : r));
+  };
+
+  const computeRow = (r: RowState) => computeSlip({
+    basicSalary: Number(r.emp.basicSalary || 0),
+    conveyance: Number(r.emp.conveyance || 0),
+    houseRentPercent: Number(r.emp.houseRentPercent || 0),
+    medicalPercent: Number(r.emp.medicalPercent || 0),
+    incomeTaxPercent: Number(r.emp.incomeTaxPercent || 0),
+    eobiEmployeePercent: Number(r.emp.eobiEmployeePercent || 0),
+    eobiEmployerPercent: Number(r.emp.eobiEmployerPercent || 0),
+    overtime: parseInt(r.overtime) || 0,
+    otherDeduction: parseInt(r.otherDeduction) || 0,
+    daysPresent: r.daysPresent,
+    daysAbsent: r.daysAbsent,
+    daysLeave: r.daysLeave,
+  });
+
+  const generate = async () => {
+    setError(null); setSuccess(null); setSaving(true);
+    try {
+      const slips = rows.map(r => ({
+        employeeId: r.emp.id,
+        month, year,
+        overtime: parseInt(r.overtime) || 0,
+        otherDeduction: parseInt(r.otherDeduction) || 0,
+        daysPresent: r.daysPresent,
+        daysAbsent: r.daysAbsent,
+        daysLeave: r.daysLeave,
+        weekOffs: r.weekOffs,
+      }));
+      const res = await fetch("/api/salary-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slips }),
+      });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || "Failed to save"); }
+      const data = await res.json();
+      // API returns either a single object (1 slip) or { slips: [...] } (bulk)
+      const saved: any[] = Array.isArray(data?.slips) ? data.slips : [data];
+      const byEmp = new Map<number, number>();
+      for (const s of saved) if (s?.employeeId && s?.id) byEmp.set(s.employeeId, s.id);
+      setRows(prev => prev.map(r => ({ ...r, slipId: byEmp.get(r.emp.id) ?? r.slipId })));
+      setSuccess(`Generated ${rows.length} slip${rows.length === 1 ? "" : "s"} for ${month} ${year}. View or print each below.`);
     } catch (e: any) {
       setError(e.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleEmployeeChange = (empId: string) => {
-    set("employeeId", empId);
-    if (empId) loadEmployee(empId);
-  };
-
-  const handleMonthYearChange = (k: "month" | "year", v: any) => {
-    const next = { ...slip, [k]: v };
-    setSlip(next);
-    if (slip.employeeId) loadEmployee(slip.employeeId, next.month, next.year);
-  };
-
-  const handlePrint = () => window.print();
-
-  const gross = grossEarnings(slip);
-  const deductions = totalDeductions(slip);
-  const net = netPay(slip);
+  const totalNet = rows.reduce((s, r) => s + computeRow(r).netPay, 0);
+  const totalGross = rows.reduce((s, r) => s + computeRow(r).grossEarnings, 0);
 
   return (
     <div className="fade-up">
-      {/* ── Controls (no-print) ── */}
-      <div className="no-print" style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Salary Slip</h1>
-            <p style={{ color: "#888", fontSize: 13, marginTop: 4 }}>Generate and print employee salary slips</p>
-          </div>
-          <button onClick={handlePrint} className="btn btn-primary" style={{ gap: 6 }}>
-            🖨 Print / Save PDF
-          </button>
-        </div>
-
-        <div className="card" style={{ padding: "16px 20px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
-            <div>
-              <label className="form-label">Employee</label>
-              <select value={slip.employeeId} onChange={e => handleEmployeeChange(e.target.value)}>
-                <option value="">— Select Employee —</option>
-                {employees.map(e => (
-                  <option key={e.id} value={e.employeeId}>{e.employeeId} — {e.firstName} {e.lastName}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Month</label>
-              <select value={slip.month} onChange={e => handleMonthYearChange("month", e.target.value)}>
-                {MONTHS.map(m => <option key={m}>{m}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Year</label>
-              <select value={slip.year} onChange={e => handleMonthYearChange("year", parseInt(e.target.value))}>
-                {YEARS.map(y => <option key={y}>{y}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {(slip as any)._noRecord && slip.employeeId && !loading && (
-            <div style={{ marginTop: 12, padding: "9px 14px", background: "#fff8e1", border: "1px solid #e0c96e", borderRadius: 6, fontSize: 13, color: "#7a5800" }}>
-              No salary record found for <strong>{slip.month} {slip.year}</strong>. Go to the employee's profile → <em>Salary History</em> tab to add one.
-            </div>
-          )}
-        </div>
-
-        {error && <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginTop: 12 }}>{error}</div>}
-        {loading && <div style={{ textAlign: "center", color: "#888", marginTop: 12 }}>Loading employee data...</div>}
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Generate Salary Slips</h1>
+        <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
+          Pick a month, select employees, and generate. Slips use each employee's salary structure from their profile.
+        </p>
       </div>
 
-      {/* ── Printable Salary Slip ── */}
-      {slip.employeeId && (
-        <div ref={printRef} style={{
-          background: "#fff",
-          maxWidth: 900,
-          margin: "0 auto",
-          fontFamily: "'Segoe UI', Arial, sans-serif",
-          fontSize: 13,
-          color: "#1a1a1a",
-          border: "1px solid #ddd",
-          borderRadius: 8,
-        }}>
-          {/* Header */}
-          <div style={{ background: "#A32D2D", color: "#fff", padding: "10px 24px", textAlign: "center", borderRadius: "8px 8px 0 0" }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>Supreme Art (Pvt.) Ltd. | HR Department</div>
+      {/* Period + employee selector */}
+      <div className="card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "180px 140px 1fr", gap: 12, alignItems: "end", marginBottom: 12 }}>
+          <div>
+            <label className="form-label">Month</label>
+            <select value={month} onChange={e => setMonth(e.target.value)}>
+              {MONTHS.map(m => <option key={m}>{m}</option>)}
+            </select>
           </div>
-          <div style={{ background: "#7C1F1F", color: "#fff", padding: "12px 24px", textAlign: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 3 }}>SALARY SLIP</div>
+          <div>
+            <label className="form-label">Year</label>
+            <select value={year} onChange={e => setYear(parseInt(e.target.value))}>
+              {YEARS.map(y => <option key={y}>{y}</option>)}
+            </select>
           </div>
+          <div>
+            <label className="form-label">Search employee</label>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, employee ID, department…" />
+          </div>
+        </div>
 
-          {/* Employee ID / Month / Year */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, borderBottom: "2px solid #A32D2D", background: "#fafafa", padding: "12px 24px", fontSize: 13 }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ fontWeight: 600 }}>Employee ID:</span>
-              <span style={{ background: "#fff3cd", padding: "3px 14px", borderRadius: 4, fontWeight: 700, border: "1px solid #e0c96e" }}>{slip.employeeId}</span>
-            </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ fontWeight: 600 }}>Month:</span>
-              <span style={{ background: "#fff3cd", padding: "3px 14px", borderRadius: 4, fontWeight: 700, border: "1px solid #e0c96e" }}>{slip.month}</span>
-            </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 6 }}>
-              <span style={{ fontWeight: 600 }}>Year:</span>
-              <span style={{ background: "#fff3cd", padding: "3px 14px", borderRadius: 4, fontWeight: 700, border: "1px solid #e0c96e" }}>{slip.year}</span>
-            </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--text2)" }}>
+            {selectedIds.size} of {filtered.length} selected
           </div>
-
-          {/* Employee Info */}
-          <SectionHeader>Employee Information</SectionHeader>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px" }}>
-            <InfoRow label="Employee Name" value={slip.name} />
-            <InfoRow label="Department" value={slip.department} />
-            <InfoRow label="Designation" value={slip.designation} />
-            <InfoRow label="Date of Joining" value={slip.joiningDate} />
-            <InfoRow label="Contact No." value={slip.phone} />
-            <InfoRow label="Email" value={slip.email} />
-            <InfoRow label="CNIC / Passport" value={slip.cnic} />
-            <InfoRow label="Status" value={slip.empStatus} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-sm" onClick={selectAll}>Select all</button>
+            <button className="btn btn-sm" onClick={clearAll}>Clear</button>
           </div>
+        </div>
 
-          {/* Attendance */}
-          <SectionHeader color="#2e6b4f">Attendance Summary</SectionHeader>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px", background: "#f6fbf8" }}>
-            <AttRow label="Days Present" value={slip.daysPresent} color="#15803D" />
-            <AttRow label="Days Absent" value={slip.daysAbsent} color="#DC2626" />
-            <AttRow label="Days on Leave" value={slip.daysLeave} color="#D97706" />
-            <AttRow label="Week Offs" value={slip.weekOffs} color="#15803D" />
-          </div>
-
-          {/* Earnings & Deductions */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, padding: "0 24px 0", marginTop: 12 }}>
-            {/* Earnings */}
-            <div style={{ paddingRight: 12 }}>
-              <div style={{ background: "#2e6b4f", color: "#fff", fontWeight: 700, fontSize: 12, padding: "7px 12px", textAlign: "center", borderRadius: 4, marginBottom: 4, letterSpacing: 1 }}>
-                EARNINGS
+        <div style={{ maxHeight: 240, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 6 }}>
+          {filtered.length === 0 ? (
+            <div className="empty" style={{ padding: "1rem" }}>No matching active employees.</div>
+          ) : filtered.map(e => (
+            <label key={e.id} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 12px", borderBottom: "1px solid var(--border)", cursor: "pointer",
+              background: selectedIds.has(e.id) ? "#fbf3f3" : "transparent",
+            }}>
+              <input type="checkbox" checked={selectedIds.has(e.id)} onChange={() => toggleSelect(e.id)} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{e.firstName} {e.lastName}</div>
+                <div style={{ fontSize: 11, color: "var(--text2)" }}>{e.employeeId} • {e.designation || "—"} • {e.department || "—"}</div>
               </div>
-              <EarningRow label="Basic Salary" value={slip.basicSalary} />
-              <EarningRow label="House Rent (40%)" value={houseRent(slip.basicSalary)} />
-              <EarningRow label="Medical Allow. (10%)" value={medicalAllow(slip.basicSalary)} />
-              <EarningRow label="Conveyance Allow." value={slip.conveyance} />
-              <EarningRow label="Overtime / Bonus" value={slip.overtime} />
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#e8f4e8", borderRadius: 4, marginTop: 4, fontWeight: 700 }}>
-                <span style={{ color: "#2e6b4f" }}>GROSS EARNINGS</span>
-                <span style={{ color: "#2e6b4f" }}>{fmt(gross)}</span>
+              <div style={{ fontSize: 12, color: "var(--text2)" }}>
+                {e.basicSalary ? `PKR ${Number(e.basicSalary).toLocaleString()}` : <span style={{ color: "#b97a00" }}>No basic set</span>}
               </div>
-            </div>
+            </label>
+          ))}
+        </div>
 
-            {/* Deductions */}
-            <div style={{ paddingLeft: 12 }}>
-              <div style={{ background: "#A32D2D", color: "#fff", fontWeight: 700, fontSize: 12, padding: "7px 12px", textAlign: "center", borderRadius: 4, marginBottom: 4, letterSpacing: 1 }}>
-                DEDUCTIONS
-              </div>
-              <EarningRow label="Income Tax (5%)" value={incomeTax(slip.basicSalary)} />
-              <EarningRow label="EOBI (Employee 1%)" value={eobiEmployee(slip.basicSalary)} />
-              <EarningRow label="EOBI (Employer 2%)" value={eobiEmployer(slip.basicSalary)} />
-              <EarningRow label="Absent Deduction" value={absentDeduct(slip)} />
-              <EarningRow label="Other Deduction" value={slip.otherDeduction} />
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#fde8e8", borderRadius: 4, marginTop: 4, fontWeight: 700 }}>
-                <span style={{ color: "#A32D2D" }}>TOTAL DEDUCTIONS</span>
-                <span style={{ color: "#A32D2D" }}>{fmt(deductions)}</span>
-              </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+          <button className="btn btn-primary" onClick={buildRows} disabled={loadingAtt || selectedIds.size === 0}>
+            {loadingAtt ? "Loading attendance…" : `Load Selected (${selectedIds.size})`}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 12 }}>{error}</div>}
+      {success && <div className="card" style={{ borderColor: "#15803D", color: "#15803D", background: "#eaf6ee", marginBottom: 12 }}>{success}</div>}
+
+      {/* Editable preview table */}
+      {rows.length > 0 && (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: 700 }}>Preview · {month} {year} · {rows.length} employee{rows.length === 1 ? "" : "s"}</div>
+            <div style={{ fontSize: 12, color: "var(--text2)" }}>
+              Total gross: <strong>PKR {fmt(totalGross)}</strong> · Total net: <strong>PKR {fmt(totalNet)}</strong>
             </div>
           </div>
-
-          {/* Net Pay */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", margin: "16px 24px 0", borderRadius: 6, overflow: "hidden" }}>
-            <div style={{ background: "#7C1F1F", color: "#fff", padding: "14px 20px", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              💰 NET PAY (PKR)
-            </div>
-            <div style={{ background: "#A32D2D", color: "#fff", padding: "14px 20px", fontWeight: 800, fontSize: 22, textAlign: "center" }}>
-              {fmt(net)}
-            </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ minWidth: 1100 }}>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th style={{ textAlign: "right" }}>Basic</th>
+                  <th style={{ textAlign: "center" }}>Present</th>
+                  <th style={{ textAlign: "center" }}>Absent</th>
+                  <th style={{ textAlign: "center" }}>Leave</th>
+                  <th style={{ textAlign: "right" }}>Overtime</th>
+                  <th style={{ textAlign: "right" }}>Other Ded.</th>
+                  <th style={{ textAlign: "right" }}>Gross</th>
+                  <th style={{ textAlign: "right" }}>Deductions</th>
+                  <th style={{ textAlign: "right", color: "var(--brand)" }}>Net Pay</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => {
+                  const c = computeRow(r);
+                  return (
+                    <tr key={r.emp.id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{r.emp.firstName} {r.emp.lastName}</div>
+                        <div style={{ fontSize: 11, color: "var(--text2)" }}>{r.emp.employeeId}</div>
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(Number(r.emp.basicSalary || 0))}</td>
+                      <td style={{ textAlign: "center" }}><input type="number" value={r.daysPresent} onChange={e => updateRow(i, "daysPresent", parseInt(e.target.value) || 0)} style={cellInput} /></td>
+                      <td style={{ textAlign: "center" }}><input type="number" value={r.daysAbsent} onChange={e => updateRow(i, "daysAbsent", parseInt(e.target.value) || 0)} style={cellInput} /></td>
+                      <td style={{ textAlign: "center" }}><input type="number" value={r.daysLeave} onChange={e => updateRow(i, "daysLeave", parseInt(e.target.value) || 0)} style={cellInput} /></td>
+                      <td style={{ textAlign: "right" }}><input type="number" value={r.overtime} onChange={e => updateRow(i, "overtime", e.target.value)} style={{ ...cellInput, textAlign: "right" }} /></td>
+                      <td style={{ textAlign: "right" }}><input type="number" value={r.otherDeduction} onChange={e => updateRow(i, "otherDeduction", e.target.value)} style={{ ...cellInput, textAlign: "right" }} /></td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(c.grossEarnings)}</td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(c.totalDeductions)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(c.netPay)}</td>
+                      <td>
+                        {r.slipId ? (
+                          <Link href={`/salary/${r.slipId}`} className="btn btn-sm btn-primary">View / Print</Link>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "var(--text2)" }}>Not generated</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {/* Signatures */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "28px 40px 16px", gap: 40, marginTop: 10 }}>
-            <div>
-              <div style={{ fontSize: 12, fontStyle: "italic" }}>Employee Signature: ________________________</div>
-              <div style={{ fontSize: 12, marginTop: 16, fontStyle: "italic" }}>Name: ______________________</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, fontStyle: "italic" }}>Authorized Signatory: ________________________</div>
-              <div style={{ fontSize: 12, marginTop: 16, fontStyle: "italic" }}>Name & Stamp: __________________</div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div style={{ background: "#f5f5f5", borderTop: "1px solid #e0e0e0", padding: "8px 24px", textAlign: "center", fontSize: 11, color: "#888", borderRadius: "0 0 8px 8px" }}>
-            ⚠ This is a computer-generated salary slip. For queries contact HR department.
+          <div style={{ padding: "12px 14px", borderTop: "1px solid var(--border)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button className="btn btn-primary" onClick={generate} disabled={saving}>
+              {saving ? "Generating…" : `💾 Generate ${rows.length} Slip${rows.length === 1 ? "" : "s"}`}
+            </button>
           </div>
         </div>
       )}
 
-      {!slip.employeeId && (
-        <div className="card empty" style={{ marginTop: 0 }}>
-          Select an employee and month above to generate the salary slip.
-        </div>
+      {rows.length === 0 && !loadingAtt && (
+        <div className="card empty">Pick a month, select employees, then click <strong>Load Selected</strong> to begin.</div>
       )}
-
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          header { display: none !important; }
-          main { padding: 0 !important; }
-          body { background: #fff !important; }
-        }
-      `}</style>
     </div>
   );
 }
 
-function SectionHeader({ children, color = "#A32D2D" }: { children: React.ReactNode; color?: string }) {
-  return (
-    <div style={{ background: color, color: "#fff", fontWeight: 700, fontSize: 12, padding: "7px 24px", textAlign: "center", letterSpacing: 1, marginTop: 8 }}>
-      {children}
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", padding: "5px 0", borderBottom: "1px solid #f0f0f0" }}>
-      <span style={{ fontWeight: 600, minWidth: 160, fontSize: 12 }}>{label}:</span>
-      <span style={{ fontSize: 12 }}>{value || "—"}</span>
-    </div>
-  );
-}
-
-function AttRow({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #eaf4ee" }}>
-      <span style={{ fontWeight: 600, fontSize: 12 }}>{label}:</span>
-      <span style={{ fontWeight: 700, color, fontSize: 13 }}>{value}</span>
-    </div>
-  );
-}
-
-function EarningRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 10px", borderBottom: "1px solid #f3f3f3", fontSize: 12 }}>
-      <span>{label}</span>
-      <span style={{ fontVariantNumeric: "tabular-nums" }}>{value.toLocaleString("en-PK")}</span>
-    </div>
-  );
-}
+const cellInput: React.CSSProperties = {
+  width: 70, padding: "4px 6px", border: "1px solid var(--border)", borderRadius: 4, fontSize: 12,
+};

@@ -32,6 +32,13 @@ export default function ReportsLanding() {
           urdu="آدھے دن کی تاریخ"
           desc="All half-day requests by employee, status, date range."
         />
+        <ReportCard
+          href="/reports/salary"
+          icon="💰"
+          title="Salary Records"
+          urdu="تنخواہ کا ریکارڈ"
+          desc="All generated salary slips by month, employee. Click any row to view & print the slip."
+        />
       </div>
     </div>
   );

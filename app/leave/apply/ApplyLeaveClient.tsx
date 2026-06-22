@@ -103,7 +103,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
         <button onClick={() => scaledPrint()} className="btn btn-print">🖨 Print Form</button>
       </div>
 
-      <div className="card leave-form-wrap" style={{ maxWidth: 780, margin: "0 auto" }}>
+      <div className="card leave-form-wrap print-page-bg" style={{ maxWidth: 780, margin: "0 auto", position: "relative" }}>
         {/* Letterhead */}
         <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

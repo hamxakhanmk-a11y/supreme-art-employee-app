@@ -1,76 +1,128 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sql as rawSql } from "drizzle-orm";
-import { salaryRecords } from "@/lib/schema";
-import { and, eq, desc } from "drizzle-orm";
+import { salaryRecords, employees } from "@/lib/schema";
+import { and, eq, desc, asc, inArray } from "drizzle-orm";
+import { guardWrite, getSession } from "@/lib/auth";
+import { computeSlip, MONTHS } from "@/lib/salary";
 
-async function ensureTable() {
-  await db.execute(rawSql`CREATE TABLE IF NOT EXISTS salary_records (
-    id serial PRIMARY KEY,
-    employee_id integer NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    month varchar(20) NOT NULL,
-    year integer NOT NULL,
-    basic_salary integer NOT NULL DEFAULT 0,
-    conveyance integer NOT NULL DEFAULT 6000,
-    overtime integer NOT NULL DEFAULT 0,
-    days_present integer NOT NULL DEFAULT 0,
-    days_absent integer NOT NULL DEFAULT 0,
-    days_leave integer NOT NULL DEFAULT 0,
-    week_offs integer NOT NULL DEFAULT 0,
-    other_deduction integer NOT NULL DEFAULT 0,
-    notes text,
-    created_at timestamp DEFAULT now() NOT NULL
-  )`);
-}
-
-// GET /api/salary-records?employeeId=1
+// GET /api/salary-records?employeeId=1&month=June&year=2025
+// All filters optional. employeeId scopes to one employee. month+year scopes to one period.
 export async function GET(req: NextRequest) {
-  const employeeId = req.nextUrl.searchParams.get("employeeId");
-  if (!employeeId) return NextResponse.json({ error: "employeeId required" }, { status: 400 });
+  const sp = req.nextUrl.searchParams;
+  const employeeId = sp.get("employeeId");
+  const month = sp.get("month");
+  const year = sp.get("year");
+
   try {
-    await ensureTable();
-    const rows = await db.select().from(salaryRecords)
-      .where(eq(salaryRecords.employeeId, parseInt(employeeId)))
-      .orderBy(desc(salaryRecords.year), desc(salaryRecords.id));
+    const conds: any[] = [];
+    if (employeeId) conds.push(eq(salaryRecords.employeeId, parseInt(employeeId)));
+    if (month) conds.push(eq(salaryRecords.month, month));
+    if (year) conds.push(eq(salaryRecords.year, parseInt(year)));
+
+    const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
+    const rows = where
+      ? await db.select().from(salaryRecords).where(where).orderBy(desc(salaryRecords.year), desc(salaryRecords.monthNum), asc(salaryRecords.employeeName))
+      : await db.select().from(salaryRecords).orderBy(desc(salaryRecords.year), desc(salaryRecords.monthNum), asc(salaryRecords.employeeName));
     return NextResponse.json(rows);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
-// POST /api/salary-records  — upsert by employeeId + month + year
+// POST /api/salary-records
+// Body: either a single slip object OR { slips: [...] } for bulk.
+// Each slip requires { employeeId, month, year }. The server snapshots employee structure
+// (basic, conveyance, percentages) at generation time and recomputes all derived amounts.
 export async function POST(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
+  const session = await getSession();
+  const generatedBy = session ? `${session.name} <${session.email}>` : null;
+
   try {
-    await ensureTable();
     const body = await req.json();
-    const { employeeId, month, year } = body;
-    if (!employeeId || !month || !year) return NextResponse.json({ error: "employeeId, month, year required" }, { status: 400 });
+    const slipsIn: any[] = Array.isArray(body?.slips) ? body.slips : [body];
+    if (slipsIn.length === 0) return NextResponse.json({ error: "No slips provided" }, { status: 400 });
 
-    const existing = await db.select().from(salaryRecords)
-      .where(and(eq(salaryRecords.employeeId, employeeId), eq(salaryRecords.month, month), eq(salaryRecords.year, year)));
+    // Bulk-load all employees touched
+    const empIds = Array.from(new Set(slipsIn.map(s => Number(s.employeeId)).filter(Boolean)));
+    if (empIds.length === 0) return NextResponse.json({ error: "employeeId is required on each slip" }, { status: 400 });
+    const empRows = await db.select().from(employees).where(inArray(employees.id, empIds));
+    const empById = new Map(empRows.map(e => [e.id, e]));
 
-    const values = {
-      employeeId,
-      month,
-      year,
-      basicSalary: body.basicSalary ?? 0,
-      conveyance: body.conveyance ?? 6000,
-      overtime: body.overtime ?? 0,
-      daysPresent: body.daysPresent ?? 0,
-      daysAbsent: body.daysAbsent ?? 0,
-      daysLeave: body.daysLeave ?? 0,
-      weekOffs: body.weekOffs ?? 0,
-      otherDeduction: body.otherDeduction ?? 0,
-      notes: body.notes || null,
-    };
+    const results: any[] = [];
+    for (const s of slipsIn) {
+      const empDbId = Number(s.employeeId);
+      const emp = empById.get(empDbId);
+      if (!emp) { results.push({ employeeId: empDbId, error: "Employee not found" }); continue; }
+      const month = String(s.month || "");
+      const year = Number(s.year);
+      if (!month || !year) { results.push({ employeeId: empDbId, error: "month/year required" }); continue; }
+      const monthNum = MONTHS.indexOf(month) + 1;
 
-    if (existing.length > 0) {
-      await db.update(salaryRecords).set(values).where(eq(salaryRecords.id, existing[0].id));
-      return NextResponse.json({ id: existing[0].id });
-    } else {
-      const [row] = await db.insert(salaryRecords).values(values).returning();
-      return NextResponse.json({ id: row.id });
+      const inputs = {
+        basicSalary: Number(emp.basicSalary || 0),
+        conveyance: Number(emp.conveyance || 0),
+        houseRentPercent: Number(emp.houseRentPercent || 0),
+        medicalPercent: Number(emp.medicalPercent || 0),
+        incomeTaxPercent: Number(emp.incomeTaxPercent || 0),
+        eobiEmployeePercent: Number(emp.eobiEmployeePercent || 0),
+        eobiEmployerPercent: Number(emp.eobiEmployerPercent || 0),
+        overtime: Number(s.overtime || 0),
+        otherDeduction: Number(s.otherDeduction || 0),
+        daysPresent: Number(s.daysPresent || 0),
+        daysAbsent: Number(s.daysAbsent || 0),
+        daysLeave: Number(s.daysLeave || 0),
+      };
+      const c = computeSlip(inputs);
+
+      const values = {
+        employeeId: empDbId,
+        month, monthNum, year,
+        employeeCode: emp.employeeId,
+        employeeName: `${emp.firstName} ${emp.lastName}`.trim(),
+        designation: emp.designation || null,
+        department: emp.department || null,
+        basicSalary: inputs.basicSalary,
+        conveyance: inputs.conveyance,
+        houseRentPercent: inputs.houseRentPercent,
+        medicalPercent: inputs.medicalPercent,
+        incomeTaxPercent: inputs.incomeTaxPercent,
+        eobiEmployeePercent: inputs.eobiEmployeePercent,
+        eobiEmployerPercent: inputs.eobiEmployerPercent,
+        overtime: inputs.overtime,
+        otherDeduction: inputs.otherDeduction,
+        daysPresent: inputs.daysPresent,
+        daysAbsent: inputs.daysAbsent,
+        daysLeave: inputs.daysLeave,
+        weekOffs: Number(s.weekOffs || 0),
+        houseRent: c.houseRent,
+        medical: c.medical,
+        grossEarnings: c.grossEarnings,
+        incomeTax: c.incomeTax,
+        eobiEmployee: c.eobiEmployee,
+        eobiEmployer: c.eobiEmployer,
+        absentDeduction: c.absentDeduction,
+        totalDeductions: c.totalDeductions,
+        netPay: c.netPay,
+        notes: s.notes || null,
+        generatedBy,
+      };
+
+      // Upsert by (employee, month, year)
+      const existing = await db.select({ id: salaryRecords.id }).from(salaryRecords)
+        .where(and(eq(salaryRecords.employeeId, empDbId), eq(salaryRecords.month, month), eq(salaryRecords.year, year)));
+      if (existing.length > 0) {
+        const [r] = await db.update(salaryRecords).set(values).where(eq(salaryRecords.id, existing[0].id)).returning();
+        results.push(r);
+      } else {
+        const [r] = await db.insert(salaryRecords).values(values).returning();
+        results.push(r);
+      }
     }
+
+    if (results.length === 1) return NextResponse.json(results[0], { status: 201 });
+    return NextResponse.json({ slips: results }, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -78,6 +130,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/salary-records?id=1
 export async function DELETE(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   try {

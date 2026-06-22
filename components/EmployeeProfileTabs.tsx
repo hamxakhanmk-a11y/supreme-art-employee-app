@@ -8,17 +8,18 @@ type OtherDoc = { id: number; label: string; url: string; category?: string | nu
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
 }: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
-  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary">("personal");
+  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary" | "salaryHistory">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "personal", label: "Personal" },
     { key: "contact", label: "Contact" },
     { key: "job", label: "Job" },
+    { key: "salary", label: "Salary" },
+    { key: "salaryHistory", label: "Salary History" },
     { key: "banking", label: "Banking" },
     { key: "documents", label: "Documents" },
     { key: "education", label: "Education" },
     { key: "experience", label: "Experience" },
-    { key: "salary", label: "Salary History" },
   ];
 
   return (
@@ -92,8 +93,24 @@ export default function EmployeeProfileTabs({
           ["Work Location", employee.workLocation],
           ["Shift", employee.shift],
           ["Status", employee.status],
-          ["Basic Salary", employee.basicSalary ? `PKR ${Number(employee.basicSalary).toLocaleString()}` : null],
         ]} />}
+
+        {tab === "salary" && (() => {
+          const basic = Number(employee.basicSalary || 0);
+          const conv = Number(employee.conveyance || 0);
+          const hr = Math.round(basic * (Number(employee.houseRentPercent || 0) / 100));
+          const med = Math.round(basic * (Number(employee.medicalPercent || 0) / 100));
+          const fmtPKR = (n: number) => n ? `PKR ${n.toLocaleString()}` : "—";
+          return <Grid items={[
+            ["Basic Salary", fmtPKR(basic)],
+            ["Conveyance", fmtPKR(conv)],
+            [`House Rent (${employee.houseRentPercent || 0}%)`, fmtPKR(hr)],
+            [`Medical (${employee.medicalPercent || 0}%)`, fmtPKR(med)],
+            ["Income Tax %", `${employee.incomeTaxPercent || 0}%`],
+            ["EOBI Employee %", `${employee.eobiEmployeePercent || 0}%`],
+            ["EOBI Employer %", `${employee.eobiEmployerPercent || 0}%`],
+          ]} />;
+        })()}
 
         {tab === "banking" && <Grid items={[
           ["Bank Name", employee.bankName],
@@ -181,7 +198,7 @@ export default function EmployeeProfileTabs({
           </table>
         )}
 
-        {tab === "salary" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
+        {tab === "salaryHistory" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
       </div>
     </div>
   );
@@ -241,185 +258,50 @@ function fmtDate(d: any): string {
   catch { return String(d); }
 }
 
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const THIS_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) => THIS_YEAR - 2 + i);
-const fmt = (n: number) => Number(n).toLocaleString("en-PK");
+const fmtPKR = (n: number) => Number(n || 0).toLocaleString("en-PK");
 
 type SalaryRecord = {
   id: number; month: string; year: number;
-  basicSalary: number; conveyance: number; overtime: number;
-  daysPresent: number; daysAbsent: number; daysLeave: number; weekOffs: number;
-  otherDeduction: number; notes: string | null;
+  basicSalary: number;
+  grossEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  createdAt: string;
 };
-
-const houseRent    = (b: number) => Math.round(b * 0.40);
-const medicalAllow = (b: number) => Math.round(b * 0.10);
-const gross        = (r: SalaryRecord) => r.basicSalary + houseRent(r.basicSalary) + medicalAllow(r.basicSalary) + r.conveyance + r.overtime;
-const incomeTax    = (b: number) => Math.round(b * 0.05);
-const eobiEmp      = (b: number) => Math.round(b * 0.01);
-const eobiEmpr     = (b: number) => Math.round(b * 0.02);
-const absentDed    = (r: SalaryRecord) => {
-  const wd = r.daysPresent + r.daysAbsent + r.daysLeave;
-  return wd === 0 || r.daysAbsent === 0 ? 0 : Math.round((gross(r) / wd) * r.daysAbsent);
-};
-const totalDed     = (r: SalaryRecord) => incomeTax(r.basicSalary) + eobiEmp(r.basicSalary) + eobiEmpr(r.basicSalary) + absentDed(r) + r.otherDeduction;
-const netPay       = (r: SalaryRecord) => gross(r) - totalDed(r);
 
 function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; basicSalary: number | null }) {
   const [records, setRecords] = useState<SalaryRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [attLoading, setAttLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    month: MONTHS[new Date().getMonth()], year: THIS_YEAR,
-    basicSalary: basicSalary || 0, conveyance: 6000, overtime: 0,
-    daysPresent: 0, daysAbsent: 0, daysLeave: 0, weekOffs: 0,
-    otherDeduction: 0, notes: "",
-  });
 
-  const load = () => {
+  useEffect(() => {
     setLoading(true);
     fetch(`/api/salary-records?employeeId=${employeeDbId}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setRecords(data); else setError(data?.error || "Failed to load records"); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  };
-
-  const fetchAttendance = async (month: string, year: number) => {
-    const monthIdx = MONTHS.indexOf(month);
-    const from = `${year}-${String(monthIdx + 1).padStart(2, "0")}-01`;
-    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
-    const to = `${year}-${String(monthIdx + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-    setAttLoading(true);
-    try {
-      const res = await fetch(`/api/attendance?from=${from}&to=${to}&employeeId=${employeeDbId}`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        let present = 0, absent = 0, leave = 0;
-        data.forEach((r: any) => {
-          if (r.status === "present" || r.status === "half-day") present++;
-          else if (r.status === "absent") absent++;
-          else if (r.status === "leave") leave++;
-        });
-        setForm(p => ({ ...p, daysPresent: present, daysAbsent: absent, daysLeave: leave }));
-      }
-    } catch { /* silently ignore */ }
-    finally { setAttLoading(false); }
-  };
-
-  useEffect(() => { load(); }, [employeeDbId]);
-
-  const sf = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleMonthYear = (k: "month" | "year", v: any) => {
-    const next = { ...form, [k]: v };
-    setForm(next);
-    fetchAttendance(next.month, next.year);
-  };
-
-  const save = async () => {
-    setSaving(true); setError(null);
-    try {
-      const res = await fetch("/api/salary-records", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employeeId: employeeDbId, ...form }),
-      });
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error); }
-      setShowForm(false);
-      load();
-    } catch (e: any) { setError(e.message); }
-    finally { setSaving(false); }
-  };
-
-  const del = async (id: number) => {
-    if (!confirm("Delete this salary record?")) return;
-    await fetch(`/api/salary-records?id=${id}`, { method: "DELETE" });
-    load();
-  };
+  }, [employeeDbId]);
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} record{records.length !== 1 ? "s" : ""}</div>
-        <button className="btn btn-primary btn-sm" onClick={() => {
-          if (!showForm) fetchAttendance(form.month, form.year);
-          setShowForm(s => !s);
-        }}>
-          {showForm ? "✕ Cancel" : "＋ Add Salary Record"}
-        </button>
+        <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} slip{records.length !== 1 ? "s" : ""}</div>
+        <a href="/salary" className="btn btn-primary btn-sm">＋ Generate Slip</a>
       </div>
 
-      {showForm && (
-        <div className="card" style={{ marginBottom: 16, background: "var(--bg2)" }}>
-          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>New Salary Record</div>
-          <div style={{ fontSize: 11, color: "var(--text2)", marginBottom: 10 }}>Days present/absent/leave are auto-filled from attendance. You can adjust if needed.</div>
-          {error && <div style={{ color: "var(--danger)", marginBottom: 10, fontSize: 12 }}>{error}</div>}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
-            <div><label className="form-label">Month</label>
-              <select value={form.month} onChange={e => handleMonthYear("month", e.target.value)}>
-                {MONTHS.map(m => <option key={m}>{m}</option>)}
-              </select>
-            </div>
-            <div><label className="form-label">Year</label>
-              <select value={form.year} onChange={e => handleMonthYear("year", parseInt(e.target.value))}>
-                {YEARS.map(y => <option key={y}>{y}</option>)}
-              </select>
-            </div>
-            <div><label className="form-label">Basic Salary</label>
-              <input type="number" value={form.basicSalary} onChange={e => sf("basicSalary", Number(e.target.value))} />
-            </div>
-            <div><label className="form-label">Conveyance</label>
-              <input type="number" value={form.conveyance} onChange={e => sf("conveyance", Number(e.target.value))} />
-            </div>
-            <div><label className="form-label">Overtime / Bonus</label>
-              <input type="number" value={form.overtime} onChange={e => sf("overtime", Number(e.target.value))} />
-            </div>
-            <div>
-              <label className="form-label">Days Present {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
-              <input type="number" value={form.daysPresent} onChange={e => sf("daysPresent", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
-            </div>
-            <div>
-              <label className="form-label">Days Absent {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
-              <input type="number" value={form.daysAbsent} onChange={e => sf("daysAbsent", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
-            </div>
-            <div>
-              <label className="form-label">Days on Leave {attLoading && <span style={{ color: "var(--text2)", fontSize: 10 }}>loading…</span>}</label>
-              <input type="number" value={form.daysLeave} onChange={e => sf("daysLeave", Number(e.target.value))} style={{ background: "var(--bg2)" }} />
-            </div>
-            <div><label className="form-label">Other Deduction</label>
-              <input type="number" value={form.otherDeduction} onChange={e => sf("otherDeduction", Number(e.target.value))} />
-            </div>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label className="form-label">Notes</label>
-            <input value={form.notes} onChange={e => sf("notes", e.target.value)} placeholder="Optional notes" />
-          </div>
-          <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={saving} onClick={save}>
-            {saving ? "Saving..." : "Save Record"}
-          </button>
-        </div>
-      )}
+      {error && <div style={{ color: "var(--danger)", marginBottom: 10, fontSize: 12 }}>{error}</div>}
 
-      {loading ? <div className="empty">Loading...</div> : records.length === 0 ? (
-        <div className="empty">No salary records yet. Click <strong>＋ Add Salary Record</strong> to add one.</div>
+      {loading ? <div className="empty">Loading…</div> : records.length === 0 ? (
+        <div className="empty">No salary slips for this employee yet. <a href="/salary" style={{ color: "var(--brand)" }}>Generate one →</a></div>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table>
             <thead>
               <tr>
-                <th>Month / Year</th>
+                <th>Period</th>
                 <th className="num">Basic</th>
                 <th className="num">Gross</th>
-                <th className="num">Income Tax</th>
-                <th className="num">EOBI Emp</th>
-                <th className="num">EOBI Empr</th>
-                <th className="num">Absent Ded.</th>
-                <th className="num">Other Ded.</th>
                 <th className="num" style={{ color: "var(--danger)" }}>Total Ded.</th>
                 <th className="num" style={{ color: "var(--success)" }}>Net Pay</th>
                 <th></th>
@@ -429,18 +311,11 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
               {records.map(r => (
                 <tr key={r.id}>
                   <td style={{ fontWeight: 600 }}>{r.month} {r.year}</td>
-                  <td className="num">{fmt(r.basicSalary)}</td>
-                  <td className="num">{fmt(gross(r))}</td>
-                  <td className="num">{fmt(incomeTax(r.basicSalary))}</td>
-                  <td className="num">{fmt(eobiEmp(r.basicSalary))}</td>
-                  <td className="num">{fmt(eobiEmpr(r.basicSalary))}</td>
-                  <td className="num">{fmt(absentDed(r))}</td>
-                  <td className="num">{fmt(r.otherDeduction)}</td>
-                  <td className="num" style={{ color: "var(--danger)", fontWeight: 600 }}>{fmt(totalDed(r))}</td>
-                  <td className="num" style={{ color: "var(--success)", fontWeight: 700 }}>{fmt(netPay(r))}</td>
-                  <td>
-                    <button className="btn btn-sm btn-danger-soft" onClick={() => del(r.id)}>Delete</button>
-                  </td>
+                  <td className="num">{fmtPKR(r.basicSalary)}</td>
+                  <td className="num">{fmtPKR(r.grossEarnings)}</td>
+                  <td className="num" style={{ color: "var(--danger)", fontWeight: 600 }}>{fmtPKR(r.totalDeductions)}</td>
+                  <td className="num" style={{ color: "var(--success)", fontWeight: 700 }}>{fmtPKR(r.netPay)}</td>
+                  <td><a href={`/salary/${r.id}`} className="btn btn-sm">View</a></td>
                 </tr>
               ))}
             </tbody>

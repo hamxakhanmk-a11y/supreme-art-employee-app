@@ -376,9 +376,11 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
 @media print {
   @page { margin: 8mm 8mm; size: A4 portrait; }
-  body { background: #fff !important; font-size: 8.5pt; }
+  /* Force every container white — no cream/beige leak from any ancestor */
+  html, body, main, .fade-up, .card { background: #fff !important; }
+  body { font-size: 8.5pt; }
   header, .no-print { display: none !important; }
-  main { padding: 0 !important; max-width: none !important; }
+  main { padding: 0 !important; max-width: none !important; margin: 0 !important; }
   .print-page { box-shadow: none !important; border: none !important; padding: 0 !important; }
   /* Force main employee form onto a single page */
   .print-page:first-of-type { page-break-after: avoid; break-after: avoid; }
@@ -389,14 +391,78 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   .print-pair-value { font-size: 8pt !important; padding: 2px 4px !important; min-height: 14pt !important; }
   .print-only { display: block !important; }
 
-  .print-watermark { display: flex !important; position: fixed; inset: 0; align-items: center; justify-content: center; pointer-events: none; z-index: 9999; overflow: hidden; }
-  .print-watermark img { width: 92%; max-width: 900px; height: auto; opacity: 0.08; transform: rotate(-30deg); transform-origin: center center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-watermark { display: none !important; }
+
+  /* A4-page container with a faded centered Urdu logo background.
+     Add class="print-page-bg" to any element you want watermarked
+     (forms, salary slips, reports). The image scales with the
+     container so it also works when body is zoomed for printing. */
+  .print-page-bg {
+    background-image: url('/logo-urdu.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: contain;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-page-bg > * { position: relative; z-index: 1; }
+  /* Fade the watermark via a pseudo overlay — keeps text crisp on top */
+  .print-page-bg::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.90);
+    pointer-events: none;
+    z-index: 0;
+  }
 
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
 
+  /* Tables in print: compact + flow within page width without right-edge crop */
+  table { font-size: 8pt !important; border-collapse: collapse; width: 100% !important; }
+  th, td { padding: 4px 6px !important; word-wrap: break-word; overflow-wrap: anywhere; }
+  /* Containers that hold tables: lift overflow:auto so all columns show on paper
+     instead of being clipped to a horizontal scrollbar */
+  .card,
+  .card[style*="overflow-x"],
+  .card[style*="overflow:auto"],
+  div[style*="overflow-x: auto"],
+  div[style*="overflowX"] {
+    overflow: visible !important;
+  }
+  /* Drop any min-width hint that was forcing horizontal scroll on screen */
+  table[style*="min-width"] { min-width: 0 !important; }
+
   /* ── Leave & Half-Day forms: scale body so content fits one page ── */
-  body.print-scaled { zoom: 0.62 !important; }
+  body.print-scaled { zoom: 0.56 !important; }
+  body.print-scaled .leave-form { gap: 8px !important; }
+  body.print-scaled .lf-letterhead { padding-bottom: 8px !important; margin-bottom: 10px !important; }
+  body.print-scaled .lf-letterhead img { height: 180px !important; max-width: 460px !important; }
+  body.print-scaled .lf-letterhead { padding-bottom: 14px !important; margin-bottom: 14px !important; }
+  body.print-scaled .lf-office-banner { margin-top: 12px !important; padding: 5px 10px !important; }
+  body.print-scaled .lf-final-banner { margin-top: 10px !important; padding: 6px 10px !important; }
+  body.print-scaled .lf-blank-line { height: 16px !important; }
+  body.print-scaled .lf-policy-box { padding: 8px 10px !important; }
+  body.print-scaled .lf-field-label { margin-bottom: 3px !important; }
+  body.print-scaled textarea { min-height: 50px !important; }
+  /* Avoid breaking inside the form — keep it as one block */
+  body.print-scaled .leave-form-wrap {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+    /* Stretch the form to use the full printable width so we lose the
+       grey side-margins inside the A4 sheet. Body zoom 0.56 scales it
+       back down so 1300px intrinsic → ~728px printed (≈ A4 portrait
+       printable width). */
+    max-width: 1300px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 18px !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,
