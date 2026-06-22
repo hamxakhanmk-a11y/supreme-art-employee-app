@@ -104,7 +104,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
       <div className="card" style={{ maxWidth: 780, margin: "0 auto" }}>
         {/* Letterhead */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
+        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" style={{ height: 100, width: "auto", maxWidth: 320, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
@@ -113,7 +113,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           </div>
         </div>
 
-        <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
+        <form className="leave-form" onSubmit={submit} style={{ display: "grid", gap: 14 }}>
           {err && <div className="no-print" style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
           {ok && <div className="no-print" style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
 
@@ -266,7 +266,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           </div>
 
           {/* === FOR OFFICE USE ONLY === */}
-          <div style={{ marginTop: 24, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="lf-office-banner" style={{ marginTop: 24, padding: "8px 12px", background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 1.2 }}>For Office Use Only</span>
             <span className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600 }}>صرف دفتری استعمال کے لیے</span>
           </div>
@@ -314,7 +314,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           </div>
 
           {/* Final approval */}
-          <div style={{ marginTop: 18, padding: "10px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
+          <div className="lf-final-banner" style={{ marginTop: 18, padding: "10px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.8 }}>
               Final Approval by HEAD HR &amp; ADMINISTRATION
             </div>
@@ -352,8 +352,8 @@ function BiLabel({ en, ur }: { en: string; ur: string }) {
 /* A labelled form field: bilingual label above, input below */
 function Field({ en, ur, children, compact }: { en: string; ur: string; children: React.ReactNode; compact?: boolean }) {
   return (
-    <div>
-      <div style={{ marginBottom: compact ? 4 : 6 }}>
+    <div className="lf-field">
+      <div className="lf-field-label" style={{ marginBottom: compact ? 4 : 6 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>{en}</span>
         {ur && <span className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginLeft: 10 }}>{ur}</span>}
       </div>
@@ -367,7 +367,7 @@ function BlankLines({ count }: { count: number }) {
   return (
     <div>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ borderBottom: "1px dotted #555", height: 22, marginTop: i === 0 ? 0 : 4 }} />
+        <div key={i} className="lf-blank-line" style={{ borderBottom: "1px dotted #555", height: 22, marginTop: i === 0 ? 0 : 4 }} />
       ))}
     </div>
   );

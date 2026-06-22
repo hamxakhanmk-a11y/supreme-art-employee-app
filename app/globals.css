@@ -395,6 +395,23 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
 
+  /* ── Leave & Half-Day forms: fit on one page ── */
+  img[alt="Supreme Art"] { height: 54px !important; max-height: 54px !important; }
+  .card { padding: 8px 12px !important; }
+  .leave-form { gap: 6px !important; }
+  .leave-form textarea { height: 32px !important; min-height: 32px !important; }
+  .leave-form .lf-blank-line { height: 13px !important; margin-top: 2px !important; }
+  .leave-form .lf-sig-line { height: 24px !important; }
+  .leave-form .lf-sig-final { height: 28px !important; }
+  .leave-form .lf-office-banner { margin-top: 4px !important; padding: 4px 8px !important; }
+  .leave-form .lf-final-banner { margin-top: 4px !important; padding: 5px 8px !important; }
+  .leave-form .lf-letterhead { padding-bottom: 6px !important; margin-bottom: 8px !important; }
+  .leave-form .lf-field { margin-bottom: 0 !important; }
+  .leave-form .lf-field-label { margin-bottom: 2px !important; font-size: 8pt !important; }
+  .leave-form .lf-field-label .urdu { font-size: 10pt !important; }
+  .leave-form .lf-policy-box { padding: 5px 8px !important; margin-top: 0 !important; }
+  .leave-form .lf-sig-row { margin-top: 4px !important; gap: 10px !important; }
+
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,
      calendar icons, focus rings) and keeps just a ruled box that
