@@ -25,6 +25,9 @@ const STATUS = {
   "half-day": { label: "Half-day",  color: "#1D4ED8", bg: "#dfe8fc" },
 } as const;
 
+const DEFAULT_CHECK_IN  = "08:00";
+const DEFAULT_CHECK_OUT = "16:45";
+
 // Statuses shown as inline pills in each row (Half-day is its own button).
 const ROW_PILLS = ["present", "absent", "leave"] as const;
 
@@ -119,8 +122,24 @@ export default function AttendancePage() {
   };
 
   const mark = (emp: Row, status: Row["status"]) => {
-    updateRow(emp.id, { status });
-    persist(emp, { status });
+    const patch: Partial<Row> = { status };
+    if (status === "present" && !emp.checkIn)  patch.checkIn  = DEFAULT_CHECK_IN;
+    if (status === "present" && !emp.checkOut) patch.checkOut = DEFAULT_CHECK_OUT;
+    updateRow(emp.id, patch);
+    persist(emp, patch);
+  };
+
+  const [markingAll, setMarkingAll] = useState(false);
+  const markAllPresent = async () => {
+    if (closed) return;
+    setMarkingAll(true);
+    const unmarked = rows.filter(r => !r.status);
+    for (const emp of unmarked) {
+      const patch = { status: "present" as const, checkIn: emp.checkIn || DEFAULT_CHECK_IN, checkOut: emp.checkOut || DEFAULT_CHECK_OUT };
+      updateRow(emp.id, patch);
+      await persist(emp, patch);
+    }
+    setMarkingAll(false);
   };
 
   // Half-day works even on closed days — employees often file the form
@@ -202,6 +221,20 @@ export default function AttendancePage() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: "auto" }} />
+          {!closed && summary.unmarked > 0 && (
+            <button onClick={markAllPresent} disabled={markingAll}
+              style={{
+                padding: "8px 16px", borderRadius: 8,
+                border: "1px solid #15803D",
+                background: "#15803D", color: "#fff",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                boxShadow: "0 2px 6px rgba(21,128,61,0.30)",
+                cursor: markingAll ? "wait" : "pointer",
+                opacity: markingAll ? 0.7 : 1,
+              }}>
+              {markingAll ? "Marking…" : `✓ Mark All Present (${summary.unmarked})`}
+            </button>
+          )}
           <button onClick={() => setShowOffPicker(v => !v)}
             style={{
               padding: "8px 16px", borderRadius: 8,
@@ -389,7 +422,13 @@ export default function AttendancePage() {
                     <input type="time" value={r.checkIn ?? ""} disabled={closed}
                       onChange={e => updateRow(r.id, { checkIn: e.target.value })}
                       onBlur={() => persist(r, {})}
-                      style={{ padding: "5px 8px", fontSize: 12 }} />
+                      style={{ padding: "5px 8px", fontSize: 12, borderColor: r.checkIn && r.checkIn > DEFAULT_CHECK_IN ? "#DC2626" : undefined }} />
+                    {r.checkIn && r.checkIn > DEFAULT_CHECK_IN && (() => {
+                      const [ih, im] = r.checkIn.split(":").map(Number);
+                      const [dh, dm] = DEFAULT_CHECK_IN.split(":").map(Number);
+                      const diff = (ih * 60 + im) - (dh * 60 + dm);
+                      return <div style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, marginTop: 2 }}>Late {diff}m</div>;
+                    })()}
                   </td>
                   <td>
                     <input type="time" value={r.checkOut ?? ""} disabled={closed}

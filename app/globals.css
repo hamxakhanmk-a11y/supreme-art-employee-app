@@ -375,11 +375,18 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 .print-header-meta { font-size: 9pt; color: #777; margin-top: 2px; }
 
 @media print {
-  @page { margin: 14mm 10mm; }
-  body { background: #fff !important; font-size: 11pt; }
+  @page { margin: 8mm 8mm; size: A4 portrait; }
+  body { background: #fff !important; font-size: 8.5pt; }
   header, .no-print { display: none !important; }
   main { padding: 0 !important; max-width: none !important; }
-  .print-page { box-shadow: none !important; }
+  .print-page { box-shadow: none !important; border: none !important; padding: 0 !important; }
+  /* Force main employee form onto a single page */
+  .print-page:first-of-type { page-break-after: avoid; break-after: avoid; }
+  .print-section { margin-bottom: 4pt !important; padding: 4pt 6pt !important; }
+  .print-section-title { font-size: 7.5pt !important; padding: 2pt 6pt !important; margin-bottom: 3pt !important; }
+  .print-pair { margin-bottom: 3pt !important; }
+  .print-pair-label { font-size: 6.5pt !important; }
+  .print-pair-value { font-size: 8pt !important; padding: 2px 4px !important; min-height: 14pt !important; }
   .print-only { display: block !important; }
 
   .print-watermark { display: flex !important; position: fixed; inset: 0; align-items: center; justify-content: center; pointer-events: none; z-index: 9999; overflow: hidden; }
@@ -387,6 +394,9 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
+
+  /* ── Leave & Half-Day forms: scale body so content fits one page ── */
+  body.print-scaled { zoom: 0.62 !important; }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,
