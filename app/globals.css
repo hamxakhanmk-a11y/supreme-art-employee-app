@@ -389,14 +389,47 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   .print-pair-value { font-size: 8pt !important; padding: 2px 4px !important; min-height: 14pt !important; }
   .print-only { display: block !important; }
 
-  .print-watermark { display: flex !important; position: fixed; inset: 0; align-items: center; justify-content: center; pointer-events: none; z-index: 9999; overflow: hidden; }
-  .print-watermark img { width: 92%; max-width: 900px; height: auto; opacity: 0.08; transform: rotate(-30deg); transform-origin: center center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-watermark { display: none !important; }
+
+  /* A4-page container with a faded centered Urdu logo background.
+     Add class="print-page-bg" to any element you want watermarked
+     (forms, salary slips, reports). The image scales with the
+     container so it also works when body is zoomed for printing. */
+  .print-page-bg {
+    background-image: url('/logo-urdu.png');
+    background-repeat: no-repeat;
+    background-position: center 55%;
+    background-size: 70% auto;
+    background-attachment: local;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-page-bg > * { position: relative; }
+  /* Fade the watermark via a pseudo overlay — keeps text crisp on top */
+  .print-page-bg::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.88);
+    pointer-events: none;
+    z-index: 0;
+  }
 
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
 
   /* ── Leave & Half-Day forms: scale body so content fits one page ── */
-  body.print-scaled { zoom: 0.62 !important; }
+  body.print-scaled { zoom: 0.56 !important; }
+  body.print-scaled .leave-form { gap: 8px !important; }
+  body.print-scaled .lf-letterhead { padding-bottom: 8px !important; margin-bottom: 10px !important; }
+  body.print-scaled .lf-letterhead img { height: 80px !important; }
+  body.print-scaled .lf-office-banner { margin-top: 12px !important; padding: 5px 10px !important; }
+  body.print-scaled .lf-final-banner { margin-top: 10px !important; padding: 6px 10px !important; }
+  body.print-scaled .lf-blank-line { height: 16px !important; }
+  body.print-scaled .lf-policy-box { padding: 8px 10px !important; }
+  body.print-scaled .lf-field-label { margin-bottom: 3px !important; }
+  body.print-scaled textarea { min-height: 50px !important; }
+  /* Avoid breaking inside the form — keep it as one block */
+  body.print-scaled .leave-form-wrap { page-break-inside: avoid; break-inside: avoid; }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,

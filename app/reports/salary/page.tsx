@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { salaryRecords, employees } from "@/lib/schema";
 import { desc, asc } from "drizzle-orm";
 import SalaryReportClient from "./SalaryReportClient";
+import PrintHeader from "@/components/PrintHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +12,10 @@ export default async function SalaryReportPage() {
     db.select({ id: employees.id, employeeId: employees.employeeId, firstName: employees.firstName, lastName: employees.lastName, department: employees.department })
       .from(employees).orderBy(asc(employees.firstName)),
   ]);
-  return <SalaryReportClient records={records as any[]} employees={emps as any[]} />;
+  return (
+    <>
+      <PrintHeader title="Salary Records" />
+      <SalaryReportClient records={records as any[]} employees={emps as any[]} />
+    </>
+  );
 }

@@ -63,7 +63,7 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Salary Records</h1>
           <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>All generated salary slips. Click any row to view and print.</p>
@@ -71,10 +71,11 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
         <div style={{ display: "flex", gap: 8 }}>
           <Link href="/salary" className="btn btn-primary">＋ Generate Slips</Link>
           <button className="btn" onClick={exportCSV} disabled={filtered.length === 0}>⬇ Excel (CSV)</button>
+          <button className="btn btn-print" onClick={() => window.print()} disabled={filtered.length === 0}>🖨 Print</button>
         </div>
       </div>
 
-      <div className="card" style={{ padding: "12px 14px", marginBottom: 12 }}>
+      <div className="card no-print" style={{ padding: "12px 14px", marginBottom: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "200px 140px 1fr", gap: 12, alignItems: "end" }}>
           <div>
             <label className="form-label">Month</label>

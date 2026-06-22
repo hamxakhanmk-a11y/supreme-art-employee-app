@@ -11,17 +11,20 @@ export default function SalarySlipView({ slip }: { slip: any }) {
         <button className="btn btn-primary" onClick={() => window.print()}>🖨 Print / Save PDF</button>
       </div>
 
-      <div style={{
+      <div className="print-page-bg" style={{
         background: "#fff", maxWidth: 900, margin: "0 auto",
         fontFamily: "'Segoe UI', Arial, sans-serif", fontSize: 13, color: "#1a1a1a",
-        border: "1px solid #ddd", borderRadius: 8,
+        border: "1px solid #ddd", borderRadius: 8, position: "relative",
       }}>
-        {/* Header */}
-        <div style={{ background: "#A32D2D", color: "#fff", padding: "10px 24px", textAlign: "center", borderRadius: "8px 8px 0 0" }}>
-          <div style={{ fontSize: 11, opacity: 0.85 }}>Supreme Art (Pvt.) Ltd. | HR Department</div>
-        </div>
-        <div style={{ background: "#7C1F1F", color: "#fff", padding: "12px 24px", textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 3 }}>SALARY SLIP</div>
+        {/* Letterhead with logo */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "2.5px solid #A32D2D", borderRadius: "8px 8px 0 0", background: "#fff" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 80, width: "auto", maxWidth: 280, objectFit: "contain" }} />
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#A32D2D", textTransform: "uppercase", letterSpacing: 1.2 }}>Salary Slip</div>
+            <div className="urdu" style={{ fontSize: 16, color: "#A32D2D", fontWeight: 600, marginTop: 4 }}>تنخواہ کی پرچی</div>
+            <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>Supreme Art (Pvt.) Ltd. · HR Department</div>
+          </div>
         </div>
 
         {/* Top meta */}

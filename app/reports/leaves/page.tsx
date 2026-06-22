@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees, leaveTypes } from "@/lib/schema";
 import { asc } from "drizzle-orm";
 import LeaveHistoryClient from "@/app/leave/history/LeaveHistoryClient";
+import PrintHeader from "@/components/PrintHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function LeaveHistoryReport() {
   ]);
   return (
     <div className="fade-up">
+      <PrintHeader title="Leave History" />
       <div className="no-print" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Leave History</h1>
         <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>All leave requests with filters, print and Excel export.</p>
