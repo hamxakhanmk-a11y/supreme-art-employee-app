@@ -91,32 +91,17 @@ export default function SalaryPage() {
 
   const set = (k: keyof Slip, v: any) => setSlip(p => ({ ...p, [k]: v }));
 
-  const loadEmployee = async (empId: string) => {
+  const loadEmployee = async (empId: string, month?: string, year?: number) => {
     const emp = employees.find(e => e.employeeId === empId);
     if (!emp) return;
     setLoading(true);
     setError(null);
+    const m = month ?? slip.month;
+    const y = year ?? slip.year;
     try {
-      // Fetch attendance for the selected month/year
-      const monthIdx = MONTHS.indexOf(slip.month);
-      const from = `${slip.year}-${String(monthIdx + 1).padStart(2, "0")}-01`;
-      const daysInMonth = new Date(slip.year, monthIdx + 1, 0).getDate();
-      const to = `${slip.year}-${String(monthIdx + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-      const attRes = await fetch(`/api/attendance?from=${from}&to=${to}&employeeId=${emp.id}`);
-      const attData = await attRes.json();
-
-      let present = 0, absent = 0, leave = 0;
-      if (Array.isArray(attData)) {
-        attData.forEach((r: any) => {
-          if (r.status === "present" || r.status === "half-day") present++;
-          else if (r.status === "absent") absent++;
-          else if (r.status === "leave") leave++;
-        });
-      }
-
-      // Estimate week offs from remaining days
-      const totalMarked = present + absent + leave;
-      const weekOffs = Math.max(0, daysInMonth - totalMarked);
+      const recRes = await fetch(`/api/salary-records?employeeId=${emp.id}`);
+      const records: any[] = await recRes.json();
+      const rec = Array.isArray(records) ? records.find((r: any) => r.month === m && r.year === y) : null;
 
       setSlip(p => ({
         ...p,
@@ -129,12 +114,16 @@ export default function SalaryPage() {
         cnic: emp.cnic || "",
         joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "",
         empStatus: emp.status || "Active",
-        basicSalary: emp.basicSalary || 0,
-        daysPresent: present,
-        daysAbsent: absent,
-        daysLeave: leave,
-        weekOffs,
-      }));
+        basicSalary: rec ? rec.basicSalary : (emp.basicSalary || 0),
+        conveyance: rec ? rec.conveyance : 6000,
+        overtime: rec ? rec.overtime : 0,
+        daysPresent: rec ? rec.daysPresent : 0,
+        daysAbsent: rec ? rec.daysAbsent : 0,
+        daysLeave: rec ? rec.daysLeave : 0,
+        weekOffs: rec ? rec.weekOffs : 0,
+        otherDeduction: rec ? rec.otherDeduction : 0,
+        _noRecord: !rec,
+      } as any));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -148,8 +137,9 @@ export default function SalaryPage() {
   };
 
   const handleMonthYearChange = (k: "month" | "year", v: any) => {
-    setSlip(p => ({ ...p, [k]: v }));
-    if (slip.employeeId) setTimeout(() => loadEmployee(slip.employeeId), 0);
+    const next = { ...slip, [k]: v };
+    setSlip(next);
+    if (slip.employeeId) loadEmployee(slip.employeeId, next.month, next.year);
   };
 
   const handlePrint = () => window.print();
@@ -197,40 +187,9 @@ export default function SalaryPage() {
             </div>
           </div>
 
-          {slip.employeeId && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14, marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
-              <div>
-                <label className="form-label">Basic Salary (PKR)</label>
-                <input type="number" value={slip.basicSalary} onChange={e => set("basicSalary", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Conveyance Allow.</label>
-                <input type="number" value={slip.conveyance} onChange={e => set("conveyance", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Overtime / Bonus</label>
-                <input type="number" value={slip.overtime} onChange={e => set("overtime", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Other Deduction</label>
-                <input type="number" value={slip.otherDeduction} onChange={e => set("otherDeduction", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Days Present</label>
-                <input type="number" value={slip.daysPresent} onChange={e => set("daysPresent", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Days Absent</label>
-                <input type="number" value={slip.daysAbsent} onChange={e => set("daysAbsent", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Days on Leave</label>
-                <input type="number" value={slip.daysLeave} onChange={e => set("daysLeave", Number(e.target.value))} />
-              </div>
-              <div>
-                <label className="form-label">Week Offs</label>
-                <input type="number" value={slip.weekOffs} onChange={e => set("weekOffs", Number(e.target.value))} />
-              </div>
+          {(slip as any)._noRecord && slip.employeeId && !loading && (
+            <div style={{ marginTop: 12, padding: "9px 14px", background: "#fff8e1", border: "1px solid #e0c96e", borderRadius: 6, fontSize: 13, color: "#7a5800" }}>
+              No salary record found for <strong>{slip.month} {slip.year}</strong>. Go to the employee's profile → <em>Salary History</em> tab to add one.
             </div>
           )}
         </div>

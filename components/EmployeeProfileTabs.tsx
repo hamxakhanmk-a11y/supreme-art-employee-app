@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
 type Exp = { id: number; company: string; position: string | null; fromDate: string | null; toDate: string | null; description: string | null; };
@@ -8,7 +8,7 @@ type OtherDoc = { id: number; label: string; url: string; category?: string | nu
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
 }: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
-  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking">("personal");
+  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "personal", label: "Personal" },
@@ -18,6 +18,7 @@ export default function EmployeeProfileTabs({
     { key: "documents", label: "Documents" },
     { key: "education", label: "Education" },
     { key: "experience", label: "Experience" },
+    { key: "salary", label: "Salary History" },
   ];
 
   return (
@@ -179,6 +180,8 @@ export default function EmployeeProfileTabs({
             </tbody>
           </table>
         )}
+
+        {tab === "salary" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
       </div>
     </div>
   );
@@ -236,4 +239,178 @@ function fmtDate(d: any): string {
   if (!d) return "";
   try { return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); }
   catch { return String(d); }
+}
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const THIS_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 5 }, (_, i) => THIS_YEAR - 2 + i);
+const fmt = (n: number) => Number(n).toLocaleString("en-PK");
+
+type SalaryRecord = {
+  id: number; month: string; year: number;
+  basicSalary: number; conveyance: number; overtime: number;
+  daysPresent: number; daysAbsent: number; daysLeave: number; weekOffs: number;
+  otherDeduction: number; notes: string | null;
+};
+
+const houseRent    = (b: number) => Math.round(b * 0.40);
+const medicalAllow = (b: number) => Math.round(b * 0.10);
+const gross        = (r: SalaryRecord) => r.basicSalary + houseRent(r.basicSalary) + medicalAllow(r.basicSalary) + r.conveyance + r.overtime;
+const incomeTax    = (b: number) => Math.round(b * 0.05);
+const eobiEmp      = (b: number) => Math.round(b * 0.01);
+const eobiEmpr     = (b: number) => Math.round(b * 0.02);
+const absentDed    = (r: SalaryRecord) => {
+  const wd = r.daysPresent + r.daysAbsent + r.daysLeave;
+  return wd === 0 || r.daysAbsent === 0 ? 0 : Math.round((gross(r) / wd) * r.daysAbsent);
+};
+const totalDed     = (r: SalaryRecord) => incomeTax(r.basicSalary) + eobiEmp(r.basicSalary) + eobiEmpr(r.basicSalary) + absentDed(r) + r.otherDeduction;
+const netPay       = (r: SalaryRecord) => gross(r) - totalDed(r);
+
+function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; basicSalary: number | null }) {
+  const [records, setRecords] = useState<SalaryRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    month: MONTHS[new Date().getMonth()], year: THIS_YEAR,
+    basicSalary: basicSalary || 0, conveyance: 6000, overtime: 0,
+    daysPresent: 0, daysAbsent: 0, daysLeave: 0, weekOffs: 0,
+    otherDeduction: 0, notes: "",
+  });
+
+  const load = () => {
+    setLoading(true);
+    fetch(`/api/salary-records?employeeId=${employeeDbId}`)
+      .then(r => r.json()).then(setRecords).catch(() => {}).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [employeeDbId]);
+
+  const sf = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const save = async () => {
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch("/api/salary-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: employeeDbId, ...form }),
+      });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error); }
+      setShowForm(false);
+      load();
+    } catch (e: any) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const del = async (id: number) => {
+    if (!confirm("Delete this salary record?")) return;
+    await fetch(`/api/salary-records?id=${id}`, { method: "DELETE" });
+    load();
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: "var(--text2)" }}>{records.length} record{records.length !== 1 ? "s" : ""}</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(s => !s)}>
+          {showForm ? "✕ Cancel" : "＋ Add Salary Record"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ marginBottom: 16, background: "var(--bg2)" }}>
+          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 13 }}>New Salary Record</div>
+          {error && <div style={{ color: "var(--danger)", marginBottom: 10, fontSize: 12 }}>{error}</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
+            <div><label className="form-label">Month</label>
+              <select value={form.month} onChange={e => sf("month", e.target.value)}>
+                {MONTHS.map(m => <option key={m}>{m}</option>)}
+              </select>
+            </div>
+            <div><label className="form-label">Year</label>
+              <select value={form.year} onChange={e => sf("year", parseInt(e.target.value))}>
+                {YEARS.map(y => <option key={y}>{y}</option>)}
+              </select>
+            </div>
+            <div><label className="form-label">Basic Salary</label>
+              <input type="number" value={form.basicSalary} onChange={e => sf("basicSalary", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Conveyance</label>
+              <input type="number" value={form.conveyance} onChange={e => sf("conveyance", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Overtime / Bonus</label>
+              <input type="number" value={form.overtime} onChange={e => sf("overtime", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Days Present</label>
+              <input type="number" value={form.daysPresent} onChange={e => sf("daysPresent", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Days Absent</label>
+              <input type="number" value={form.daysAbsent} onChange={e => sf("daysAbsent", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Days on Leave</label>
+              <input type="number" value={form.daysLeave} onChange={e => sf("daysLeave", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Week Offs</label>
+              <input type="number" value={form.weekOffs} onChange={e => sf("weekOffs", Number(e.target.value))} />
+            </div>
+            <div><label className="form-label">Other Deduction</label>
+              <input type="number" value={form.otherDeduction} onChange={e => sf("otherDeduction", Number(e.target.value))} />
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label className="form-label">Notes</label>
+            <input value={form.notes} onChange={e => sf("notes", e.target.value)} placeholder="Optional notes" />
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={saving} onClick={save}>
+            {saving ? "Saving..." : "Save Record"}
+          </button>
+        </div>
+      )}
+
+      {loading ? <div className="empty">Loading...</div> : records.length === 0 ? (
+        <div className="empty">No salary records yet. Click <strong>＋ Add Salary Record</strong> to add one.</div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Month / Year</th>
+                <th className="num">Basic</th>
+                <th className="num">Gross</th>
+                <th className="num">Income Tax</th>
+                <th className="num">EOBI Emp</th>
+                <th className="num">EOBI Empr</th>
+                <th className="num">Absent Ded.</th>
+                <th className="num">Other Ded.</th>
+                <th className="num" style={{ color: "var(--danger)" }}>Total Ded.</th>
+                <th className="num" style={{ color: "var(--success)" }}>Net Pay</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600 }}>{r.month} {r.year}</td>
+                  <td className="num">{fmt(r.basicSalary)}</td>
+                  <td className="num">{fmt(gross(r))}</td>
+                  <td className="num">{fmt(incomeTax(r.basicSalary))}</td>
+                  <td className="num">{fmt(eobiEmp(r.basicSalary))}</td>
+                  <td className="num">{fmt(eobiEmpr(r.basicSalary))}</td>
+                  <td className="num">{fmt(absentDed(r))}</td>
+                  <td className="num">{fmt(r.otherDeduction)}</td>
+                  <td className="num" style={{ color: "var(--danger)", fontWeight: 600 }}>{fmt(totalDed(r))}</td>
+                  <td className="num" style={{ color: "var(--success)", fontWeight: 700 }}>{fmt(netPay(r))}</td>
+                  <td>
+                    <button className="btn btn-sm btn-danger-soft" onClick={() => del(r.id)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
