@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MONTHS } from "@/lib/salary";
-import PrintLandscape from "@/components/PrintLandscape";
+import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 
 type Slip = {
   id: number;
@@ -73,7 +73,7 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
         <div style={{ display: "flex", gap: 8 }}>
           <Link href="/salary" className="btn btn-primary">＋ Generate Slips</Link>
           <button className="btn" onClick={exportCSV} disabled={filtered.length === 0}>⬇ Excel (CSV)</button>
-          <button className="btn btn-print" onClick={() => window.print()} disabled={filtered.length === 0}>🖨 Print</button>
+          <button className="btn btn-print" onClick={printLandscape} disabled={filtered.length === 0}>🖨 Print</button>
         </div>
       </div>
 

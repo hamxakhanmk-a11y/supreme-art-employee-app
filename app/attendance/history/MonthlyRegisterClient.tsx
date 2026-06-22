@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
-import PrintLandscape from "@/components/PrintLandscape";
+import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 
 type Emp = {
   id: number;
@@ -130,7 +130,7 @@ export default function MonthlyRegisterClient({
         </select>
         <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
         <div style={{ flex: 1 }} />
-        <button onClick={() => window.print()} className="btn btn-print">🖨 Print Register</button>
+        <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
         <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
       </div>
 

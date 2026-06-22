@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
-import PrintLandscape from "@/components/PrintLandscape";
+import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null };
@@ -142,7 +142,7 @@ export default function LeaveHistoryClient({
             </select>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => window.print()} className="btn btn-print" style={{ flex: 1 }}>🖨 Print</button>
+            <button onClick={printLandscape} className="btn btn-print" style={{ flex: 1 }}>🖨 Print</button>
             <button onClick={exportCSV} className="btn btn-primary" style={{ flex: 1 }} disabled={!filtered.length}>⬇ Excel</button>
           </div>
         </div>
