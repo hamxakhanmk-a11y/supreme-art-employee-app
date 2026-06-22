@@ -8,18 +8,18 @@ type OtherDoc = { id: number; label: string; url: string; category?: string | nu
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
 }: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
-  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary">("personal");
+  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary" | "salaryHistory">("personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "personal", label: "Personal" },
     { key: "contact", label: "Contact" },
     { key: "job", label: "Job" },
     { key: "salary", label: "Salary" },
+    { key: "salaryHistory", label: "Salary History" },
     { key: "banking", label: "Banking" },
     { key: "documents", label: "Documents" },
     { key: "education", label: "Education" },
     { key: "experience", label: "Experience" },
-    { key: "salary", label: "Salary History" },
   ];
 
   return (
@@ -198,7 +198,7 @@ export default function EmployeeProfileTabs({
           </table>
         )}
 
-        {tab === "salary" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
+        {tab === "salaryHistory" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
       </div>
     </div>
   );
