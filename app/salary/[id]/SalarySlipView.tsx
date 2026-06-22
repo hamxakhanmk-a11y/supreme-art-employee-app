@@ -1,29 +1,35 @@
 "use client";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-PK");
 
 export default function SalarySlipView({ slip }: { slip: any }) {
+  const router = useRouter();
+  const goBack = () => {
+    // Go to whichever page the user came from (Salary generator vs Reports).
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/salary");
+  };
   return (
-    <div className="fade-up">
+    <div className="fade-up salary-slip-page">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Link href="/reports/salary" style={{ fontSize: 13, color: "var(--brand)" }}>← Back to Salary Records</Link>
+        <button onClick={goBack} style={{ fontSize: 13, color: "var(--brand)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
         <button className="btn btn-primary" onClick={() => window.print()}>🖨 Print / Save PDF</button>
       </div>
 
-      <div className="print-page-bg" style={{
+      <div className="print-page-bg salary-slip" style={{
         background: "#fff", maxWidth: 900, margin: "0 auto",
-        fontFamily: "'Segoe UI', Arial, sans-serif", fontSize: 13, color: "#1a1a1a",
+        fontFamily: "'Segoe UI', Arial, sans-serif", fontSize: 14, color: "#1a1a1a",
         border: "1px solid #ddd", borderRadius: 8, position: "relative",
       }}>
         {/* Letterhead with logo */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "2.5px solid #A32D2D", borderRadius: "8px 8px 0 0", background: "#fff" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 28px", borderBottom: "3px solid #A32D2D", borderRadius: "8px 8px 0 0", background: "#fff" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 80, width: "auto", maxWidth: 280, objectFit: "contain" }} />
+          <img className="ss-logo" src="/logo.png" alt="Supreme Art" style={{ height: 130, width: "auto", maxWidth: 400, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#A32D2D", textTransform: "uppercase", letterSpacing: 1.2 }}>Salary Slip</div>
-            <div className="urdu" style={{ fontSize: 16, color: "#A32D2D", fontWeight: 600, marginTop: 4 }}>تنخواہ کی پرچی</div>
-            <div style={{ fontSize: 10, color: "#777", marginTop: 4 }}>Supreme Art (Pvt.) Ltd. · HR Department</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#A32D2D", textTransform: "uppercase", letterSpacing: 1.4, lineHeight: 1.1 }}>Salary Slip</div>
+            <div className="urdu" style={{ fontSize: 24, color: "#A32D2D", fontWeight: 600, marginTop: 6 }}>تنخواہ کی پرچی</div>
+            <div style={{ fontSize: 12, color: "#777", marginTop: 6 }}>Supreme Art (Pvt.) Ltd. · HR Department</div>
           </div>
         </div>
 
@@ -75,28 +81,28 @@ export default function SalarySlipView({ slip }: { slip: any }) {
         </div>
 
         {/* Net Pay */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", margin: "16px 24px 0", borderRadius: 6, overflow: "hidden" }}>
-          <div style={{ background: "#7C1F1F", color: "#fff", padding: "14px 20px", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", margin: "20px 24px 0", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ background: "#7C1F1F", color: "#fff", padding: "18px 22px", fontWeight: 700, fontSize: 17, display: "flex", alignItems: "center", gap: 8 }}>
             💰 NET PAY (PKR)
           </div>
-          <div style={{ background: "#A32D2D", color: "#fff", padding: "14px 20px", fontWeight: 800, fontSize: 22, textAlign: "center" }}>
+          <div style={{ background: "#A32D2D", color: "#fff", padding: "18px 22px", fontWeight: 800, fontSize: 28, textAlign: "center" }}>
             {fmt(slip.netPay)}
           </div>
         </div>
 
         {/* Signatures */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "28px 40px 16px", gap: 40, marginTop: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "40px 40px 18px", gap: 40, marginTop: 14 }}>
           <div>
-            <div style={{ fontSize: 12, fontStyle: "italic" }}>Employee Signature: ________________________</div>
-            <div style={{ fontSize: 12, marginTop: 16, fontStyle: "italic" }}>Name: ______________________</div>
+            <div style={{ fontSize: 14, fontStyle: "italic" }}>Employee Signature: ________________________</div>
+            <div style={{ fontSize: 14, marginTop: 22, fontStyle: "italic" }}>Name: ______________________</div>
           </div>
           <div>
-            <div style={{ fontSize: 12, fontStyle: "italic" }}>Authorized Signatory: ________________________</div>
-            <div style={{ fontSize: 12, marginTop: 16, fontStyle: "italic" }}>Name & Stamp: __________________</div>
+            <div style={{ fontSize: 14, fontStyle: "italic" }}>Authorized Signatory: ________________________</div>
+            <div style={{ fontSize: 14, marginTop: 22, fontStyle: "italic" }}>Name & Stamp: __________________</div>
           </div>
         </div>
 
-        <div style={{ background: "#f5f5f5", borderTop: "1px solid #e0e0e0", padding: "8px 24px", textAlign: "center", fontSize: 11, color: "#888", borderRadius: "0 0 8px 8px" }}>
+        <div style={{ background: "#f5f5f5", borderTop: "1px solid #e0e0e0", padding: "10px 24px", textAlign: "center", fontSize: 12, color: "#888", borderRadius: "0 0 8px 8px" }}>
           ⚠ This is a computer-generated salary slip.
         </div>
       </div>
@@ -115,45 +121,45 @@ export default function SalarySlipView({ slip }: { slip: any }) {
 
 function SectionHeader({ children, color = "#A32D2D" }: { children: React.ReactNode; color?: string }) {
   return (
-    <div style={{ background: color, color: "#fff", fontWeight: 700, fontSize: 12, padding: "7px 24px", textAlign: "center", letterSpacing: 1, marginTop: 8 }}>
+    <div style={{ background: color, color: "#fff", fontWeight: 700, fontSize: 14, padding: "9px 24px", textAlign: "center", letterSpacing: 1, marginTop: 10 }}>
       {children}
     </div>
   );
 }
 function MetaPill({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13 }}>
+    <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 15 }}>
       <span style={{ fontWeight: 600 }}>{label}:</span>
-      <span style={{ background: "#fff3cd", padding: "3px 14px", borderRadius: 4, fontWeight: 700, border: "1px solid #e0c96e" }}>{value}</span>
+      <span style={{ background: "#fff3cd", padding: "4px 16px", borderRadius: 4, fontWeight: 700, border: "1px solid #e0c96e", fontSize: 15 }}>{value}</span>
     </div>
   );
 }
 function InfoRow({ label, value }: { label: string; value: any }) {
   return (
-    <div style={{ display: "flex", padding: "5px 0", borderBottom: "1px solid #f0f0f0" }}>
-      <span style={{ fontWeight: 600, minWidth: 160, fontSize: 12 }}>{label}:</span>
-      <span style={{ fontSize: 12 }}>{value || "—"}</span>
+    <div style={{ display: "flex", padding: "7px 0", borderBottom: "1px solid #f0f0f0" }}>
+      <span style={{ fontWeight: 600, minWidth: 170, fontSize: 14 }}>{label}:</span>
+      <span style={{ fontSize: 14 }}>{value || "—"}</span>
     </div>
   );
 }
 function AttRow({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #eaf4ee" }}>
-      <span style={{ fontWeight: 600, fontSize: 12 }}>{label}:</span>
-      <span style={{ fontWeight: 700, color, fontSize: 13 }}>{value}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #eaf4ee" }}>
+      <span style={{ fontWeight: 600, fontSize: 14 }}>{label}:</span>
+      <span style={{ fontWeight: 700, color, fontSize: 15 }}>{value}</span>
     </div>
   );
 }
 function PanelHeader({ children, bg }: { children: React.ReactNode; bg: string }) {
   return (
-    <div style={{ background: bg, color: "#fff", fontWeight: 700, fontSize: 12, padding: "7px 12px", textAlign: "center", borderRadius: 4, marginBottom: 4, letterSpacing: 1 }}>
+    <div style={{ background: bg, color: "#fff", fontWeight: 700, fontSize: 14, padding: "9px 14px", textAlign: "center", borderRadius: 4, marginBottom: 5, letterSpacing: 1 }}>
       {children}
     </div>
   );
 }
 function Row({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 10px", borderBottom: "1px solid #f3f3f3", fontSize: 12 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 12px", borderBottom: "1px solid #f3f3f3", fontSize: 14 }}>
       <span>{label}</span>
       <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(value)}</span>
     </div>
@@ -161,7 +167,7 @@ function Row({ label, value }: { label: string; value: number }) {
 }
 function TotalRow({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: bg, borderRadius: 4, marginTop: 4, fontWeight: 700 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: bg, borderRadius: 4, marginTop: 5, fontWeight: 700, fontSize: 15 }}>
       <span style={{ color }}>{label}</span>
       <span style={{ color }}>{fmt(value)}</span>
     </div>
