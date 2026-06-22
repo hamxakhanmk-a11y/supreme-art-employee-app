@@ -311,7 +311,7 @@ export default function SalaryGeneratorPage() {
                       <td style={{ textAlign: "right", fontWeight: 700, color: "var(--brand)", fontVariantNumeric: "tabular-nums" }}>{fmt(c.netPay)}</td>
                       <td>
                         {r.slipId ? (
-                          <Link href={`/salary/${r.slipId}`} className="btn btn-sm btn-primary">View / Print</Link>
+                          <Link href={`/salary/${r.slipId}`} className="btn btn-sm btn-primary">View</Link>
                         ) : (
                           <span style={{ fontSize: 11, color: "var(--text2)" }}>Not generated</span>
                         )}

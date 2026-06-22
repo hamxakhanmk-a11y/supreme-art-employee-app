@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-PK");
 
-export default function SalarySlipView({ slip }: { slip: any }) {
+export default function SalarySlipView({ slip, embedded = false }: { slip: any; embedded?: boolean }) {
   const router = useRouter();
   const goBack = () => {
     // Go to whichever page the user came from (Salary generator vs Reports).
@@ -12,10 +12,12 @@ export default function SalarySlipView({ slip }: { slip: any }) {
   };
   return (
     <div className="fade-up salary-slip-page">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <button onClick={goBack} style={{ fontSize: 13, color: "var(--brand)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
-        <button className="btn btn-primary" onClick={() => window.print()}>🖨 Print / Save PDF</button>
-      </div>
+      {!embedded && (
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <button onClick={goBack} style={{ fontSize: 13, color: "var(--brand)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
+          <button className="btn btn-primary" onClick={() => window.print()}>🖨 Save PDF</button>
+        </div>
+      )}
 
       <div className="print-page-bg salary-slip" style={{
         background: "#fff", maxWidth: 900, margin: "0 auto",

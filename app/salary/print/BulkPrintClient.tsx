@@ -18,14 +18,13 @@ export default function BulkPrintClient({ slips }: { slips: any[] }) {
       <div className="bulk-slip-stack">
         {slips.map((s, i) => (
           <div key={s.id} className="bulk-slip-item" style={{ pageBreakAfter: i < slips.length - 1 ? "always" : "auto", breakAfter: i < slips.length - 1 ? "page" : "auto" }}>
-            <SalarySlipView slip={s} />
+            <SalarySlipView slip={s} embedded />
           </div>
         ))}
       </div>
       <style>{`
         @media print {
           .bulk-slip-item { page-break-inside: avoid; break-inside: avoid; }
-          .bulk-slip-item .salary-slip-page > .no-print { display: none !important; }
         }
       `}</style>
     </div>
