@@ -279,14 +279,6 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
             <BlankLines count={3} />
           </div>
 
-          {/* Final approval banner */}
-          <div className="lf-final-banner" style={{ marginTop: 6, padding: "8px 12px", background: "var(--brand-soft)", border: "1px solid var(--brand)", borderRadius: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--brand)", textTransform: "uppercase", letterSpacing: 0.8 }}>
-              Final Approval by HEAD HR &amp; ADMINISTRATION
-            </div>
-            <div className="urdu" style={{ fontSize: 15, color: "var(--brand)", fontWeight: 600, marginTop: 2 }}>حتمی منظوری برائے سربراہ ایچ آر</div>
-          </div>
-
           {/* === All signatures on ONE row === */}
           <div className="lf-sign-row" style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.85fr", gap: 16 }}>
             <Field en="Employee Sig." ur="ملازم دستخط" compact>
