@@ -145,22 +145,48 @@ export const leaveTypes = pgTable("leave_types", {
 });
 
 // =====================
-// SALARY RECORDS
+// SALARY RECORDS (generated slip snapshot)
 // =====================
 export const salaryRecords = pgTable("salary_records", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
   month: varchar("month", { length: 20 }).notNull(),
+  monthNum: integer("month_num"),
   year: integer("year").notNull(),
+  // Employee snapshot
+  employeeCode: varchar("employee_code", { length: 20 }),
+  employeeName: varchar("employee_name", { length: 160 }),
+  designation: varchar("designation", { length: 80 }),
+  department: varchar("department", { length: 60 }),
+  // Structure snapshot
   basicSalary: integer("basic_salary").notNull().default(0),
-  conveyance: integer("conveyance").notNull().default(6000),
+  conveyance: integer("conveyance").notNull().default(0),
+  houseRentPercent: integer("house_rent_percent").notNull().default(0),
+  medicalPercent: integer("medical_percent").notNull().default(0),
+  incomeTaxPercent: integer("income_tax_percent").notNull().default(0),
+  eobiEmployeePercent: integer("eobi_employee_percent").notNull().default(0),
+  eobiEmployerPercent: integer("eobi_employer_percent").notNull().default(0),
+  // Per-slip inputs
   overtime: integer("overtime").notNull().default(0),
+  otherDeduction: integer("other_deduction").notNull().default(0),
+  // Attendance
   daysPresent: integer("days_present").notNull().default(0),
   daysAbsent: integer("days_absent").notNull().default(0),
   daysLeave: integer("days_leave").notNull().default(0),
   weekOffs: integer("week_offs").notNull().default(0),
-  otherDeduction: integer("other_deduction").notNull().default(0),
+  // Computed amounts
+  houseRent: integer("house_rent").notNull().default(0),
+  medical: integer("medical").notNull().default(0),
+  grossEarnings: integer("gross_earnings").notNull().default(0),
+  incomeTax: integer("income_tax").notNull().default(0),
+  eobiEmployee: integer("eobi_employee").notNull().default(0),
+  eobiEmployer: integer("eobi_employer").notNull().default(0),
+  absentDeduction: integer("absent_deduction").notNull().default(0),
+  totalDeductions: integer("total_deductions").notNull().default(0),
+  netPay: integer("net_pay").notNull().default(0),
+  // Meta
   notes: text("notes"),
+  generatedBy: varchar("generated_by", { length: 120 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

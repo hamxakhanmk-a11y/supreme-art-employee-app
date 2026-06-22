@@ -32,9 +32,10 @@ const subNav: Record<string, { href: string; label: string }[]> = {
     { href: "/reports/attendance", label: "Attendance Register" },
     { href: "/reports/leaves", label: "Leave History" },
     { href: "/reports/half-day", label: "Half-Day History" },
+    { href: "/reports/salary", label: "Salary Records" },
   ],
   salary: [
-    { href: "/salary", label: "Salary Slip" },
+    { href: "/salary", label: "Generate Slips" },
   ],
 };
 
