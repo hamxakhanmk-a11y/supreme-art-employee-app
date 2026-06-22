@@ -282,7 +282,10 @@ function SalaryHistory({ employeeDbId, basicSalary }: { employeeDbId: number; ba
   const load = () => {
     setLoading(true);
     fetch(`/api/salary-records?employeeId=${employeeDbId}`)
-      .then(r => r.json()).then(setRecords).catch(() => {}).finally(() => setLoading(false));
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setRecords(data); else setError(data?.error || "Failed to load records"); })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, [employeeDbId]);
