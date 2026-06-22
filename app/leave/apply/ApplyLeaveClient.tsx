@@ -105,12 +105,12 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
       <div className="card leave-form-wrap print-page-bg" style={{ maxWidth: 780, margin: "0 auto", position: "relative" }}>
         {/* Letterhead */}
-        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2.5px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
+        <div className="lf-letterhead" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "3px solid var(--brand)", paddingBottom: 12, marginBottom: 18 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Supreme Art" style={{ height: 100, width: "auto", maxWidth: 320, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Supreme Art" style={{ height: 120, width: "auto", maxWidth: 380, objectFit: "contain" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "var(--brand)" }}>Leave Application Form</div>
-            <div className="urdu" style={{ fontSize: 17, color: "var(--brand)", fontWeight: 600, marginTop: 4 }}>رخصت کی درخواست فارم</div>
+            <div className="lf-title" style={{ fontSize: 22, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.2, color: "var(--brand)", lineHeight: 1.1 }}>Leave Application Form</div>
+            <div className="urdu lf-title-ur" style={{ fontSize: 22, color: "var(--brand)", fontWeight: 600, marginTop: 6 }}>رخصت کی درخواست فارم</div>
           </div>
         </div>
 
@@ -118,29 +118,30 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           {err && <div className="no-print" style={{ color: "var(--danger)", fontSize: 12, padding: "8px 12px", background: "var(--danger-bg)", borderRadius: 6 }}>{err}</div>}
           {ok && <div className="no-print" style={{ color: "var(--success)", fontSize: 12, padding: "8px 12px", background: "var(--success-bg)", borderRadius: 6 }}>✓ Leave request submitted! Redirecting…</div>}
 
-          {/* === Employee block === */}
-          <Field en="Employee Name" ur="ملازم نام">
-            <select required value={form.employeeId} onChange={e => {
-              const id = e.target.value;
-              const emp = employees.find(x => String(x.id) === id);
-              setForm({ ...form, employeeId: id, department: emp?.department || "" });
-            }}>
-              <option value="">— Select Employee —</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-            </select>
-          </Field>
-
-          <Field en="Designation" ur="عہدہ">
-            <input value={selectedEmp?.designation || ""} readOnly placeholder=" " />
-          </Field>
-
-          <Field en="Employee ID" ur="ملازم ای ڈی">
-            <input value={selectedEmp?.employeeId || ""} readOnly placeholder=" " />
-          </Field>
-
-          <Field en="Department" ur="ڈیپارٹمنٹ یا شعبہ">
-            <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder=" " />
-          </Field>
+          {/* === Employee block === two-column to use horizontal space */}
+          <div className="lf-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Field en="Employee Name" ur="ملازم نام">
+              <select required value={form.employeeId} onChange={e => {
+                const id = e.target.value;
+                const emp = employees.find(x => String(x.id) === id);
+                setForm({ ...form, employeeId: id, department: emp?.department || "" });
+              }}>
+                <option value="">— Select Employee —</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
+              </select>
+            </Field>
+            <Field en="Employee ID" ur="ملازم ای ڈی">
+              <input value={selectedEmp?.employeeId || ""} readOnly placeholder=" " />
+            </Field>
+          </div>
+          <div className="lf-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Field en="Designation" ur="عہدہ">
+              <input value={selectedEmp?.designation || ""} readOnly placeholder=" " />
+            </Field>
+            <Field en="Department" ur="ڈیپارٹمنٹ یا شعبہ">
+              <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder=" " />
+            </Field>
+          </div>
 
           {/* === Type of Leave (with inline manager) === */}
           <div>
@@ -220,7 +221,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
           {/* === Reason === */}
           <Field en="Reason for Leave" ur="رخصت کی وجہ">
-            <textarea rows={3} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
+            <textarea className="lf-reason" rows={5} value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} placeholder="Briefly describe the reason for leave…" />
           </Field>
 
           {/* === Sick leave medical cert === */}
@@ -280,7 +281,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               </span>
               <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>سپروائزر یا مینیجر کی رائے</div>
             </div>
-            <BlankLines count={3} />
+            <BlankLines count={5} />
           </div>
 
           {/* Approval status */}
@@ -300,7 +301,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
               <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", textTransform: "uppercase", letterSpacing: 0.4 }}>Reason (if not approved)</span>
               <div className="urdu" style={{ fontSize: 14, color: "var(--text2)", marginTop: 2 }}>وجہ اگر منظور نہ ھو</div>
             </div>
-            <BlankLines count={2} />
+            <BlankLines count={4} />
           </div>
 
           <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>

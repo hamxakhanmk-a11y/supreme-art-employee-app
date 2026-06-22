@@ -433,18 +433,21 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   /* Drop any min-width hint that was forcing horizontal scroll on screen */
   table[style*="min-width"] { min-width: 0 !important; }
 
-  /* ── Leave & Half-Day forms: scale body so content fits one page ── */
-  body.print-scaled { zoom: 0.56 !important; }
-  body.print-scaled .leave-form { gap: 8px !important; }
-  body.print-scaled .lf-letterhead { padding-bottom: 8px !important; margin-bottom: 10px !important; }
-  body.print-scaled .lf-letterhead img { height: 180px !important; max-width: 460px !important; }
-  body.print-scaled .lf-letterhead { padding-bottom: 14px !important; margin-bottom: 14px !important; }
-  body.print-scaled .lf-office-banner { margin-top: 12px !important; padding: 5px 10px !important; }
-  body.print-scaled .lf-final-banner { margin-top: 10px !important; padding: 6px 10px !important; }
-  body.print-scaled .lf-blank-line { height: 16px !important; }
-  body.print-scaled .lf-policy-box { padding: 8px 10px !important; }
+  /* ── Leave & Half-Day forms: gentler zoom so text is bigger but still
+     fits one page (achievable thanks to the new 2-column rows). */
+  body.print-scaled { zoom: 0.72 !important; }
+  body.print-scaled .leave-form { gap: 10px !important; }
+  body.print-scaled .lf-letterhead { padding-bottom: 10px !important; margin-bottom: 14px !important; }
+  body.print-scaled .lf-letterhead img { height: 170px !important; max-width: 500px !important; }
+  body.print-scaled .lf-title { font-size: 24px !important; }
+  body.print-scaled .lf-title-ur { font-size: 24px !important; }
+  body.print-scaled .lf-office-banner { margin-top: 14px !important; padding: 7px 12px !important; }
+  body.print-scaled .lf-final-banner { margin-top: 12px !important; padding: 8px 12px !important; }
+  body.print-scaled .lf-blank-line { height: 22px !important; }
+  body.print-scaled .lf-policy-box { padding: 9px 12px !important; }
   body.print-scaled .lf-field-label { margin-bottom: 3px !important; }
-  body.print-scaled textarea { min-height: 50px !important; }
+  body.print-scaled textarea { min-height: 60px !important; }
+  body.print-scaled textarea.lf-reason { min-height: 110px !important; }
   /* Avoid breaking inside the form — keep it as one block */
   body.print-scaled .leave-form-wrap {
     page-break-inside: avoid;
@@ -452,15 +455,14 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
     page-break-after: avoid;
     break-after: avoid;
     /* Stretch the form to use the full printable width so we lose the
-       grey side-margins inside the A4 sheet. Body zoom 0.56 scales it
-       back down so 1300px intrinsic → ~728px printed (≈ A4 portrait
-       printable width). */
-    max-width: 1300px !important;
+       grey side-margins inside the A4 sheet. Body zoom 0.72 → intrinsic
+       1020px renders at ~735px printed (≈ A4 portrait printable width). */
+    max-width: 1020px !important;
     width: 100% !important;
     margin: 0 auto !important;
-    padding: 18px !important;
+    padding: 22px !important;
     box-shadow: none !important;
-    border: 1px solid #ccc !important;
+    border: 1.5px solid #999 !important;
   }
   body.print-scaled .leave-form > * { page-break-inside: avoid; break-inside: avoid; }
 
