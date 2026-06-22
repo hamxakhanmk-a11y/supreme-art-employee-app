@@ -395,15 +395,8 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   table th { background: #f3f3f3 !important; color: #333 !important; }
   tr:hover td { background: transparent !important; }
 
-  /* ── Leave & Half-Day forms: scale entire form to fit one page ── */
-  .leave-form-wrap {
-    zoom: 0.62 !important;
-    max-width: none !important;
-    width: 161% !important;   /* 100 / 0.62 ≈ 161 — keeps readable width */
-    margin: 0 auto !important;
-    box-shadow: none !important;
-    border: 1px solid #ddd !important;
-  }
+  /* ── Leave & Half-Day forms: scale body so content fits one page ── */
+  body.print-scaled { zoom: 0.62 !important; }
 
   /* Print form inputs as clean blank boxes — for printing the form
      empty and filling by hand. Drops UI chrome (dropdown arrows,

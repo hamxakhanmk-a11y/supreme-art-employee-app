@@ -40,13 +40,14 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
   const selectedEmp = employees.find(e => String(e.id) === form.employeeId);
 
-  const printBlank = () => {
-    document.body.classList.add("print-blank");
-    // Let the class apply, then trigger print. Cleanup after print dialog closes.
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => document.body.classList.remove("print-blank"), 200);
-    }, 30);
+  const scaledPrint = (blank = false) => {
+    if (blank) document.body.classList.add("print-blank");
+    document.body.classList.add("print-scaled");
+    window.addEventListener("afterprint", () => {
+      document.body.classList.remove("print-scaled");
+      document.body.classList.remove("print-blank");
+    }, { once: true });
+    setTimeout(() => window.print(), 30);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -98,8 +99,8 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
   return (
     <>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, justifyContent: "flex-end" }}>
-        <button onClick={printBlank} className="btn">🖨 Print Blank</button>
-        <button onClick={() => window.print()} className="btn btn-print">🖨 Print Form</button>
+        <button onClick={() => scaledPrint(true)} className="btn">🖨 Print Blank</button>
+        <button onClick={() => scaledPrint()} className="btn btn-print">🖨 Print Form</button>
       </div>
 
       <div className="card leave-form-wrap" style={{ maxWidth: 780, margin: "0 auto" }}>
