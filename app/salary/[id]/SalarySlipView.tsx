@@ -44,7 +44,7 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
 
         {/* Employee info */}
         <SectionHeader>Employee Information</SectionHeader>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, padding: "0 24px 4px" }}>
           <InfoRow label="Employee Name" value={slip.employeeName} />
           <InfoRow label="Department" value={slip.department} />
           <InfoRow label="Designation" value={slip.designation} />
@@ -53,7 +53,7 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
 
         {/* Attendance */}
         <SectionHeader color="#2e6b4f">Attendance Summary</SectionHeader>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px", background: "#f6fbf8" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, padding: "8px 24px 4px", background: "#f6fbf8" }}>
           <AttRow label="Days Present" value={slip.daysPresent} color="#15803D" />
           <AttRow label="Days Absent" value={slip.daysAbsent} color="#DC2626" />
           <AttRow label="Days on Leave" value={slip.daysLeave} color="#D97706" />
