@@ -4,12 +4,15 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const modules = [
-  { key: "profile",    label: "Profile" },
-  { key: "attendance", label: "Attendance" },
-  { key: "forms",      label: "Forms" },
-  { key: "reports",    label: "Reports" },
-  { key: "salary",     label: "Salary" },
+type Role = "superadmin" | "admin" | "hr" | "ceo";
+
+const MODULES_BASE: { key: string; label: string; roles: Role[] | null }[] = [
+  { key: "profile",    label: "Profile",    roles: null },
+  { key: "attendance", label: "Attendance", roles: null },
+  { key: "forms",      label: "Forms",      roles: null },
+  { key: "reports",    label: "Reports",    roles: null },
+  { key: "salary",     label: "Salary",     roles: null },
+  { key: "users",      label: "Users",      roles: ["superadmin"] },
 ];
 
 const subNav: Record<string, { href: string; label: string }[]> = {
@@ -37,6 +40,9 @@ const subNav: Record<string, { href: string; label: string }[]> = {
   salary: [
     { href: "/salary", label: "Generate Slips" },
   ],
+  users: [
+    { href: "/admin/users", label: "All Users" },
+  ],
 };
 
 function pathToModule(path: string): string {
@@ -44,6 +50,7 @@ function pathToModule(path: string): string {
   if (path.startsWith("/reports")) return "reports";
   if (path.startsWith("/salary")) return "salary";
   if (path.startsWith("/attendance")) return "attendance";
+  if (path.startsWith("/admin/users")) return "users";
   // Legacy leave routes resolve to forms module.
   if (path.startsWith("/leave")) return "forms";
   return "profile";
@@ -51,7 +58,7 @@ function pathToModule(path: string): string {
 
 const HIDE_ON = ["/login", "/setup", "/set-password"];
 
-interface MeUser { id: number; email: string; name: string; role: "superadmin" | "admin" | "hr" | "ceo" }
+interface MeUser { id: number; email: string; name: string; role: Role }
 
 export default function TopNav() {
   const pathname = usePathname();
@@ -70,6 +77,7 @@ export default function TopNav() {
   if (hidden) return null;
   const activeModule = pathToModule(pathname);
   const links = subNav[activeModule] || [];
+  const modules = MODULES_BASE.filter(m => !m.roles || (me && m.roles.includes(me.role)));
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -166,11 +174,6 @@ export default function TopNav() {
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{me.name}</div>
                     <div style={{ fontSize: 12, color: "var(--text2)" }}>{me.email}</div>
                   </div>
-                  {me.role === "superadmin" && (
-                    <Link href="/admin/users" onClick={() => setMenuOpen(false)} style={menuItem}>
-                      👥 Manage users
-                    </Link>
-                  )}
                   <button onClick={signOut} style={{ ...menuItem, border: "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
                     ↪ Sign out
                   </button>
