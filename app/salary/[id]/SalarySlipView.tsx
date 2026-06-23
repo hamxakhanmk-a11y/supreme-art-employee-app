@@ -44,7 +44,7 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
 
         {/* Employee info */}
         <SectionHeader>Employee Information</SectionHeader>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, padding: "0 24px 4px" }}>
           <InfoRow label="Employee Name" value={slip.employeeName} />
           <InfoRow label="Department" value={slip.department} />
           <InfoRow label="Designation" value={slip.designation} />
@@ -53,29 +53,34 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
 
         {/* Attendance */}
         <SectionHeader color="#2e6b4f">Attendance Summary</SectionHeader>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "0 24px 4px", background: "#f6fbf8" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, padding: "8px 24px 4px", background: "#f6fbf8" }}>
           <AttRow label="Days Present" value={slip.daysPresent} color="#15803D" />
           <AttRow label="Days Absent" value={slip.daysAbsent} color="#DC2626" />
           <AttRow label="Days on Leave" value={slip.daysLeave} color="#D97706" />
           <AttRow label="Week Offs" value={slip.weekOffs} color="#15803D" />
         </div>
 
-        {/* Earnings & Deductions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, padding: "0 24px", marginTop: 12 }}>
-          <div style={{ paddingRight: 12 }}>
+        {/* Earnings · Not Deducted · Deductions */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, padding: "0 24px", marginTop: 12 }}>
+          <div style={{ paddingRight: 8 }}>
             <PanelHeader bg="#2e6b4f">EARNINGS</PanelHeader>
             <Row label="Basic Salary" value={slip.basicSalary} />
-            <Row label={`House Rent (${slip.houseRentPercent}%)`} value={slip.houseRent} />
-            <Row label={`Medical Allow. (${slip.medicalPercent}%)`} value={slip.medical} />
             <Row label="Conveyance Allow." value={slip.conveyance} />
             <Row label="Overtime / Bonus" value={slip.overtime} />
             <TotalRow color="#2e6b4f" bg="#e8f4e8" label="GROSS EARNINGS" value={slip.grossEarnings} />
           </div>
-          <div style={{ paddingLeft: 12 }}>
+          <div style={{ paddingLeft: 8, paddingRight: 8 }}>
+            <PanelHeader bg="#185FA5">NOT DEDUCTED</PanelHeader>
+            <Row label="ESSI" value={slip.essiContribution} />
+            <Row label="EOBI Employer (5% × min wage)" value={slip.eobiEmployerContribution} />
+            <Row label="Accommodation" value={slip.accommodation} />
+            <Row label="Food" value={slip.food} />
+            <TotalRow color="#185FA5" bg="#e6f1fb" label="TOTAL BENEFITS" value={slip.totalNotDeducted} />
+          </div>
+          <div style={{ paddingLeft: 8 }}>
             <PanelHeader bg="#A32D2D">DEDUCTIONS</PanelHeader>
             <Row label={`Income Tax (${slip.incomeTaxPercent}%)`} value={slip.incomeTax} />
             <Row label={`EOBI Employee (${slip.eobiEmployeePercent}%)`} value={slip.eobiEmployee} />
-            <Row label={`EOBI Employer (${slip.eobiEmployerPercent}%)`} value={slip.eobiEmployer} />
             <Row label="Absent Deduction" value={slip.absentDeduction} />
             <Row label="Other Deduction" value={slip.otherDeduction} />
             <TotalRow color="#A32D2D" bg="#fde8e8" label="TOTAL DEDUCTIONS" value={slip.totalDeductions} />

@@ -124,11 +124,10 @@ export default function SalaryGeneratorPage() {
   const computeRow = (r: RowState) => computeSlip({
     basicSalary: Number(r.emp.basicSalary || 0),
     conveyance: Number(r.emp.conveyance || 0),
-    houseRentPercent: Number(r.emp.houseRentPercent || 0),
-    medicalPercent: Number(r.emp.medicalPercent || 0),
     incomeTaxPercent: Number(r.emp.incomeTaxPercent || 0),
     eobiEmployeePercent: Number(r.emp.eobiEmployeePercent || 0),
-    eobiEmployerPercent: Number(r.emp.eobiEmployerPercent || 0),
+    accommodation: Number((r.emp as any).accommodation || 0),
+    food: Number((r.emp as any).food || 0),
     overtime: parseInt(r.overtime) || 0,
     otherDeduction: parseInt(r.otherDeduction) || 0,
     daysPresent: r.daysPresent,

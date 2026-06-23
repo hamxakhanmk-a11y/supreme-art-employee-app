@@ -63,6 +63,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       incomeTaxPercent: body.incomeTaxPercent ? parseInt(body.incomeTaxPercent) : 0,
       eobiEmployeePercent: body.eobiEmployeePercent ? parseInt(body.eobiEmployeePercent) : 0,
       eobiEmployerPercent: body.eobiEmployerPercent ? parseInt(body.eobiEmployerPercent) : 0,
+      accommodation: body.accommodation ? parseInt(body.accommodation) : 0,
+      food: body.food ? parseInt(body.food) : 0,
       bankName: body.bankName || null,
       accountTitle: body.accountTitle || null,
       accountNumber: body.accountNumber || null,
