@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { salaryRecords, employees } from "@/lib/schema";
 import { and, eq, desc, asc, inArray } from "drizzle-orm";
 import { guardWrite, getSession } from "@/lib/auth";
-import { computeSlip, MONTHS } from "@/lib/salary";
+import { computeSlip, MONTHS, MIN_WAGE_PKR } from "@/lib/salary";
 
 // GET /api/salary-records?employeeId=1&month=June&year=2025
 // All filters optional. employeeId scopes to one employee. month+year scopes to one period.
@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
         eobiEmployeeAmount: inputs.eobiEmployeeAmount,
         eobiEmployerPercent: 0,
         eobiEmployerAmount: inputs.eobiEmployerAmount,
+        minimumWage: MIN_WAGE_PKR,
         overtime: inputs.overtime,
         otherDeduction: inputs.otherDeduction,
         daysPresent: inputs.daysPresent,

@@ -174,6 +174,9 @@ export const salaryRecords = pgTable("salary_records", {
   eobiEmployeeAmount: integer("eobi_employee_amount").notNull().default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").notNull().default(0),
   eobiEmployerAmount: integer("eobi_employer_amount").notNull().default(0),
+  // Snapshot of statutory minimum wage at the time of slip generation —
+  // used to recompute EOBI when reading historical slips.
+  minimumWage: integer("minimum_wage").notNull().default(37000),
   // Per-slip inputs
   overtime: integer("overtime").notNull().default(0),
   otherDeduction: integer("other_deduction").notNull().default(0),

@@ -67,9 +67,12 @@ export function computeSlip(i: SlipInputs): SlipComputed {
   const incomeTax = incomeTaxAmt > 0
     ? incomeTaxAmt
     : Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
+  // EOBI Employee percent is taken against the statutory minimum wage,
+  // not the basic salary (PK convention: 1% of minimum wage). A fixed
+  // PKR amount on the employee overrides the percent if provided.
   const eobiEmployee = eobiEmpAmt > 0
     ? eobiEmpAmt
-    : Math.round(basic * (Number(i.eobiEmployeePercent) || 0) / 100);
+    : Math.round(MIN_WAGE_PKR * (Number(i.eobiEmployeePercent) || 0) / 100);
 
   const grossEarnings = basic + conv + overtime;
   const absentDeduction = Math.round((basic / WORKING_DAYS_DENOMINATOR) * daysAbsent);
