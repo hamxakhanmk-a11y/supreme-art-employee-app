@@ -71,6 +71,7 @@ export const employees = pgTable("employees", {
   eobiEmployeePercent: integer("eobi_employee_percent").default(0),
   eobiEmployeeAmount: integer("eobi_employee_amount").default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").default(0),
+  eobiEmployerAmount: integer("eobi_employer_amount").default(1850),
   accommodation: integer("accommodation").default(0),
   food: integer("food").default(0),
 
@@ -172,6 +173,7 @@ export const salaryRecords = pgTable("salary_records", {
   eobiEmployeePercent: integer("eobi_employee_percent").notNull().default(0),
   eobiEmployeeAmount: integer("eobi_employee_amount").notNull().default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").notNull().default(0),
+  eobiEmployerAmount: integer("eobi_employer_amount").notNull().default(0),
   // Per-slip inputs
   overtime: integer("overtime").notNull().default(0),
   otherDeduction: integer("other_deduction").notNull().default(0),

@@ -107,11 +107,13 @@ export default function EmployeeProfileTabs({
           const fmtPKR = (n: number) => n ? `PKR ${n.toLocaleString()}` : "—";
           const fmtPctOrPkr = (amt: number, pct: number) =>
             amt > 0 ? `PKR ${amt.toLocaleString()}` : `${pct}%`;
+          const eobiEmpr = Number(employee.eobiEmployerAmount || 1850);
           return <Grid items={[
             ["Basic Salary", fmtPKR(basic)],
             ["Income Tax", fmtPctOrPkr(itAmt, itPct)],
             ["EOBI Employee", fmtPctOrPkr(eobiAmt, eobiPct)],
             ["Conveyance", fmtPKR(conv)],
+            ["EOBI Employer", fmtPKR(eobiEmpr)],
             ["Accommodation", fmtPKR(accom)],
             ["Food", fmtPKR(food)],
           ]} />;

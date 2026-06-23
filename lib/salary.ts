@@ -24,6 +24,9 @@ export interface SlipInputs {
   incomeTaxAmount: number;
   eobiEmployeePercent: number;
   eobiEmployeeAmount: number;
+  // EOBI Employer is configured per-employee (PKR). If 0, falls back to
+  // the default 5% × min wage = PKR 1,850.
+  eobiEmployerAmount: number;
   accommodation: number;
   food: number;
   overtime: number;
@@ -74,7 +77,8 @@ export function computeSlip(i: SlipInputs): SlipComputed {
   const netPay = grossEarnings - totalDeductions;
 
   const essiContribution = ESSI_CONTRIBUTION;
-  const eobiEmployerContribution = EOBI_EMPLOYER_CONTRIBUTION;
+  const eobiEmployerInput = Number(i.eobiEmployerAmount) || 0;
+  const eobiEmployerContribution = eobiEmployerInput > 0 ? eobiEmployerInput : EOBI_EMPLOYER_CONTRIBUTION;
   const totalNotDeducted = essiContribution + eobiEmployerContribution + accommodation + food;
 
   return {

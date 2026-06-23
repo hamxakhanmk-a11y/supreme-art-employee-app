@@ -27,6 +27,7 @@ export type EmployeePayload = {
   eobiEmployeePercent: string;
   eobiEmployeeAmount: string;
   eobiEmployerPercent: string;
+  eobiEmployerAmount: string;
   accommodation: string;
   food: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
@@ -59,6 +60,7 @@ const empty: EmployeePayload = {
   eobiEmployeePercent: "0",
   eobiEmployeeAmount: "0",
   eobiEmployerPercent: "0",
+  eobiEmployerAmount: "1850",
   accommodation: "0",
   food: "0",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
@@ -289,9 +291,10 @@ export default function EmployeeForm({
         </Row>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 16, marginBottom: 6 }}>Not-Deducted Benefits</div>
         <div style={{ fontSize: 11, color: "var(--text2)", marginTop: -4, marginBottom: 8 }}>
-          ESSI (PKR 2,400) and EOBI Employer (PKR 1,850 = 5% of min wage) are fixed and added automatically on every slip.
+          ESSI (PKR 2,400) is fixed and added automatically on every slip.
         </div>
         <Row>
+          <Field label="EOBI Employer (PKR)"><input type="number" value={form.eobiEmployerAmount} onChange={e => set("eobiEmployerAmount", e.target.value)} placeholder="1850" /></Field>
           <Field label="Accommodation (PKR)"><input type="number" value={form.accommodation} onChange={e => set("accommodation", e.target.value)} /></Field>
           <Field label="Food (PKR)"><input type="number" value={form.food} onChange={e => set("food", e.target.value)} /></Field>
         </Row>
