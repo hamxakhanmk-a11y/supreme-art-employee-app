@@ -12,11 +12,11 @@
   --border2: rgba(0,0,0,0.20);
 
   /* Brand */
-  --brand: #185FA5;
-  --brand-dark: #0F4278;
-  --brand-light: #2D7DD2;
-  --brand-soft: #e8f0fb;
-  --brand-deep: #0A2D57;
+  --brand: #A32D2D;
+  --brand-dark: #7C1F1F;
+  --brand-light: #C04545;
+  --brand-soft: #fdecec;
+  --brand-deep: #5C1414;
 
   /* Status palette */
   --blue-bg: #E6F1FB; --blue-text: #0C447C; --blue-border: #85B7EB;
@@ -98,7 +98,7 @@ html, body {
   color: #fff;
   border-color: var(--brand);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(24,95,165,0.28);
+  box-shadow: 0 1px 3px rgba(163,45,45,0.28);
 }
 .btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
 
@@ -150,7 +150,7 @@ input:hover, select:hover, textarea:hover { border-color: var(--text2); }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(24,95,165,0.10);
+  box-shadow: 0 0 0 3px rgba(163,45,45,0.10);
 }
 
 input[type=checkbox], input[type=radio] {
@@ -208,7 +208,7 @@ input[type=date] { font-family: inherit; }
   text-decoration: none;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.mode-btn.active { background: var(--brand); color: #fff; box-shadow: 0 1px 3px rgba(24,95,165,0.28); }
+.mode-btn.active { background: var(--brand); color: #fff; box-shadow: 0 1px 3px rgba(163,45,45,0.28); }
 .mode-btn:hover:not(.active) { color: var(--brand); background: var(--brand-soft); }
 
 /* ---------- Tables ---------- */
