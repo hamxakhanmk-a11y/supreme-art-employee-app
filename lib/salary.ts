@@ -18,8 +18,12 @@ export const EOBI_EMPLOYER_CONTRIBUTION = Math.round(MIN_WAGE_PKR * 0.05); // 18
 export interface SlipInputs {
   basicSalary: number;
   conveyance: number;
+  // For Income Tax and EOBI Employee: if *Amount is > 0, it overrides the
+  // percent calculation. Otherwise the percent of basic salary is used.
   incomeTaxPercent: number;
+  incomeTaxAmount: number;
   eobiEmployeePercent: number;
+  eobiEmployeeAmount: number;
   accommodation: number;
   food: number;
   overtime: number;
@@ -55,8 +59,14 @@ export function computeSlip(i: SlipInputs): SlipComputed {
   const accommodation = Number(i.accommodation) || 0;
   const food = Number(i.food) || 0;
 
-  const incomeTax = Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
-  const eobiEmployee = Math.round(basic * (Number(i.eobiEmployeePercent) || 0) / 100);
+  const incomeTaxAmt = Number(i.incomeTaxAmount) || 0;
+  const eobiEmpAmt = Number(i.eobiEmployeeAmount) || 0;
+  const incomeTax = incomeTaxAmt > 0
+    ? incomeTaxAmt
+    : Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
+  const eobiEmployee = eobiEmpAmt > 0
+    ? eobiEmpAmt
+    : Math.round(basic * (Number(i.eobiEmployeePercent) || 0) / 100);
 
   const grossEarnings = basic + conv + overtime;
   const absentDeduction = Math.round((basic / WORKING_DAYS_DENOMINATOR) * daysAbsent);

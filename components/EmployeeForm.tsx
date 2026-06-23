@@ -23,7 +23,9 @@ export type EmployeePayload = {
   houseRentPercent: string;
   medicalPercent: string;
   incomeTaxPercent: string;
+  incomeTaxAmount: string;
   eobiEmployeePercent: string;
+  eobiEmployeeAmount: string;
   eobiEmployerPercent: string;
   accommodation: string;
   food: string;
@@ -53,7 +55,9 @@ const empty: EmployeePayload = {
   houseRentPercent: "0",
   medicalPercent: "0",
   incomeTaxPercent: "0",
+  incomeTaxAmount: "0",
   eobiEmployeePercent: "0",
+  eobiEmployeeAmount: "0",
   eobiEmployerPercent: "0",
   accommodation: "0",
   food: "0",
@@ -270,15 +274,23 @@ export default function EmployeeForm({
           <Field label="Conveyance (PKR)"><input type="number" value={form.conveyance} onChange={e => set("conveyance", e.target.value)} /></Field>
         </Row>
         <Row>
-          <Field label="House Rent %"><PercentSelect value={form.houseRentPercent} onChange={v => set("houseRentPercent", v)} /></Field>
-          <Field label="Medical %"><PercentSelect value={form.medicalPercent} onChange={v => set("medicalPercent", v)} /></Field>
-          <Field label="Income Tax %"><PercentSelect value={form.incomeTaxPercent} onChange={v => set("incomeTaxPercent", v)} /></Field>
-        </Row>
-        <Row>
-          <Field label="EOBI Employee %"><PercentSelect value={form.eobiEmployeePercent} onChange={v => set("eobiEmployeePercent", v)} /></Field>
-          <Field label="EOBI Employer %"><PercentSelect value={form.eobiEmployerPercent} onChange={v => set("eobiEmployerPercent", v)} /></Field>
+          <Field label="Income Tax">
+            <AmountOrPercent
+              percent={form.incomeTaxPercent} amount={form.incomeTaxAmount}
+              onChange={(p, a) => { set("incomeTaxPercent", p); set("incomeTaxAmount", a); }}
+            />
+          </Field>
+          <Field label="EOBI Employee">
+            <AmountOrPercent
+              percent={form.eobiEmployeePercent} amount={form.eobiEmployeeAmount}
+              onChange={(p, a) => { set("eobiEmployeePercent", p); set("eobiEmployeeAmount", a); }}
+            />
+          </Field>
         </Row>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 16, marginBottom: 6 }}>Not-Deducted Benefits</div>
+        <div style={{ fontSize: 11, color: "var(--text2)", marginTop: -4, marginBottom: 8 }}>
+          ESSI (PKR 2,400) and EOBI Employer (PKR 1,850 = 5% of min wage) are fixed and added automatically on every slip.
+        </div>
         <Row>
           <Field label="Accommodation (PKR)"><input type="number" value={form.accommodation} onChange={e => set("accommodation", e.target.value)} /></Field>
           <Field label="Food (PKR)"><input type="number" value={form.food} onChange={e => set("food", e.target.value)} /></Field>
@@ -431,6 +443,35 @@ function PercentSelect({ value, onChange }: { value: string; onChange: (v: strin
         <option key={i} value={String(i)}>{i}%</option>
       ))}
     </select>
+  );
+}
+
+// A single field that lets the user enter either a percentage (of basic
+// salary) OR a fixed PKR amount. The two are kept in lockstep — switching
+// unit clears the other field so the compute step never sees both set.
+function AmountOrPercent({ percent, amount, onChange }: {
+  percent: string; amount: string; onChange: (p: string, a: string) => void;
+}) {
+  const initialUnit: "PKR" | "%" = (parseInt(amount) || 0) > 0 ? "PKR" : "%";
+  const [unit, setUnit] = useState<"PKR" | "%">(initialUnit);
+  const value = unit === "PKR" ? amount : percent;
+  const handleValue = (v: string) => {
+    if (unit === "PKR") onChange("0", v || "0");
+    else onChange(v || "0", "0");
+  };
+  const handleUnit = (u: "PKR" | "%") => {
+    setUnit(u);
+    if (u === "PKR") onChange("0", percent === "0" ? "0" : "0");
+    else onChange(amount === "0" ? "0" : "0", "0");
+  };
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "85px 1fr", gap: 6 }}>
+      <select value={unit} onChange={e => handleUnit(e.target.value as "PKR" | "%")}>
+        <option value="%">% of basic</option>
+        <option value="PKR">PKR</option>
+      </select>
+      <input type="number" min={0} value={value} onChange={e => handleValue(e.target.value)} placeholder="0" />
+    </div>
   );
 }
 

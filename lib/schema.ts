@@ -67,7 +67,9 @@ export const employees = pgTable("employees", {
   houseRentPercent: integer("house_rent_percent").default(0),
   medicalPercent: integer("medical_percent").default(0),
   incomeTaxPercent: integer("income_tax_percent").default(0),
+  incomeTaxAmount: integer("income_tax_amount").default(0),
   eobiEmployeePercent: integer("eobi_employee_percent").default(0),
+  eobiEmployeeAmount: integer("eobi_employee_amount").default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").default(0),
   accommodation: integer("accommodation").default(0),
   food: integer("food").default(0),
@@ -166,7 +168,9 @@ export const salaryRecords = pgTable("salary_records", {
   houseRentPercent: integer("house_rent_percent").notNull().default(0),
   medicalPercent: integer("medical_percent").notNull().default(0),
   incomeTaxPercent: integer("income_tax_percent").notNull().default(0),
+  incomeTaxAmount: integer("income_tax_amount").notNull().default(0),
   eobiEmployeePercent: integer("eobi_employee_percent").notNull().default(0),
+  eobiEmployeeAmount: integer("eobi_employee_amount").notNull().default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").notNull().default(0),
   // Per-slip inputs
   overtime: integer("overtime").notNull().default(0),
@@ -253,53 +257,6 @@ export const experienceRecords = pgTable("experience_records", {
   fromDate: date("from_date"),
   toDate: date("to_date"),
   description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// =====================
-// SALARY SLIPS (snapshot per month per employee)
-// =====================
-export const salarySlips = pgTable("salary_slips", {
-  id: serial("id").primaryKey(),
-  employeeId: integer("employee_id")
-    .notNull()
-    .references(() => employees.id, { onDelete: "cascade" }),
-  month: integer("month").notNull(), // 1-12
-  year: integer("year").notNull(),
-  // Snapshot of employee info
-  employeeCode: varchar("employee_code", { length: 20 }).notNull(),
-  employeeName: varchar("employee_name", { length: 160 }).notNull(),
-  designation: varchar("designation", { length: 80 }),
-  department: varchar("department", { length: 60 }),
-  // Snapshot of structure
-  basicSalary: integer("basic_salary").notNull().default(0),
-  conveyance: integer("conveyance").notNull().default(0),
-  houseRentPercent: integer("house_rent_percent").notNull().default(0),
-  medicalPercent: integer("medical_percent").notNull().default(0),
-  incomeTaxPercent: integer("income_tax_percent").notNull().default(0),
-  eobiEmployeePercent: integer("eobi_employee_percent").notNull().default(0),
-  eobiEmployerPercent: integer("eobi_employer_percent").notNull().default(0),
-  // Computed earnings
-  houseRent: integer("house_rent").notNull().default(0),
-  medical: integer("medical").notNull().default(0),
-  overtime: integer("overtime").notNull().default(0),
-  grossEarnings: integer("gross_earnings").notNull().default(0),
-  // Attendance counts
-  daysPresent: integer("days_present").notNull().default(0),
-  daysAbsent: integer("days_absent").notNull().default(0),
-  daysOnLeave: integer("days_on_leave").notNull().default(0),
-  weekOffs: integer("week_offs").notNull().default(0),
-  // Deductions
-  incomeTax: integer("income_tax").notNull().default(0),
-  eobiEmployee: integer("eobi_employee").notNull().default(0),
-  eobiEmployer: integer("eobi_employer").notNull().default(0),
-  absentDeduction: integer("absent_deduction").notNull().default(0),
-  otherDeduction: integer("other_deduction").notNull().default(0),
-  totalDeductions: integer("total_deductions").notNull().default(0),
-  // Net
-  netPay: integer("net_pay").notNull().default(0),
-  notes: text("notes"),
-  generatedBy: varchar("generated_by", { length: 120 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
