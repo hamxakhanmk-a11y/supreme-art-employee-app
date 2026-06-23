@@ -98,17 +98,16 @@ export default function EmployeeProfileTabs({
         {tab === "salary" && (() => {
           const basic = Number(employee.basicSalary || 0);
           const conv = Number(employee.conveyance || 0);
-          const hr = Math.round(basic * (Number(employee.houseRentPercent || 0) / 100));
-          const med = Math.round(basic * (Number(employee.medicalPercent || 0) / 100));
+          const accom = Number(employee.accommodation || 0);
+          const food = Number(employee.food || 0);
           const fmtPKR = (n: number) => n ? `PKR ${n.toLocaleString()}` : "—";
           return <Grid items={[
             ["Basic Salary", fmtPKR(basic)],
             ["Conveyance", fmtPKR(conv)],
-            [`House Rent (${employee.houseRentPercent || 0}%)`, fmtPKR(hr)],
-            [`Medical (${employee.medicalPercent || 0}%)`, fmtPKR(med)],
             ["Income Tax %", `${employee.incomeTaxPercent || 0}%`],
             ["EOBI Employee %", `${employee.eobiEmployeePercent || 0}%`],
-            ["EOBI Employer %", `${employee.eobiEmployerPercent || 0}%`],
+            ["Accommodation", fmtPKR(accom)],
+            ["Food", fmtPKR(food)],
           ]} />;
         })()}
 

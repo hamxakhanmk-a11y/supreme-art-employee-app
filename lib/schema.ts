@@ -69,6 +69,8 @@ export const employees = pgTable("employees", {
   incomeTaxPercent: integer("income_tax_percent").default(0),
   eobiEmployeePercent: integer("eobi_employee_percent").default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").default(0),
+  accommodation: integer("accommodation").default(0),
+  food: integer("food").default(0),
 
   // Banking
   bankName: varchar("bank_name", { length: 80 }),
@@ -184,6 +186,12 @@ export const salaryRecords = pgTable("salary_records", {
   absentDeduction: integer("absent_deduction").notNull().default(0),
   totalDeductions: integer("total_deductions").notNull().default(0),
   netPay: integer("net_pay").notNull().default(0),
+  // Not-deducted benefits (informational on slip)
+  accommodation: integer("accommodation").notNull().default(0),
+  food: integer("food").notNull().default(0),
+  essiContribution: integer("essi_contribution").notNull().default(0),
+  eobiEmployerContribution: integer("eobi_employer_contribution").notNull().default(0),
+  totalNotDeducted: integer("total_not_deducted").notNull().default(0),
   // Meta
   notes: text("notes"),
   generatedBy: varchar("generated_by", { length: 120 }),

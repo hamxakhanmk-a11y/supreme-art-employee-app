@@ -7,14 +7,21 @@ export const MONTHS = [
 
 export const WORKING_DAYS_DENOMINATOR = 26;
 
+// Pakistan minimum monthly wage (PKR). Used to compute the employer-side
+// EOBI contribution (5% of minimum wage = 1850 PKR).
+export const MIN_WAGE_PKR = 37000;
+
+// Fixed not-deducted benefits the company pays for every employee.
+export const ESSI_CONTRIBUTION = 2400;
+export const EOBI_EMPLOYER_CONTRIBUTION = Math.round(MIN_WAGE_PKR * 0.05); // 1850
+
 export interface SlipInputs {
   basicSalary: number;
   conveyance: number;
-  houseRentPercent: number;
-  medicalPercent: number;
   incomeTaxPercent: number;
   eobiEmployeePercent: number;
-  eobiEmployerPercent: number;
+  accommodation: number;
+  food: number;
   overtime: number;
   otherDeduction: number;
   daysPresent: number;
@@ -23,14 +30,19 @@ export interface SlipInputs {
 }
 
 export interface SlipComputed {
-  houseRent: number;
-  medical: number;
   grossEarnings: number;
+  // Not-deducted (informational benefits, do not affect net pay)
+  essiContribution: number;
+  eobiEmployerContribution: number;
+  accommodation: number;
+  food: number;
+  totalNotDeducted: number;
+  // Deductions
   incomeTax: number;
   eobiEmployee: number;
-  eobiEmployer: number;
   absentDeduction: number;
   totalDeductions: number;
+  // Net
   netPay: number;
 }
 
@@ -40,17 +52,25 @@ export function computeSlip(i: SlipInputs): SlipComputed {
   const overtime = Number(i.overtime) || 0;
   const otherDed = Number(i.otherDeduction) || 0;
   const daysAbsent = Number(i.daysAbsent) || 0;
+  const accommodation = Number(i.accommodation) || 0;
+  const food = Number(i.food) || 0;
 
-  const houseRent = Math.round(basic * (Number(i.houseRentPercent) || 0) / 100);
-  const medical = Math.round(basic * (Number(i.medicalPercent) || 0) / 100);
   const incomeTax = Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
   const eobiEmployee = Math.round(basic * (Number(i.eobiEmployeePercent) || 0) / 100);
-  const eobiEmployer = Math.round(basic * (Number(i.eobiEmployerPercent) || 0) / 100);
 
-  const grossEarnings = basic + houseRent + medical + conv + overtime;
+  const grossEarnings = basic + conv + overtime;
   const absentDeduction = Math.round((basic / WORKING_DAYS_DENOMINATOR) * daysAbsent);
-  const totalDeductions = incomeTax + eobiEmployee + eobiEmployer + absentDeduction + otherDed;
+  const totalDeductions = incomeTax + eobiEmployee + absentDeduction + otherDed;
   const netPay = grossEarnings - totalDeductions;
 
-  return { houseRent, medical, grossEarnings, incomeTax, eobiEmployee, eobiEmployer, absentDeduction, totalDeductions, netPay };
+  const essiContribution = ESSI_CONTRIBUTION;
+  const eobiEmployerContribution = EOBI_EMPLOYER_CONTRIBUTION;
+  const totalNotDeducted = essiContribution + eobiEmployerContribution + accommodation + food;
+
+  return {
+    grossEarnings,
+    essiContribution, eobiEmployerContribution, accommodation, food, totalNotDeducted,
+    incomeTax, eobiEmployee, absentDeduction, totalDeductions,
+    netPay,
+  };
 }

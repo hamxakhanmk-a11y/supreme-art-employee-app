@@ -25,6 +25,8 @@ export type EmployeePayload = {
   incomeTaxPercent: string;
   eobiEmployeePercent: string;
   eobiEmployerPercent: string;
+  accommodation: string;
+  food: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
   photoUrl: string; cnicFrontUrl: string; cnicBackUrl: string; passportUrl: string;
   ssiUrl: string; ubiUrl: string;
@@ -53,6 +55,8 @@ const empty: EmployeePayload = {
   incomeTaxPercent: "0",
   eobiEmployeePercent: "0",
   eobiEmployerPercent: "0",
+  accommodation: "0",
+  food: "0",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
   photoUrl: "", cnicFrontUrl: "", cnicBackUrl: "", passportUrl: "",
   ssiUrl: "", ubiUrl: "",
@@ -273,6 +277,11 @@ export default function EmployeeForm({
         <Row>
           <Field label="EOBI Employee %"><PercentSelect value={form.eobiEmployeePercent} onChange={v => set("eobiEmployeePercent", v)} /></Field>
           <Field label="EOBI Employer %"><PercentSelect value={form.eobiEmployerPercent} onChange={v => set("eobiEmployerPercent", v)} /></Field>
+        </Row>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 16, marginBottom: 6 }}>Not-Deducted Benefits</div>
+        <Row>
+          <Field label="Accommodation (PKR)"><input type="number" value={form.accommodation} onChange={e => set("accommodation", e.target.value)} /></Field>
+          <Field label="Food (PKR)"><input type="number" value={form.food} onChange={e => set("food", e.target.value)} /></Field>
         </Row>
       </div>
 
