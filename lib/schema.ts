@@ -72,6 +72,10 @@ export const employees = pgTable("employees", {
   eobiEmployeeAmount: integer("eobi_employee_amount").default(0),
   eobiEmployerPercent: integer("eobi_employer_percent").default(0),
   eobiEmployerAmount: integer("eobi_employer_amount").default(1850),
+  // Per-employee minimum wage (PKR). EOBI % is computed against this, not basic.
+  minimumWage: integer("minimum_wage").default(37000),
+  // Per-employee ESSI / Social Security employer contribution (PKR).
+  essiContribution: integer("essi_contribution").default(2400),
   accommodation: integer("accommodation").default(0),
   food: integer("food").default(0),
 

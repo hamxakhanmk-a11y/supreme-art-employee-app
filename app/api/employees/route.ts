@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
       eobiEmployeeAmount: body.eobiEmployeeAmount ? parseInt(body.eobiEmployeeAmount) : 0,
       eobiEmployerPercent: body.eobiEmployerPercent ? parseInt(body.eobiEmployerPercent) : 0,
       eobiEmployerAmount: body.eobiEmployerAmount !== undefined && body.eobiEmployerAmount !== "" ? parseInt(body.eobiEmployerAmount) : 1850,
+      minimumWage: body.minimumWage !== undefined && body.minimumWage !== "" ? parseInt(body.minimumWage) : 37000,
+      essiContribution: body.essiContribution !== undefined && body.essiContribution !== "" ? parseInt(body.essiContribution) : 2400,
       accommodation: body.accommodation ? parseInt(body.accommodation) : 0,
       food: body.food ? parseInt(body.food) : 0,
       bankName: body.bankName || null,

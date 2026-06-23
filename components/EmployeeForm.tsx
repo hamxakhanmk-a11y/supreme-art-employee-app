@@ -28,6 +28,8 @@ export type EmployeePayload = {
   eobiEmployeeAmount: string;
   eobiEmployerPercent: string;
   eobiEmployerAmount: string;
+  minimumWage: string;
+  essiContribution: string;
   accommodation: string;
   food: string;
   bankName: string; accountTitle: string; accountNumber: string; iban: string;
@@ -61,6 +63,8 @@ const empty: EmployeePayload = {
   eobiEmployeeAmount: "0",
   eobiEmployerPercent: "0",
   eobiEmployerAmount: "1850",
+  minimumWage: "37000",
+  essiContribution: "2400",
   accommodation: "0",
   food: "0",
   bankName: "", accountTitle: "", accountNumber: "", iban: "",
@@ -274,6 +278,10 @@ export default function EmployeeForm({
         <Row>
           <Field label="Basic Salary (PKR)"><input type="number" value={form.basicSalary} onChange={e => set("basicSalary", e.target.value)} /></Field>
           <Field label="Conveyance (PKR)"><input type="number" value={form.conveyance} onChange={e => set("conveyance", e.target.value)} /></Field>
+          <Field label="Minimum Wage (PKR)">
+            <input type="number" value={form.minimumWage} onChange={e => set("minimumWage", e.target.value)} placeholder="37000" />
+            <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 4 }}>Used to compute EOBI % (not shown on slip).</div>
+          </Field>
         </Row>
         <Row>
           <Field label="Income Tax">
@@ -290,10 +298,8 @@ export default function EmployeeForm({
           </Field>
         </Row>
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 16, marginBottom: 6 }}>Not-Deducted Benefits</div>
-        <div style={{ fontSize: 11, color: "var(--text2)", marginTop: -4, marginBottom: 8 }}>
-          ESSI (PKR 2,400) is fixed and added automatically on every slip.
-        </div>
         <Row>
+          <Field label="ESSI (PKR)"><input type="number" value={form.essiContribution} onChange={e => set("essiContribution", e.target.value)} placeholder="2400" /></Field>
           <Field label="EOBI Employer (PKR)"><input type="number" value={form.eobiEmployerAmount} onChange={e => set("eobiEmployerAmount", e.target.value)} placeholder="1850" /></Field>
           <Field label="Accommodation (PKR)"><input type="number" value={form.accommodation} onChange={e => set("accommodation", e.target.value)} /></Field>
           <Field label="Food (PKR)"><input type="number" value={form.food} onChange={e => set("food", e.target.value)} /></Field>
