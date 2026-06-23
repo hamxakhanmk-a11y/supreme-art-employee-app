@@ -100,12 +100,20 @@ export default function EmployeeProfileTabs({
           const conv = Number(employee.conveyance || 0);
           const accom = Number(employee.accommodation || 0);
           const food = Number(employee.food || 0);
+          const itAmt = Number(employee.incomeTaxAmount || 0);
+          const itPct = Number(employee.incomeTaxPercent || 0);
+          const eobiAmt = Number(employee.eobiEmployeeAmount || 0);
+          const eobiPct = Number(employee.eobiEmployeePercent || 0);
           const fmtPKR = (n: number) => n ? `PKR ${n.toLocaleString()}` : "—";
+          const fmtPctOrPkr = (amt: number, pct: number) =>
+            amt > 0 ? `PKR ${amt.toLocaleString()}` : `${pct}%`;
+          const eobiEmpr = Number(employee.eobiEmployerAmount || 1850);
           return <Grid items={[
             ["Basic Salary", fmtPKR(basic)],
+            ["Income Tax", fmtPctOrPkr(itAmt, itPct)],
+            ["EOBI Employee", fmtPctOrPkr(eobiAmt, eobiPct)],
             ["Conveyance", fmtPKR(conv)],
-            ["Income Tax %", `${employee.incomeTaxPercent || 0}%`],
-            ["EOBI Employee %", `${employee.eobiEmployeePercent || 0}%`],
+            ["EOBI Employer", fmtPKR(eobiEmpr)],
             ["Accommodation", fmtPKR(accom)],
             ["Food", fmtPKR(food)],
           ]} />;

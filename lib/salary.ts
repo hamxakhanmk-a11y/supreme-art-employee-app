@@ -7,19 +7,27 @@ export const MONTHS = [
 
 export const WORKING_DAYS_DENOMINATOR = 26;
 
-// Pakistan minimum monthly wage (PKR). Used to compute the employer-side
-// EOBI contribution (5% of minimum wage = 1850 PKR).
-export const MIN_WAGE_PKR = 37000;
-
-// Fixed not-deducted benefits the company pays for every employee.
-export const ESSI_CONTRIBUTION = 2400;
-export const EOBI_EMPLOYER_CONTRIBUTION = Math.round(MIN_WAGE_PKR * 0.05); // 1850
+// Default Pakistan minimum monthly wage and ESSI used when an employee's
+// per-employee value is missing. Both are editable on the employee profile.
+export const DEFAULT_MIN_WAGE_PKR = 37000;
+export const DEFAULT_ESSI_CONTRIBUTION = 2400;
 
 export interface SlipInputs {
   basicSalary: number;
   conveyance: number;
+  // Per-employee minimum wage. EOBI Employee % is computed against this.
+  minimumWage: number;
+  // For Income Tax and EOBI Employee: if *Amount is > 0, it overrides the
+  // percent calculation. Otherwise the percent is used (income tax of basic,
+  // EOBI of minimum wage).
   incomeTaxPercent: number;
+  incomeTaxAmount: number;
   eobiEmployeePercent: number;
+  eobiEmployeeAmount: number;
+  // EOBI Employer is configured per-employee (PKR).
+  eobiEmployerAmount: number;
+  // ESSI / Social Security per-employee employer contribution (PKR).
+  essiContribution: number;
   accommodation: number;
   food: number;
   overtime: number;
@@ -54,17 +62,27 @@ export function computeSlip(i: SlipInputs): SlipComputed {
   const daysAbsent = Number(i.daysAbsent) || 0;
   const accommodation = Number(i.accommodation) || 0;
   const food = Number(i.food) || 0;
+  const minWage = Number(i.minimumWage) || DEFAULT_MIN_WAGE_PKR;
 
-  const incomeTax = Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
-  const eobiEmployee = Math.round(basic * (Number(i.eobiEmployeePercent) || 0) / 100);
+  const incomeTaxAmt = Number(i.incomeTaxAmount) || 0;
+  const eobiEmpAmt = Number(i.eobiEmployeeAmount) || 0;
+  const incomeTax = incomeTaxAmt > 0
+    ? incomeTaxAmt
+    : Math.round(basic * (Number(i.incomeTaxPercent) || 0) / 100);
+  // EOBI Employee percent is taken against the employee's minimum wage,
+  // not the basic salary (PK convention: 1% of minimum wage). A fixed
+  // PKR amount on the employee overrides the percent if provided.
+  const eobiEmployee = eobiEmpAmt > 0
+    ? eobiEmpAmt
+    : Math.round(minWage * (Number(i.eobiEmployeePercent) || 0) / 100);
 
   const grossEarnings = basic + conv + overtime;
   const absentDeduction = Math.round((basic / WORKING_DAYS_DENOMINATOR) * daysAbsent);
   const totalDeductions = incomeTax + eobiEmployee + absentDeduction + otherDed;
   const netPay = grossEarnings - totalDeductions;
 
-  const essiContribution = ESSI_CONTRIBUTION;
-  const eobiEmployerContribution = EOBI_EMPLOYER_CONTRIBUTION;
+  const essiContribution = Number(i.essiContribution) || 0;
+  const eobiEmployerContribution = Number(i.eobiEmployerAmount) || 0;
   const totalNotDeducted = essiContribution + eobiEmployerContribution + accommodation + food;
 
   return {

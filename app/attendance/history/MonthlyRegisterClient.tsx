@@ -16,7 +16,7 @@ type Emp = {
 };
 type Rec = { employeeId: number; date: string; status: string };
 
-const MONTHS = [
+export const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
@@ -35,7 +35,12 @@ type Code = keyof typeof CODE;
 
 export default function MonthlyRegisterClient({
   year, month, daysInMonth, employees, records,
-}: { year: number; month: number; daysInMonth: number; employees: Emp[]; records: Rec[] }) {
+  rangeFrom, rangeTo,
+}: {
+  year: number; month: number; daysInMonth: number; employees: Emp[]; records: Rec[];
+  // If set, the toolbar shows from/to pickers instead of just month/year.
+  rangeFrom?: string; rangeTo?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -70,7 +75,9 @@ export default function MonthlyRegisterClient({
       else if (c === "leave") L++;
       else if (c === "holiday") H++;
     }
-    return { P, A, L, H, Half, net: P };
+    // Net working days = paid days for the month = present + paid leave + holiday.
+    // (Absent days are excluded — they're what gets deducted from salary.)
+    return { P, A, L, H, Half, net: P + L + H };
   };
 
   const changeMonth = (delta: number) => {
@@ -119,20 +126,31 @@ export default function MonthlyRegisterClient({
         subtitle={`${MONTHS[month - 1]} ${year}`}
       />
 
-      {/* Toolbar — month / year picker + actions */}
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        <button onClick={() => changeMonth(-1)} className="btn btn-sm">‹ Prev</button>
-        <select value={month} onChange={e => setMonth(parseInt(e.target.value))} style={{ width: 140 }}>
-          {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-        </select>
-        <select value={year} onChange={e => setYear(parseInt(e.target.value))} style={{ width: 100 }}>
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
-        <div style={{ flex: 1 }} />
-        <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
-        <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
-      </div>
+      {/* Toolbar */}
+      {rangeFrom && rangeTo ? (
+        <RangeToolbar
+          pathname={pathname}
+          from={rangeFrom}
+          to={rangeTo}
+          onPrint={printLandscape}
+          onExport={exportCSV}
+          years={years}
+        />
+      ) : (
+        <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+          <button onClick={() => changeMonth(-1)} className="btn btn-sm">‹ Prev</button>
+          <select value={month} onChange={e => setMonth(parseInt(e.target.value))} style={{ width: 140 }}>
+            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+          <select value={year} onChange={e => setYear(parseInt(e.target.value))} style={{ width: 100 }}>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
+          <div style={{ flex: 1 }} />
+          <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
+          <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
+        </div>
+      )}
 
       {/* Codes legend */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
@@ -274,6 +292,65 @@ export default function MonthlyRegisterClient({
 
 function fmt(n: number) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+export function RangeToolbar({
+  pathname, from, to, onPrint, onExport, years,
+}: {
+  pathname: string;
+  from: string; to: string;
+  onPrint: () => void;
+  onExport: () => void;
+  years: number[];
+}) {
+  const router = useRouter();
+  const [fy, fm] = from.split("-").map(Number);
+  const [ty, tm] = to.split("-").map(Number);
+
+  const apply = (newFrom: string, newTo: string) => {
+    router.push(`${pathname}?from=${newFrom}&to=${newTo}`);
+  };
+  const setFromYear = (y: number) => apply(`${y}-${String(fm).padStart(2, "0")}`, to);
+  const setFromMonth = (m: number) => apply(`${fy}-${String(m).padStart(2, "0")}`, to);
+  const setToYear = (y: number) => apply(from, `${y}-${String(tm).padStart(2, "0")}`);
+  const setToMonth = (m: number) => apply(from, `${ty}-${String(m).padStart(2, "0")}`);
+
+  const presetSingleMonth = (y: number, m: number) => {
+    const ym = `${y}-${String(m).padStart(2, "0")}`;
+    apply(ym, ym);
+  };
+  const presetYear = (y: number) => apply(`${y}-01`, `${y}-12`);
+  const presetYTD = () => {
+    const now = new Date();
+    apply(`${now.getFullYear()}-01`, `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  return (
+    <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4 }}>FROM</span>
+      <select value={fm} onChange={e => setFromMonth(parseInt(e.target.value))} style={{ width: 130 }}>
+        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select value={fy} onChange={e => setFromYear(parseInt(e.target.value))} style={{ width: 90 }}>
+        {years.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4 }}>TO</span>
+      <select value={tm} onChange={e => setToMonth(parseInt(e.target.value))} style={{ width: 130 }}>
+        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select value={ty} onChange={e => setToYear(parseInt(e.target.value))} style={{ width: 90 }}>
+        {years.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+      <div style={{ display: "flex", gap: 4, marginLeft: 6 }}>
+        <button onClick={() => presetSingleMonth(fy, fm)} className="btn btn-sm" title="Current month only">This month</button>
+        <button onClick={presetYTD} className="btn btn-sm" title="January through current month">YTD</button>
+        <button onClick={() => presetYear(fy)} className="btn btn-sm" title="Full calendar year">Full year</button>
+      </div>
+      <div style={{ flex: 1 }} />
+      <button onClick={onPrint} className="btn btn-print">🖨 Print Register</button>
+      <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
+    </div>
+  );
 }
 
 function LegendChip({ code, marker, label, c }: { code: string; marker?: string; label: string; c: string }) {

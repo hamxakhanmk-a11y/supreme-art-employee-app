@@ -79,8 +79,14 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
           </div>
           <div style={{ paddingLeft: 8 }}>
             <PanelHeader bg="#A32D2D">DEDUCTIONS</PanelHeader>
-            <Row label={`Income Tax (${slip.incomeTaxPercent}%)`} value={slip.incomeTax} />
-            <Row label={`EOBI Employee (${slip.eobiEmployeePercent}%)`} value={slip.eobiEmployee} />
+            <Row
+              label={Number(slip.incomeTaxAmount) > 0 ? "Income Tax" : `Income Tax (${slip.incomeTaxPercent}%)`}
+              value={slip.incomeTax}
+            />
+            <Row
+              label={Number(slip.eobiEmployeeAmount) > 0 ? "EOBI Employee" : `EOBI Employee (${slip.eobiEmployeePercent}%)`}
+              value={slip.eobiEmployee}
+            />
             <Row label="Absent Deduction" value={slip.absentDeduction} />
             <Row label="Other Deduction" value={slip.otherDeduction} />
             <TotalRow color="#A32D2D" bg="#fde8e8" label="TOTAL DEDUCTIONS" value={slip.totalDeductions} />

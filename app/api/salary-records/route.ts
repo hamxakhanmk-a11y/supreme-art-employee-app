@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { salaryRecords, employees } from "@/lib/schema";
 import { and, eq, desc, asc, inArray } from "drizzle-orm";
 import { guardWrite, getSession } from "@/lib/auth";
-import { computeSlip, MONTHS } from "@/lib/salary";
+import { computeSlip, MONTHS, DEFAULT_MIN_WAGE_PKR, DEFAULT_ESSI_CONTRIBUTION } from "@/lib/salary";
 
 // GET /api/salary-records?employeeId=1&month=June&year=2025
 // All filters optional. employeeId scopes to one employee. month+year scopes to one period.
@@ -60,11 +60,18 @@ export async function POST(req: NextRequest) {
       if (!month || !year) { results.push({ employeeId: empDbId, error: "month/year required" }); continue; }
       const monthNum = MONTHS.indexOf(month) + 1;
 
+      const minWage = Number((emp as any).minimumWage ?? DEFAULT_MIN_WAGE_PKR) || DEFAULT_MIN_WAGE_PKR;
+      const essi = Number((emp as any).essiContribution ?? DEFAULT_ESSI_CONTRIBUTION);
       const inputs = {
         basicSalary: Number(emp.basicSalary || 0),
         conveyance: Number(emp.conveyance || 0),
+        minimumWage: minWage,
         incomeTaxPercent: Number(emp.incomeTaxPercent || 0),
+        incomeTaxAmount: Number((emp as any).incomeTaxAmount || 0),
         eobiEmployeePercent: Number(emp.eobiEmployeePercent || 0),
+        eobiEmployeeAmount: Number((emp as any).eobiEmployeeAmount || 0),
+        eobiEmployerAmount: Number((emp as any).eobiEmployerAmount || 0),
+        essiContribution: essi,
         accommodation: Number(emp.accommodation || 0),
         food: Number(emp.food || 0),
         overtime: Number(s.overtime || 0),
@@ -87,8 +94,12 @@ export async function POST(req: NextRequest) {
         houseRentPercent: 0,
         medicalPercent: 0,
         incomeTaxPercent: inputs.incomeTaxPercent,
+        incomeTaxAmount: inputs.incomeTaxAmount,
         eobiEmployeePercent: inputs.eobiEmployeePercent,
+        eobiEmployeeAmount: inputs.eobiEmployeeAmount,
         eobiEmployerPercent: 0,
+        eobiEmployerAmount: inputs.eobiEmployerAmount,
+        minimumWage: minWage,
         overtime: inputs.overtime,
         otherDeduction: inputs.otherDeduction,
         daysPresent: inputs.daysPresent,
