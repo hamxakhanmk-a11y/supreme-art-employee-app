@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Role = "superadmin" | "admin" | "hr" | "ceo";
 interface User {
@@ -13,14 +13,25 @@ interface User {
   hasPassword: boolean;
 }
 
-const ROLE_LABEL: Record<string, string> = { superadmin: "Super Admin", admin: "Admin", hr: "HR", ceo: "CEO" };
-const ROLE_COLOR: Record<string, string> = { superadmin: "#5B21B6", admin: "#A32D2D", hr: "#185FA5", ceo: "#0F766E" };
+const ROLE_LABEL: Record<Role, string> = { superadmin: "Super Admin", admin: "Admin", hr: "HR", ceo: "CEO" };
+const ROLE_COLOR: Record<Role, string> = { superadmin: "#5B21B6", admin: "#A32D2D", hr: "#185FA5", ceo: "#0F766E" };
+
+type TabKey = "all" | "superadmin" | "admin" | "hr" | "ceo" | "disabled";
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "all", label: "All Users" },
+  { key: "superadmin", label: "Super Admin" },
+  { key: "admin", label: "Admin" },
+  { key: "hr", label: "HR" },
+  { key: "ceo", label: "CEO" },
+  { key: "disabled", label: "Disabled" },
+];
 
 export default function AdminUsersClient({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState<TabKey>("all");
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [iName, setIName] = useState("");
@@ -86,6 +97,28 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     refresh();
   }
 
+  async function promoteToSuperAdmin(u: User) {
+    if (!confirm(`Promote ${u.name} to Super Admin? They will gain full user-management access.`)) return;
+    await patch(u.id, { role: "superadmin" });
+  }
+
+  // Counts per tab
+  const counts = useMemo(() => {
+    const c: Record<TabKey, number> = { all: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, disabled: 0 };
+    for (const u of users) {
+      c.all++;
+      if (!u.active) c.disabled++;
+      else c[u.role]++;
+    }
+    return c;
+  }, [users]);
+
+  const filtered = useMemo(() => {
+    if (tab === "all") return users;
+    if (tab === "disabled") return users.filter(u => !u.active);
+    return users.filter(u => u.active && u.role === tab);
+  }, [users, tab]);
+
   return (
     <div className="fade-up">
       <div style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
@@ -128,11 +161,12 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               </div>
             </div>
           ) : (
-            <form onSubmit={invite} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px auto", gap: 10, alignItems: "end" }}>
+            <form onSubmit={invite} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 160px auto", gap: 10, alignItems: "end" }}>
               <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
               <Field label="Email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} /></Field>
               <Field label="Role">
                 <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as Role)}>
+                  <option value="superadmin">Super Admin</option>
                   <option value="admin">Admin (full access)</option>
                   <option value="hr">HR (full access)</option>
                   <option value="ceo">CEO (view & print only)</option>
@@ -147,76 +181,112 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         </div>
       )}
 
+      {/* === Tabs === */}
+      <div style={{
+        display: "flex", gap: 4, borderBottom: "1px solid var(--border)", marginBottom: 0,
+        overflowX: "auto",
+      }}>
+        {TABS.map(t => {
+          const isActive = tab === t.key;
+          return (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{
+                background: isActive ? "var(--bg)" : "transparent",
+                border: "1px solid var(--border)",
+                borderBottomColor: isActive ? "var(--bg)" : "var(--border)",
+                borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+                padding: "8px 14px", fontSize: 13,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? "var(--brand)" : "var(--text2)",
+                cursor: "pointer", marginBottom: -1, whiteSpace: "nowrap",
+              }}>
+              {t.label}
+              <span style={{
+                marginLeft: 6, padding: "1px 7px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                background: isActive ? ROLE_COLOR[t.key as Role] || "var(--text2)" : "var(--bg2, #f4f4f4)",
+                color: isActive ? "#fff" : "var(--text2)",
+              }}>{counts[t.key]}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {loading ? (
-        <div style={{ color: "var(--text2)" }}>Loading…</div>
+        <div style={{ color: "var(--text2)", padding: 16 }}>Loading…</div>
       ) : (
-        <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
-                <Th>Name</Th>
-                <Th>Email</Th>
-                <Th>Role</Th>
-                <Th>Status</Th>
-                <Th>Last login</Th>
-                <Th style={{ textAlign: "right" }}>Actions</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => {
-                const isSelf = u.id === currentUserId;
-                return (
-                  <tr key={u.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <Td><b>{u.name}</b>{isSelf && <span style={{ color: "var(--text2)", fontWeight: 400 }}> (you)</span>}</Td>
-                    <Td>{u.email}</Td>
-                    <Td>
-                      {u.role === "superadmin" ? (
-                        <span style={{
-                          padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 800,
-                          background: ROLE_COLOR.superadmin, color: "#fff", display: "inline-block",
-                        }}>Super Admin</span>
-                      ) : (
-                        <select disabled={isSelf} value={u.role}
+        <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderTop: "none", borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: "hidden" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>
+              No users in this tab.
+            </div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
+                  <Th>Name</Th>
+                  <Th>Email</Th>
+                  <Th>Role</Th>
+                  <Th>Status</Th>
+                  <Th>Last login</Th>
+                  <Th style={{ textAlign: "right" }}>Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(u => {
+                  const isSelf = u.id === currentUserId;
+                  return (
+                    <tr key={u.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <Td><b>{u.name}</b>{isSelf && <span style={{ color: "var(--text2)", fontWeight: 400 }}> (you)</span>}</Td>
+                      <Td>{u.email}</Td>
+                      <Td>
+                        <select value={u.role}
                           onChange={e => patch(u.id, { role: e.target.value })}
                           style={{
                             padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700,
                             border: `1px solid ${ROLE_COLOR[u.role]}`, color: ROLE_COLOR[u.role],
-                            background: "transparent", cursor: isSelf ? "not-allowed" : "pointer",
+                            background: "transparent", cursor: "pointer",
                           }}>
+                          <option value="superadmin">Super Admin</option>
                           <option value="admin">Admin</option>
                           <option value="hr">HR</option>
                           <option value="ceo">CEO</option>
                         </select>
-                      )}
-                    </Td>
-                    <Td>
-                      {u.active
-                        ? <span style={pill("#0F766E", "#D1FAE5")}>{u.hasPassword ? "Active" : "Invited"}</span>
-                        : <span style={pill("#7C1F1F", "#FEE2E2")}>Disabled</span>}
-                    </Td>
-                    <Td style={{ color: "var(--text2)", fontSize: 12 }}>
-                      {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
-                    </Td>
-                    <Td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      {u.role !== "superadmin" && (
+                      </Td>
+                      <Td>
+                        {u.active
+                          ? <span style={pill("#0F766E", "#D1FAE5")}>{u.hasPassword ? "Active" : "Invited"}</span>
+                          : <span style={pill("#7C1F1F", "#FEE2E2")}>Disabled</span>}
+                      </Td>
+                      <Td style={{ color: "var(--text2)", fontSize: 12 }}>
+                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </Td>
+                      <Td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button onClick={() => reInvite(u.id, u.name)} style={btnLink}>Send invite</button>
-                      )}
-                      {!isSelf && u.role !== "superadmin" && (
-                        <>
-                          {" · "}
-                          <button onClick={() => patch(u.id, { active: !u.active })} style={btnLink}>
-                            {u.active ? "Disable" : "Enable"}
-                          </button>
-                          {" · "}
-                          <button onClick={() => del(u.id, u.name)} style={{ ...btnLink, color: "#7C1F1F" }}>Delete</button>
-                        </>
-                      )}
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        {u.role !== "superadmin" && (
+                          <>
+                            {" · "}
+                            <button onClick={() => promoteToSuperAdmin(u)} style={{ ...btnLink, color: ROLE_COLOR.superadmin }}>
+                              Make Super Admin
+                            </button>
+                          </>
+                        )}
+                        {!isSelf && (
+                          <>
+                            {" · "}
+                            <button onClick={() => patch(u.id, { active: !u.active })} style={btnLink}>
+                              {u.active ? "Disable" : "Enable"}
+                            </button>
+                            {" · "}
+                            <button onClick={() => del(u.id, u.name)} style={{ ...btnLink, color: "#7C1F1F" }}>Delete</button>
+                          </>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>
