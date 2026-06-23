@@ -13,25 +13,39 @@ interface User {
   hasPassword: boolean;
 }
 
-const ROLE_LABEL: Record<Role, string> = { superadmin: "Super Admin", admin: "Admin", hr: "HR", ceo: "CEO" };
-const ROLE_COLOR: Record<Role, string> = { superadmin: "#5B21B6", admin: "#A32D2D", hr: "#185FA5", ceo: "#0F766E" };
+const ROLE_LABEL: Record<Role, string> = {
+  superadmin: "Super Admin",
+  admin: "Admin",
+  hr: "HR",
+  ceo: "CEO (view-only)",
+};
+const ROLE_COLOR: Record<Role, string> = {
+  superadmin: "#5B21B6",
+  admin: "#A32D2D",
+  hr: "#185FA5",
+  ceo: "#0F766E",
+};
 
-type TabKey = "all" | "superadmin" | "admin" | "hr" | "ceo" | "disabled";
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "All Users" },
-  { key: "superadmin", label: "Super Admin" },
-  { key: "admin", label: "Admin" },
-  { key: "hr", label: "HR" },
-  { key: "ceo", label: "CEO" },
-  { key: "disabled", label: "Disabled" },
-];
+const AVATAR_BG: Record<Role, string> = {
+  superadmin: "#5B21B6",
+  admin: "#A32D2D",
+  hr: "#185FA5",
+  ceo: "#0F766E",
+};
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join("") || "?";
+}
+function fmtDate(d: string | null) {
+  if (!d) return "never";
+  return new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
 
 export default function AdminUsersClient({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<TabKey>("all");
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [iName, setIName] = useState("");
@@ -91,43 +105,45 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   }
 
   async function del(id: number, name: string) {
-    if (!confirm(`Permanently delete user "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Remove user "${name}"? This cannot be undone.`)) return;
     const r = await fetch(`/api/users/${id}`, { method: "DELETE" });
     if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || "Delete failed"); return; }
     refresh();
   }
 
-  async function promoteToSuperAdmin(u: User) {
-    if (!confirm(`Promote ${u.name} to Super Admin? They will gain full user-management access.`)) return;
-    await patch(u.id, { role: "superadmin" });
-  }
-
-  // Counts per tab
+  // Counts for summary tiles (only active users counted in role buckets)
   const counts = useMemo(() => {
-    const c: Record<TabKey, number> = { all: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, disabled: 0 };
+    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0 };
     for (const u of users) {
-      c.all++;
-      if (!u.active) c.disabled++;
-      else c[u.role]++;
+      c.total++;
+      if (u.active) c[u.role]++;
     }
     return c;
   }, [users]);
 
-  const filtered = useMemo(() => {
-    if (tab === "all") return users;
-    if (tab === "disabled") return users.filter(u => !u.active);
-    return users.filter(u => u.active && u.role === tab);
-  }, [users, tab]);
-
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 20 }}>
+      {/* === Header === */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Users</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Invite, edit roles, or deactivate portal users.</p>
+          <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
+            Invite, edit roles, or deactivate portal users.
+          </p>
         </div>
-        <button onClick={() => { setInviteOpen(true); setInviteResult(null); }}
-          style={btnPrimary}>+ Invite User</button>
+      </div>
+
+      {/* === Summary tiles === */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: 12, marginBottom: 18,
+      }}>
+        <Tile label="TOTAL USERS" value={counts.total} />
+        <Tile label="SUPER ADMINS" value={counts.superadmin} accent={ROLE_COLOR.superadmin} />
+        <Tile label="ADMINS" value={counts.admin} accent={ROLE_COLOR.admin} />
+        <Tile label="HR" value={counts.hr} accent={ROLE_COLOR.hr} />
+        <Tile label="CEO" value={counts.ceo} accent={ROLE_COLOR.ceo} />
       </div>
 
       {!emailConfigured && (
@@ -139,10 +155,18 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
 
       {error && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
+      {/* === Authorized users header + invite button === */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ flex: 1, fontSize: 16, fontWeight: 700 }}>Authorized Users</div>
+        <button onClick={() => { setInviteOpen(true); setInviteResult(null); }} style={btnDark}>
+          + Invite User
+        </button>
+      </div>
+
       {inviteOpen && (
         <div style={{
           background: "var(--bg)", border: "1px solid var(--border)",
-          borderRadius: 12, padding: 18, marginBottom: 20, boxShadow: "var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04))"
+          borderRadius: 12, padding: 18, marginBottom: 16,
         }}>
           {inviteResult ? (
             <div>
@@ -161,7 +185,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               </div>
             </div>
           ) : (
-            <form onSubmit={invite} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 160px auto", gap: 10, alignItems: "end" }}>
+            <form onSubmit={invite} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px auto", gap: 10, alignItems: "end" }}>
               <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
               <Field label="Email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} /></Field>
               <Field label="Role">
@@ -181,114 +205,105 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         </div>
       )}
 
-      {/* === Tabs === */}
-      <div style={{
-        display: "flex", gap: 4, borderBottom: "1px solid var(--border)", marginBottom: 0,
-        overflowX: "auto",
-      }}>
-        {TABS.map(t => {
-          const isActive = tab === t.key;
-          return (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              style={{
-                background: isActive ? "var(--bg)" : "transparent",
-                border: "1px solid var(--border)",
-                borderBottomColor: isActive ? "var(--bg)" : "var(--border)",
-                borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
-                padding: "8px 14px", fontSize: 13,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? "var(--brand)" : "var(--text2)",
-                cursor: "pointer", marginBottom: -1, whiteSpace: "nowrap",
-              }}>
-              {t.label}
-              <span style={{
-                marginLeft: 6, padding: "1px 7px", borderRadius: 999, fontSize: 11, fontWeight: 700,
-                background: isActive ? ROLE_COLOR[t.key as Role] || "var(--text2)" : "var(--bg2, #f4f4f4)",
-                color: isActive ? "#fff" : "var(--text2)",
-              }}>{counts[t.key]}</span>
-            </button>
-          );
-        })}
-      </div>
-
+      {/* === User cards === */}
       {loading ? (
         <div style={{ color: "var(--text2)", padding: 16 }}>Loading…</div>
+      ) : users.length === 0 ? (
+        <div style={{ padding: 24, textAlign: "center", color: "var(--text2)", fontSize: 13, border: "1px solid var(--border)", borderRadius: 12, background: "var(--bg)" }}>
+          No users yet.
+        </div>
       ) : (
-        <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderTop: "none", borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: "hidden" }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 24, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>
-              No users in this tab.
-            </div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
-                  <Th>Name</Th>
-                  <Th>Email</Th>
-                  <Th>Role</Th>
-                  <Th>Status</Th>
-                  <Th>Last login</Th>
-                  <Th style={{ textAlign: "right" }}>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(u => {
-                  const isSelf = u.id === currentUserId;
-                  return (
-                    <tr key={u.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <Td><b>{u.name}</b>{isSelf && <span style={{ color: "var(--text2)", fontWeight: 400 }}> (you)</span>}</Td>
-                      <Td>{u.email}</Td>
-                      <Td>
-                        <select value={u.role}
-                          onChange={e => patch(u.id, { role: e.target.value })}
-                          style={{
-                            padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 700,
-                            border: `1px solid ${ROLE_COLOR[u.role]}`, color: ROLE_COLOR[u.role],
-                            background: "transparent", cursor: "pointer",
-                          }}>
-                          <option value="superadmin">Super Admin</option>
-                          <option value="admin">Admin</option>
-                          <option value="hr">HR</option>
-                          <option value="ceo">CEO</option>
-                        </select>
-                      </Td>
-                      <Td>
-                        {u.active
-                          ? <span style={pill("#0F766E", "#D1FAE5")}>{u.hasPassword ? "Active" : "Invited"}</span>
-                          : <span style={pill("#7C1F1F", "#FEE2E2")}>Disabled</span>}
-                      </Td>
-                      <Td style={{ color: "var(--text2)", fontSize: 12 }}>
-                        {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
-                      </Td>
-                      <Td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <button onClick={() => reInvite(u.id, u.name)} style={btnLink}>Send invite</button>
-                        {u.role !== "superadmin" && (
-                          <>
-                            {" · "}
-                            <button onClick={() => promoteToSuperAdmin(u)} style={{ ...btnLink, color: ROLE_COLOR.superadmin }}>
-                              Make Super Admin
-                            </button>
-                          </>
-                        )}
-                        {!isSelf && (
-                          <>
-                            {" · "}
-                            <button onClick={() => patch(u.id, { active: !u.active })} style={btnLink}>
-                              {u.active ? "Disable" : "Enable"}
-                            </button>
-                            {" · "}
-                            <button onClick={() => del(u.id, u.name)} style={{ ...btnLink, color: "#7C1F1F" }}>Delete</button>
-                          </>
-                        )}
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+        <div style={{ display: "grid", gap: 10 }}>
+          {users.map(u => {
+            const isSelf = u.id === currentUserId;
+            return (
+              <div key={u.id} style={{
+                background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
+                padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
+                opacity: u.active ? 1 : 0.6,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: AVATAR_BG[u.role], color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 700, fontSize: 15, flexShrink: 0,
+                }}>{initials(u.name)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{u.name}</div>
+                    {isSelf && (
+                      <span style={{
+                        padding: "2px 8px", borderRadius: 999, background: "#E0F2FE", color: "#075985",
+                        fontSize: 10, fontWeight: 700, letterSpacing: 0.3,
+                      }}>YOU</span>
+                    )}
+                    {!u.active && (
+                      <span style={{
+                        padding: "2px 8px", borderRadius: 999, background: "#FEE2E2", color: "#7C1F1F",
+                        fontSize: 10, fontWeight: 700,
+                      }}>DISABLED</span>
+                    )}
+                    {u.active && !u.hasPassword && (
+                      <span style={{
+                        padding: "2px 8px", borderRadius: 999, background: "#FEF3C7", color: "#92400E",
+                        fontSize: 10, fontWeight: 700,
+                      }}>INVITED</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {u.email} · Last login: {fmtDate(u.lastLoginAt)}
+                  </div>
+                </div>
+                <select value={u.role}
+                  onChange={e => patch(u.id, { role: e.target.value })}
+                  style={{
+                    padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    border: "1px solid var(--border)", color: ROLE_COLOR[u.role],
+                    background: "var(--bg)", cursor: "pointer", minWidth: 170,
+                  }}>
+                  <option value="superadmin">Super Admin</option>
+                  <option value="admin">Admin</option>
+                  <option value="hr">HR</option>
+                  <option value="ceo">CEO (view-only)</option>
+                </select>
+                {u.active ? (
+                  <button onClick={() => reInvite(u.id, u.name)} style={btnOutline} title="Resend invite link">
+                    Resend
+                  </button>
+                ) : (
+                  <button onClick={() => patch(u.id, { active: true })} style={btnOutline}>
+                    Enable
+                  </button>
+                )}
+                {!isSelf && (
+                  u.active ? (
+                    <button onClick={() => patch(u.id, { active: false })} style={btnOutlineDanger}>
+                      Disable
+                    </button>
+                  ) : (
+                    <button onClick={() => del(u.id, u.name)} style={btnOutlineDanger}>
+                      Remove
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+function Tile({ label, value, accent }: { label: string; value: number; accent?: string }) {
+  return (
+    <div style={{
+      background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
+      padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6,
+      borderTop: accent ? `3px solid ${accent}` : "1px solid var(--border)",
+    }}>
+      <div style={{ fontSize: 11, letterSpacing: 0.5, fontWeight: 700, color: "var(--text2)" }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: accent || "var(--text)" }}>{value}</div>
     </div>
   );
 }
@@ -301,15 +316,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-function Th({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, fontSize: 11, letterSpacing: 0.3, textTransform: "uppercase", color: "var(--text2)", ...style }}>{children}</th>;
-}
-function Td({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <td style={{ padding: "10px 14px", verticalAlign: "middle", ...style }}>{children}</td>;
-}
-function pill(fg: string, bg: string): React.CSSProperties {
-  return { padding: "2px 8px", borderRadius: 999, background: bg, color: fg, fontSize: 11, fontWeight: 700, display: "inline-block" };
-}
+
 const btnPrimary: React.CSSProperties = { background: "var(--brand)", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
+const btnDark: React.CSSProperties = { background: "#1f1f1f", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const btnSecondary: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "9px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" };
-const btnLink: React.CSSProperties = { background: "none", border: "none", color: "var(--brand)", fontWeight: 600, fontSize: 12, cursor: "pointer", padding: 0 };
+const btnOutline: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "8px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer" };
+const btnOutlineDanger: React.CSSProperties = { background: "var(--bg)", color: "#A32D2D", border: "1px solid #E5B8B8", padding: "8px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer" };
