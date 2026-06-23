@@ -259,7 +259,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   style={{
                     padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
                     border: "1px solid var(--border)", color: ROLE_COLOR[u.role],
-                    background: "var(--bg)", cursor: "pointer", minWidth: 140,
+                    background: "var(--bg)", cursor: "pointer",
+                    width: 150, flexShrink: 0,
                   }}>
                   <option value="superadmin">Super Admin</option>
                   <option value="admin">Admin</option>
@@ -267,21 +268,21 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   <option value="ceo">CEO (view-only)</option>
                 </select>
                 {u.active ? (
-                  <button onClick={() => reInvite(u.id, u.name)} style={btnOutline} title="Resend invite link">
+                  <button onClick={() => reInvite(u.id, u.name)} style={{ ...btnOutline, flexShrink: 0 }} title="Resend invite link">
                     Resend
                   </button>
                 ) : (
-                  <button onClick={() => patch(u.id, { active: true })} style={btnOutline}>
+                  <button onClick={() => patch(u.id, { active: true })} style={{ ...btnOutline, flexShrink: 0 }}>
                     Enable
                   </button>
                 )}
                 {!isSelf && (
                   u.active ? (
-                    <button onClick={() => patch(u.id, { active: false })} style={btnOutlineDanger}>
+                    <button onClick={() => patch(u.id, { active: false })} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
                       Disable
                     </button>
                   ) : (
-                    <button onClick={() => del(u.id, u.name)} style={btnOutlineDanger}>
+                    <button onClick={() => del(u.id, u.name)} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
                       Remove
                     </button>
                   )
