@@ -213,53 +213,53 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
           No users yet.
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gap: 6 }}>
           {users.map(u => {
             const isSelf = u.id === currentUserId;
             return (
               <div key={u.id} style={{
-                background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
-                padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
+                background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 8,
+                padding: "8px 12px", display: "flex", alignItems: "center", gap: 10,
                 opacity: u.active ? 1 : 0.6,
               }}>
                 <div style={{
-                  width: 44, height: 44, borderRadius: "50%",
+                  width: 32, height: 32, borderRadius: "50%",
                   background: AVATAR_BG[u.role], color: "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: 700, fontSize: 15, flexShrink: 0,
+                  fontWeight: 700, fontSize: 12, flexShrink: 0,
                 }}>{initials(u.name)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{u.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</span>
                     {isSelf && (
                       <span style={{
-                        padding: "2px 8px", borderRadius: 999, background: "#E0F2FE", color: "#075985",
-                        fontSize: 10, fontWeight: 700, letterSpacing: 0.3,
+                        padding: "1px 6px", borderRadius: 999, background: "#E0F2FE", color: "#075985",
+                        fontSize: 9, fontWeight: 700, letterSpacing: 0.3,
                       }}>YOU</span>
                     )}
                     {!u.active && (
                       <span style={{
-                        padding: "2px 8px", borderRadius: 999, background: "#FEE2E2", color: "#7C1F1F",
-                        fontSize: 10, fontWeight: 700,
+                        padding: "1px 6px", borderRadius: 999, background: "#FEE2E2", color: "#7C1F1F",
+                        fontSize: 9, fontWeight: 700,
                       }}>DISABLED</span>
                     )}
                     {u.active && !u.hasPassword && (
                       <span style={{
-                        padding: "2px 8px", borderRadius: 999, background: "#FEF3C7", color: "#92400E",
-                        fontSize: 10, fontWeight: 700,
+                        padding: "1px 6px", borderRadius: 999, background: "#FEF3C7", color: "#92400E",
+                        fontSize: 9, fontWeight: 700,
                       }}>INVITED</span>
                     )}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {u.email} · Last login: {fmtDate(u.lastLoginAt)}
                   </div>
                 </div>
                 <select value={u.role}
                   onChange={e => patch(u.id, { role: e.target.value })}
                   style={{
-                    padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
                     border: "1px solid var(--border)", color: ROLE_COLOR[u.role],
-                    background: "var(--bg)", cursor: "pointer", minWidth: 170,
+                    background: "var(--bg)", cursor: "pointer", minWidth: 140,
                   }}>
                   <option value="superadmin">Super Admin</option>
                   <option value="admin">Admin</option>
@@ -320,5 +320,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const btnPrimary: React.CSSProperties = { background: "var(--brand)", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const btnDark: React.CSSProperties = { background: "#1f1f1f", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const btnSecondary: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "9px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" };
-const btnOutline: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "8px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer" };
-const btnOutlineDanger: React.CSSProperties = { background: "var(--bg)", color: "#A32D2D", border: "1px solid #E5B8B8", padding: "8px 14px", borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: "pointer" };
+const btnOutline: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, cursor: "pointer" };
+const btnOutlineDanger: React.CSSProperties = { background: "var(--bg)", color: "#A32D2D", border: "1px solid #E5B8B8", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, cursor: "pointer" };
