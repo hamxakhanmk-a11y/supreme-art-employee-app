@@ -70,7 +70,9 @@ export default function MonthlyRegisterClient({
       else if (c === "leave") L++;
       else if (c === "holiday") H++;
     }
-    return { P, A, L, H, Half, net: P };
+    // Net working days = paid days for the month = present + paid leave + holiday.
+    // (Absent days are excluded — they're what gets deducted from salary.)
+    return { P, A, L, H, Half, net: P + L + H };
   };
 
   const changeMonth = (delta: number) => {
