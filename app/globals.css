@@ -43,7 +43,7 @@
 
   --radius: 10px;
   --radius-sm: 7px;
-  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font: 'Segoe UI', system-ui, sans-serif;
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 14px rgba(0,0,0,0.06);
@@ -346,10 +346,10 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 
 /* Urdu text — right-to-left Nastaliq script for bilingual labels */
 .urdu {
-  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', serif;
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Nafees Nastaleeq', serif;
   direction: rtl;
   unicode-bidi: embed;
-  line-height: 1.8;
+  line-height: 2;
 }
 
 /* Avatar — keeps its perfect circle even in cramped table cells. Tailwind's
