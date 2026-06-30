@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
 type Exp = { id: number; company: string; position: string | null; fromDate: string | null; toDate: string | null; description: string | null; };
@@ -245,9 +246,8 @@ function DocCard({ label, url, caption }: { label: string; url: string | null; c
       <div className="form-label" style={{ marginBottom: 8 }}>{label}</div>
       {url ? (
         /\.(png|jpe?g|gif|webp)$/i.test(url) ? (
-          <a href={url} target="_blank">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={label} style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
+          <a href={url} target="_blank" style={{ display: "block", position: "relative", width: "100%", height: 200, borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)" }}>
+            <Image src={url} alt={label} fill sizes="(max-width: 600px) 100vw, 300px" style={{ objectFit: "cover" }} loading="lazy" />
           </a>
         ) : (
           <a href={url} target="_blank" className="btn">📄 Open File</a>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useMemo } from "react";
 import EmployeesToolbar from "./EmployeesToolbar";
 import PrintHeader from "@/components/PrintHeader";
@@ -96,8 +97,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                 <tr key={e.id}>
                   <td className="col-photo">
                     {e.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={e.photoUrl} alt={e.firstName} className="avatar" style={{ width: 52, height: 52 }} />
+                      <Image src={e.photoUrl} alt={e.firstName} width={52} height={52} className="avatar" style={{ width: 52, height: 52, objectFit: "cover" }} loading="lazy" />
                     ) : (
                       <div className="avatar" style={{ width: 52, height: 52, background: "linear-gradient(135deg, var(--brand), var(--brand-dark))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>
                         {e.firstName[0]}{e.lastName[0]}

@@ -21,6 +21,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const body = await req.json();
 
     const [updated] = await db.update(employees).set({
+      ...(body.employeeId && typeof body.employeeId === "string" && body.employeeId.trim()
+        ? { employeeId: body.employeeId.trim() }
+        : {}),
       firstName: body.firstName,
       lastName: body.lastName,
       fatherName: body.fatherName || null,
@@ -128,6 +131,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     return NextResponse.json(updated);
   } catch (e: any) {
     console.error(e);
+    // Postgres unique-violation on employees.employee_id
+    if (e?.code === "23505" || /unique/i.test(e?.message || "")) {
+      return NextResponse.json({ error: "That Employee ID is already in use." }, { status: 409 });
+    }
     return NextResponse.json({ error: e.message || "Update failed" }, { status: 500 });
   }
 }

@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    // Vercel Blob storage — allow next/image to optimize/resize uploaded photos.
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      { protocol: "https", hostname: "*.blob.vercel-storage.com" },
+    ],
+    formats: ["image/avif", "image/webp"],
+  },
   async redirects() {
     return [
       // Old leave + attendance-history routes -> new Forms / Reports structure
