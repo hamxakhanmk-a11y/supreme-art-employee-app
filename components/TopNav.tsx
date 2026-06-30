@@ -15,35 +15,79 @@ const MODULES_BASE: { key: string; label: string; roles: Role[] | null }[] = [
   { key: "users",      label: "Users",      roles: ["superadmin"] },
 ];
 
-const subNav: Record<string, { href: string; label: string }[]> = {
-  profile: [
-    { href: "/", label: "Dashboard" },
-    { href: "/employees", label: "Employees" },
-  ],
-  attendance: [
-    { href: "/attendance", label: "Mark Today" },
-  ],
-  forms: [
-    { href: "/forms", label: "Overview" },
-    { href: "/forms/leave", label: "Leave Form" },
-    { href: "/forms/half-day", label: "Half-Day Form" },
-    { href: "/forms/file", label: "File Signed Form" },
-    { href: "/forms/approvals", label: "Pending Approvals" },
-    { href: "/forms/leave-settings", label: "Leave Settings" },
-  ],
-  reports: [
-    { href: "/reports", label: "Overview" },
-    { href: "/reports/attendance", label: "Attendance Register" },
-    { href: "/reports/leaves", label: "Leave History" },
-    { href: "/reports/half-day", label: "Half-Day History" },
-    { href: "/reports/salary", label: "Salary Records" },
-  ],
-  salary: [
-    { href: "/salary", label: "Generate Slips" },
-  ],
-  users: [
-    { href: "/admin/users", label: "All Users" },
-  ],
+const OVERVIEW_FORMS = { href: "/forms", label: "← Overview" };
+const OVERVIEW_REPORTS = { href: "/reports", label: "← Overview" };
+
+// Sub-nav is context-aware: on an overview page no tabs are shown (the page
+// itself lists every module as a card). Once the user enters a module, only
+// that module's tabs are shown, with a back-to-overview tab on the left.
+function getSubNav(path: string, module: string): { href: string; label: string }[] {
+  switch (module) {
+    case "profile":
+      return [
+        { href: "/", label: "Dashboard" },
+        { href: "/employees", label: "Employees" },
+      ];
+    case "attendance":
+      return [{ href: "/attendance", label: "Mark Today" }];
+    case "forms": {
+      if (path === "/forms") return []; // overview
+      if (path === "/forms/leave" || path === "/forms/leave-settings") {
+        return [
+          OVERVIEW_FORMS,
+          { href: "/forms/leave", label: "Leave Form" },
+          { href: "/forms/leave-settings", label: "Leave Settings" },
+        ];
+      }
+      if (path === "/forms/half-day") {
+        return [OVERVIEW_FORMS, { href: "/forms/half-day", label: "Half-Day Form" }];
+      }
+      if (path === "/forms/file") {
+        return [OVERVIEW_FORMS, { href: "/forms/file", label: "File Signed Form" }];
+      }
+      if (path === "/forms/approvals") {
+        return [OVERVIEW_FORMS, { href: "/forms/approvals", label: "Pending Approvals" }];
+      }
+      // Legacy /leave routes
+      if (path.startsWith("/leave")) {
+        return [OVERVIEW_FORMS, { href: "/forms/leave", label: "Leave Form" }];
+      }
+      return [];
+    }
+    case "reports": {
+      if (path === "/reports") return []; // overview
+      if (path.startsWith("/reports/attendance")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/attendance", label: "Attendance Register" }];
+      }
+      if (path.startsWith("/reports/leaves")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/leaves", label: "Leave History" }];
+      }
+      if (path.startsWith("/reports/half-day")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/half-day", label: "Half-Day History" }];
+      }
+      if (path.startsWith("/reports/salary")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
+      }
+      return [];
+    }
+    case "salary":
+      return [{ href: "/salary", label: "Generate Slips" }];
+    case "users":
+      return [{ href: "/admin/users", label: "All Users" }];
+    default:
+      return [];
+  }
+}
+
+// Default landing page for each top-nav module (used when the user clicks the
+// module name in the topbar). Always lands on the module's overview.
+const MODULE_HOME: Record<string, string> = {
+  profile: "/",
+  attendance: "/attendance",
+  forms: "/forms",
+  reports: "/reports",
+  salary: "/salary",
+  users: "/admin/users",
 };
 
 function pathToModule(path: string): string {
@@ -77,7 +121,7 @@ export default function TopNav() {
 
   if (hidden) return null;
   const activeModule = pathToModule(pathname);
-  const links = subNav[activeModule] || [];
+  const links = getSubNav(pathname, activeModule);
   const modules = MODULES_BASE.filter(m => !m.roles || (me && m.roles.includes(me.role)));
 
   async function signOut() {
@@ -88,9 +132,12 @@ export default function TopNav() {
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    if (href === "/forms") return pathname === "/forms";
-    if (href === "/reports") return pathname === "/reports";
-    return pathname.startsWith(href);
+    // Sibling routes can share a prefix (e.g. /forms/leave vs /forms/leave-settings),
+    // so for the explicit sub-nav entries we require either an exact match or the
+    // path to continue with a "/" (a nested sub-page).
+    if (href === pathname) return true;
+    if (pathname.startsWith(href + "/")) return true;
+    return false;
   };
 
   return (
@@ -126,7 +173,7 @@ export default function TopNav() {
             return (
               <Link
                 key={m.key}
-                href={subNav[m.key]?.[0]?.href || "/"}
+                href={MODULE_HOME[m.key] || "/"}
                 className={`mode-btn ${active ? "active" : ""}`}
               >
                 {m.label}
