@@ -93,7 +93,10 @@ export default function EmployeeProfileTabs({
           ["Reporting Manager", employee.reportingManager],
           ["Work Location", employee.workLocation],
           ["Shift", employee.shift],
-          ["Status", employee.status],
+          ["Status", (employee.status || "").charAt(0).toUpperCase() + (employee.status || "").slice(1) || "—"],
+          ...(employee.status === "resigned"
+            ? [["Resignation Date", fmtDate((employee as any).resignationDate)] as [string, any]]
+            : []),
         ]} />}
 
         {tab === "salary" && (() => {

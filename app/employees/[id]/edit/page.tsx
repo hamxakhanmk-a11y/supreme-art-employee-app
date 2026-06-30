@@ -27,6 +27,8 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
     cnicExpiry: emp.cnicExpiry || "",
     passportExpiry: emp.passportExpiry || "",
     joiningDate: emp.joiningDate || "",
+    contractExpiry: emp.contractExpiry || "",
+    resignationDate: (emp as any).resignationDate || "",
     basicSalary: emp.basicSalary?.toString() || "",
     education: edu.map(e => ({
       degree: e.degree || "",

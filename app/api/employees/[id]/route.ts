@@ -59,6 +59,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       shift: body.shift || null,
       status: body.status || "active",
       contractExpiry: body.contractExpiry || null,
+      resignationDate: body.status === "resigned" ? (body.resignationDate || null) : null,
       basicSalary: body.basicSalary ? parseInt(body.basicSalary) : null,
       conveyance: body.conveyance ? parseInt(body.conveyance) : 0,
       houseRentPercent: body.houseRentPercent ? parseInt(body.houseRentPercent) : 0,

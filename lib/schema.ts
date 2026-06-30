@@ -60,6 +60,7 @@ export const employees = pgTable("employees", {
   shift: varchar("shift", { length: 30 }),
   status: varchar("status", { length: 20 }).notNull().default("active"),
   contractExpiry: date("contract_expiry"),
+  resignationDate: date("resignation_date"),
 
   // Compensation
   basicSalary: integer("basic_salary"),

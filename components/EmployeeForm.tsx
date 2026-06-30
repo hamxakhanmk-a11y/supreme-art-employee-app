@@ -18,6 +18,7 @@ export type EmployeePayload = {
   designation: string; department: string; joiningDate: string; employmentType: string;
   reportingManager: string; workLocation: string; shift: string; status: string;
   contractExpiry: string;
+  resignationDate: string;
   basicSalary: string;
   conveyance: string;
   houseRentPercent: string;
@@ -53,6 +54,7 @@ const empty: EmployeePayload = {
   designation: "", department: "", joiningDate: "", employmentType: "Full-time",
   reportingManager: "", workLocation: "", shift: "", status: "active",
   contractExpiry: "",
+  resignationDate: "",
   basicSalary: "",
   conveyance: "0",
   houseRentPercent: "0",
@@ -261,12 +263,26 @@ export default function EmployeeForm({
         <Row>
           <Field label="Shift"><input placeholder="e.g. 9 AM – 6 PM" value={form.shift} onChange={e => set("shift", e.target.value)} /></Field>
           <Field label="Status">
-            <select value={form.status} onChange={e => set("status", e.target.value)}>
-              <option value="active">Active</option><option value="inactive">Inactive</option>
+            <select value={form.status} onChange={e => {
+              const v = e.target.value;
+              set("status", v);
+              // Clearing the date when moving back to active keeps the form honest
+              if (v !== "resigned" && form.resignationDate) set("resignationDate", "");
+            }}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="resigned">Resigned</option>
             </select>
           </Field>
           <Field label="Contract Expiry"><input type="date" value={form.contractExpiry} onChange={e => set("contractExpiry", e.target.value)} /></Field>
         </Row>
+        {form.status === "resigned" && (
+          <Row>
+            <Field label="Resignation Date">
+              <input type="date" value={form.resignationDate} onChange={e => set("resignationDate", e.target.value)} />
+            </Field>
+          </Row>
+        )}
       </div>
 
       {/* === Salary Structure === */}
