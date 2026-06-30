@@ -48,7 +48,15 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
             {emp.designation || "—"} {emp.department ? `• ${emp.department}` : ""}
           </div>
           <div style={{ marginTop: 6 }}>
-            <span className={`badge ${emp.status === "active" ? "badge-active" : "badge-inactive"}`}>{emp.status}</span>
+            <span style={{
+              padding: "3px 12px", borderRadius: 999,
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "capitalize",
+              ...(emp.status === "active"
+                ? { background: "#dcf5dc", color: "#15803D", border: "1px solid #a9e3a9" }
+                : emp.status === "resigned"
+                ? { background: "#fcdada", color: "#A32D2D", border: "1px solid #f3c2c2" }
+                : { background: "#e2e8f0", color: "#475569", border: "1px solid #cbd5e1" }),
+            }}>{emp.status}{emp.status === "resigned" && (emp as any).resignationDate ? ` · ${new Date((emp as any).resignationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

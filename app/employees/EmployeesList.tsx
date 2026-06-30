@@ -69,7 +69,10 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
       </div>
 
       <div className="table-summary no-print">
-        <strong>{filtered.length}</strong> rows · <strong>{rows.filter(r => r.status === "active").length}</strong> active · <strong>{rows.filter(r => r.status === "inactive").length}</strong> inactive
+        <strong>{filtered.length}</strong> rows ·{" "}
+        <strong>{rows.filter(r => r.status === "active").length}</strong> active ·{" "}
+        <strong>{rows.filter(r => r.status === "inactive").length}</strong> inactive ·{" "}
+        <strong>{rows.filter(r => r.status === "resigned").length}</strong> resigned
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -111,7 +114,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                   <td style={{ fontFamily: "monospace", fontSize: 12 }}>{e.cnic || "—"}</td>
                   <td>{e.phone || "—"}</td>
                   <td>
-                    <span className={`badge ${e.status === "active" ? "badge-active" : "badge-inactive"}`}>{e.status}</span>
+                    <span style={statusBadgeStyle(e.status)}>{e.status}</span>
                   </td>
                   <td className="no-print" style={{ textAlign: "right" }}>
                     <Link href={`/employees/${e.id}`}
@@ -146,5 +149,20 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
       `}</style>
     </>
   );
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  const map: Record<string, { fg: string; bg: string; border: string }> = {
+    active:   { fg: "#15803D", bg: "#dcf5dc", border: "#a9e3a9" },
+    inactive: { fg: "#475569", bg: "#e2e8f0", border: "#cbd5e1" },
+    resigned: { fg: "#A32D2D", bg: "#fcdada", border: "#f3c2c2" },
+  };
+  const c = map[status] || map.inactive;
+  return {
+    padding: "3px 10px", borderRadius: 999,
+    background: c.bg, color: c.fg, border: `1px solid ${c.border}`,
+    fontSize: 11, fontWeight: 700, letterSpacing: 0.3, textTransform: "capitalize",
+    display: "inline-block",
+  };
 }
 

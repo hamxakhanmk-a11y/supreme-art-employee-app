@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
   try {
     // Single-day mode: return all active employees joined with their attendance record (if any)
     if (date && !from && !to) {
-      const allEmployees = await db.select().from(employees).orderBy(employees.firstName);
+      const allEmployees = await db.select().from(employees)
+        .where(eq(employees.status, "active"))
+        .orderBy(employees.firstName);
       const records = await db.select().from(attendance).where(eq(attendance.date, date));
       const byEmp = new Map(records.map((r) => [r.employeeId, r]));
       const [closed] = await db.select().from(attendanceDays).where(eq(attendanceDays.date, date));

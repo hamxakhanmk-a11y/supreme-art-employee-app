@@ -70,9 +70,12 @@ export default async function Dashboard() {
   try {
     allEmployees = await db.select().from(employees);
   } catch {}
-  const total = allEmployees.length;
+  // Resigned employees are excluded from total — total reflects current headcount.
+  const onRoll = allEmployees.filter(e => e.status !== "resigned");
+  const total = onRoll.length;
   const active = allEmployees.filter(e => e.status === "active").length;
   const inactive = allEmployees.filter(e => e.status === "inactive").length;
+  const resigned = allEmployees.filter(e => e.status === "resigned").length;
 
   const alerts = buildAlerts(allEmployees);
   const expired = alerts.filter(a => a.daysLeft < 0);
@@ -102,10 +105,11 @@ export default async function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 14, marginBottom: 24 }}>
-        <StatCard label="Total Employees" value={total} sub="All records on file" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14, marginBottom: 24 }}>
+        <StatCard label="Total Employees" value={total} sub="On current payroll" />
         <StatCard label="Active" value={active} sub="Currently employed" color="#15803D" />
-        <StatCard label="Inactive" value={inactive} sub="Resigned or on hold" color="var(--text2)" />
+        <StatCard label="Inactive" value={inactive} sub="On hold" color="var(--text2)" />
+        <StatCard label="Resigned" value={resigned} sub="Left the company" color="#A32D2D" />
         <StatCard label="Open Alerts" value={alerts.length} sub="Documents needing attention" warn={alerts.length > 0} />
       </div>
 
