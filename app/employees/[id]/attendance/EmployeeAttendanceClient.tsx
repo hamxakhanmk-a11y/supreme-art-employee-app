@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
+import { lateMinutes, formatLate } from "@/lib/attendance";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type Row = { id: number; date: string; status: string; checkIn: string | null; checkOut: string | null; notes: string | null };
@@ -42,16 +43,16 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
     absent:  rows.filter(r => r.status === "absent").length,
     leave:   rows.filter(r => r.status === "leave").length,
     halfday: rows.filter(r => r.status === "half-day").length,
-    late:    rows.filter(r => r.status === "late").length,
+    late:    rows.filter(r => lateMinutes(r.checkIn) > 0).length,
   };
 
   const exportCSV = () => {
     downloadCSV(`attendance-${employee.employeeId}-${from}_to_${to}`,
-      ["Date", "Status", "Check-in", "Check-out", "Notes"],
+      ["Date", "Status", "Check-in", "Late by", "Check-out", "Notes"],
       sorted.map(r => [
         r.date,
         STATUS_LABEL[r.status]?.label || r.status,
-        r.checkIn || "", r.checkOut || "", r.notes || "",
+        r.checkIn || "", formatLate(lateMinutes(r.checkIn)), r.checkOut || "", r.notes || "",
       ])
     );
   };
@@ -111,11 +112,15 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
             <tbody>
               {sorted.map(r => {
                 const s = STATUS_LABEL[r.status];
+                const late = lateMinutes(r.checkIn);
                 return (
                   <tr key={r.id}>
                     <td>{new Date(r.date).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</td>
                     <td>{s ? <span style={{ display: "inline-block", padding: "4px 12px", fontSize: 11, fontWeight: 700, borderRadius: 999, letterSpacing: 0.3, background: s.color, color: "#fff", boxShadow: `0 1px 3px ${s.color}55` }}>{s.label}</span> : r.status}</td>
-                    <td>{r.checkIn || "—"}</td>
+                    <td>
+                      {r.checkIn || "—"}
+                      {late > 0 && <div style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, marginTop: 2 }}>Late {formatLate(late)}</div>}
+                    </td>
                     <td>{r.checkOut || "—"}</td>
                     <td style={{ color: "#666" }}>{r.notes || "—"}</td>
                   </tr>

@@ -5,6 +5,7 @@ import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar } from "./MonthlyRegisterClient";
+import { lateMinutes } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -15,7 +16,7 @@ type Emp = {
   designation: string | null;
   status: string;
 };
-type Rec = { employeeId: number; date: string; status: string };
+type Rec = { employeeId: number; date: string; status: string; checkIn: string | null };
 type YM = { y: number; m: number };
 
 const STATUS_COLORS: Record<string, { color: string; bg: string; }> = {
@@ -23,6 +24,7 @@ const STATUS_COLORS: Record<string, { color: string; bg: string; }> = {
   A: { color: "#DC2626", bg: "#fcdada" },
   L: { color: "#D97706", bg: "#fdebd0" },
   H: { color: "#0E7490", bg: "#cffafe" },
+  Lt: { color: "#DC2626", bg: "#fcdada" },
 };
 
 export default function RangeRegisterClient({
@@ -39,33 +41,34 @@ export default function RangeRegisterClient({
 
   // Build a lookup: `${employeeId}-${YYYY}-${M}` -> { P, A, L, H, Half }
   const byEmpMonth = useMemo(() => {
-    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number }>();
+    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number; Late: number }>();
     const key = (emp: number, y: number, mo: number) => `${emp}-${y}-${mo}`;
     for (const r of records) {
       const y = parseInt(r.date.slice(0, 4));
       const mo = parseInt(r.date.slice(5, 7));
       const k = key(r.employeeId, y, mo);
       let bucket = m.get(k);
-      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0 }; m.set(k, bucket); }
+      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0 }; m.set(k, bucket); }
       if (r.status === "present") bucket.P++;
       else if (r.status === "half-day") { bucket.P++; bucket.Half++; }
       else if (r.status === "absent") bucket.A++;
       else if (r.status === "leave") bucket.L++;
       else if (r.status === "holiday") bucket.H++;
+      if (lateMinutes(r.checkIn) > 0) bucket.Late++;
     }
     return m;
   }, [records]);
 
   const cellFor = (emp: Emp, y: number, mo: number) =>
-    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0 };
+    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0 };
 
   const totalsFor = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0;
     for (const ym of months) {
       const t = cellFor(emp, ym.y, ym.m);
-      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half;
+      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late;
     }
-    return { P, A, L, H, Half, net: P + L + H };
+    return { P, A, L, H, Half, Late, net: P + L + H };
   };
 
   const activeEmps = useMemo(() => employees.filter(e => e.status === "active"), [employees]);
@@ -78,7 +81,7 @@ export default function RangeRegisterClient({
       const lbl = `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`;
       headers.push(`${lbl} P`, `${lbl} A`, `${lbl} L`, `${lbl} H`);
     }
-    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Net Days");
+    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late", "Net Days");
     const rows = activeEmps.map(e => {
       const r: (string | number)[] = [e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || ""];
       for (const ym of months) {
@@ -86,7 +89,7 @@ export default function RangeRegisterClient({
         r.push(c.P, c.A, c.L, c.H);
       }
       const t = totalsFor(e);
-      r.push(t.P, t.A, t.L, t.H, t.Half, t.net);
+      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, t.net);
       return r;
     });
     downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
@@ -112,6 +115,7 @@ export default function RangeRegisterClient({
         <Chip code="A" label="Absent" />
         <Chip code="L" label="Leave" />
         <Chip code="H" label="Holiday" />
+        <Chip code="Lt" label="Late arrivals" />
         <span style={{ marginLeft: 8 }}>Net = P + L + H · {months.length} month{months.length === 1 ? "" : "s"}</span>
       </div>
 
@@ -119,7 +123,7 @@ export default function RangeRegisterClient({
         <table className="range-table">
           <thead>
             <tr className="range-banner">
-              <th colSpan={4 + months.length * 4 + 6} style={{
+              <th colSpan={4 + months.length * 4 + 7} style={{
                 textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff",
                 background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)",
                 padding: "10px 8px", textTransform: "uppercase",
@@ -137,7 +141,7 @@ export default function RangeRegisterClient({
                   {MONTHS[ym.m - 1].slice(0, 3)} {String(ym.y).slice(2)}
                 </th>
               ))}
-              <th colSpan={6} className="tot-group-h">Totals</th>
+              <th colSpan={7} className="tot-group-h">Totals</th>
             </tr>
             <tr>
               {months.flatMap(ym => [
@@ -151,12 +155,13 @@ export default function RangeRegisterClient({
               <th className="sub-h" style={{ color: STATUS_COLORS.A.color, background: "#f3eee4" }}>A</th>
               <th className="sub-h" style={{ color: STATUS_COLORS.L.color, background: "#f3eee4" }}>L</th>
               <th className="sub-h" style={{ color: STATUS_COLORS.H.color, background: "#f3eee4" }}>H</th>
+              <th className="sub-h" style={{ color: "#DC2626", background: "#f3eee4" }}>Lt</th>
               <th className="sub-h" style={{ background: "#f3eee4" }}>Net</th>
             </tr>
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + months.length * 4 + 6} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + months.length * 4 + 7} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = totalsFor(emp);
@@ -180,6 +185,7 @@ export default function RangeRegisterClient({
                   <Tot v={t.A} c={STATUS_COLORS.A.color} />
                   <Tot v={t.L} c={STATUS_COLORS.L.color} />
                   <Tot v={t.H} c={STATUS_COLORS.H.color} />
+                  <Tot v={t.Late} c="#DC2626" />
                   <Tot v={t.net} c="var(--brand)" />
                 </tr>
               );

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
+import { DEFAULT_CHECK_IN, lateMinutes, formatLate } from "@/lib/attendance";
 
 type Row = {
   id: number;
@@ -25,7 +26,6 @@ const STATUS = {
   "half-day": { label: "Half-day",  color: "#1D4ED8", bg: "#dfe8fc" },
 } as const;
 
-const DEFAULT_CHECK_IN  = "08:00";
 const DEFAULT_CHECK_OUT = "16:45";
 
 // Statuses shown as inline pills in each row (Half-day is its own button).
@@ -423,12 +423,9 @@ export default function AttendancePage() {
                       onChange={e => updateRow(r.id, { checkIn: e.target.value })}
                       onBlur={() => persist(r, {})}
                       style={{ padding: "5px 8px", fontSize: 12, borderColor: r.checkIn && r.checkIn > DEFAULT_CHECK_IN ? "#DC2626" : undefined }} />
-                    {r.checkIn && r.checkIn > DEFAULT_CHECK_IN && (() => {
-                      const [ih, im] = r.checkIn.split(":").map(Number);
-                      const [dh, dm] = DEFAULT_CHECK_IN.split(":").map(Number);
-                      const diff = (ih * 60 + im) - (dh * 60 + dm);
-                      return <div style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, marginTop: 2 }}>Late {diff}m</div>;
-                    })()}
+                    {lateMinutes(r.checkIn) > 0 && (
+                      <div style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, marginTop: 2 }}>Late {formatLate(lateMinutes(r.checkIn))}</div>
+                    )}
                   </td>
                   <td>
                     <input type="time" value={r.checkOut ?? ""} disabled={closed}

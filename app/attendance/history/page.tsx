@@ -34,6 +34,7 @@ export default async function AttendanceHistoryPage({ searchParams }: { searchPa
       employeeId: attendance.employeeId,
       date: attendance.date,
       status: attendance.status,
+      checkIn: attendance.checkIn,
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),
   ]);
 
