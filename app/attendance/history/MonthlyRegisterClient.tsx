@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, MONTHLY_MIN_HOURS, type WorkStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -73,11 +73,12 @@ export default function MonthlyRegisterClient({
   // Per-employee tallies. Half-day counts as a full P (the employee was
   // present) but is also tracked in `Half` so HR can see how many half-days.
   const tally = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const c = cellFor(emp, day);
       const late = lateFor(emp, day);
       if (late > 0) { Late++; LateMin += late; }
+      WorkedMin += workedMinutesForDay(c, late);
       if (!c) continue;
       if (c === "present") P++;
       else if (c === "half-day") { P++; Half++; }
@@ -87,7 +88,7 @@ export default function MonthlyRegisterClient({
     }
     // Net working days = paid days for the month = present + paid leave + holiday.
     // (Absent days are excluded — they're what gets deducted from salary.)
-    return { P, A, L, H, Half, Late, LateMin, net: P + L + H };
+    return { P, A, L, H, Half, Late, LateMin, WorkedMin, status: workStatus(WorkedMin, 1), net: P + L + H };
   };
 
   const changeMonth = (delta: number) => {
@@ -108,7 +109,7 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time", "Net Days"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time", "Net Days", "Worked Hrs", "Status"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
@@ -122,6 +123,7 @@ export default function MonthlyRegisterClient({
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
         ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin), t.net,
+        formatHours(t.WorkedMin), t.status === "ok" ? "OK" : "Not OK",
       ];
     });
     downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
@@ -176,6 +178,10 @@ export default function MonthlyRegisterClient({
         <LegendChip code="H"  label="Holiday"  c="#0E7490" />
         <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
         <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <StatusBadge status="ok" /> / <StatusBadge status="not-ok" />
+          <span>= worked ≥/&lt; {MONTHLY_MIN_HOURS}h this month (8:00–16:45, 1h break, minus lateness)</span>
+        </span>
       </div>
 
       {/* Register table */}
@@ -184,7 +190,7 @@ export default function MonthlyRegisterClient({
           <thead>
             {/* Top banner row — print only / accent */}
             <tr className="register-banner">
-              <th colSpan={4 + daysInMonth + 8} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
+              <th colSpan={4 + daysInMonth + 10} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
@@ -207,11 +213,13 @@ export default function MonthlyRegisterClient({
               <th className="tot-h" style={{ color: "#DC2626" }}>Lt</th>
               <th className="tot-h" style={{ color: "#DC2626" }}>Late Time</th>
               <th className="tot-h">Net</th>
+              <th className="tot-h">Worked Hrs</th>
+              <th className="tot-h">Status</th>
             </tr>
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + daysInMonth + 8} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + daysInMonth + 10} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = tally(emp);
@@ -243,6 +251,8 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#DC2626" }}>{t.Late || ""}</td>
                   <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
+                  <td className="tot-c" style={{ fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
+                  <td className="tot-c"><StatusBadge status={t.status} /></td>
                 </tr>
               );
             })}
@@ -398,6 +408,19 @@ export function SortSelect({ value, onChange }: { value: SortKey; onChange: (s: 
     >
       {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
     </select>
+  );
+}
+
+export function StatusBadge({ status }: { status: WorkStatus }) {
+  const ok = status === "ok";
+  return (
+    <span style={{
+      display: "inline-block", padding: "3px 9px", fontSize: 10, fontWeight: 800,
+      borderRadius: 999, letterSpacing: 0.3,
+      color: ok ? "#15803D" : "#DC2626", background: ok ? "#dcf5dc" : "#fcdada",
+    }}>
+      {ok ? "OK" : "Not OK"}
+    </span>
   );
 }
 

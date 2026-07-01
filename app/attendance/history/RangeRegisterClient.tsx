@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { MONTHS, RangeToolbar } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey } from "@/lib/attendance";
+import { MONTHS, RangeToolbar, StatusBadge } from "./MonthlyRegisterClient";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, formatHours, workStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -42,14 +42,14 @@ export default function RangeRegisterClient({
 
   // Build a lookup: `${employeeId}-${YYYY}-${M}` -> { P, A, L, H, Half }
   const byEmpMonth = useMemo(() => {
-    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number; Late: number; LateMin: number }>();
+    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number; Late: number; LateMin: number; WorkedMin: number }>();
     const key = (emp: number, y: number, mo: number) => `${emp}-${y}-${mo}`;
     for (const r of records) {
       const y = parseInt(r.date.slice(0, 4));
       const mo = parseInt(r.date.slice(5, 7));
       const k = key(r.employeeId, y, mo);
       let bucket = m.get(k);
-      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0 }; m.set(k, bucket); }
+      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0 }; m.set(k, bucket); }
       if (r.status === "present") bucket.P++;
       else if (r.status === "half-day") { bucket.P++; bucket.Half++; }
       else if (r.status === "absent") bucket.A++;
@@ -57,20 +57,21 @@ export default function RangeRegisterClient({
       else if (r.status === "holiday") bucket.H++;
       const late = lateMinutes(r.checkIn);
       if (late > 0) { bucket.Late++; bucket.LateMin += late; }
+      bucket.WorkedMin += workedMinutesForDay(r.status, late);
     }
     return m;
   }, [records]);
 
   const cellFor = (emp: Emp, y: number, mo: number) =>
-    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0 };
+    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0 };
 
   const totalsFor = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0;
     for (const ym of months) {
       const t = cellFor(emp, ym.y, ym.m);
-      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late; LateMin += t.LateMin;
+      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late; LateMin += t.LateMin; WorkedMin += t.WorkedMin;
     }
-    return { P, A, L, H, Half, Late, LateMin, net: P + L + H };
+    return { P, A, L, H, Half, Late, LateMin, WorkedMin, status: workStatus(WorkedMin, months.length), net: P + L + H };
   };
 
   const [sort, setSort] = useState<SortKey>("id");
@@ -87,7 +88,7 @@ export default function RangeRegisterClient({
       const lbl = `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`;
       headers.push(`${lbl} P`, `${lbl} A`, `${lbl} L`, `${lbl} H`);
     }
-    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time", "Net Days");
+    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time", "Net Days", "Worked Hrs", "Status");
     const rows = activeEmps.map(e => {
       const r: (string | number)[] = [e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || ""];
       for (const ym of months) {
@@ -95,7 +96,7 @@ export default function RangeRegisterClient({
         r.push(c.P, c.A, c.L, c.H);
       }
       const t = totalsFor(e);
-      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net);
+      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net, formatHours(t.WorkedMin), t.status === "ok" ? "OK" : "Not OK");
       return r;
     });
     downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
@@ -125,13 +126,17 @@ export default function RangeRegisterClient({
         <Chip code="H" label="Holiday" />
         <Chip code="Lt" label="Late arrivals" />
         <span style={{ marginLeft: 8 }}>Net = P + L + H · {months.length} month{months.length === 1 ? "" : "s"}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
+          <StatusBadge status="ok" /> / <StatusBadge status="not-ok" />
+          <span>= worked ≥/&lt; 180h/month (8:00–16:45, 1h break, minus lateness)</span>
+        </span>
       </div>
 
       <div className="card range-wrap" style={{ padding: 0, overflow: "auto" }}>
         <table className="range-table">
           <thead>
             <tr className="range-banner">
-              <th colSpan={4 + months.length * 4 + 8} style={{
+              <th colSpan={4 + months.length * 4 + 10} style={{
                 textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff",
                 background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)",
                 padding: "10px 8px", textTransform: "uppercase",
@@ -149,7 +154,7 @@ export default function RangeRegisterClient({
                   {MONTHS[ym.m - 1].slice(0, 3)} {String(ym.y).slice(2)}
                 </th>
               ))}
-              <th colSpan={8} className="tot-group-h">Totals</th>
+              <th colSpan={10} className="tot-group-h">Totals</th>
             </tr>
             <tr>
               {months.flatMap(ym => [
@@ -166,11 +171,13 @@ export default function RangeRegisterClient({
               <th className="sub-h" style={{ color: "#DC2626", background: "#f3eee4" }}>Lt</th>
               <th className="sub-h" style={{ color: "#DC2626", background: "#f3eee4" }}>Late Time</th>
               <th className="sub-h" style={{ background: "#f3eee4" }}>Net</th>
+              <th className="sub-h" style={{ background: "#f3eee4" }}>Worked Hrs</th>
+              <th className="sub-h" style={{ background: "#f3eee4" }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + months.length * 4 + 8} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + months.length * 4 + 10} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = totalsFor(emp);
@@ -197,6 +204,8 @@ export default function RangeRegisterClient({
                   <Tot v={t.Late} c="#DC2626" />
                   <td style={{ color: "#DC2626", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <Tot v={t.net} c="var(--brand)" />
+                  <td style={{ fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
+                  <td style={{ background: "#fdf8ee" }}><StatusBadge status={t.status} /></td>
                 </tr>
               );
             })}

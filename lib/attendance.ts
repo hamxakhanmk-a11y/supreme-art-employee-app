@@ -18,6 +18,41 @@ export function formatLate(minutes: number, compact = false): string {
   return `${m}m`;
 }
 
+// Shift: 08:00–16:45 with a 1-hour break in between -> 7h45m expected per working day.
+// Sunday is the only off day (handled by callers, which skip/zero it via attendance status).
+export const SHIFT_START = DEFAULT_CHECK_IN;
+export const SHIFT_END = "16:45";
+export const BREAK_MINUTES = 60;
+
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+export const DAILY_EXPECTED_MINUTES = toMinutes(SHIFT_END) - toMinutes(SHIFT_START) - BREAK_MINUTES;
+
+// Flat monthly cutoff: below this many worked hours in a month, status is "Not OK".
+export const MONTHLY_MIN_HOURS = 180;
+
+// Minutes credited for one day, given its status and how late the check-in was.
+// Present = full expected shift minus lateness; half-day = half credit minus lateness;
+// absent/leave/holiday = 0 (the employee wasn't clocked in for the shift).
+export function workedMinutesForDay(status: string | null | undefined, late: number): number {
+  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late);
+  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late);
+  return 0;
+}
+
+export function formatHours(minutes: number): string {
+  return (minutes / 60).toFixed(1);
+}
+
+export type WorkStatus = "ok" | "not-ok";
+
+export function workStatus(workedMinutes: number, months: number): WorkStatus {
+  return workedMinutes >= MONTHLY_MIN_HOURS * 60 * months ? "ok" : "not-ok";
+}
+
 // Sort options for the attendance register's employee rows.
 export const SORT_OPTIONS = [
   { value: "name",    label: "Name (A–Z)" },
