@@ -1,11 +1,11 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, type SortKey } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -15,6 +15,7 @@ type Emp = {
   department: string | null;
   designation: string | null;
   status: string;
+  createdAt?: string | Date | null;
 };
 type Rec = { employeeId: number; date: string; status: string; checkIn: string | null };
 type YM = { y: number; m: number };
@@ -72,7 +73,11 @@ export default function RangeRegisterClient({
     return { P, A, L, H, Half, Late, LateMin, net: P + L + H };
   };
 
-  const activeEmps = useMemo(() => employees.filter(e => e.status === "active"), [employees]);
+  const [sort, setSort] = useState<SortKey>("id");
+  const activeEmps = useMemo(
+    () => sortEmployees(employees.filter(e => e.status === "active"), sort),
+    [employees, sort]
+  );
 
   const rangeLabel = `${MONTHS[from.m - 1]} ${from.y} – ${MONTHS[to.m - 1]} ${to.y}`;
 
@@ -108,6 +113,8 @@ export default function RangeRegisterClient({
         onPrint={printLandscape}
         onExport={exportCSV}
         years={years}
+        sort={sort}
+        onSortChange={setSort}
       />
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>

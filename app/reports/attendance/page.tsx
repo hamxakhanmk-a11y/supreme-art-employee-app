@@ -73,6 +73,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       department: employees.department,
       designation: employees.designation,
       status: employees.status,
+      createdAt: employees.createdAt,
     }).from(employees).orderBy(employees.employeeId),
     db.select({
       employeeId: attendance.employeeId,

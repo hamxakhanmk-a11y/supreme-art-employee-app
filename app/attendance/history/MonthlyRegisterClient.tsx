@@ -1,10 +1,10 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -14,6 +14,7 @@ type Emp = {
   department: string | null;
   designation: string | null;
   status: string;
+  createdAt?: string | Date | null;
 };
 type Rec = { employeeId: number; date: string; status: string; checkIn: string | null };
 
@@ -55,8 +56,13 @@ export default function MonthlyRegisterClient({
     return m;
   }, [records]);
 
+  const [sort, setSort] = useState<SortKey>("id");
+
   // Active employees only (inactive can be toggled later if needed)
-  const activeEmps = useMemo(() => employees.filter(e => e.status === "active"), [employees]);
+  const activeEmps = useMemo(
+    () => sortEmployees(employees.filter(e => e.status === "active"), sort),
+    [employees, sort]
+  );
 
   const cellFor = (emp: Emp, day: number) => {
     const stored = byKey.get(`${emp.id}-${day}`);
@@ -141,6 +147,8 @@ export default function MonthlyRegisterClient({
           onPrint={printLandscape}
           onExport={exportCSV}
           years={years}
+          sort={sort}
+          onSortChange={setSort}
         />
       ) : (
         <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
@@ -153,6 +161,7 @@ export default function MonthlyRegisterClient({
           </select>
           <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
           <div style={{ flex: 1 }} />
+          <SortSelect value={sort} onChange={setSort} />
           <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
           <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
         </div>
@@ -318,13 +327,15 @@ function fmt(n: number) {
 }
 
 export function RangeToolbar({
-  pathname, from, to, onPrint, onExport, years,
+  pathname, from, to, onPrint, onExport, years, sort, onSortChange,
 }: {
   pathname: string;
   from: string; to: string;
   onPrint: () => void;
   onExport: () => void;
   years: number[];
+  sort?: SortKey;
+  onSortChange?: (s: SortKey) => void;
 }) {
   const router = useRouter();
   const [fy, fm] = from.split("-").map(Number);
@@ -370,9 +381,23 @@ export function RangeToolbar({
         <button onClick={() => presetYear(fy)} className="btn btn-sm" title="Full calendar year">Full year</button>
       </div>
       <div style={{ flex: 1 }} />
+      {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
       <button onClick={onPrint} className="btn btn-print">🖨 Print Register</button>
       <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
     </div>
+  );
+}
+
+export function SortSelect({ value, onChange }: { value: SortKey; onChange: (s: SortKey) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value as SortKey)}
+      title="Sort employees by"
+      style={{ width: 150 }}
+    >
+      {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
+    </select>
   );
 }
 
