@@ -9,10 +9,11 @@ export function lateMinutes(checkIn: string | null | undefined): number {
   return diff > 0 ? diff : 0;
 }
 
-export function formatLate(minutes: number): string {
+export function formatLate(minutes: number, compact = false): string {
   if (minutes <= 0) return "";
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  const sep = compact ? "" : " ";
+  if (h > 0) return m > 0 ? `${h}h${sep}${m}m` : `${h}h`;
   return `${m}m`;
 }
