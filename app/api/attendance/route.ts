@@ -88,3 +88,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+// DELETE /api/attendance?employeeId=&date=   -> unmark (clear) one employee's record for a day
+export async function DELETE(req: NextRequest) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
+  try {
+    const url = req.nextUrl;
+    const employeeId = url.searchParams.get("employeeId");
+    const date = url.searchParams.get("date");
+    if (!employeeId || !date) {
+      return NextResponse.json({ error: "employeeId, date required" }, { status: 400 });
+    }
+
+    const [closed] = await db.select().from(attendanceDays).where(eq(attendanceDays.date, date));
+    if (closed) return NextResponse.json({ error: "Day is closed and cannot be modified" }, { status: 423 });
+
+    await db.delete(attendance)
+      .where(and(eq(attendance.employeeId, parseInt(employeeId)), eq(attendance.date, date)));
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}

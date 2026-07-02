@@ -172,6 +172,25 @@ export default function AttendancePage() {
     }
   };
 
+  const unmark = async (emp: Row) => {
+    if (closed || !emp.status) return;
+    if (!confirm(`Unmark ${emp.firstName} ${emp.lastName} for ${date}? This clears their status, check-in/out, and notes for this day.`)) return;
+    setSavingId(emp.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/attendance?employeeId=${emp.id}&date=${date}`, { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Unmark failed");
+      }
+      updateRow(emp.id, { status: null, checkIn: null, checkOut: null, notes: null });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const closeDay = async () => {
     if (!confirm(`Close attendance for ${date}? After closing, no changes can be made unless you reopen the day.`)) return;
     const res = await fetch("/api/attendance/close", {
@@ -445,6 +464,19 @@ export default function AttendancePage() {
                       style={{ color: "var(--brand)", textDecoration: "none", fontSize: 12, fontWeight: 600 }}>
                       History
                     </Link>
+                    {r.status && !closed && (
+                      <button onClick={() => unmark(r)} disabled={savingId === r.id}
+                        title="Clear this day's status, check-in/out, and notes"
+                        style={{
+                          display: "block", marginTop: 4, marginInline: "auto",
+                          background: "none", border: "none", padding: 0,
+                          color: "#DC2626", fontSize: 11, fontWeight: 600, letterSpacing: 0.2,
+                          cursor: savingId === r.id ? "wait" : "pointer",
+                          opacity: savingId === r.id ? 0.6 : 1,
+                        }}>
+                        ✕ Unmark
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
