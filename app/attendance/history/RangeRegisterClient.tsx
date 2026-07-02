@@ -5,7 +5,7 @@ import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHours, workStatus, workPercent, formatPercent } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -102,7 +102,7 @@ export default function RangeRegisterClient({
         r.push(c.P, c.A, c.L, c.H);
       }
       const t = totalsFor(e);
-      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net, formatHours(t.WorkedMin), formatPercent(t.percent));
+      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net, formatHoursHM(t.WorkedMin), formatPercent(t.percent));
       return r;
     });
     downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
@@ -210,7 +210,7 @@ export default function RangeRegisterClient({
                   <Tot v={t.Late} c="#DC2626" />
                   <td style={{ color: "#DC2626", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <Tot v={t.net} c="var(--brand)" />
-                  <td style={{ fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
+                  <td style={{ fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatHoursHM(t.WorkedMin)}</td>
                   <td style={{ background: "#fdf8ee" }}><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
               );

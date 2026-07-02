@@ -61,6 +61,14 @@ export function formatHours(minutes: number): string {
   return (minutes / 60).toFixed(1);
 }
 
+// Worked-hours display as hh:mm, e.g. 455 minutes -> "7:35".
+export function formatHoursHM(minutes: number): string {
+  const total = Math.round(Math.max(0, minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
 export type WorkStatus = "ok" | "not-ok";
 
 export function workStatus(percent: number): WorkStatus {

@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHours, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -129,7 +129,7 @@ export default function MonthlyRegisterClient({
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
         ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin), t.net,
-        formatHours(t.WorkedMin), formatPercent(t.percent),
+        formatHoursHM(t.WorkedMin), formatPercent(t.percent),
       ];
     });
     downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
@@ -257,7 +257,7 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#DC2626" }}>{t.Late || ""}</td>
                   <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
-                  <td className="tot-c" style={{ fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
+                  <td className="tot-c" style={{ fontSize: 11 }}>{formatHoursHM(t.WorkedMin)}</td>
                   <td className="tot-c"><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
               );
