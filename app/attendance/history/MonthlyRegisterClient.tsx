@@ -186,7 +186,7 @@ export default function MonthlyRegisterClient({
         <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:00–16:45, 1h break, minus lateness)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
 

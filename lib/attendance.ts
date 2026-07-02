@@ -1,5 +1,5 @@
 // Single source of truth for "how late" an employee's check-in was.
-export const DEFAULT_CHECK_IN = "08:00";
+export const DEFAULT_CHECK_IN = "08:10";
 
 export function lateMinutes(checkIn: string | null | undefined): number {
   if (!checkIn) return 0;
@@ -18,7 +18,7 @@ export function formatLate(minutes: number, compact = false): string {
   return `${m}m`;
 }
 
-// Shift: 08:00–16:45 with a 1-hour break in between -> 7h45m expected per working day.
+// Shift: 08:10–16:45 with a 1-hour break in between -> 7h35m expected per working day.
 // Sunday is the only off day (handled by callers, which skip/zero it via attendance status).
 export const SHIFT_START = DEFAULT_CHECK_IN;
 export const SHIFT_END = "16:45";
@@ -68,7 +68,7 @@ export function workStatus(percent: number): WorkStatus {
 }
 
 // Live yield: hours worked so far ÷ expected hours for the days actually marked
-// so far (not the whole month) x 100 — e.g. after 6 marked days it's worked ÷ (6 x 7h45m).
+// so far (not the whole month) x 100 — e.g. after 6 marked days it's worked ÷ (6 x 7h35m).
 export function workPercent(workedMinutes: number, markedDays: number): number {
   if (markedDays <= 0) return 0;
   return (workedMinutes / (markedDays * DAILY_EXPECTED_MINUTES)) * 100;
