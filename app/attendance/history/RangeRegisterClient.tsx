@@ -5,7 +5,7 @@ import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHours, workStatus, workPercent, formatPercent } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -50,7 +50,7 @@ export default function RangeRegisterClient({
       const k = key(r.employeeId, y, mo);
       let bucket = m.get(k);
       if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0, MarkedDays: 0 }; m.set(k, bucket); }
-      bucket.MarkedDays++;
+      if (countsTowardYield(r.status)) bucket.MarkedDays++;
       if (r.status === "present") bucket.P++;
       else if (r.status === "half-day") { bucket.P++; bucket.Half++; }
       else if (r.status === "absent") bucket.A++;

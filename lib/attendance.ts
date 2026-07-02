@@ -48,6 +48,15 @@ export function workedMinutesForDay(status: string | null | undefined, late: num
   return 0;
 }
 
+// Only present/half-day/absent are days the employee was expected to clock in for —
+// these are what the live yield % is measured against. Holiday (Sunday is marked as
+// a holiday, since there's no separate "off day" status) and approved leave are paid
+// non-working days and must NOT count toward the denominator, or every Sunday/leave
+// day would silently drag everyone's yield down despite nobody being expected to work.
+export function countsTowardYield(status: string | null | undefined): boolean {
+  return status === "present" || status === "half-day" || status === "absent";
+}
+
 export function formatHours(minutes: number): string {
   return (minutes / 60).toFixed(1);
 }

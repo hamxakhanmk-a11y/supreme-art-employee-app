@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHours, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -80,7 +80,7 @@ export default function MonthlyRegisterClient({
       if (late > 0) { Late++; LateMin += late; }
       WorkedMin += workedMinutesForDay(c, late);
       if (!c) continue;
-      MarkedDays++;
+      if (countsTowardYield(c)) MarkedDays++;
       if (c === "present") P++;
       else if (c === "half-day") { P++; Half++; }
       else if (c === "absent") A++;
