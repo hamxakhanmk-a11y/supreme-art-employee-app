@@ -31,6 +31,9 @@ function toMinutes(hhmm: string): number {
 
 export const DAILY_EXPECTED_MINUTES = toMinutes(SHIFT_END) - toMinutes(SHIFT_START) - BREAK_MINUTES;
 
+// Total expected monthly hours: 48h/week (6-day week, Sunday off) x 4 weeks.
+export const TOTAL_MONTHLY_HOURS = 192;
+
 // Flat monthly cutoff: below this many worked hours in a month, status is "Not OK".
 export const MONTHLY_MIN_HOURS = 180;
 
@@ -51,6 +54,15 @@ export type WorkStatus = "ok" | "not-ok";
 
 export function workStatus(workedMinutes: number, months: number): WorkStatus {
   return workedMinutes >= MONTHLY_MIN_HOURS * 60 * months ? "ok" : "not-ok";
+}
+
+// Hours worked ÷ total expected hours x 100, e.g. 92.4.
+export function workPercent(workedMinutes: number, months: number): number {
+  return (workedMinutes / 60) / (TOTAL_MONTHLY_HOURS * months) * 100;
+}
+
+export function formatPercent(percent: number): string {
+  return `${percent.toFixed(1)}%`;
 }
 
 // Sort options for the attendance register's employee rows.

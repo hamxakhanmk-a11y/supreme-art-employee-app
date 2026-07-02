@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, MONTHLY_MIN_HOURS, type WorkStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent, TOTAL_MONTHLY_HOURS, type WorkStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -88,7 +88,11 @@ export default function MonthlyRegisterClient({
     }
     // Net working days = paid days for the month = present + paid leave + holiday.
     // (Absent days are excluded — they're what gets deducted from salary.)
-    return { P, A, L, H, Half, Late, LateMin, WorkedMin, status: workStatus(WorkedMin, 1), net: P + L + H };
+    return {
+      P, A, L, H, Half, Late, LateMin, WorkedMin,
+      status: workStatus(WorkedMin, 1), percent: workPercent(WorkedMin, 1),
+      net: P + L + H,
+    };
   };
 
   const changeMonth = (delta: number) => {
@@ -109,7 +113,7 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time", "Net Days", "Worked Hrs", "Status"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time", "Net Days", "Worked Hrs", "Status %"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
@@ -123,7 +127,7 @@ export default function MonthlyRegisterClient({
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
         ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin), t.net,
-        formatHours(t.WorkedMin), t.status === "ok" ? "OK" : "Not OK",
+        formatHours(t.WorkedMin), formatPercent(t.percent),
       ];
     });
     downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
@@ -179,8 +183,8 @@ export default function MonthlyRegisterClient({
         <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
         <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <StatusBadge status="ok" /> / <StatusBadge status="not-ok" />
-          <span>= worked ≥/&lt; {MONTHLY_MIN_HOURS}h this month (8:00–16:45, 1h break, minus lateness)</span>
+          <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
+          <span>= worked hours ÷ {TOTAL_MONTHLY_HOURS}h monthly target × 100 (8:00–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
 
@@ -252,7 +256,7 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
                   <td className="tot-c" style={{ fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
-                  <td className="tot-c"><StatusBadge status={t.status} /></td>
+                  <td className="tot-c"><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
               );
             })}
@@ -411,7 +415,7 @@ export function SortSelect({ value, onChange }: { value: SortKey; onChange: (s: 
   );
 }
 
-export function StatusBadge({ status }: { status: WorkStatus }) {
+export function StatusBadge({ status, percent }: { status: WorkStatus; percent: number }) {
   const ok = status === "ok";
   return (
     <span style={{
@@ -419,7 +423,7 @@ export function StatusBadge({ status }: { status: WorkStatus }) {
       borderRadius: 999, letterSpacing: 0.3,
       color: ok ? "#15803D" : "#DC2626", background: ok ? "#dcf5dc" : "#fcdada",
     }}>
-      {ok ? "OK" : "Not OK"}
+      {formatPercent(percent)}
     </span>
   );
 }

@@ -5,7 +5,7 @@ import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, formatHours, workStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -71,7 +71,11 @@ export default function RangeRegisterClient({
       const t = cellFor(emp, ym.y, ym.m);
       P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late; LateMin += t.LateMin; WorkedMin += t.WorkedMin;
     }
-    return { P, A, L, H, Half, Late, LateMin, WorkedMin, status: workStatus(WorkedMin, months.length), net: P + L + H };
+    return {
+      P, A, L, H, Half, Late, LateMin, WorkedMin,
+      status: workStatus(WorkedMin, months.length), percent: workPercent(WorkedMin, months.length),
+      net: P + L + H,
+    };
   };
 
   const [sort, setSort] = useState<SortKey>("id");
@@ -88,7 +92,7 @@ export default function RangeRegisterClient({
       const lbl = `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`;
       headers.push(`${lbl} P`, `${lbl} A`, `${lbl} L`, `${lbl} H`);
     }
-    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time", "Net Days", "Worked Hrs", "Status");
+    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time", "Net Days", "Worked Hrs", "Status %");
     const rows = activeEmps.map(e => {
       const r: (string | number)[] = [e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || ""];
       for (const ym of months) {
@@ -96,7 +100,7 @@ export default function RangeRegisterClient({
         r.push(c.P, c.A, c.L, c.H);
       }
       const t = totalsFor(e);
-      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net, formatHours(t.WorkedMin), t.status === "ok" ? "OK" : "Not OK");
+      r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin), t.net, formatHours(t.WorkedMin), formatPercent(t.percent));
       return r;
     });
     downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
@@ -127,8 +131,8 @@ export default function RangeRegisterClient({
         <Chip code="Lt" label="Late arrivals" />
         <span style={{ marginLeft: 8 }}>Net = P + L + H · {months.length} month{months.length === 1 ? "" : "s"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
-          <StatusBadge status="ok" /> / <StatusBadge status="not-ok" />
-          <span>= worked ≥/&lt; 180h/month (8:00–16:45, 1h break, minus lateness)</span>
+          <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
+          <span>= worked hours ÷ 192h/month target × 100 (8:00–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
 
@@ -205,7 +209,7 @@ export default function RangeRegisterClient({
                   <td style={{ color: "#DC2626", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
                   <Tot v={t.net} c="var(--brand)" />
                   <td style={{ fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatHours(t.WorkedMin)}</td>
-                  <td style={{ background: "#fdf8ee" }}><StatusBadge status={t.status} /></td>
+                  <td style={{ background: "#fdf8ee" }}><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
               );
             })}
