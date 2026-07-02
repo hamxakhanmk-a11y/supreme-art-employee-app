@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { MONTHS, RangeToolbar, StatusBadge } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent } from "@/lib/attendance";
+import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel } from "./MonthlyRegisterClient";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -88,6 +88,28 @@ export default function RangeRegisterClient({
 
   const rangeLabel = `${MONTHS[from.m - 1]} ${from.y} – ${MONTHS[to.m - 1]} ${to.y}`;
 
+  // Live "time required" per month — only counts calendar days actually marked
+  // so far in that month (not the whole month), same live scoping as the yield %.
+  const requiredByMonth = useMemo(() => {
+    const activeIds = new Set(activeEmps.map(e => e.id));
+    const daysByMonth = new Map<string, Set<number>>();
+    for (const r of records) {
+      if (!activeIds.has(r.employeeId) || !countsTowardYield(r.status)) continue;
+      const key = `${r.date.slice(0, 4)}-${r.date.slice(5, 7)}`;
+      if (!daysByMonth.has(key)) daysByMonth.set(key, new Set());
+      daysByMonth.get(key)!.add(parseInt(r.date.slice(8, 10)));
+    }
+    return months.map(ym => {
+      const key = `${ym.y}-${String(ym.m).padStart(2, "0")}`;
+      const markedDays = daysByMonth.get(key)?.size || 0;
+      return {
+        label: `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`,
+        markedDays,
+        requiredMinutes: markedDays * DAILY_EXPECTED_MINUTES,
+      };
+    });
+  }, [records, months, activeEmps]);
+
   const exportCSV = () => {
     const headers = ["Emp ID", "Full Name", "Department", "Designation"];
     for (const ym of months) {
@@ -123,6 +145,8 @@ export default function RangeRegisterClient({
         sort={sort}
         onSortChange={setSort}
       />
+
+      <RequiredHoursPanel months={requiredByMonth} />
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
         <strong style={{ color: "var(--text)" }}>Codes:</strong>

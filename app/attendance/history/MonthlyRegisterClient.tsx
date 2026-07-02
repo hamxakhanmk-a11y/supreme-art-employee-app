@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -63,6 +63,19 @@ export default function MonthlyRegisterClient({
     () => sortEmployees(employees.filter(e => e.status === "active"), sort),
     [employees, sort]
   );
+
+  // Live "time required": only counts calendar days that have actually been
+  // marked so far this month (not the full month), same live scoping as the yield %.
+  const markedDaysInMonth = useMemo(() => {
+    const activeIds = new Set(activeEmps.map(e => e.id));
+    const days = new Set<number>();
+    for (const r of records) {
+      if (!activeIds.has(r.employeeId) || !countsTowardYield(r.status)) continue;
+      days.add(parseInt(r.date.slice(8, 10)));
+    }
+    return days.size;
+  }, [records, activeEmps]);
+  const requiredMinutes = markedDaysInMonth * DAILY_EXPECTED_MINUTES;
 
   const cellFor = (emp: Emp, day: number) => {
     const stored = byKey.get(`${emp.id}-${day}`);
@@ -174,6 +187,14 @@ export default function MonthlyRegisterClient({
           <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
         </div>
       )}
+
+      {/* Live time-required summary */}
+      <RequiredHoursPanel
+        label={`${MONTHS[month - 1]} ${year}`}
+        markedDays={markedDaysInMonth}
+        totalDays={daysInMonth}
+        requiredMinutes={requiredMinutes}
+      />
 
       {/* Codes legend */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
@@ -414,6 +435,55 @@ export function SortSelect({ value, onChange }: { value: SortKey; onChange: (s: 
     >
       {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
     </select>
+  );
+}
+
+// Live "time required" summary — required hours only count days marked so far
+// (not the whole period), matching the live yield %. Accepts either one period
+// (Monthly view) or several (Range view, "each month" broken out).
+export function RequiredHoursPanel({
+  label, markedDays, totalDays, requiredMinutes, months,
+}: {
+  label?: string; markedDays?: number; totalDays?: number; requiredMinutes?: number;
+  months?: { label: string; markedDays: number; requiredMinutes: number }[];
+}) {
+  const items = months ?? [{ label: label!, markedDays: markedDays!, requiredMinutes: requiredMinutes! }];
+  const totalRequired = items.reduce((sum, i) => sum + i.requiredMinutes, 0);
+  const totalMarked = items.reduce((sum, i) => sum + i.markedDays, 0);
+
+  return (
+    <div className="card" style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", padding: "12px 16px", marginBottom: 14, borderLeft: "4px solid var(--brand)" }}>
+      <div style={{ fontSize: 22, lineHeight: 1 }}>⏱</div>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+          Time Required{months ? "" : ` — ${label}`} (live, days marked so far)
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--brand)" }}>
+          {formatHoursHM(totalRequired)} <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>hrs</span>
+        </div>
+        {!months && (
+          <div style={{ fontSize: 11, color: "var(--text3)" }}>
+            {markedDays} of {totalDays} day{totalDays === 1 ? "" : "s"} marked × 7h35m/day
+          </div>
+        )}
+      </div>
+      {months && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", borderLeft: "1px solid var(--border)", paddingLeft: 18 }}>
+          {items.map(i => (
+            <div key={i.label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text2)" }}>{i.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--brand-dark)" }}>{formatHoursHM(i.requiredMinutes)}</div>
+              <div style={{ fontSize: 9, color: "var(--text3)" }}>{i.markedDays}d</div>
+            </div>
+          ))}
+          <div style={{ textAlign: "center", borderLeft: "1px solid var(--border)", paddingLeft: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text2)" }}>Total</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--brand-dark)" }}>{formatHoursHM(totalRequired)}</div>
+            <div style={{ fontSize: 9, color: "var(--text3)" }}>{totalMarked}d</div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
