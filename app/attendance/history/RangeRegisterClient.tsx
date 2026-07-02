@@ -42,14 +42,15 @@ export default function RangeRegisterClient({
 
   // Build a lookup: `${employeeId}-${YYYY}-${M}` -> { P, A, L, H, Half }
   const byEmpMonth = useMemo(() => {
-    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number; Late: number; LateMin: number; WorkedMin: number }>();
+    const m = new Map<string, { P: number; A: number; L: number; H: number; Half: number; Late: number; LateMin: number; WorkedMin: number; MarkedDays: number }>();
     const key = (emp: number, y: number, mo: number) => `${emp}-${y}-${mo}`;
     for (const r of records) {
       const y = parseInt(r.date.slice(0, 4));
       const mo = parseInt(r.date.slice(5, 7));
       const k = key(r.employeeId, y, mo);
       let bucket = m.get(k);
-      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0 }; m.set(k, bucket); }
+      if (!bucket) { bucket = { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0, MarkedDays: 0 }; m.set(k, bucket); }
+      bucket.MarkedDays++;
       if (r.status === "present") bucket.P++;
       else if (r.status === "half-day") { bucket.P++; bucket.Half++; }
       else if (r.status === "absent") bucket.A++;
@@ -63,17 +64,18 @@ export default function RangeRegisterClient({
   }, [records]);
 
   const cellFor = (emp: Emp, y: number, mo: number) =>
-    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0 };
+    byEmpMonth.get(`${emp.id}-${y}-${mo}`) || { P: 0, A: 0, L: 0, H: 0, Half: 0, Late: 0, LateMin: 0, WorkedMin: 0, MarkedDays: 0 };
 
   const totalsFor = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0, MarkedDays = 0;
     for (const ym of months) {
       const t = cellFor(emp, ym.y, ym.m);
-      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late; LateMin += t.LateMin; WorkedMin += t.WorkedMin;
+      P += t.P; A += t.A; L += t.L; H += t.H; Half += t.Half; Late += t.Late; LateMin += t.LateMin; WorkedMin += t.WorkedMin; MarkedDays += t.MarkedDays;
     }
+    const percent = workPercent(WorkedMin, MarkedDays);
     return {
-      P, A, L, H, Half, Late, LateMin, WorkedMin,
-      status: workStatus(WorkedMin, months.length), percent: workPercent(WorkedMin, months.length),
+      P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays,
+      status: workStatus(percent), percent,
       net: P + L + H,
     };
   };
@@ -132,7 +134,7 @@ export default function RangeRegisterClient({
         <span style={{ marginLeft: 8 }}>Net = P + L + H · {months.length} month{months.length === 1 ? "" : "s"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= worked hours ÷ 192h/month target × 100 (8:00–16:45, 1h break, minus lateness)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:00–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
 

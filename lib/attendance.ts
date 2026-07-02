@@ -32,10 +32,12 @@ function toMinutes(hhmm: string): number {
 export const DAILY_EXPECTED_MINUTES = toMinutes(SHIFT_END) - toMinutes(SHIFT_START) - BREAK_MINUTES;
 
 // Total expected monthly hours: 48h/week (6-day week, Sunday off) x 4 weeks.
+// Kept as the reference figure the 93.75% cutoff below is derived from (180 / 192).
 export const TOTAL_MONTHLY_HOURS = 192;
 
-// Flat monthly cutoff: below this many worked hours in a month, status is "Not OK".
+// Flat monthly cutoff (out of TOTAL_MONTHLY_HOURS) below which yield is "Not OK".
 export const MONTHLY_MIN_HOURS = 180;
+export const MIN_YIELD_PERCENT = (MONTHLY_MIN_HOURS / TOTAL_MONTHLY_HOURS) * 100;
 
 // Minutes credited for one day, given its status and how late the check-in was.
 // Present = full expected shift minus lateness; half-day = half credit minus lateness;
@@ -52,13 +54,15 @@ export function formatHours(minutes: number): string {
 
 export type WorkStatus = "ok" | "not-ok";
 
-export function workStatus(workedMinutes: number, months: number): WorkStatus {
-  return workedMinutes >= MONTHLY_MIN_HOURS * 60 * months ? "ok" : "not-ok";
+export function workStatus(percent: number): WorkStatus {
+  return percent >= MIN_YIELD_PERCENT ? "ok" : "not-ok";
 }
 
-// Hours worked ÷ total expected hours x 100, e.g. 92.4.
-export function workPercent(workedMinutes: number, months: number): number {
-  return (workedMinutes / 60) / (TOTAL_MONTHLY_HOURS * months) * 100;
+// Live yield: hours worked so far ÷ expected hours for the days actually marked
+// so far (not the whole month) x 100 — e.g. after 6 marked days it's worked ÷ (6 x 7h45m).
+export function workPercent(workedMinutes: number, markedDays: number): number {
+  if (markedDays <= 0) return 0;
+  return (workedMinutes / (markedDays * DAILY_EXPECTED_MINUTES)) * 100;
 }
 
 export function formatPercent(percent: number): string {

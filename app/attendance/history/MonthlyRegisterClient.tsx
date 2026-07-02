@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent, TOTAL_MONTHLY_HOURS, type WorkStatus } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, formatHours, workStatus, workPercent, formatPercent, type WorkStatus } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -73,13 +73,14 @@ export default function MonthlyRegisterClient({
   // Per-employee tallies. Half-day counts as a full P (the employee was
   // present) but is also tracked in `Half` so HR can see how many half-days.
   const tally = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0, MarkedDays = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const c = cellFor(emp, day);
       const late = lateFor(emp, day);
       if (late > 0) { Late++; LateMin += late; }
       WorkedMin += workedMinutesForDay(c, late);
       if (!c) continue;
+      MarkedDays++;
       if (c === "present") P++;
       else if (c === "half-day") { P++; Half++; }
       else if (c === "absent") A++;
@@ -88,9 +89,10 @@ export default function MonthlyRegisterClient({
     }
     // Net working days = paid days for the month = present + paid leave + holiday.
     // (Absent days are excluded — they're what gets deducted from salary.)
+    const percent = workPercent(WorkedMin, MarkedDays);
     return {
-      P, A, L, H, Half, Late, LateMin, WorkedMin,
-      status: workStatus(WorkedMin, 1), percent: workPercent(WorkedMin, 1),
+      P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays,
+      status: workStatus(percent), percent,
       net: P + L + H,
     };
   };
@@ -184,7 +186,7 @@ export default function MonthlyRegisterClient({
         <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= worked hours ÷ {TOTAL_MONTHLY_HOURS}h monthly target × 100 (8:00–16:45, 1h break, minus lateness)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:00–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
 
