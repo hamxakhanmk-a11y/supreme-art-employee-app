@@ -191,6 +191,28 @@ export default function AttendancePage() {
     }
   };
 
+  const [unmarkingAll, setUnmarkingAll] = useState(false);
+  const unmarkAll = async () => {
+    if (closed) return;
+    const markedCount = rows.length - summary.unmarked;
+    if (!markedCount) return;
+    if (!confirm(`Unmark all ${markedCount} marked employee(s) for ${date}? This clears every status, check-in/out, and note for this day.`)) return;
+    setUnmarkingAll(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/attendance?date=${date}`, { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Unmark all failed");
+      }
+      setRows(prev => prev.map(r => ({ ...r, status: null, checkIn: null, checkOut: null, notes: null })));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setUnmarkingAll(false);
+    }
+  };
+
   const closeDay = async () => {
     if (!confirm(`Close attendance for ${date}? After closing, no changes can be made unless you reopen the day.`)) return;
     const res = await fetch("/api/attendance/close", {
@@ -252,6 +274,19 @@ export default function AttendancePage() {
                 opacity: markingAll ? 0.7 : 1,
               }}>
               {markingAll ? "Marking…" : `✓ Mark All Present (${summary.unmarked})`}
+            </button>
+          )}
+          {!closed && rows.length - summary.unmarked > 0 && (
+            <button onClick={unmarkAll} disabled={unmarkingAll}
+              style={{
+                padding: "8px 16px", borderRadius: 8,
+                border: "1px solid #DC2626",
+                background: "#fff", color: "#DC2626",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                cursor: unmarkingAll ? "wait" : "pointer",
+                opacity: unmarkingAll ? 0.7 : 1,
+              }}>
+              {unmarkingAll ? "Unmarking…" : `✕ Unmark All (${rows.length - summary.unmarked})`}
             </button>
           )}
           <button onClick={() => setShowOffPicker(v => !v)}
