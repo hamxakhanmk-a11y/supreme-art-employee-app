@@ -146,8 +146,6 @@ export default function RangeRegisterClient({
         onSortChange={setSort}
       />
 
-      <RequiredHoursPanel months={requiredByMonth} />
-
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
         <strong style={{ color: "var(--text)" }}>Codes:</strong>
         <Chip code="P" label="Present (incl. half-day)" />
@@ -161,6 +159,8 @@ export default function RangeRegisterClient({
           <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
+
+      <RequiredHoursPanel months={requiredByMonth} />
 
       <div className="card range-wrap" style={{ padding: 0, overflow: "auto" }}>
         <table className="range-table">

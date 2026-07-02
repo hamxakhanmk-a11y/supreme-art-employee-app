@@ -188,14 +188,6 @@ export default function MonthlyRegisterClient({
         </div>
       )}
 
-      {/* Live time-required summary */}
-      <RequiredHoursPanel
-        label={`${MONTHS[month - 1]} ${year}`}
-        markedDays={markedDaysInMonth}
-        totalDays={daysInMonth}
-        requiredMinutes={requiredMinutes}
-      />
-
       {/* Codes legend */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
         <strong style={{ color: "var(--text)" }}>Codes:</strong>
@@ -210,6 +202,14 @@ export default function MonthlyRegisterClient({
           <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
         </span>
       </div>
+
+      {/* Live time-required summary */}
+      <RequiredHoursPanel
+        label={`${MONTHS[month - 1]} ${year}`}
+        markedDays={markedDaysInMonth}
+        totalDays={daysInMonth}
+        requiredMinutes={requiredMinutes}
+      />
 
       {/* Register table */}
       <div className="card register-wrap" style={{ padding: 0, overflow: "auto" }}>
@@ -449,39 +449,22 @@ export function RequiredHoursPanel({
 }) {
   const items = months ?? [{ label: label!, markedDays: markedDays!, requiredMinutes: requiredMinutes! }];
   const totalRequired = items.reduce((sum, i) => sum + i.requiredMinutes, 0);
-  const totalMarked = items.reduce((sum, i) => sum + i.markedDays, 0);
 
   return (
-    <div className="card" style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", padding: "12px 16px", marginBottom: 14, borderLeft: "4px solid var(--brand)" }}>
-      <div style={{ fontSize: 22, lineHeight: 1 }}>⏱</div>
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-          Time Required{months ? "" : ` — ${label}`} (live, days marked so far)
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--brand)" }}>
-          {formatHoursHM(totalRequired)} <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>hrs</span>
-        </div>
-        {!months && (
-          <div style={{ fontSize: 11, color: "var(--text3)" }}>
-            {markedDays} of {totalDays} day{totalDays === 1 ? "" : "s"} marked × 7h35m/day
-          </div>
-        )}
-      </div>
-      {months && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", borderLeft: "1px solid var(--border)", paddingLeft: 18 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "5px 10px", marginBottom: 6, borderLeft: "3px solid var(--brand)", background: "var(--bg2)", borderRadius: 4, fontSize: 11 }}>
+      <span style={{ fontSize: 13, lineHeight: 1 }}>⏱</span>
+      <span style={{ fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.3, fontSize: 10 }}>
+        Time Required{months ? "" : ` — ${label}`}
+      </span>
+      <span style={{ fontWeight: 800, color: "var(--brand)" }}>{formatHoursHM(totalRequired)} hrs</span>
+      {!months ? (
+        <span style={{ color: "var(--text3)" }}>({markedDays}/{totalDays} days marked × 7h35m, live)</span>
+      ) : (
+        <span style={{ display: "flex", gap: 8, flexWrap: "wrap", color: "var(--text3)" }}>
           {items.map(i => (
-            <div key={i.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text2)" }}>{i.label}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--brand-dark)" }}>{formatHoursHM(i.requiredMinutes)}</div>
-              <div style={{ fontSize: 9, color: "var(--text3)" }}>{i.markedDays}d</div>
-            </div>
+            <span key={i.label}>{i.label}: <strong style={{ color: "var(--brand-dark)" }}>{formatHoursHM(i.requiredMinutes)}</strong> ({i.markedDays}d)</span>
           ))}
-          <div style={{ textAlign: "center", borderLeft: "1px solid var(--border)", paddingLeft: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text2)" }}>Total</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--brand-dark)" }}>{formatHoursHM(totalRequired)}</div>
-            <div style={{ fontSize: 9, color: "var(--text3)" }}>{totalMarked}d</div>
-          </div>
-        </div>
+        </span>
       )}
     </div>
   );
