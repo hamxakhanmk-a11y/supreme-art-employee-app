@@ -39,13 +39,31 @@ export const TOTAL_MONTHLY_HOURS = 192;
 export const MONTHLY_MIN_HOURS = 180;
 export const MIN_YIELD_PERCENT = (MONTHLY_MIN_HOURS / TOTAL_MONTHLY_HOURS) * 100;
 
-// Minutes credited for one day, given its status and how late the check-in was.
-// Present = full expected shift minus lateness; half-day = half credit minus lateness;
+// Minutes credited for one day, given its status, how late the check-in was,
+// and any personal hourly (mid-day) leave. Present = full expected shift minus
+// lateness minus personal leave; half-day = half credit minus the same;
 // absent/leave/holiday = 0 (the employee wasn't clocked in for the shift).
-export function workedMinutesForDay(status: string | null | undefined, late: number): number {
-  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late);
-  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late);
+// Official hourly leave is excused and never deducted — only personal is.
+export function workedMinutesForDay(status: string | null | undefined, late: number, personalLeaveMin = 0): number {
+  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late - personalLeaveMin);
+  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late - personalLeaveMin);
   return 0;
+}
+
+// Parse a duration typed by HR into minutes: "1:30" -> 90, "0:45" -> 45,
+// "1.5" -> 90 (decimal hours), "45" -> 45 (plain minutes). Empty/invalid -> 0.
+export function parseDurationToMinutes(input: string): number {
+  const s = input.trim();
+  if (!s) return 0;
+  if (s.includes(":")) {
+    const [h, m] = s.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return 0;
+    return Math.max(0, h * 60 + (m || 0));
+  }
+  const n = Number(s);
+  if (isNaN(n) || n < 0) return 0;
+  // A bare decimal like "1.5" reads as hours; a whole number reads as minutes.
+  return Number.isInteger(n) ? n : Math.round(n * 60);
 }
 
 // Only present/half-day/absent are days the employee was expected to clock in for —

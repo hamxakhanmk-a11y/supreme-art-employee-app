@@ -16,7 +16,7 @@ type Emp = {
   status: string;
   createdAt?: string | Date | null;
 };
-type Rec = { employeeId: number; date: string; status: string; checkIn: string | null };
+type Rec = { employeeId: number; date: string; status: string; checkIn: string | null; officialLeaveMin?: number; personalLeaveMin?: number };
 
 export const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -48,10 +48,13 @@ export default function MonthlyRegisterClient({
 
   // record lookup by `${employeeId}-${day}`
   const byKey = useMemo(() => {
-    const m = new Map<string, { status: string; checkIn: string | null }>();
+    const m = new Map<string, { status: string; checkIn: string | null; officialLeaveMin: number; personalLeaveMin: number }>();
     for (const r of records) {
       const day = parseInt(r.date.slice(8, 10));
-      m.set(`${r.employeeId}-${day}`, { status: r.status, checkIn: r.checkIn });
+      m.set(`${r.employeeId}-${day}`, {
+        status: r.status, checkIn: r.checkIn,
+        officialLeaveMin: r.officialLeaveMin ?? 0, personalLeaveMin: r.personalLeaveMin ?? 0,
+      });
     }
     return m;
   }, [records]);
@@ -82,16 +85,22 @@ export default function MonthlyRegisterClient({
     return (stored?.status as Code | undefined) ?? null;
   };
   const lateFor = (emp: Emp, day: number) => lateMinutes(byKey.get(`${emp.id}-${day}`)?.checkIn);
+  const leavesFor = (emp: Emp, day: number) => {
+    const stored = byKey.get(`${emp.id}-${day}`);
+    return { official: stored?.officialLeaveMin ?? 0, personal: stored?.personalLeaveMin ?? 0 };
+  };
 
   // Per-employee tallies. Half-day counts as a full P (the employee was
   // present) but is also tracked in `Half` so HR can see how many half-days.
   const tally = (emp: Emp) => {
-    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0, MarkedDays = 0;
+    let P = 0, A = 0, L = 0, H = 0, Half = 0, Late = 0, LateMin = 0, WorkedMin = 0, MarkedDays = 0, OffLvMin = 0, PerLvMin = 0;
     for (let day = 1; day <= daysInMonth; day++) {
       const c = cellFor(emp, day);
       const late = lateFor(emp, day);
+      const lv = leavesFor(emp, day);
       if (late > 0) { Late++; LateMin += late; }
-      WorkedMin += workedMinutesForDay(c, late);
+      OffLvMin += lv.official; PerLvMin += lv.personal;
+      WorkedMin += workedMinutesForDay(c, late, lv.personal);
       if (!c) continue;
       if (countsTowardYield(c)) MarkedDays++;
       if (c === "present") P++;
@@ -104,7 +113,7 @@ export default function MonthlyRegisterClient({
     // (Absent days are excluded — they're what gets deducted from salary.)
     const percent = workPercent(WorkedMin, MarkedDays);
     return {
-      P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays,
+      P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays, OffLvMin, PerLvMin,
       status: workStatus(percent), percent,
       net: P + L + H,
     };
@@ -128,20 +137,25 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time", "Net Days", "Worked Hrs", "Status %"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Net Days", "Worked Hrs", "Status %"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
         const c = cellFor(e, i + 1);
         const late = lateFor(e, i + 1);
+        const lv = leavesFor(e, i + 1);
         if (!c) return "";
         const v = CODE[c as Code];
-        const code = v.marker ? `${v.code}${v.marker}` : v.code;
-        return late > 0 ? `${code} (Late ${formatLate(late)})` : code;
+        let code = v.marker ? `${v.code}${v.marker}` : v.code;
+        if (late > 0) code += ` (Late ${formatLate(late)})`;
+        if (lv.official > 0) code += ` (OL ${formatHoursHM(lv.official)})`;
+        if (lv.personal > 0) code += ` (PL ${formatHoursHM(lv.personal)})`;
+        return code;
       });
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
-        ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin), t.net,
+        ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin + t.PerLvMin),
+        t.OffLvMin ? formatHoursHM(t.OffLvMin) : "", t.PerLvMin ? formatHoursHM(t.PerLvMin) : "", t.net,
         formatHoursHM(t.WorkedMin), formatPercent(t.percent),
       ];
     });
@@ -197,9 +211,11 @@ export default function MonthlyRegisterClient({
         <LegendChip code="H"  label="Holiday"  c="#0E7490" />
         <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
         <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
+        <LegendChip code="OL" label="Official hourly leave (excused, not deducted)" c="#0E7490" />
+        <LegendChip code="PL" label="Personal hourly leave (deducted like lateness, included in Late Time)" c="#9333EA" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave)</span>
         </span>
       </div>
 
@@ -217,7 +233,7 @@ export default function MonthlyRegisterClient({
           <thead>
             {/* Top banner row — print only / accent */}
             <tr className="register-banner">
-              <th colSpan={4 + daysInMonth + 10} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
+              <th colSpan={4 + daysInMonth + 12} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
@@ -238,7 +254,9 @@ export default function MonthlyRegisterClient({
               <th className="tot-h" style={{ color: "#D97706" }}>L</th>
               <th className="tot-h" style={{ color: "#0E7490" }}>H</th>
               <th className="tot-h" style={{ color: "#DC2626" }}>Lt</th>
-              <th className="tot-h" style={{ color: "#DC2626" }}>Late Time</th>
+              <th className="tot-h" style={{ color: "#DC2626" }} title="Lateness + personal hourly leave">Late Time</th>
+              <th className="tot-h" style={{ color: "#0E7490" }} title="Official hourly leave — excused, not deducted">OL</th>
+              <th className="tot-h" style={{ color: "#9333EA" }} title="Personal hourly leave — deducted like lateness">PL</th>
               <th className="tot-h">Net</th>
               <th className="tot-h">Worked Hrs</th>
               <th className="tot-h">Status</th>
@@ -246,7 +264,7 @@ export default function MonthlyRegisterClient({
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + daysInMonth + 10} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + daysInMonth + 12} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = tally(emp);
@@ -259,9 +277,13 @@ export default function MonthlyRegisterClient({
                   {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
                     const c = cellFor(emp, day);
                     const late = lateFor(emp, day);
+                    const lv = leavesFor(emp, day);
                     if (!c) return <td key={day} className={`day-c ${isSunday(day) ? "day-sun-c" : ""}`} />;
                     const v = CODE[c as Code];
-                    const title = late > 0 ? `${c.replace("-", " ")} — late ${formatLate(late)}` : c.replace("-", " ");
+                    let title = c.replace("-", " ");
+                    if (late > 0) title += ` — late ${formatLate(late)}`;
+                    if (lv.official > 0) title += ` — official leave ${formatHoursHM(lv.official)}`;
+                    if (lv.personal > 0) title += ` — personal leave ${formatHoursHM(lv.personal)}`;
                     return (
                       <td key={day} className="day-c" style={{ background: v.bg, color: v.color, fontWeight: 700, position: "relative" }} title={title}>
                         {v.code}
@@ -276,7 +298,9 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#D97706" }}>{t.L}</td>
                   <td className="tot-c" style={{ color: "#0E7490" }}>{t.H || ""}</td>
                   <td className="tot-c" style={{ color: "#DC2626" }}>{t.Late || ""}</td>
-                  <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin)}</td>
+                  <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin + t.PerLvMin)}</td>
+                  <td className="tot-c" style={{ color: "#0E7490", fontSize: 11 }}>{t.OffLvMin ? formatHoursHM(t.OffLvMin) : ""}</td>
+                  <td className="tot-c" style={{ color: "#9333EA", fontSize: 11 }}>{t.PerLvMin ? formatHoursHM(t.PerLvMin) : ""}</td>
                   <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
                   <td className="tot-c" style={{ fontSize: 11 }}>{formatHoursHM(t.WorkedMin)}</td>
                   <td className="tot-c"><StatusBadge status={t.status} percent={t.percent} /></td>

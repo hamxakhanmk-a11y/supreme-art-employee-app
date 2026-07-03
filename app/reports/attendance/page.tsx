@@ -80,6 +80,8 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       date: attendance.date,
       status: attendance.status,
       checkIn: attendance.checkIn,
+      officialLeaveMin: attendance.officialLeaveMin,
+      personalLeaveMin: attendance.personalLeaveMin,
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),
   ]);
 

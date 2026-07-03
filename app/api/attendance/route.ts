@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
           status: r?.status ?? null,
           checkIn: r?.checkIn ?? null,
           checkOut: r?.checkOut ?? null,
+          officialLeaveMin: r?.officialLeaveMin ?? 0,
+          personalLeaveMin: r?.personalLeaveMin ?? 0,
           notes: r?.notes ?? null,
         };
       });
@@ -54,13 +56,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/attendance  { employeeId, date, status, checkIn?, checkOut?, notes? }
+// POST /api/attendance  { employeeId, date, status, checkIn?, checkOut?, officialLeaveMin?, personalLeaveMin?, notes? }
 export async function POST(req: NextRequest) {
   const guard = await guardWrite();
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
     const { employeeId, date, status, checkIn, checkOut, notes } = body;
+    const officialLeaveMin = Math.max(0, parseInt(body.officialLeaveMin) || 0);
+    const personalLeaveMin = Math.max(0, parseInt(body.personalLeaveMin) || 0);
     if (!employeeId || !date || !status) {
       return NextResponse.json({ error: "employeeId, date, status required" }, { status: 400 });
     }
@@ -78,10 +82,10 @@ export async function POST(req: NextRequest) {
 
     if (existing.length > 0) {
       await db.update(attendance)
-        .set({ status, checkIn: checkIn || null, checkOut: checkOut || null, notes: notes || null, updatedAt: new Date() })
+        .set({ status, checkIn: checkIn || null, checkOut: checkOut || null, officialLeaveMin, personalLeaveMin, notes: notes || null, updatedAt: new Date() })
         .where(eq(attendance.id, existing[0].id));
     } else {
-      await db.insert(attendance).values({ employeeId, date, status, checkIn: checkIn || null, checkOut: checkOut || null, notes: notes || null });
+      await db.insert(attendance).values({ employeeId, date, status, checkIn: checkIn || null, checkOut: checkOut || null, officialLeaveMin, personalLeaveMin, notes: notes || null });
     }
     return NextResponse.json({ success: true });
   } catch (e: any) {

@@ -129,6 +129,11 @@ export const attendance = pgTable("attendance", {
   status: varchar("status", { length: 20 }).notNull().default("present"), // present | absent | leave | half-day | late
   checkIn: varchar("check_in", { length: 8 }),    // HH:MM
   checkOut: varchar("check_out", { length: 8 }),  // HH:MM
+  // Hourly (mid-day) leave taken during the shift, in minutes.
+  // Official leave is excused (no deduction); personal leave is deducted
+  // from worked time exactly like lateness.
+  officialLeaveMin: integer("official_leave_min").notNull().default(0),
+  personalLeaveMin: integer("personal_leave_min").notNull().default(0),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
