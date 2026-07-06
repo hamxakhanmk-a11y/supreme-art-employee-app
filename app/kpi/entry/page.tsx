@@ -1,28 +1,38 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
+import { employees } from "@/lib/schema";
+import { and, eq, isNotNull } from "drizzle-orm";
+import EntryClient from "./EntryClient";
 
 export const dynamic = "force-dynamic";
 
-export default function KpiEntryPage() {
-  return (
-    <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 14, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>KPI &mdash; Monthly Entry</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Enter each department&apos;s figures for the month; KPI scores compute from the formula.
-          </p>
-        </div>
-        <Link href="/kpi" className="btn">← Overview</Link>
-      </div>
+export default async function KpiEntryPage() {
+  const emps = await db.select({
+    id: employees.id,
+    employeeId: employees.employeeId,
+    firstName: employees.firstName,
+    lastName: employees.lastName,
+    department: employees.department,
+    designation: employees.designation,
+    kpiTemplate: employees.kpiTemplate,
+  }).from(employees)
+    .where(and(eq(employees.status, "active"), isNotNull(employees.kpiTemplate)))
+    .orderBy(employees.firstName);
 
-      <div className="card" style={{ borderLeft: "4px solid var(--brand)" }}>
-        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>Setup in progress</div>
-        <p style={{ fontSize: 13, color: "var(--text2)", margin: 0, lineHeight: 1.6 }}>
-          The month picker and per-department input fields appear here as each department&apos;s
-          KPI formula is added. Send the first department&apos;s formula (its metrics, weights and
-          targets) and its input fields &mdash; e.g. sales, invoices &mdash; will show up on this screen.
-        </p>
+  if (emps.length === 0) {
+    return (
+      <div className="fade-up">
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>KPI &mdash; Monthly Entry</h1>
+        <div className="card" style={{ marginTop: 16, borderLeft: "4px solid var(--brand)" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>No employees have a KPI template yet</div>
+          <p style={{ fontSize: 13, color: "var(--text2)", margin: "0 0 12px" }}>
+            Assign a template to at least one employee first, then come back to enter their monthly figures.
+          </p>
+          <Link href="/kpi/assign" className="btn btn-primary">🔗 Assign Templates</Link>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <EntryClient employees={emps} />;
 }
