@@ -31,12 +31,14 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
   const now = new Date();
   const searchParams = useSearchParams();
   const initialCode = searchParams.get("designation");
-  // Arriving via ?designation=CODE from the overview preselects that role and
-  // its first employee.
-  const initialEmp = (initialCode && employees.find(e => e.kpiTemplate === initialCode)) || employees[0];
+  // Arriving via ?designation=CODE from the overview selects that role even if
+  // nobody is assigned it yet (we then show an empty state instead of silently
+  // jumping to an unrelated employee). Otherwise start on the first assignee.
+  const initialRole = initialCode && getDesignation(initialCode) ? initialCode : (employees[0]?.kpiTemplate ?? "");
+  const initialEmpId = employees.find(e => e.kpiTemplate === initialRole)?.id ?? null;
 
-  const [role, setRole] = useState<string>(initialEmp.kpiTemplate!);
-  const [empId, setEmpId] = useState(initialEmp.id);
+  const [role, setRole] = useState<string>(initialRole);
+  const [empId, setEmpId] = useState<number | null>(initialEmpId);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
   const [vals, setVals] = useState<Record<string, number>>({});
@@ -46,20 +48,19 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
   const [saving, setSaving] = useState(0);
 
   const countFor = (code: string) => employees.filter(e => e.kpiTemplate === code).length;
-  // Only roles actually assigned to someone, grouped by department for the dropdown.
+  // Roles assigned to someone (plus the current role, so a deep-linked empty
+  // role still shows selected), grouped by department for the dropdown.
   const roleGroups = byDepartment()
-    .map(g => ({ department: g.department, roles: g.designations.filter(d => countFor(d.code) > 0) }))
+    .map(g => ({ department: g.department, roles: g.designations.filter(d => countFor(d.code) > 0 || d.code === role) }))
     .filter(g => g.roles.length > 0);
   const visible = employees.filter(e => e.kpiTemplate === role);
-  const emp = employees.find(e => e.id === empId)!;
-  const tpl = emp.kpiTemplate ? getDesignation(emp.kpiTemplate) : undefined;
+  const tpl = getDesignation(role);
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 3 + i);
 
-  // Switching role jumps to the first employee holding it.
+  // Switching role jumps to the first employee holding it (or none).
   const changeRole = (code: string) => {
     setRole(code);
-    const first = employees.find(e => e.kpiTemplate === code);
-    if (first) setEmpId(first.id);
+    setEmpId(employees.find(e => e.kpiTemplate === code)?.id ?? null);
   };
 
   // Load the year's saved operands + target overrides whenever the selected
@@ -69,6 +70,7 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
     let active = true;
     const controller = new AbortController();
     async function run() {
+      if (empId == null) { setVals({}); setTargets({}); setLoading(false); return; }
       try {
         const res = await fetch(`/api/kpi/values?employeeId=${empId}&year=${year}`, { signal: controller.signal });
         const data = await res.json();
@@ -114,7 +116,7 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
       const res = await fetch("/api/kpi/values", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId: empId, templateCode: emp.kpiTemplate, year, month,
+          employeeId: empId, templateCode: role, year, month,
           kpiIdx: kpi.idx, inputKey, value: raw === "" ? null : Number(raw),
         }),
       });
@@ -182,7 +184,8 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
             </optgroup>
           ))}
         </select>
-        <select value={empId} onChange={e => setEmpId(Number(e.target.value))} style={{ minWidth: 240 }}>
+        <select value={empId ?? ""} onChange={e => setEmpId(Number(e.target.value))} style={{ minWidth: 240 }} disabled={visible.length === 0}>
+          {visible.length === 0 && <option value="">— No one assigned —</option>}
           {visible.map(e => (
             <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
           ))}
@@ -220,6 +223,17 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
         </div>
       )}
 
+      {empId == null ? (
+        <div className="card" style={{ borderLeft: "4px solid var(--brand)" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>
+            No one is assigned the {tpl ? tpl.title : role} role yet
+          </div>
+          <p style={{ fontSize: 13, color: "var(--text2)", margin: "0 0 12px" }}>
+            Assign this template to an employee first, then their monthly figures can be entered here.
+          </p>
+          <Link href="/kpi/assign" className="btn btn-primary">🔗 Assign Templates</Link>
+        </div>
+      ) : (
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table className="kpi-entry-table">
           <thead>
@@ -288,6 +302,7 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
           </tbody>
         </table>
       </div>
+      )}
 
       <style jsx global>{`
         .kpi-entry-table { border-collapse: collapse; width: 100%; font-size: 12px; background: var(--bg); }
