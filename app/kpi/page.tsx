@@ -18,7 +18,8 @@ export default function KpiLanding() {
             scores every role against its own formula.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/kpi/assign" className="btn">🔗 Assign Templates</Link>
           <Link href="/kpi/entry" className="btn btn-primary">✍️ Monthly Entry</Link>
         </div>
       </div>

@@ -7,6 +7,8 @@ import {
   timestamp,
   integer,
   boolean,
+  doublePrecision,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // =====================
@@ -61,6 +63,9 @@ export const employees = pgTable("employees", {
   status: varchar("status", { length: 20 }).notNull().default("active"),
   contractExpiry: date("contract_expiry"),
   resignationDate: date("resignation_date"),
+  // Manually-assigned KPI template code (a designation code from lib/kpi/catalog,
+  // e.g. "FIN"). Null = employee is not KPI-tracked.
+  kpiTemplate: varchar("kpi_template", { length: 10 }),
 
   // Compensation
   basicSalary: integer("basic_salary"),
@@ -138,6 +143,43 @@ export const attendance = pgTable("attendance", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// =====================
+// KPI VALUES (per employee, per month, raw operand inputs)
+// =====================
+// One row per operand HR types: (employee, year, month, kpiIdx, inputKey) -> value.
+// kpiIdx/inputKey are relative to the employee's assigned template in
+// lib/kpi/catalog. templateCode is stored so historical values stay aligned
+// even if the employee's template assignment later changes.
+export const kpiValues = pgTable("kpi_values", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  templateCode: varchar("template_code", { length: 10 }).notNull(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),   // 1-12
+  kpiIdx: integer("kpi_idx").notNull(),
+  inputKey: varchar("input_key", { length: 40 }).notNull(),
+  value: doublePrecision("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uq: uniqueIndex("kpi_values_uq").on(t.employeeId, t.year, t.month, t.kpiIdx, t.inputKey),
+}));
+
+// Per-employee numeric target override for qualitative targets ("≥ Budget").
+export const kpiTargets = pgTable("kpi_targets", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  year: integer("year").notNull(),
+  kpiIdx: integer("kpi_idx").notNull(),
+  target: doublePrecision("target"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uq: uniqueIndex("kpi_targets_uq").on(t.employeeId, t.year, t.kpiIdx),
+}));
 
 // Tracks which dates have been "closed" by admin
 export const attendanceDays = pgTable("attendance_days", {

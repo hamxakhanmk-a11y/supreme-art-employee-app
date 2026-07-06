@@ -75,10 +75,11 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       return [{ href: "/salary", label: "Generate Slips" }];
     case "kpi": {
       if (path === "/kpi") return []; // overview
-      if (path.startsWith("/kpi/entry")) {
-        return [{ href: "/kpi", label: "← Overview" }, { href: "/kpi/entry", label: "Monthly Entry" }];
-      }
-      return [{ href: "/kpi", label: "← Overview" }];
+      return [
+        { href: "/kpi", label: "← Overview" },
+        { href: "/kpi/assign", label: "Assign Templates" },
+        { href: "/kpi/entry", label: "Monthly Entry" },
+      ];
     }
     case "users":
       return [{ href: "/admin/users", label: "All Users" }];
