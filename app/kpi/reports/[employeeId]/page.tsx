@@ -100,12 +100,12 @@ export default async function EmployeeTrackerPage({
         </table>
       </div>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .kpi-tracker-table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
         .kpi-tracker-table th, .kpi-tracker-table td { border: 1px solid var(--border); padding: 5px 7px; text-align: center; white-space: nowrap; }
         .kpi-tracker-table thead th { background: var(--bg2); font-weight: 700; font-size: 10.5px; }
         .kpi-tracker-table tbody tr:hover td { background: var(--bg2); }
-      `}</style>
+      ` }} />
     </div>
   );
 }
