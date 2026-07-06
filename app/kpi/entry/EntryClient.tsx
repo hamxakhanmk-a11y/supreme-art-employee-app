@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getDesignation, MONTH_LABELS, type KpiDef } from "@/lib/kpi/catalog";
 import {
@@ -26,9 +27,19 @@ function fmt(n: number | null, unit: string): string {
   return unit === "PKR" ? r.toLocaleString() : String(r);
 }
 
+// An employee's KPI department = the department of their assigned template.
+const deptOf = (e: Emp) => (e.kpiTemplate ? getDesignation(e.kpiTemplate)?.department : null) ?? "Unassigned";
+
 export default function EntryClient({ employees }: { employees: Emp[] }) {
   const now = new Date();
-  const [empId, setEmpId] = useState(employees[0].id);
+  const searchParams = useSearchParams();
+  const initialCode = searchParams.get("designation");
+  // Arriving via ?designation=CODE from the overview preselects that role's
+  // department and its first employee.
+  const initialEmp = (initialCode && employees.find(e => e.kpiTemplate === initialCode)) || employees[0];
+
+  const [dept, setDept] = useState<string>(deptOf(initialEmp));
+  const [empId, setEmpId] = useState(initialEmp.id);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
   const [vals, setVals] = useState<Record<string, number>>({});
@@ -37,9 +48,18 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(0);
 
+  const departments = Array.from(new Set(employees.map(deptOf))).sort();
+  const visible = employees.filter(e => deptOf(e) === dept);
   const emp = employees.find(e => e.id === empId)!;
   const tpl = emp.kpiTemplate ? getDesignation(emp.kpiTemplate) : undefined;
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 3 + i);
+
+  // Switching department jumps to the first employee in it.
+  const changeDept = (d: string) => {
+    setDept(d);
+    const first = employees.find(e => deptOf(e) === d);
+    if (first && deptOf(emp) !== d) setEmpId(first.id);
+  };
 
   // Load the year's saved operands + target overrides whenever the selected
   // employee or year changes. The fetch runs inside an async task (not a
@@ -152,8 +172,13 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
 
       {/* Selectors */}
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+        <select value={dept} onChange={e => changeDept(e.target.value)} style={{ minWidth: 200 }} title="Filter by department">
+          {departments.map(d => (
+            <option key={d} value={d}>{d} ({employees.filter(e => deptOf(e) === d).length})</option>
+          ))}
+        </select>
         <select value={empId} onChange={e => setEmpId(Number(e.target.value))} style={{ minWidth: 240 }}>
-          {employees.map(e => (
+          {visible.map(e => (
             <option key={e.id} value={e.id}>{e.firstName} {e.lastName} · {e.kpiTemplate}</option>
           ))}
         </select>
