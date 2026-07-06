@@ -1,0 +1,5472 @@
+{
+ "designations": [
+  {
+   "code": "CEO",
+   "sheet": "CEO CEO",
+   "title": "Chief Executive Officer (CEO)",
+   "department": "Executive Leadership",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Revenue Growth Rate",
+     "formulaText": "(Current Year Rev − Prior Year Rev) / Prior Year Rev × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "current_year_rev",
+       "label": "Current Year Rev"
+      },
+      {
+       "key": "prior_year_rev",
+       "label": "Prior Year Rev"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 15.0,
+      "qualitative": false,
+      "raw": "≥ 15%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Net Profit Margin",
+     "formulaText": "Net Profit / Total Revenue × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "net_profit",
+       "label": "Net Profit"
+      },
+      {
+       "key": "total_revenue",
+       "label": "Total Revenue"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 10.0,
+      "qualitative": false,
+      "raw": "≥ 10%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "EBITDA",
+     "formulaText": "Net Profit + Interest + Tax + Depreciation + Amortisation",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "sum_terms",
+     "inputs": [
+      {
+       "key": "net_profit",
+       "label": "Net Profit"
+      },
+      {
+       "key": "interest",
+       "label": "Interest"
+      },
+      {
+       "key": "tax",
+       "label": "Tax"
+      },
+      {
+       "key": "depreciation",
+       "label": "Depreciation"
+      },
+      {
+       "key": "amortisation",
+       "label": "Amortisation"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Budget"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Strategic Goal Achievement",
+     "formulaText": "Goals Achieved on Time / Total Goals × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "goals_achieved_o",
+       "label": "Goals Achieved on Time"
+      },
+      {
+       "key": "total_goals",
+       "label": "Total Goals"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 80.0,
+      "qualitative": false,
+      "raw": "≥ 80%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Employee Engagement Score",
+     "formulaText": "Favourable Responses / Total Responses × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "favourable_respo",
+       "label": "Favourable Responses"
+      },
+      {
+       "key": "total_responses",
+       "label": "Total Responses"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 75.0,
+      "qualitative": false,
+      "raw": "≥ 75%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Board Reporting Timeliness",
+     "formulaText": "Reports on Time / Total Reports Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_on_time",
+       "label": "Reports on Time"
+      },
+      {
+       "key": "total_reports_du",
+       "label": "Total Reports Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Customer NPS",
+     "formulaText": "% Promoters − % Detractors",
+     "unit": "Score",
+     "agg": "AVERAGE",
+     "compute": "diff",
+     "inputs": [
+      {
+       "key": "promoters",
+       "label": "% Promoters"
+      },
+      {
+       "key": "detractors",
+       "label": "% Detractors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 40.0,
+      "qualitative": false,
+      "raw": "≥ +40"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Market Share Growth",
+     "formulaText": "(Current Share − Prior Share) / Prior Share × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "current_share",
+       "label": "Current Share"
+      },
+      {
+       "key": "prior_share",
+       "label": "Prior Share"
+      }
+     ],
+     "target": {
+      "op": ">",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "> 0%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Senior Leadership Retention",
+     "formulaText": "(Opening HC − Departures) / Opening HC × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "opening_hc",
+       "label": "Opening HC"
+      },
+      {
+       "key": "departures",
+       "label": "Departures"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "CSR Initiatives Delivered",
+     "formulaText": "Count of CSR Initiatives Completed in Year",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "csr_initiatives_",
+       "label": "CSR Initiatives Completed in Year"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≥ 3"
+     }
+    }
+   ]
+  },
+  {
+   "code": "DIR",
+   "sheet": "DIR Director",
+   "title": "Director",
+   "department": "Executive Leadership",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Budget Adherence",
+     "formulaText": "(Actual Spend − Budget) / Budget × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "actual_spend",
+       "label": "Actual Spend"
+      },
+      {
+       "key": "budget",
+       "label": "Budget"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Strategic Objective Delivery",
+     "formulaText": "Divisional Goals Achieved / Total Goals × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "divisional_goals",
+       "label": "Divisional Goals Achieved"
+      },
+      {
+       "key": "total_goals",
+       "label": "Total Goals"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Cross-Functional Project Success",
+     "formulaText": "Projects On Time & On Scope / Total Projects × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "projects_on_time",
+       "label": "Projects On Time & On Scope"
+      },
+      {
+       "key": "total_projects",
+       "label": "Total Projects"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 80.0,
+      "qualitative": false,
+      "raw": "≥ 80%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "KPI Reporting Accuracy",
+     "formulaText": "Reports Accurate & On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_accurate",
+       "label": "Reports Accurate & On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Team Performance Rating",
+     "formulaText": "Sum of Appraisal Scores / No. of Direct Reports",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_appraisal",
+       "label": "Sum of Appraisal Scores"
+      },
+      {
+       "key": "no_of_direct_rep",
+       "label": "No. of Direct Reports"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 3.5,
+      "qualitative": false,
+      "raw": "≥ 3.5"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Talent Development",
+     "formulaText": "Reports with Dev Plan / Total Direct Reports × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_with_dev",
+       "label": "Reports with Dev Plan"
+      },
+      {
+       "key": "total_direct_rep",
+       "label": "Total Direct Reports"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 80.0,
+      "qualitative": false,
+      "raw": "≥ 80%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Process Improvement Initiatives",
+     "formulaText": "Count of Improvements Implemented per Quarter",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "improvements_imp",
+       "label": "Improvements Implemented per Quarter"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 2/Qtr"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Compliance & Governance",
+     "formulaText": "Compliant Activities / Total Audited × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_activi",
+       "label": "Compliant Activities"
+      },
+      {
+       "key": "total_audited",
+       "label": "Total Audited"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Innovation Initiatives Launched",
+     "formulaText": "Count of New Initiatives Launched in Quarter",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "new_initiatives_",
+       "label": "New Initiatives Launched in Quarter"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 1/Qtr"
+     }
+    }
+   ]
+  },
+  {
+   "code": "FIN",
+   "sheet": "FIN Finance_Mg",
+   "title": "Finance Manager",
+   "department": "Finance",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Budget Forecast Accuracy",
+     "formulaText": "(Actual − Forecast) / Forecast × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "actual",
+       "label": "Actual"
+      },
+      {
+       "key": "forecast",
+       "label": "Forecast"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Financial Report Timeliness",
+     "formulaText": "Reports On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_on_time",
+       "label": "Reports On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Operating Cash Flow",
+     "formulaText": "Cash Inflows − Cash Outflows",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "diff",
+     "inputs": [
+      {
+       "key": "cash_inflows",
+       "label": "Cash Inflows"
+      },
+      {
+       "key": "cash_outflows",
+       "label": "Cash Outflows"
+      }
+     ],
+     "target": {
+      "op": ">",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "> 0"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Variance Analysis Completion",
+     "formulaText": "Variances Explained / Total Variances × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "variances_explai",
+       "label": "Variances Explained"
+      },
+      {
+       "key": "total_variances",
+       "label": "Total Variances"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Audit Finding Resolution Rate",
+     "formulaText": "Findings Resolved on Time / Total Findings × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "findings_resolve",
+       "label": "Findings Resolved on Time"
+      },
+      {
+       "key": "total_findings",
+       "label": "Total Findings"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Cost Reduction",
+     "formulaText": "Total Cost Savings / Total Cost Base × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "total_cost_savin",
+       "label": "Total Cost Savings"
+      },
+      {
+       "key": "total_cost_base",
+       "label": "Total Cost Base"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≥ 3%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Statutory Compliance Rate",
+     "formulaText": "Compliant Activities / Total Activities × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_activi",
+       "label": "Compliant Activities"
+      },
+      {
+       "key": "total_activities",
+       "label": "Total Activities"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Team Performance Score",
+     "formulaText": "Sum of Appraisal Scores / Team Size",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_appraisal",
+       "label": "Sum of Appraisal Scores"
+      },
+      {
+       "key": "team_size",
+       "label": "Team Size"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 3.5,
+      "qualitative": false,
+      "raw": "≥ 3.5"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "ERP Utilisation",
+     "formulaText": "Transactions in System / Total Transactions × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "transactions_in_",
+       "label": "Transactions in System"
+      },
+      {
+       "key": "total_transactio",
+       "label": "Total Transactions"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Payroll Accuracy Rate",
+     "formulaText": "(Total Cycles − Error Cycles) / Total Cycles × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "total_cycles",
+       "label": "Total Cycles"
+      },
+      {
+       "key": "error_cycles",
+       "label": "Error Cycles"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "ACC",
+   "sheet": "ACC Accounts_A",
+   "title": "Accounts Assistant",
+   "department": "Finance",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Invoice Processing Accuracy",
+     "formulaText": "(Invoices − Errors) / Invoices × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "invoices",
+       "label": "Invoices"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Invoice Processing Timeliness",
+     "formulaText": "Invoices On Time / Total Received × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "invoices_on_time",
+       "label": "Invoices On Time"
+      },
+      {
+       "key": "total_received",
+       "label": "Total Received"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Bank Reconciliation Completion",
+     "formulaText": "Accounts Reconciled by Deadline / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "accounts_reconci",
+       "label": "Accounts Reconciled by Deadline"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Overdue Receivables Rate",
+     "formulaText": "Overdue Value / Total AR Balance × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "overdue_value",
+       "label": "Overdue Value"
+      },
+      {
+       "key": "total_ar_balance",
+       "label": "Total AR Balance"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Data Entry Error Rate",
+     "formulaText": "Errors / Total Transactions × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "errors",
+       "label": "Errors"
+      },
+      {
+       "key": "total_transactio",
+       "label": "Total Transactions"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 1.0,
+      "qualitative": false,
+      "raw": "≤ 1%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Petty Cash Reconciliation",
+     "formulaText": "Correct Reconciliations / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correct_reconcil",
+       "label": "Correct Reconciliations"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Filing & Documentation",
+     "formulaText": "Documents Filed Correctly / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "documents_filed_",
+       "label": "Documents Filed Correctly"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Audit Support Readiness",
+     "formulaText": "Requests Fulfilled Same Day / Total Requests × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "requests_fulfill",
+       "label": "Requests Fulfilled Same Day"
+      },
+      {
+       "key": "total_requests",
+       "label": "Total Requests"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Expense Report Processing Time",
+     "formulaText": "Total Days / No. of Reports",
+     "unit": "Days",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_days",
+       "label": "Total Days"
+      },
+      {
+       "key": "no_of_reports",
+       "label": "No. of Reports"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3 days"
+     }
+    }
+   ]
+  },
+  {
+   "code": "CSH",
+   "sheet": "CSH Cashier",
+   "title": "Cashier cum Accounts Assistant",
+   "department": "Finance",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Cash Drawer Accuracy Rate",
+     "formulaText": "(Sessions − Sessions w/ Variance) / Sessions × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "sessions",
+       "label": "Sessions"
+      },
+      {
+       "key": "sessions_w",
+       "label": "Sessions w"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Transaction Processing Speed",
+     "formulaText": "Total Time (min) / No. of Transactions",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_time_min",
+       "label": "Total Time (min)"
+      },
+      {
+       "key": "no_of_transactio",
+       "label": "No. of Transactions"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2 min"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Cash Variance Incidents",
+     "formulaText": "Count of Unresolved Cash Discrepancies",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "unresolved_cash_",
+       "label": "Unresolved Cash Discrepancies"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Receipt Issuance Compliance",
+     "formulaText": "Txns with Correct Receipt / Total Txns × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "txns_with_correc",
+       "label": "Txns with Correct Receipt"
+      },
+      {
+       "key": "total_txns",
+       "label": "Total Txns"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Customer Query Resolution Time",
+     "formulaText": "Total Query Time (min) / No. of Queries",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_query_time",
+       "label": "Total Query Time (min)"
+      },
+      {
+       "key": "no_of_queries",
+       "label": "No. of Queries"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5 min"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Daily Reconciliation Timeliness",
+     "formulaText": "Shifts with On-Time Recon / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "shifts_with_on",
+       "label": "Shifts with On"
+      },
+      {
+       "key": "time_recon",
+       "label": "Time Recon"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Payment Error Rate",
+     "formulaText": "Errors / Total Transactions × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "errors",
+       "label": "Errors"
+      },
+      {
+       "key": "total_transactio",
+       "label": "Total Transactions"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 1.0,
+      "qualitative": false,
+      "raw": "≤ 1%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Attendance & Punctuality",
+     "formulaText": "Shifts On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_on_time",
+       "label": "Shifts On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "HR",
+   "sheet": "HR HR_Mgr",
+   "title": "HR Manager",
+   "department": "Human Resources",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Time-to-Hire (Days)",
+     "formulaText": "Sum(Offer Accept − Job Post) / No. of Hires",
+     "unit": "Days",
+     "agg": "AVERAGE",
+     "compute": "avg_diff",
+     "inputs": [
+      {
+       "key": "offer_accept",
+       "label": "Offer Accept"
+      },
+      {
+       "key": "job_post",
+       "label": "Job Post"
+      },
+      {
+       "key": "no_of_hires",
+       "label": "No. of Hires"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≤ 30"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Employee Turnover Rate",
+     "formulaText": "Employees Who Left / Avg Headcount × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "employees_who_le",
+       "label": "Employees Who Left"
+      },
+      {
+       "key": "avg_headcount",
+       "label": "Avg Headcount"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 15.0,
+      "qualitative": false,
+      "raw": "≤ 15%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Offer Acceptance Rate",
+     "formulaText": "Offers Accepted / Total Offers × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "offers_accepted",
+       "label": "Offers Accepted"
+      },
+      {
+       "key": "total_offers",
+       "label": "Total Offers"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Onboarding Completion Rate",
+     "formulaText": "New Hires Completing Onboarding / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "new_hires_comple",
+       "label": "New Hires Completing Onboarding"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Training Completion Rate",
+     "formulaText": "Completed Training / Assigned Training × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "completed_traini",
+       "label": "Completed Training"
+      },
+      {
+       "key": "assigned_trainin",
+       "label": "Assigned Training"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Employee Engagement Score",
+     "formulaText": "Favourable Responses / Total Responses × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "favourable_respo",
+       "label": "Favourable Responses"
+      },
+      {
+       "key": "total_responses",
+       "label": "Total Responses"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 75.0,
+      "qualitative": false,
+      "raw": "≥ 75%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Grievance Resolution Time",
+     "formulaText": "Sum(Resolve Date − File Date) / No. of Grievances",
+     "unit": "Days",
+     "agg": "AVERAGE",
+     "compute": "avg_diff",
+     "inputs": [
+      {
+       "key": "resolve_date",
+       "label": "Resolve Date"
+      },
+      {
+       "key": "file_date",
+       "label": "File Date"
+      },
+      {
+       "key": "no_of_grievances",
+       "label": "No. of Grievances"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 14.0,
+      "qualitative": false,
+      "raw": "≤ 14"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Appraisal Completion Rate",
+     "formulaText": "Appraisals Completed / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "appraisals_compl",
+       "label": "Appraisals Completed"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "HR Compliance Audit Score",
+     "formulaText": "Audit Points Achieved / Total Possible × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "audit_points_ach",
+       "label": "Audit Points Achieved"
+      },
+      {
+       "key": "total_possible",
+       "label": "Total Possible"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Absenteeism Rate",
+     "formulaText": "Absent Days / Scheduled Working Days × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "absent_days",
+       "label": "Absent Days"
+      },
+      {
+       "key": "scheduled_workin",
+       "label": "Scheduled Working Days"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "ADM",
+   "sheet": "ADM Admin_Asst",
+   "title": "Administrative Assistant",
+   "department": "HR & Administration",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Document Processing Accuracy",
+     "formulaText": "(Docs − Errors) / Total Docs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "docs",
+       "label": "Docs"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Calendar Management Accuracy",
+     "formulaText": "(Meetings − Conflicts) / Total Meetings × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "meetings",
+       "label": "Meetings"
+      },
+      {
+       "key": "conflicts",
+       "label": "Conflicts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Supply Availability Rate",
+     "formulaText": "(Work Days − Stockout Days) / Work Days × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "work_days",
+       "label": "Work Days"
+      },
+      {
+       "key": "stockout_days",
+       "label": "Stockout Days"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Minutes Distribution Time",
+     "formulaText": "Sum(Distribution − Meeting End) hrs / No. of Meetings",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "avg_diff",
+     "inputs": [
+      {
+       "key": "distribution",
+       "label": "Distribution"
+      },
+      {
+       "key": "meeting_end",
+       "label": "Meeting End"
+      },
+      {
+       "key": "no_of_meetings",
+       "label": "No. of Meetings"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 24.0,
+      "qualitative": false,
+      "raw": "≤ 24 hrs"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Expense Report Processing",
+     "formulaText": "Sum of Processing Days / Total Reports",
+     "unit": "Days",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_processin",
+       "label": "Sum of Processing Days"
+      },
+      {
+       "key": "total_reports",
+       "label": "Total Reports"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Incoming Mail Handling",
+     "formulaText": "Mail Handled Same Day / Total Mail × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "mail_handled_sam",
+       "label": "Mail Handled Same Day"
+      },
+      {
+       "key": "total_mail",
+       "label": "Total Mail"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Filing & Records Compliance",
+     "formulaText": "(Filed − Misfiled) / Total Filed × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "filed",
+       "label": "Filed"
+      },
+      {
+       "key": "misfiled",
+       "label": "Misfiled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Equipment Uptime",
+     "formulaText": "(Avail Hrs − Downtime Hrs) / Avail Hrs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "avail_hrs",
+       "label": "Avail Hrs"
+      },
+      {
+       "key": "downtime_hrs",
+       "label": "Downtime Hrs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Task Completion Rate",
+     "formulaText": "Tasks by Deadline / Total Assigned × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "tasks_by_deadlin",
+       "label": "Tasks by Deadline"
+      },
+      {
+       "key": "total_assigned",
+       "label": "Total Assigned"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "TKR",
+   "sheet": "TKR Timekeeper",
+   "title": "Timekeeper cum Receptionist",
+   "department": "Human Resources",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Timekeeping Accuracy Rate",
+     "formulaText": "(Records − Errors) / Total Records × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "records",
+       "label": "Records"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Payroll Data Submission",
+     "formulaText": "Periods Submitted On Time / Total Periods × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "periods_submitte",
+       "label": "Periods Submitted On Time"
+      },
+      {
+       "key": "total_periods",
+       "label": "Total Periods"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Discrepancy Resolution Rate",
+     "formulaText": "Resolved Before Payroll / Total Discrepancies × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "resolved_before_",
+       "label": "Resolved Before Payroll"
+      },
+      {
+       "key": "total_discrepanc",
+       "label": "Total Discrepancies"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Leave Balance Accuracy",
+     "formulaText": "(Balances − Errors) / Total Balances × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "balances",
+       "label": "Balances"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Absenteeism Report Delivery",
+     "formulaText": "Reports On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_on_time",
+       "label": "Reports On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Visitor Processing Time",
+     "formulaText": "Total Processing Time (min) / No. of Visitors",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_processing",
+       "label": "Total Processing Time (min)"
+      },
+      {
+       "key": "no_of_visitors",
+       "label": "No. of Visitors"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3 min"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Call Response Time",
+     "formulaText": "Total Rings Before Answer / Total Calls",
+     "unit": "Rings",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_rings_befo",
+       "label": "Total Rings Before Answer"
+      },
+      {
+       "key": "total_calls",
+       "label": "Total Calls"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Reception Desk Availability",
+     "formulaText": "Core Hours Staffed / Total Core Hours × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "core_hours_staff",
+       "label": "Core Hours Staffed"
+      },
+      {
+       "key": "total_core_hours",
+       "label": "Total Core Hours"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Confidentiality Compliance",
+     "formulaText": "Count of Data Disclosure Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "data_disclosure_",
+       "label": "Data Disclosure Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    }
+   ]
+  },
+  {
+   "code": "PRD",
+   "sheet": "PRD Prod_Mgr",
+   "title": "Production Manager",
+   "department": "Production",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Production Output vs. Plan",
+     "formulaText": "Actual Units / Planned Units × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_units",
+       "label": "Actual Units"
+      },
+      {
+       "key": "planned_units",
+       "label": "Planned Units"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "OEE",
+     "formulaText": "Availability × Performance × Quality (all %)",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "product_pct",
+     "inputs": [
+      {
+       "key": "availability",
+       "label": "Availability"
+      },
+      {
+       "key": "performance",
+       "label": "Performance"
+      },
+      {
+       "key": "quality",
+       "label": "Quality"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 75.0,
+      "qualitative": false,
+      "raw": "≥ 75%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "On-Time Delivery Rate",
+     "formulaText": "Orders Delivered On Time / Total Orders × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "orders_delivered",
+       "label": "Orders Delivered On Time"
+      },
+      {
+       "key": "total_orders",
+       "label": "Total Orders"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Defect / Rejection Rate",
+     "formulaText": "Rejected Units / Total Units Produced × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "rejected_units",
+       "label": "Rejected Units"
+      },
+      {
+       "key": "total_units_prod",
+       "label": "Total Units Produced"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Production Cost per Unit",
+     "formulaText": "Total Production Cost / Total Units Produced",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_production",
+       "label": "Total Production Cost"
+      },
+      {
+       "key": "total_units_prod",
+       "label": "Total Units Produced"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Budget"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Waste / Scrap Rate",
+     "formulaText": "Scrap Weight / Total Material Consumed × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "scrap_weight",
+       "label": "Scrap Weight"
+      },
+      {
+       "key": "total_material_c",
+       "label": "Total Material Consumed"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Unplanned Downtime (hrs/mo)",
+     "formulaText": "Sum of All Unplanned Downtime Hours",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "single",
+     "inputs": [
+      {
+       "key": "sum_of_all_unpla",
+       "label": "Sum of All Unplanned Downtime Hours"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≤ 4"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Safety Incident Rate",
+     "formulaText": "Count of Recordable Safety Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "recordable_safet",
+       "label": "Recordable Safety Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Labour Productivity",
+     "formulaText": "Total Units Produced / Total Labour Hours",
+     "unit": "Units/Hr",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_units_prod",
+       "label": "Total Units Produced"
+      },
+      {
+       "key": "total_labour_hou",
+       "label": "Total Labour Hours"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Standard"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "CI Initiatives",
+     "formulaText": "Count of Lean/CI Projects Implemented",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "lean_ci_projects",
+       "label": "Lean/CI Projects Implemented"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 2/Qtr"
+     }
+    }
+   ]
+  },
+  {
+   "code": "APM",
+   "sheet": "APM APM",
+   "title": "Assistant to Production Manager",
+   "department": "Production",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Schedule Adherence Rate",
+     "formulaText": "Shifts per Schedule / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_per_sched",
+       "label": "Shifts per Schedule"
+      },
+      {
+       "key": "total_shifts",
+       "label": "Total Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Downtime Resolution Time",
+     "formulaText": "Sum of Resolution Minutes / No. of Issues",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_resolutio",
+       "label": "Sum of Resolution Minutes"
+      },
+      {
+       "key": "no_of_issues",
+       "label": "No. of Issues"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≤ 30"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Quality Non-Conformance Rate",
+     "formulaText": "Failing Batches / Total Batches × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "failing_batches",
+       "label": "Failing Batches"
+      },
+      {
+       "key": "total_batches",
+       "label": "Total Batches"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Daily Report Timeliness",
+     "formulaText": "Reports Correct & On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_correct_",
+       "label": "Reports Correct & On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Raw Material Availability",
+     "formulaText": "(Shifts − Shortage Shifts) / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "shifts",
+       "label": "Shifts"
+      },
+      {
+       "key": "shortage_shifts",
+       "label": "Shortage Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Safety Compliance Rate",
+     "formulaText": "Safety Checks Passed / Total Checks × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "safety_checks_pa",
+       "label": "Safety Checks Passed"
+      },
+      {
+       "key": "total_checks",
+       "label": "Total Checks"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "New Hire Training Completion",
+     "formulaText": "Trained within 2 Wks / Total New Hires × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "trained_within_2",
+       "label": "Trained within 2 Wks"
+      },
+      {
+       "key": "total_new_hires",
+       "label": "Total New Hires"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Timesheet Accuracy",
+     "formulaText": "(Records − Errors) / Total Records × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "records",
+       "label": "Records"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Shift Briefing Compliance",
+     "formulaText": "Briefings On Time with Notes / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "briefings_on_tim",
+       "label": "Briefings On Time with Notes"
+      },
+      {
+       "key": "total_shifts",
+       "label": "Total Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "LMG",
+   "sheet": "LMG Line_Mgr",
+   "title": "Production Line Manager",
+   "department": "Production",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Line Output Achievement",
+     "formulaText": "Actual Units / Scheduled Units per Shift × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_units",
+       "label": "Actual Units"
+      },
+      {
+       "key": "scheduled_units_",
+       "label": "Scheduled Units per Shift"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Line Efficiency Rate",
+     "formulaText": "Actual Output / Theoretical Max Output × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_output",
+       "label": "Actual Output"
+      },
+      {
+       "key": "theoretical_max_",
+       "label": "Theoretical Max Output"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "First-Pass Quality Yield",
+     "formulaText": "(Units − Rejected) / Total Units × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "units",
+       "label": "Units"
+      },
+      {
+       "key": "rejected",
+       "label": "Rejected"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Scrap / Waste Rate",
+     "formulaText": "Scrap Weight / Total Input Weight × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "scrap_weight",
+       "label": "Scrap Weight"
+      },
+      {
+       "key": "total_input_weig",
+       "label": "Total Input Weight"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Unplanned Downtime (min/shift)",
+     "formulaText": "Sum of Unplanned Stoppage Minutes",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "single",
+     "inputs": [
+      {
+       "key": "sum_of_unplanned",
+       "label": "Sum of Unplanned Stoppage Minutes"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≤ 30"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Safety Incidents",
+     "formulaText": "Count of Safety Incidents / Near-Misses",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "safety_incidents",
+       "label": "Safety Incidents / Near-Misses"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Schedule Adherence",
+     "formulaText": "Shifts Completed in Time / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_completed",
+       "label": "Shifts Completed in Time"
+      },
+      {
+       "key": "total_shifts",
+       "label": "Total Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Team Attendance Rate",
+     "formulaText": "Staff On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "staff_on_time",
+       "label": "Staff On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "PM Compliance",
+     "formulaText": "PM Tasks On Time / Total PM Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "pm_tasks_on_time",
+       "label": "PM Tasks On Time"
+      },
+      {
+       "key": "total_pm_schedul",
+       "label": "Total PM Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "KPI Report Timeliness",
+     "formulaText": "Reports On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_on_time",
+       "label": "Reports On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "FRM",
+   "sheet": "FRM Foreman",
+   "title": "Production Foreman",
+   "department": "Production",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Shift Output Achievement",
+     "formulaText": "Actual Units / Planned Units × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_units",
+       "label": "Actual Units"
+      },
+      {
+       "key": "planned_units",
+       "label": "Planned Units"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Quality Check Compliance",
+     "formulaText": "QC Checks Done / Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "qc_checks_done",
+       "label": "QC Checks Done"
+      },
+      {
+       "key": "scheduled",
+       "label": "Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Scrap / Deviation Reports",
+     "formulaText": "Incidents Reported Same Shift / Total Incidents × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "incidents_report",
+       "label": "Incidents Reported Same Shift"
+      },
+      {
+       "key": "total_incidents",
+       "label": "Total Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Safety Toolbox Completion",
+     "formulaText": "Pre-Shift Meetings Done / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "pre",
+       "label": "Pre"
+      },
+      {
+       "key": "shift_meetings_d",
+       "label": "Shift Meetings Done"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "PPE Compliance Rate",
+     "formulaText": "Workers Compliant / Total Observed × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "workers_complian",
+       "label": "Workers Compliant"
+      },
+      {
+       "key": "total_observed",
+       "label": "Total Observed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Incident Report Filing Time",
+     "formulaText": "Sum of Hours to File / No. of Incidents",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_hours_to_",
+       "label": "Sum of Hours to File"
+      },
+      {
+       "key": "no_of_incidents",
+       "label": "No. of Incidents"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Changeover Time",
+     "formulaText": "Sum of Changeover Durations / No. of Changeovers",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_changeove",
+       "label": "Sum of Changeover Durations"
+      },
+      {
+       "key": "no_of_changeover",
+       "label": "No. of Changeovers"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Standard"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Staff Productivity Rate",
+     "formulaText": "Total Units / No. of Workers per Shift",
+     "unit": "Units/Worker",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_units",
+       "label": "Total Units"
+      },
+      {
+       "key": "no_of_workers_pe",
+       "label": "No. of Workers per Shift"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Standard"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Unresolved Discipline Issues",
+     "formulaText": "Count of Unresolved Conduct Issues",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "unresolved_condu",
+       "label": "Unresolved Conduct Issues"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "New Employee SOP Sign-off",
+     "formulaText": "Staff Signed Off within 1 Wk / Total New Staff × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "staff_signed_off",
+       "label": "Staff Signed Off within 1 Wk"
+      },
+      {
+       "key": "total_new_staff",
+       "label": "Total New Staff"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "SGD",
+   "sheet": "SGD Sr_Designe",
+   "title": "Senior Graphic Designer",
+   "department": "Production & Design",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Project Delivery On Time",
+     "formulaText": "Projects On Time / Total Projects × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "projects_on_time",
+       "label": "Projects On Time"
+      },
+      {
+       "key": "total_projects",
+       "label": "Total Projects"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Revision Rate",
+     "formulaText": "Total Revision Rounds / No. of Projects",
+     "unit": "Rounds",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_revision_r",
+       "label": "Total Revision Rounds"
+      },
+      {
+       "key": "no_of_projects",
+       "label": "No. of Projects"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Brand Guideline Compliance",
+     "formulaText": "Compliant First Submissions / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_first_",
+       "label": "Compliant First Submissions"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Print File Error Rate",
+     "formulaText": "Files Returned for Correction / Total Files × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "files_returned_f",
+       "label": "Files Returned for Correction"
+      },
+      {
+       "key": "total_files",
+       "label": "Total Files"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Junior Designer Mentorship",
+     "formulaText": "Juniors with Feedback & Dev Plan / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "juniors_with_fee",
+       "label": "Juniors with Feedback & Dev Plan"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Design Throughput",
+     "formulaText": "Actual Assets / Planned Assets × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_assets",
+       "label": "Actual Assets"
+      },
+      {
+       "key": "planned_assets",
+       "label": "Planned Assets"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "≥ 100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Stakeholder Satisfaction",
+     "formulaText": "Sum of Ratings / No. of Ratings",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_ratings",
+       "label": "Sum of Ratings"
+      },
+      {
+       "key": "no_of_ratings",
+       "label": "No. of Ratings"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≥ 4"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Asset Library Maintenance",
+     "formulaText": "Correctly Archived Files / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correctly_archiv",
+       "label": "Correctly Archived Files"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "JGD",
+   "sheet": "JGD Jr_Designe",
+   "title": "Junior Graphic Designer",
+   "department": "Production & Design",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Task Completion Rate",
+     "formulaText": "Tasks by Deadline / Total Assigned × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "tasks_by_deadlin",
+       "label": "Tasks by Deadline"
+      },
+      {
+       "key": "total_assigned",
+       "label": "Total Assigned"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Revision Turnaround Time",
+     "formulaText": "Sum of Hours (Feedback to Resubmit) / No. of Rounds",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_hours_fee",
+       "label": "Sum of Hours (Feedback to Resubmit)"
+      },
+      {
+       "key": "no_of_rounds",
+       "label": "No. of Rounds"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≤ 4"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Brand Guideline Adherence",
+     "formulaText": "Compliant First Submissions / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_first_",
+       "label": "Compliant First Submissions"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Print File Accuracy",
+     "formulaText": "(Files − Technical Errors) / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "files",
+       "label": "Files"
+      },
+      {
+       "key": "technical_errors",
+       "label": "Technical Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Error Rate",
+     "formulaText": "Errors Found by Proofreader / Deliverables × 10",
+     "unit": "Per 10",
+     "agg": "AVERAGE",
+     "compute": "ratio_x10",
+     "inputs": [
+      {
+       "key": "errors_found_by_",
+       "label": "Errors Found by Proofreader"
+      },
+      {
+       "key": "deliverables",
+       "label": "Deliverables"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Asset Library Contribution",
+     "formulaText": "Correctly Saved Files / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correctly_saved_",
+       "label": "Correctly Saved Files"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Feedback Acceptance Score",
+     "formulaText": "Sum of Senior Ratings / No. of Ratings",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_senior_ra",
+       "label": "Sum of Senior Ratings"
+      },
+      {
+       "key": "no_of_ratings",
+       "label": "No. of Ratings"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≥ 4"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Skills Development",
+     "formulaText": "Count of New Skills / Tools Practised & Documented",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "new_skills_tools",
+       "label": "New Skills / Tools Practised & Documented"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 1/Qtr"
+     }
+    }
+   ]
+  },
+  {
+   "code": "CTP",
+   "sheet": "CTP CTP_Tech",
+   "title": "CTP Technician",
+   "department": "Production & Design",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Plate Production On-Time",
+     "formulaText": "Plates On Time / Total Plates × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "plates_on_time",
+       "label": "Plates On Time"
+      },
+      {
+       "key": "total_plates",
+       "label": "Total Plates"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Plate Defect / Remake Rate",
+     "formulaText": "Plates Remade / Total Plates × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "plates_remade",
+       "label": "Plates Remade"
+      },
+      {
+       "key": "total_plates",
+       "label": "Total Plates"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Preflight Error Detection",
+     "formulaText": "Errors Caught Preflight / Total Errors × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "errors_caught_pr",
+       "label": "Errors Caught Preflight"
+      },
+      {
+       "key": "total_errors",
+       "label": "Total Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "RIP Processing Time",
+     "formulaText": "Sum of RIP Times / No. of Jobs",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_rip_times",
+       "label": "Sum of RIP Times"
+      },
+      {
+       "key": "no_of_jobs",
+       "label": "No. of Jobs"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Standard"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Consumable Usage Ratio",
+     "formulaText": "Actual Usage / Standard Usage × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_usage",
+       "label": "Actual Usage"
+      },
+      {
+       "key": "standard_usage",
+       "label": "Standard Usage"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 105.0,
+      "qualitative": false,
+      "raw": "≤ 105%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "CTP Equipment Uptime",
+     "formulaText": "(Sched Hrs − Downtime) / Sched Hrs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "sched_hrs",
+       "label": "Sched Hrs"
+      },
+      {
+       "key": "downtime",
+       "label": "Downtime"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "PM Completion Rate",
+     "formulaText": "PM Tasks On Time / Total PM Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "pm_tasks_on_time",
+       "label": "PM Tasks On Time"
+      },
+      {
+       "key": "total_pm_schedul",
+       "label": "Total PM Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Press Return Rate",
+     "formulaText": "Count of Plates Returned from Press per Month",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "plates_returned_",
+       "label": "Plates Returned from Press per Month"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Production Log Accuracy",
+     "formulaText": "Correct Log Entries / Total Entries × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correct_log_entr",
+       "label": "Correct Log Entries"
+      },
+      {
+       "key": "total_entries",
+       "label": "Total Entries"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "SMG",
+   "sheet": "SMG Sales_Mgr",
+   "title": "B2B Sales Manager",
+   "department": "Sales & Marketing",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Revenue vs. Target",
+     "formulaText": "Actual Revenue / Sales Target × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_revenue",
+       "label": "Actual Revenue"
+      },
+      {
+       "key": "sales_target",
+       "label": "Sales Target"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "≥ 100%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "New Accounts Won",
+     "formulaText": "Count of New Client Accounts Signed",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "new_client_accou",
+       "label": "New Client Accounts Signed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Quota"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Pipeline Value",
+     "formulaText": "Sum of Qualified Opportunity Values in CRM",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "single",
+     "inputs": [
+      {
+       "key": "sum_of_qualified",
+       "label": "Sum of Qualified Opportunity Values in CRM"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 3× Qtr Target"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Win Rate",
+     "formulaText": "Deals Won / Qualified Deals × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "deals_won",
+       "label": "Deals Won"
+      },
+      {
+       "key": "qualified_deals",
+       "label": "Qualified Deals"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 35.0,
+      "qualitative": false,
+      "raw": "≥ 35%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Average Deal Size",
+     "formulaText": "Total Revenue from Closed Deals / No. of Deals",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_revenue_fr",
+       "label": "Total Revenue from Closed Deals"
+      },
+      {
+       "key": "no_of_deals",
+       "label": "No. of Deals"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Plan"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Forecast Accuracy",
+     "formulaText": "|Actual − Forecast| / Forecast × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "actual",
+       "label": "|Actual"
+      },
+      {
+       "key": "forecast",
+       "label": "Forecast|"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 10.0,
+      "qualitative": false,
+      "raw": "≤ 10%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Customer Retention Rate",
+     "formulaText": "(Accounts End − New Won) / Accounts Start × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "accounts_end",
+       "label": "Accounts End"
+      },
+      {
+       "key": "new_won",
+       "label": "New Won"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Team Quota Attainment",
+     "formulaText": "Execs at/above Quota / Total Execs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "execs_at",
+       "label": "Execs at"
+      },
+      {
+       "key": "above_quota_tota",
+       "label": "above Quota / Total Execs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 80.0,
+      "qualitative": false,
+      "raw": "≥ 80%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "CRM Data Hygiene",
+     "formulaText": "Up-to-Date Records / Total CRM Records × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "up",
+       "label": "Up"
+      },
+      {
+       "key": "to_date_records",
+       "label": "to-Date Records"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Sales Cycle Length (Days)",
+     "formulaText": "Sum(Contract − First Contact) / No. of Deals",
+     "unit": "Days",
+     "agg": "AVERAGE",
+     "compute": "avg_diff",
+     "inputs": [
+      {
+       "key": "contract",
+       "label": "Contract"
+      },
+      {
+       "key": "first_contact",
+       "label": "First Contact"
+      },
+      {
+       "key": "no_of_deals",
+       "label": "No. of Deals"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Benchmark"
+     }
+    }
+   ]
+  },
+  {
+   "code": "SEX",
+   "sheet": "SEX Sales_Exec",
+   "title": "Sales Executive",
+   "department": "Sales & Marketing",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Individual Revenue vs. Quota",
+     "formulaText": "Actual Revenue / Assigned Quota × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "actual_revenue",
+       "label": "Actual Revenue"
+      },
+      {
+       "key": "assigned_quota",
+       "label": "Assigned Quota"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "≥ 100%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "New Leads Generated",
+     "formulaText": "Count of New Prospects Added to Pipeline",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "new_prospects_ad",
+       "label": "New Prospects Added to Pipeline"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Monthly Target"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Lead-to-Opp Conversion Rate",
+     "formulaText": "Converted Leads / Total Leads × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "converted_leads",
+       "label": "Converted Leads"
+      },
+      {
+       "key": "total_leads",
+       "label": "Total Leads"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≥ 30%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Client Meetings / Calls (wk)",
+     "formulaText": "Count of Confirmed Meetings, Calls, Demos",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "confirmed_meetin",
+       "label": "Confirmed Meetings, Calls, Demos"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Weekly Target"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Proposal Submission Rate",
+     "formulaText": "Proposals On Time / Qualified Opps × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "proposals_on_tim",
+       "label": "Proposals On Time"
+      },
+      {
+       "key": "qualified_opps",
+       "label": "Qualified Opps"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Win Rate",
+     "formulaText": "Proposals Won / Total Proposals × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "proposals_won",
+       "label": "Proposals Won"
+      },
+      {
+       "key": "total_proposals",
+       "label": "Total Proposals"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≥ 30%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Account NPS",
+     "formulaText": "% Promoters − % Detractors",
+     "unit": "Score",
+     "agg": "AVERAGE",
+     "compute": "diff",
+     "inputs": [
+      {
+       "key": "promoters",
+       "label": "% Promoters"
+      },
+      {
+       "key": "detractors",
+       "label": "% Detractors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 40.0,
+      "qualitative": false,
+      "raw": "≥ +40"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Upsell / Cross-sell Revenue",
+     "formulaText": "Sum of Upsell + Cross-sell Transactions",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "sum_terms",
+     "inputs": [
+      {
+       "key": "sum_of_upsell",
+       "label": "Sum of Upsell"
+      },
+      {
+       "key": "cross_sell_trans",
+       "label": "Cross-sell Transactions"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Qtr Target"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "CRM Update Compliance",
+     "formulaText": "Interactions Logged <24h / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "interactions_log",
+       "label": "Interactions Logged <24h"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Report Submission Timeliness",
+     "formulaText": "Reports On Time / Total Due × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "reports_on_time",
+       "label": "Reports On Time"
+      },
+      {
+       "key": "total_due",
+       "label": "Total Due"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "WHM",
+   "sheet": "WHM Warehouse_",
+   "title": "Warehouse Manager",
+   "department": "Warehouse & Inventory",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Inventory Accuracy Rate",
+     "formulaText": "(SKUs − Discrepant SKUs) / Total SKUs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "skus",
+       "label": "SKUs"
+      },
+      {
+       "key": "discrepant_skus",
+       "label": "Discrepant SKUs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Order Fulfillment Accuracy",
+     "formulaText": "(Orders − Error Orders) / Total Orders × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "orders",
+       "label": "Orders"
+      },
+      {
+       "key": "error_orders",
+       "label": "Error Orders"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "On-Time Dispatch Rate",
+     "formulaText": "Orders On Time / Total Dispatched × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "orders_on_time",
+       "label": "Orders On Time"
+      },
+      {
+       "key": "total_dispatched",
+       "label": "Total Dispatched"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Receiving Accuracy",
+     "formulaText": "(Deliveries − Discrepant) / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "deliveries",
+       "label": "Deliveries"
+      },
+      {
+       "key": "discrepant",
+       "label": "Discrepant"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Cycle Count Completion",
+     "formulaText": "Counts Completed On Time / Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "counts_completed",
+       "label": "Counts Completed On Time"
+      },
+      {
+       "key": "scheduled",
+       "label": "Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Inventory Turnover Rate",
+     "formulaText": "COGS / Average Inventory Value",
+     "unit": "Times",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "cogs",
+       "label": "COGS"
+      },
+      {
+       "key": "average_inventor",
+       "label": "Average Inventory Value"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ Plan"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Space Utilisation",
+     "formulaText": "Occupied Space / Total Available Space × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "occupied_space",
+       "label": "Occupied Space"
+      },
+      {
+       "key": "total_available_",
+       "label": "Total Available Space"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 70.0,
+      "qualitative": false,
+      "raw": "70–85%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Damaged Goods Rate",
+     "formulaText": "Value Damaged / Total Inventory Value × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "value_damaged",
+       "label": "Value Damaged"
+      },
+      {
+       "key": "total_inventory_",
+       "label": "Total Inventory Value"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 0.5,
+      "qualitative": false,
+      "raw": "≤ 0.5%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Safety Incident Rate",
+     "formulaText": "Count of Recordable Safety Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "recordable_safet",
+       "label": "Recordable Safety Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Equipment Maintenance",
+     "formulaText": "Maintenance Tasks On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "maintenance_task",
+       "label": "Maintenance Tasks On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "STK",
+   "sheet": "STK Storekeepe",
+   "title": "Storekeeper",
+   "department": "Warehouse & Inventory",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Stock Record Accuracy",
+     "formulaText": "(Items − Discrepant) / Total Items × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "items",
+       "label": "Items"
+      },
+      {
+       "key": "discrepant",
+       "label": "Discrepant"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Receiving Accuracy",
+     "formulaText": "(Deliveries − Errors) / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "deliveries",
+       "label": "Deliveries"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Issuance Accuracy",
+     "formulaText": "(Issues − Errors) / Total Issues × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "issues",
+       "label": "Issues"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Stock Discrepancy Rate",
+     "formulaText": "Counts with Discrepancy / Total Counts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "counts_with_disc",
+       "label": "Counts with Discrepancy"
+      },
+      {
+       "key": "total_counts",
+       "label": "Total Counts"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 2.0,
+      "qualitative": false,
+      "raw": "≤ 2%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Reorder Reporting Time (hrs)",
+     "formulaText": "Sum of Hours to Flag / No. of Low-Stock Events",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_hours_to_",
+       "label": "Sum of Hours to Flag"
+      },
+      {
+       "key": "no_of_low_stock_",
+       "label": "No. of Low-Stock Events"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Same Day"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "FIFO Compliance",
+     "formulaText": "Items Issued in FIFO Order / Total in Sample × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "items_issued_in_",
+       "label": "Items Issued in FIFO Order"
+      },
+      {
+       "key": "total_in_sample",
+       "label": "Total in Sample"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Transaction Log Accuracy",
+     "formulaText": "(Transactions − Errors) / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "transactions",
+       "label": "Transactions"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Housekeeping Score",
+     "formulaText": "Sum of Inspection Scores / No. of Inspections",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_inspectio",
+       "label": "Sum of Inspection Scores"
+      },
+      {
+       "key": "no_of_inspection",
+       "label": "No. of Inspections"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≥ 4"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Damage / Loss Rate",
+     "formulaText": "Damaged/Expired/Lost / Total Stock Value × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "damaged",
+       "label": "Damaged"
+      },
+      {
+       "key": "expired_lost_tot",
+       "label": "Expired/Lost / Total Stock Value"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 0.5,
+      "qualitative": false,
+      "raw": "≤ 0.5%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "SMM",
+   "sheet": "SMM Sr_Maint_M",
+   "title": "Senior Maintenance & Repair Manager",
+   "department": "Maintenance & Repair",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "OEE",
+     "formulaText": "Availability × Performance × Quality (all %)",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "product_pct",
+     "inputs": [
+      {
+       "key": "availability",
+       "label": "Availability"
+      },
+      {
+       "key": "performance",
+       "label": "Performance"
+      },
+      {
+       "key": "quality",
+       "label": "Quality"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 80.0,
+      "qualitative": false,
+      "raw": "≥ 80%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Planned vs. Unplanned Ratio",
+     "formulaText": "Planned Maint Hrs / Total Maint Hrs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "planned_maint_hr",
+       "label": "Planned Maint Hrs"
+      },
+      {
+       "key": "total_maint_hrs",
+       "label": "Total Maint Hrs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 70.0,
+      "qualitative": false,
+      "raw": "≥ 70%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "MTBF (Hours)",
+     "formulaText": "Total Operating Time / No. of Failures",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_operating_",
+       "label": "Total Operating Time"
+      },
+      {
+       "key": "no_of_failures",
+       "label": "No. of Failures"
+      }
+     ],
+     "target": {
+      "op": null,
+      "value": null,
+      "qualitative": true,
+      "raw": "Increases QoQ"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "MTTR (Hours)",
+     "formulaText": "Total Repair Time / No. of Failures",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_repair_tim",
+       "label": "Total Repair Time"
+      },
+      {
+       "key": "no_of_failures",
+       "label": "No. of Failures"
+      }
+     ],
+     "target": {
+      "op": null,
+      "value": null,
+      "qualitative": true,
+      "raw": "Decreases QoQ"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Maintenance Budget Adherence",
+     "formulaText": "(Actual − Budget) / Budget × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "actual",
+       "label": "Actual"
+      },
+      {
+       "key": "budget",
+       "label": "Budget"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "PM Schedule Compliance",
+     "formulaText": "PM Work Orders On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "pm_work_orders_o",
+       "label": "PM Work Orders On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Equipment Downtime Cost",
+     "formulaText": "Downtime Hrs × Hourly Production Value Lost",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "product",
+     "inputs": [
+      {
+       "key": "downtime_hrs",
+       "label": "Downtime Hrs"
+      },
+      {
+       "key": "hourly_productio",
+       "label": "Hourly Production Value Lost"
+      }
+     ],
+     "target": {
+      "op": null,
+      "value": null,
+      "qualitative": true,
+      "raw": "Decreases MoM"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Safety Compliance",
+     "formulaText": "Compliant Activities / Total Audited × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_activi",
+       "label": "Compliant Activities"
+      },
+      {
+       "key": "total_audited",
+       "label": "Total Audited"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Contractor SLA Compliance",
+     "formulaText": "SLA Met / Total Deliverables × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "sla_met",
+       "label": "SLA Met"
+      },
+      {
+       "key": "total_deliverabl",
+       "label": "Total Deliverables"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "CapEx Plan Accuracy",
+     "formulaText": "CapEx Projects On Time & Budget / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "capex_projects_o",
+       "label": "CapEx Projects On Time & Budget"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "MIN",
+   "sheet": "MIN Maint_Inch",
+   "title": "Maintenance In-charge",
+   "department": "Maintenance & Repair",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Work Order Completion Rate",
+     "formulaText": "WOs Closed in Time / Total WOs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "wos_closed_in_ti",
+       "label": "WOs Closed in Time"
+      },
+      {
+       "key": "total_wos",
+       "label": "Total WOs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Response Time to Breakdown",
+     "formulaText": "Sum of Minutes (Report to On-Site) / No. of Events",
+     "unit": "Minutes",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_minutes_r",
+       "label": "Sum of Minutes (Report to On-Site)"
+      },
+      {
+       "key": "no_of_events",
+       "label": "No. of Events"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 30.0,
+      "qualitative": false,
+      "raw": "≤ 30"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "PPM Schedule Adherence",
+     "formulaText": "PPM Tasks On Schedule / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "ppm_tasks_on_sch",
+       "label": "PPM Tasks On Schedule"
+      },
+      {
+       "key": "total",
+       "label": "Total"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Unplanned Downtime (hrs/mo)",
+     "formulaText": "Sum of Unplanned Downtime Hours",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "single",
+     "inputs": [
+      {
+       "key": "sum_of_unplanned",
+       "label": "Sum of Unplanned Downtime Hours"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≤ 4"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Spare Parts Availability",
+     "formulaText": "Requests Fulfilled from Stock / Total Requests × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "requests_fulfill",
+       "label": "Requests Fulfilled from Stock"
+      },
+      {
+       "key": "total_requests",
+       "label": "Total Requests"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "CMMS Data Accuracy",
+     "formulaText": "(WOs − Missing Data) / Total WOs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "wos",
+       "label": "WOs"
+      },
+      {
+       "key": "missing_data",
+       "label": "Missing Data"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Safety Incidents (Maint)",
+     "formulaText": "Count of Recordable Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "recordable_incid",
+       "label": "Recordable Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Team Productivity (Wrench %)",
+     "formulaText": "Productive Hrs / Available Hrs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "productive_hrs",
+       "label": "Productive Hrs"
+      },
+      {
+       "key": "available_hrs",
+       "label": "Available Hrs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 65.0,
+      "qualitative": false,
+      "raw": "≥ 65%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Repair Cost per Incident",
+     "formulaText": "Total Reactive Repair Costs / No. of Reactive Jobs",
+     "unit": "PKR",
+     "agg": "SUM",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "total_reactive_r",
+       "label": "Total Reactive Repair Costs"
+      },
+      {
+       "key": "no_of_reactive_j",
+       "label": "No. of Reactive Jobs"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Benchmark"
+     }
+    }
+   ]
+  },
+  {
+   "code": "MCH",
+   "sheet": "MCH Mechanic",
+   "title": "Mechanic",
+   "department": "Maintenance & Repair",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "First-Time Fix Rate",
+     "formulaText": "(Repairs − Return Visits) / Total Repairs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "repairs",
+       "label": "Repairs"
+      },
+      {
+       "key": "return_visits",
+       "label": "Return Visits"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Avg Repair Turnaround (hrs)",
+     "formulaText": "Sum of Repair Durations / No. of Jobs",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_repair_du",
+       "label": "Sum of Repair Durations"
+      },
+      {
+       "key": "no_of_jobs",
+       "label": "No. of Jobs"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Standard"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "PM Task Completion Rate",
+     "formulaText": "PM Tasks On Schedule / Total Assigned × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "pm_tasks_on_sche",
+       "label": "PM Tasks On Schedule"
+      },
+      {
+       "key": "total_assigned",
+       "label": "Total Assigned"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Rework Rate",
+     "formulaText": "Jobs Requiring Rework / Total Jobs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "jobs_requiring_r",
+       "label": "Jobs Requiring Rework"
+      },
+      {
+       "key": "total_jobs",
+       "label": "Total Jobs"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3.0,
+      "qualitative": false,
+      "raw": "≤ 3%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Parts Usage Accuracy",
+     "formulaText": "(Parts Used − Mismatched) / Total Parts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "parts_used",
+       "label": "Parts Used"
+      },
+      {
+       "key": "mismatched",
+       "label": "Mismatched"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 99.0,
+      "qualitative": false,
+      "raw": "≥ 99%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Safety Compliance",
+     "formulaText": "Jobs in Full Compliance / Total Audited × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "jobs_in_full_com",
+       "label": "Jobs in Full Compliance"
+      },
+      {
+       "key": "total_audited",
+       "label": "Total Audited"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Diagnostic Accuracy",
+     "formulaText": "Correct Diagnoses / Total Diagnoses × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correct_diagnose",
+       "label": "Correct Diagnoses"
+      },
+      {
+       "key": "total_diagnoses",
+       "label": "Total Diagnoses"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90.0,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Workshop Cleanliness Score",
+     "formulaText": "Sum of Audit Scores / No. of Audits",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_audit_sco",
+       "label": "Sum of Audit Scores"
+      },
+      {
+       "key": "no_of_audits",
+       "label": "No. of Audits"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≥ 4"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Attendance & Punctuality",
+     "formulaText": "Shifts On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_on_time",
+       "label": "Shifts On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "AMC",
+   "sheet": "AMC Asst_Mecha",
+   "title": "Assistant Mechanic",
+   "department": "Maintenance & Repair",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Task Completion Rate",
+     "formulaText": "Tasks Done in Shift / Total Assigned × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "tasks_done_in_sh",
+       "label": "Tasks Done in Shift"
+      },
+      {
+       "key": "total_assigned",
+       "label": "Total Assigned"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Support Quality Rating",
+     "formulaText": "Sum of Senior Mechanic Ratings / No. of Ratings",
+     "unit": "Score/5",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_senior_me",
+       "label": "Sum of Senior Mechanic Ratings"
+      },
+      {
+       "key": "no_of_ratings",
+       "label": "No. of Ratings"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 4.0,
+      "qualitative": false,
+      "raw": "≥ 4"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Tool Retrieval Accuracy",
+     "formulaText": "(Retrievals − Incorrect) / Total × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "retrievals",
+       "label": "Retrievals"
+      },
+      {
+       "key": "incorrect",
+       "label": "Incorrect"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Routine Maintenance Accuracy",
+     "formulaText": "(Tasks − Errors) / Total Routine Tasks × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "tasks",
+       "label": "Tasks"
+      },
+      {
+       "key": "errors",
+       "label": "Errors"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 97.0,
+      "qualitative": false,
+      "raw": "≥ 97%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Workshop Cleanliness",
+     "formulaText": "Shifts with Full Cleanup / Total Shifts × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_with_full",
+       "label": "Shifts with Full Cleanup"
+      },
+      {
+       "key": "total_shifts",
+       "label": "Total Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Safety & PPE Compliance",
+     "formulaText": "Compliant Observations / Total Observed × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_observ",
+       "label": "Compliant Observations"
+      },
+      {
+       "key": "total_observed",
+       "label": "Total Observed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Skills Progress (SOPs/Qtr)",
+     "formulaText": "Count of New SOPs Signed Off per Quarter",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "new_sops_signed_",
+       "label": "New SOPs Signed Off per Quarter"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≥ 1/Qtr"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Attendance & Punctuality",
+     "formulaText": "Shifts On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_on_time",
+       "label": "Shifts On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "ELC",
+   "sheet": "ELC Electricia",
+   "title": "Electrician",
+   "department": "Maintenance & Repair",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "First-Time Fix Rate",
+     "formulaText": "(Repairs − Return Visits) / Total Repairs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "repairs",
+       "label": "Repairs"
+      },
+      {
+       "key": "return_visits",
+       "label": "Return Visits"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 85.0,
+      "qualitative": false,
+      "raw": "≥ 85%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Mean Time to Repair (hrs)",
+     "formulaText": "Sum of Repair Durations / No. of Failures",
+     "unit": "Hours",
+     "agg": "AVERAGE",
+     "compute": "ratio",
+     "inputs": [
+      {
+       "key": "sum_of_repair_du",
+       "label": "Sum of Repair Durations"
+      },
+      {
+       "key": "no_of_failures",
+       "label": "No. of Failures"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": null,
+      "qualitative": true,
+      "raw": "≤ Standard"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Electrical PM Completion",
+     "formulaText": "PM Tasks On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "pm_tasks_on_time",
+       "label": "PM Tasks On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95.0,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Fault Recurrence Rate",
+     "formulaText": "Faults Recurring <30 Days / Total Repairs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "faults_recurring",
+       "label": "Faults Recurring <30 Days"
+      },
+      {
+       "key": "total_repairs",
+       "label": "Total Repairs"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 5.0,
+      "qualitative": false,
+      "raw": "≤ 5%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Code & Safety Compliance",
+     "formulaText": "Compliant Jobs / Total Audited × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_jobs",
+       "label": "Compliant Jobs"
+      },
+      {
+       "key": "total_audited",
+       "label": "Total Audited"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Safety Incident Rate",
+     "formulaText": "Count of Electrical Safety Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "electrical_safet",
+       "label": "Electrical Safety Incidents"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 0.0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "PPE Compliance",
+     "formulaText": "Compliant Sessions / Total Observed × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "compliant_sessio",
+       "label": "Compliant Sessions"
+      },
+      {
+       "key": "total_observed",
+       "label": "Total Observed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100.0,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "WO Documentation Accuracy",
+     "formulaText": "(WOs − Missing Docs) / Total WOs × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "growth_pct",
+     "inputs": [
+      {
+       "key": "wos",
+       "label": "WOs"
+      },
+      {
+       "key": "missing_docs",
+       "label": "Missing Docs"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Attendance & Punctuality",
+     "formulaText": "Shifts On Time / Total Scheduled × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_on_time",
+       "label": "Shifts On Time"
+      },
+      {
+       "key": "total_scheduled",
+       "label": "Total Scheduled"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98.0,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    }
+   ]
+  }
+ ]
+}
