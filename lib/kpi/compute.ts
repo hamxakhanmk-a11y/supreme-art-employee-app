@@ -18,6 +18,15 @@ export function monthlyValue(compute: ComputeType, inputs: { key: string }[], op
     case "growth_pct":
       if (!has(2) || num(v[1]) === 0) return null;
       return ((num(v[0]) - num(v[1])) / num(v[1])) * 100;
+    case "net_self_pct":
+      if (!has(2) || num(v[0]) === 0) return null;
+      return ((num(v[0]) - num(v[1])) / num(v[0])) * 100;
+    case "net_pct":
+      if (!has(3) || num(v[2]) === 0) return null;
+      return ((num(v[0]) - num(v[1])) / num(v[2])) * 100;
+    case "abs_dev_pct":
+      if (!has(2) || num(v[1]) === 0) return null;
+      return (Math.abs(num(v[0]) - num(v[1])) / num(v[1])) * 100;
     case "ratio_x10":
       if (!has(2) || num(v[1]) === 0) return null;
       return (num(v[0]) / num(v[1])) * 10;

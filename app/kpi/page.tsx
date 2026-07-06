@@ -20,6 +20,7 @@ export default function KpiLanding() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href="/kpi/assign" className="btn">🔗 Assign Templates</Link>
+          <Link href="/kpi/reports" className="btn">📊 Reports</Link>
           <Link href="/kpi/entry" className="btn btn-primary">✍️ Monthly Entry</Link>
         </div>
       </div>

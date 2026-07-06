@@ -216,7 +216,7 @@
      "formulaText": "(Opening HC − Departures) / Opening HC × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "opening_hc",
@@ -700,7 +700,7 @@
      "formulaText": "(Total Cycles − Error Cycles) / Total Cycles × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "total_cycles",
@@ -732,7 +732,7 @@
      "formulaText": "(Invoices − Errors) / Invoices × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "invoices",
@@ -956,15 +956,15 @@
      "formulaText": "(Sessions − Sessions w/ Variance) / Sessions × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "sessions",
        "label": "Sessions"
       },
       {
-       "key": "sessions_w",
-       "label": "Sessions w"
+       "key": "sessions_w_varia",
+       "label": "Sessions w/ Variance"
       }
      ],
      "target": {
@@ -1072,15 +1072,15 @@
      "formulaText": "Shifts with On-Time Recon / Total Shifts × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "ratio_pct",
      "inputs": [
       {
-       "key": "shifts_with_on",
-       "label": "Shifts with On"
+       "key": "shifts_with_on_t",
+       "label": "Shifts with On-Time Recon"
       },
       {
-       "key": "time_recon",
-       "label": "Time Recon"
+       "key": "total_shifts",
+       "label": "Total Shifts"
       }
      ],
      "target": {
@@ -1408,7 +1408,7 @@
      "formulaText": "(Docs − Errors) / Total Docs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "docs",
@@ -1417,6 +1417,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_docs",
+       "label": "Total Docs"
       }
      ],
      "target": {
@@ -1432,7 +1436,7 @@
      "formulaText": "(Meetings − Conflicts) / Total Meetings × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "meetings",
@@ -1441,6 +1445,10 @@
       {
        "key": "conflicts",
        "label": "Conflicts"
+      },
+      {
+       "key": "total_meetings",
+       "label": "Total Meetings"
       }
      ],
      "target": {
@@ -1456,7 +1464,7 @@
      "formulaText": "(Work Days − Stockout Days) / Work Days × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "work_days",
@@ -1556,7 +1564,7 @@
      "formulaText": "(Filed − Misfiled) / Total Filed × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "filed",
@@ -1565,6 +1573,10 @@
       {
        "key": "misfiled",
        "label": "Misfiled"
+      },
+      {
+       "key": "total_filed",
+       "label": "Total Filed"
       }
      ],
      "target": {
@@ -1580,7 +1592,7 @@
      "formulaText": "(Avail Hrs − Downtime Hrs) / Avail Hrs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "avail_hrs",
@@ -1636,7 +1648,7 @@
      "formulaText": "(Records − Errors) / Total Records × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "records",
@@ -1645,6 +1657,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_records",
+       "label": "Total Records"
       }
      ],
      "target": {
@@ -1708,7 +1724,7 @@
      "formulaText": "(Balances − Errors) / Total Balances × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "balances",
@@ -1717,6 +1733,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_balances",
+       "label": "Total Balances"
       }
      ],
      "target": {
@@ -2192,7 +2212,7 @@
      "formulaText": "(Shifts − Shortage Shifts) / Total Shifts × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "shifts",
@@ -2201,6 +2221,10 @@
       {
        "key": "shortage_shifts",
        "label": "Shortage Shifts"
+      },
+      {
+       "key": "total_shifts",
+       "label": "Total Shifts"
       }
      ],
      "target": {
@@ -2264,7 +2288,7 @@
      "formulaText": "(Records − Errors) / Total Records × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "records",
@@ -2273,6 +2297,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_records",
+       "label": "Total Records"
       }
      ],
      "target": {
@@ -2368,7 +2396,7 @@
      "formulaText": "(Units − Rejected) / Total Units × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "units",
@@ -2377,6 +2405,10 @@
       {
        "key": "rejected",
        "label": "Rejected"
+      },
+      {
+       "key": "total_units",
+       "label": "Total Units"
       }
      ],
      "target": {
@@ -2632,15 +2664,15 @@
      "formulaText": "Pre-Shift Meetings Done / Total Shifts × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "ratio_pct",
      "inputs": [
       {
-       "key": "pre",
-       "label": "Pre"
+       "key": "pre_shift_meetin",
+       "label": "Pre-Shift Meetings Done"
       },
       {
-       "key": "shift_meetings_d",
-       "label": "Shift Meetings Done"
+       "key": "total_shifts",
+       "label": "Total Shifts"
       }
      ],
      "target": {
@@ -3076,7 +3108,7 @@
      "formulaText": "(Files − Technical Errors) / Total × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "files",
@@ -3085,6 +3117,10 @@
       {
        "key": "technical_errors",
        "label": "Technical Errors"
+      },
+      {
+       "key": "total",
+       "label": "Total"
       }
      ],
      "target": {
@@ -3320,7 +3356,7 @@
      "formulaText": "(Sched Hrs − Downtime) / Sched Hrs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_self_pct",
      "inputs": [
       {
        "key": "sched_hrs",
@@ -3532,15 +3568,15 @@
      "formulaText": "|Actual − Forecast| / Forecast × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "abs_dev_pct",
      "inputs": [
       {
        "key": "actual",
-       "label": "|Actual"
+       "label": "Actual"
       },
       {
        "key": "forecast",
-       "label": "Forecast|"
+       "label": "Forecast"
       }
      ],
      "target": {
@@ -3556,7 +3592,7 @@
      "formulaText": "(Accounts End − New Won) / Accounts Start × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "accounts_end",
@@ -3565,6 +3601,10 @@
       {
        "key": "new_won",
        "label": "New Won"
+      },
+      {
+       "key": "accounts_start",
+       "label": "Accounts Start"
       }
      ],
      "target": {
@@ -3583,12 +3623,12 @@
      "compute": "ratio_pct",
      "inputs": [
       {
-       "key": "execs_at",
-       "label": "Execs at"
+       "key": "execs_at_above_q",
+       "label": "Execs at/above Quota"
       },
       {
-       "key": "above_quota_tota",
-       "label": "above Quota / Total Execs"
+       "key": "total_execs",
+       "label": "Total Execs"
       }
      ],
      "target": {
@@ -3604,15 +3644,15 @@
      "formulaText": "Up-to-Date Records / Total CRM Records × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "ratio_pct",
      "inputs": [
       {
-       "key": "up",
-       "label": "Up"
+       "key": "up_to_date_recor",
+       "label": "Up-to-Date Records"
       },
       {
-       "key": "to_date_records",
-       "label": "to-Date Records"
+       "key": "total_crm_record",
+       "label": "Total CRM Records"
       }
      ],
      "target": {
@@ -3904,7 +3944,7 @@
      "formulaText": "(SKUs − Discrepant SKUs) / Total SKUs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "skus",
@@ -3913,6 +3953,10 @@
       {
        "key": "discrepant_skus",
        "label": "Discrepant SKUs"
+      },
+      {
+       "key": "total_skus",
+       "label": "Total SKUs"
       }
      ],
      "target": {
@@ -3928,7 +3972,7 @@
      "formulaText": "(Orders − Error Orders) / Total Orders × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "orders",
@@ -3937,6 +3981,10 @@
       {
        "key": "error_orders",
        "label": "Error Orders"
+      },
+      {
+       "key": "total_orders",
+       "label": "Total Orders"
       }
      ],
      "target": {
@@ -3976,7 +4024,7 @@
      "formulaText": "(Deliveries − Discrepant) / Total × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "deliveries",
@@ -3985,6 +4033,10 @@
       {
        "key": "discrepant",
        "label": "Discrepant"
+      },
+      {
+       "key": "total",
+       "label": "Total"
       }
      ],
      "target": {
@@ -4148,7 +4200,7 @@
      "formulaText": "(Items − Discrepant) / Total Items × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "items",
@@ -4157,6 +4209,10 @@
       {
        "key": "discrepant",
        "label": "Discrepant"
+      },
+      {
+       "key": "total_items",
+       "label": "Total Items"
       }
      ],
      "target": {
@@ -4172,7 +4228,7 @@
      "formulaText": "(Deliveries − Errors) / Total × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "deliveries",
@@ -4181,6 +4237,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total",
+       "label": "Total"
       }
      ],
      "target": {
@@ -4196,7 +4256,7 @@
      "formulaText": "(Issues − Errors) / Total Issues × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "issues",
@@ -4205,6 +4265,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_issues",
+       "label": "Total Issues"
       }
      ],
      "target": {
@@ -4292,7 +4356,7 @@
      "formulaText": "(Transactions − Errors) / Total × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "transactions",
@@ -4301,6 +4365,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total",
+       "label": "Total"
       }
      ],
      "target": {
@@ -4343,12 +4411,12 @@
      "compute": "ratio_pct",
      "inputs": [
       {
-       "key": "damaged",
-       "label": "Damaged"
+       "key": "damaged_expired_",
+       "label": "Damaged/Expired/Lost"
       },
       {
-       "key": "expired_lost_tot",
-       "label": "Expired/Lost / Total Stock Value"
+       "key": "total_stock_valu",
+       "label": "Total Stock Value"
       }
      ],
      "target": {
@@ -4740,7 +4808,7 @@
      "formulaText": "(WOs − Missing Data) / Total WOs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "wos",
@@ -4749,6 +4817,10 @@
       {
        "key": "missing_data",
        "label": "Missing Data"
+      },
+      {
+       "key": "total_wos",
+       "label": "Total WOs"
       }
      ],
      "target": {
@@ -4840,7 +4912,7 @@
      "formulaText": "(Repairs − Return Visits) / Total Repairs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "repairs",
@@ -4849,6 +4921,10 @@
       {
        "key": "return_visits",
        "label": "Return Visits"
+      },
+      {
+       "key": "total_repairs",
+       "label": "Total Repairs"
       }
      ],
      "target": {
@@ -4936,7 +5012,7 @@
      "formulaText": "(Parts Used − Mismatched) / Total Parts × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "parts_used",
@@ -4945,6 +5021,10 @@
       {
        "key": "mismatched",
        "label": "Mismatched"
+      },
+      {
+       "key": "total_parts",
+       "label": "Total Parts"
       }
      ],
      "target": {
@@ -5112,7 +5192,7 @@
      "formulaText": "(Retrievals − Incorrect) / Total × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "retrievals",
@@ -5121,6 +5201,10 @@
       {
        "key": "incorrect",
        "label": "Incorrect"
+      },
+      {
+       "key": "total",
+       "label": "Total"
       }
      ],
      "target": {
@@ -5136,7 +5220,7 @@
      "formulaText": "(Tasks − Errors) / Total Routine Tasks × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "tasks",
@@ -5145,6 +5229,10 @@
       {
        "key": "errors",
        "label": "Errors"
+      },
+      {
+       "key": "total_routine_ta",
+       "label": "Total Routine Tasks"
       }
      ],
      "target": {
@@ -5260,7 +5348,7 @@
      "formulaText": "(Repairs − Return Visits) / Total Repairs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "repairs",
@@ -5269,6 +5357,10 @@
       {
        "key": "return_visits",
        "label": "Return Visits"
+      },
+      {
+       "key": "total_repairs",
+       "label": "Total Repairs"
       }
      ],
      "target": {
@@ -5424,7 +5516,7 @@
      "formulaText": "(WOs − Missing Docs) / Total WOs × 100",
      "unit": "%",
      "agg": "AVERAGE",
-     "compute": "growth_pct",
+     "compute": "net_pct",
      "inputs": [
       {
        "key": "wos",
@@ -5433,6 +5525,10 @@
       {
        "key": "missing_docs",
        "label": "Missing Docs"
+      },
+      {
+       "key": "total_wos",
+       "label": "Total WOs"
       }
      ],
      "target": {

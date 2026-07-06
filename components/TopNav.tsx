@@ -79,6 +79,7 @@ function getSubNav(path: string, module: string): { href: string; label: string 
         { href: "/kpi", label: "← Overview" },
         { href: "/kpi/assign", label: "Assign Templates" },
         { href: "/kpi/entry", label: "Monthly Entry" },
+        { href: "/kpi/reports", label: "Reports" },
       ];
     }
     case "users":

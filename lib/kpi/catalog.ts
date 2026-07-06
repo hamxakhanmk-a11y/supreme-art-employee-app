@@ -7,6 +7,9 @@ export type KpiInput = { key: string; label: string };
 export type ComputeType =
   | "ratio_pct"    // a / b × 100
   | "growth_pct"   // (a − b) / b × 100   (current, prior)
+  | "net_self_pct" // (a − b) / a × 100   (e.g. (Invoices − Errors) / Invoices)
+  | "net_pct"      // (a − b) / c × 100   (separate total denominator)
+  | "abs_dev_pct"  // |a − b| / b × 100   (e.g. Forecast Accuracy)
   | "ratio_x10"    // a / b × 10
   | "ratio"        // a / b               (e.g. total ÷ count)
   | "avg_diff"     // (a − b) / c         (Sum(a−b) ÷ N)
