@@ -73,15 +73,15 @@ function getSubNav(path: string, module: string): { href: string; label: string 
     }
     case "salary":
       return [{ href: "/salary", label: "Generate Slips" }];
-    case "kpi": {
-      if (path === "/kpi") return []; // overview
+    case "kpi":
+      // Always show the KPI tabs (including on the overview) so Reports etc.
+      // are reachable from anywhere in the section.
       return [
-        { href: "/kpi", label: "← Overview" },
+        { href: "/kpi", label: "Overview" },
         { href: "/kpi/assign", label: "Assign Templates" },
         { href: "/kpi/entry", label: "Monthly Entry" },
         { href: "/kpi/reports", label: "Reports" },
       ];
-    }
     case "users":
       return [{ href: "/admin/users", label: "All Users" }];
     default:
@@ -143,6 +143,7 @@ export default function TopNav() {
 
   const isSubActive = (href: string) => {
     if (href === "/") return pathname === "/";
+    if (href === "/kpi") return pathname === "/kpi";
     if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
     // Sibling routes can share a prefix (e.g. /forms/leave vs /forms/leave-settings),
     // so for the explicit sub-nav entries we require either an exact match or the
