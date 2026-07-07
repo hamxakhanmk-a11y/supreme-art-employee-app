@@ -109,13 +109,10 @@ export default function MonthlyRegisterClient({
       else if (c === "leave") L++;
       else if (c === "holiday") H++;
     }
-    // Net working days = paid days for the month = present + paid leave + holiday.
-    // (Absent days are excluded — they're what gets deducted from salary.)
     const percent = workPercent(WorkedMin, MarkedDays);
     return {
       P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays, OffLvMin, PerLvMin,
       status: workStatus(percent), percent,
-      net: P + L + H,
     };
   };
 
@@ -137,7 +134,7 @@ export default function MonthlyRegisterClient({
 
   const exportCSV = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
-    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Net Days", "Worked Hrs", "Status %"];
+    const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Worked Hrs", "Status %"];
     const rows = activeEmps.map(e => {
       const t = tally(e);
       const cells = Array.from({ length: daysInMonth }, (_, i) => {
@@ -155,7 +152,7 @@ export default function MonthlyRegisterClient({
       return [
         e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || "",
         ...cells, t.P, t.Half, t.A, t.L, t.H, t.Late, formatLate(t.LateMin + t.PerLvMin),
-        t.OffLvMin ? formatHoursHM(t.OffLvMin) : "", t.PerLvMin ? formatHoursHM(t.PerLvMin) : "", t.net,
+        t.OffLvMin ? formatHoursHM(t.OffLvMin) : "", t.PerLvMin ? formatHoursHM(t.PerLvMin) : "",
         formatHoursHM(t.WorkedMin), formatPercent(t.percent),
       ];
     });
@@ -233,7 +230,7 @@ export default function MonthlyRegisterClient({
           <thead>
             {/* Top banner row — print only / accent */}
             <tr className="register-banner">
-              <th colSpan={4 + daysInMonth + 12} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
+              <th colSpan={4 + daysInMonth + 11} style={{ textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff", background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", padding: "10px 8px", textTransform: "uppercase" }}>
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
@@ -257,14 +254,13 @@ export default function MonthlyRegisterClient({
               <th className="tot-h" style={{ color: "#DC2626" }} title="Lateness + personal hourly leave">Late Time</th>
               <th className="tot-h" style={{ color: "#0E7490" }} title="Official hourly leave — excused, not deducted">OL</th>
               <th className="tot-h" style={{ color: "#9333EA" }} title="Personal hourly leave — deducted like lateness">PL</th>
-              <th className="tot-h">Net</th>
               <th className="tot-h">Worked Hrs</th>
               <th className="tot-h">Status</th>
             </tr>
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + daysInMonth + 12} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + daysInMonth + 11} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = tally(emp);
@@ -301,7 +297,6 @@ export default function MonthlyRegisterClient({
                   <td className="tot-c" style={{ color: "#DC2626", fontSize: 11 }}>{formatLate(t.LateMin + t.PerLvMin)}</td>
                   <td className="tot-c" style={{ color: "#0E7490", fontSize: 11 }}>{t.OffLvMin ? formatHoursHM(t.OffLvMin) : ""}</td>
                   <td className="tot-c" style={{ color: "#9333EA", fontSize: 11 }}>{t.PerLvMin ? formatHoursHM(t.PerLvMin) : ""}</td>
-                  <td className="tot-c" style={{ color: "var(--brand)" }}>{t.net}</td>
                   <td className="tot-c" style={{ fontSize: 11 }}>{formatHoursHM(t.WorkedMin)}</td>
                   <td className="tot-c"><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
@@ -481,14 +476,17 @@ export function RequiredHoursPanel({
 }) {
   const items = months ?? [{ label: label!, markedDays: markedDays!, requiredMinutes: requiredMinutes! }];
   const totalRequired = items.reduce((sum, i) => sum + i.requiredMinutes, 0);
+  const totalDaysRequired = items.reduce((sum, i) => sum + i.markedDays, 0);
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "5px 10px", marginBottom: 6, borderLeft: "3px solid var(--brand)", background: "var(--bg2)", borderRadius: 4, fontSize: 11 }}>
       <span style={{ fontSize: 13, lineHeight: 1 }}>⏱</span>
       <span style={{ fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.3, fontSize: 10 }}>
-        Time Required{months ? "" : ` — ${label}`}
+        Required{months ? "" : ` — ${label}`}
       </span>
       <span style={{ fontWeight: 800, color: "var(--brand)" }}>{formatHoursHM(totalRequired)} hrs</span>
+      <span style={{ color: "var(--text3)" }}>·</span>
+      <span style={{ fontWeight: 800, color: "var(--brand)" }}>{totalDaysRequired} day{totalDaysRequired === 1 ? "" : "s"}</span>
       {!months ? (
         <span style={{ color: "var(--text3)" }}>({markedDays}/{totalDays} days marked × 7h35m, live)</span>
       ) : (

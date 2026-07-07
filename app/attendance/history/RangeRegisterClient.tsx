@@ -81,7 +81,6 @@ export default function RangeRegisterClient({
     return {
       P, A, L, H, Half, Late, LateMin, WorkedMin, MarkedDays, OffLvMin, PerLvMin,
       status: workStatus(percent), percent,
-      net: P + L + H,
     };
   };
 
@@ -121,7 +120,7 @@ export default function RangeRegisterClient({
       const lbl = `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`;
       headers.push(`${lbl} P`, `${lbl} A`, `${lbl} L`, `${lbl} H`);
     }
-    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Net Days", "Worked Hrs", "Status %");
+    headers.push("Total P", "Total A", "Total L", "Total H", "Total Half", "Total Late Days", "Total Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Worked Hrs", "Status %");
     const rows = activeEmps.map(e => {
       const r: (string | number)[] = [e.employeeId, `${e.firstName} ${e.lastName}`, e.department || "", e.designation || ""];
       for (const ym of months) {
@@ -131,7 +130,7 @@ export default function RangeRegisterClient({
       const t = totalsFor(e);
       r.push(t.P, t.A, t.L, t.H, t.Half, t.Late, formatLate(t.LateMin + t.PerLvMin),
         t.OffLvMin ? formatHoursHM(t.OffLvMin) : "", t.PerLvMin ? formatHoursHM(t.PerLvMin) : "",
-        t.net, formatHoursHM(t.WorkedMin), formatPercent(t.percent));
+        formatHoursHM(t.WorkedMin), formatPercent(t.percent));
       return r;
     });
     downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
@@ -162,7 +161,7 @@ export default function RangeRegisterClient({
         <Chip code="Lt" label="Late arrivals" />
         <Chip code="OL" label="Official hourly leave (excused)" />
         <Chip code="PL" label="Personal hourly leave (deducted like lateness)" />
-        <span style={{ marginLeft: 8 }}>Net = P + L + H · {months.length} month{months.length === 1 ? "" : "s"}</span>
+        <span style={{ marginLeft: 8 }}>{months.length} month{months.length === 1 ? "" : "s"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
           <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
@@ -175,7 +174,7 @@ export default function RangeRegisterClient({
         <table className="range-table">
           <thead>
             <tr className="range-banner">
-              <th colSpan={4 + months.length * 4 + 12} style={{
+              <th colSpan={4 + months.length * 4 + 11} style={{
                 textAlign: "center", fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#fff",
                 background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)",
                 padding: "10px 8px", textTransform: "uppercase",
@@ -193,7 +192,7 @@ export default function RangeRegisterClient({
                   {MONTHS[ym.m - 1].slice(0, 3)} {String(ym.y).slice(2)}
                 </th>
               ))}
-              <th colSpan={12} className="tot-group-h">Totals</th>
+              <th colSpan={11} className="tot-group-h">Totals</th>
             </tr>
             <tr>
               {months.flatMap(ym => [
@@ -211,14 +210,13 @@ export default function RangeRegisterClient({
               <th className="sub-h" style={{ color: "#DC2626", background: "#f3eee4" }} title="Lateness + personal hourly leave">Late Time</th>
               <th className="sub-h" style={{ color: "#0E7490", background: "#f3eee4" }} title="Official hourly leave — excused, not deducted">OL</th>
               <th className="sub-h" style={{ color: "#9333EA", background: "#f3eee4" }} title="Personal hourly leave — deducted like lateness">PL</th>
-              <th className="sub-h" style={{ background: "#f3eee4" }}>Net</th>
               <th className="sub-h" style={{ background: "#f3eee4" }}>Worked Hrs</th>
               <th className="sub-h" style={{ background: "#f3eee4" }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {activeEmps.length === 0 && (
-              <tr><td colSpan={4 + months.length * 4 + 12} className="empty">No active employees.</td></tr>
+              <tr><td colSpan={4 + months.length * 4 + 11} className="empty">No active employees.</td></tr>
             )}
             {activeEmps.map(emp => {
               const t = totalsFor(emp);
@@ -246,7 +244,6 @@ export default function RangeRegisterClient({
                   <td style={{ color: "#DC2626", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatLate(t.LateMin + t.PerLvMin)}</td>
                   <td style={{ color: "#0E7490", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{t.OffLvMin ? formatHoursHM(t.OffLvMin) : ""}</td>
                   <td style={{ color: "#9333EA", fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{t.PerLvMin ? formatHoursHM(t.PerLvMin) : ""}</td>
-                  <Tot v={t.net} c="var(--brand)" />
                   <td style={{ fontWeight: 700, background: "#fdf8ee", fontSize: 11 }}>{formatHoursHM(t.WorkedMin)}</td>
                   <td style={{ background: "#fdf8ee" }}><StatusBadge status={t.status} percent={t.percent} /></td>
                 </tr>
