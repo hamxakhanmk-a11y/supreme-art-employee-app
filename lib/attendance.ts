@@ -39,14 +39,26 @@ export const TOTAL_MONTHLY_HOURS = 192;
 export const MONTHLY_MIN_HOURS = 180;
 export const MIN_YIELD_PERCENT = (MONTHLY_MIN_HOURS / TOTAL_MONTHLY_HOURS) * 100;
 
+// Minutes worked past the standard check-out (16:45). These count as overtime
+// and are added on top of the expected shift, so a late check-out can push
+// worked hours above the required total.
+export function overtimeMinutes(checkOut: string | null | undefined): number {
+  if (!checkOut) return 0;
+  const [h, m] = checkOut.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return 0;
+  const diff = (h * 60 + m) - toMinutes(SHIFT_END);
+  return diff > 0 ? diff : 0;
+}
+
 // Minutes credited for one day, given its status, how late the check-in was,
-// and any personal hourly (mid-day) leave. Present = full expected shift minus
-// lateness minus personal leave; half-day = half credit minus the same;
+// any personal hourly (mid-day) leave, and any overtime past check-out.
+// Present = full expected shift minus lateness minus personal leave, PLUS
+// overtime; half-day = half credit minus the same, plus overtime;
 // absent/leave/holiday = 0 (the employee wasn't clocked in for the shift).
 // Official hourly leave is excused and never deducted — only personal is.
-export function workedMinutesForDay(status: string | null | undefined, late: number, personalLeaveMin = 0): number {
-  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late - personalLeaveMin);
-  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late - personalLeaveMin);
+export function workedMinutesForDay(status: string | null | undefined, late: number, personalLeaveMin = 0, overtimeMin = 0): number {
+  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late - personalLeaveMin) + overtimeMin;
+  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late - personalLeaveMin) + overtimeMin;
   return 0;
 }
 

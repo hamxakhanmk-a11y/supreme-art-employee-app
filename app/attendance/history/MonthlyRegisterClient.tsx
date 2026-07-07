@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -16,7 +16,7 @@ type Emp = {
   status: string;
   createdAt?: string | Date | null;
 };
-type Rec = { employeeId: number; date: string; status: string; checkIn: string | null; officialLeaveMin?: number; personalLeaveMin?: number };
+type Rec = { employeeId: number; date: string; status: string; checkIn: string | null; checkOut?: string | null; officialLeaveMin?: number; personalLeaveMin?: number };
 
 export const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -48,11 +48,11 @@ export default function MonthlyRegisterClient({
 
   // record lookup by `${employeeId}-${day}`
   const byKey = useMemo(() => {
-    const m = new Map<string, { status: string; checkIn: string | null; officialLeaveMin: number; personalLeaveMin: number }>();
+    const m = new Map<string, { status: string; checkIn: string | null; checkOut: string | null; officialLeaveMin: number; personalLeaveMin: number }>();
     for (const r of records) {
       const day = parseInt(r.date.slice(8, 10));
       m.set(`${r.employeeId}-${day}`, {
-        status: r.status, checkIn: r.checkIn,
+        status: r.status, checkIn: r.checkIn, checkOut: r.checkOut ?? null,
         officialLeaveMin: r.officialLeaveMin ?? 0, personalLeaveMin: r.personalLeaveMin ?? 0,
       });
     }
@@ -98,9 +98,10 @@ export default function MonthlyRegisterClient({
       const c = cellFor(emp, day);
       const late = lateFor(emp, day);
       const lv = leavesFor(emp, day);
+      const ot = overtimeMinutes(byKey.get(`${emp.id}-${day}`)?.checkOut);
       if (late > 0) { Late++; LateMin += late; }
       OffLvMin += lv.official; PerLvMin += lv.personal;
-      WorkedMin += workedMinutesForDay(c, late, lv.personal);
+      WorkedMin += workedMinutesForDay(c, late, lv.personal, ot);
       if (!c) continue;
       if (countsTowardYield(c)) MarkedDays++;
       if (c === "present") P++;
@@ -212,7 +213,7 @@ export default function MonthlyRegisterClient({
         <LegendChip code="PL" label="Personal hourly leave (deducted like lateness, included in Late Time)" c="#9333EA" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45)</span>
         </span>
       </div>
 

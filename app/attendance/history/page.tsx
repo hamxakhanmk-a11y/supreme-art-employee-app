@@ -36,6 +36,7 @@ export default async function AttendanceHistoryPage({ searchParams }: { searchPa
       date: attendance.date,
       status: attendance.status,
       checkIn: attendance.checkIn,
+      checkOut: attendance.checkOut,
       officialLeaveMin: attendance.officialLeaveMin,
       personalLeaveMin: attendance.personalLeaveMin,
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),

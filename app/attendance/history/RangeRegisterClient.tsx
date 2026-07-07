@@ -5,7 +5,7 @@ import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel } from "./MonthlyRegisterClient";
-import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
+import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
   id: number;
@@ -17,7 +17,7 @@ type Emp = {
   status: string;
   createdAt?: string | Date | null;
 };
-type Rec = { employeeId: number; date: string; status: string; checkIn: string | null; officialLeaveMin?: number; personalLeaveMin?: number };
+type Rec = { employeeId: number; date: string; status: string; checkIn: string | null; checkOut?: string | null; officialLeaveMin?: number; personalLeaveMin?: number };
 type YM = { y: number; m: number };
 
 const STATUS_COLORS: Record<string, { color: string; bg: string; }> = {
@@ -62,7 +62,7 @@ export default function RangeRegisterClient({
       if (late > 0) { bucket.Late++; bucket.LateMin += late; }
       bucket.OffLvMin += r.officialLeaveMin ?? 0;
       bucket.PerLvMin += r.personalLeaveMin ?? 0;
-      bucket.WorkedMin += workedMinutesForDay(r.status, late, r.personalLeaveMin ?? 0);
+      bucket.WorkedMin += workedMinutesForDay(r.status, late, r.personalLeaveMin ?? 0, overtimeMinutes(r.checkOut));
     }
     return m;
   }, [records]);
@@ -164,7 +164,7 @@ export default function RangeRegisterClient({
         <span style={{ marginLeft: 8 }}>{months.length} month{months.length === 1 ? "" : "s"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45)</span>
         </span>
       </div>
 
