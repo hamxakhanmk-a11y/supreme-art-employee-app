@@ -185,8 +185,8 @@ export default function RangeRegisterClient({
             <tr>
               <th rowSpan={2} className="fz fz1">Emp ID</th>
               <th rowSpan={2} className="fz fz2">Full Name</th>
-              <th rowSpan={2}>Department</th>
-              <th rowSpan={2}>Designation</th>
+              <th rowSpan={2} className="col-dept">Department</th>
+              <th rowSpan={2} className="col-desig">Designation</th>
               {months.map(ym => (
                 <th key={`${ym.y}-${ym.m}`} colSpan={4} className="month-h">
                   {MONTHS[ym.m - 1].slice(0, 3)} {String(ym.y).slice(2)}
@@ -276,15 +276,16 @@ export default function RangeRegisterClient({
         .range-table tbody tr:hover td { background: var(--bg2); }
 
         @media print {
-          @page { size: legal landscape; margin: 6mm; }
+          @page { size: A4 landscape; margin: 5mm; }
           .range-banner { display: table-row !important; }
           .range-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          /* Sized to fit Legal landscape natively (≈ the old 85% scale) so a
-             plain Print fits every column without touching the dialog. */
-          .range-table { font-size: 8px; width: 100%; }
+          /* Fits A4 landscape at 100%: Department + Designation dropped on paper. */
+          .range-table { font-size: 8.5px; width: 100%; }
           .range-table th, .range-table td { padding: 2px 2px; }
-          .range-table thead th { font-size: 8px; }
-          .range-table .status-pill { padding: 1px 3px !important; font-size: 8px !important; }
+          .range-table thead th { font-size: 8.5px; }
+          .range-table .col-dept, .range-table .emp-dept,
+          .range-table .col-desig, .range-table .emp-desig { display: none; }
+          .range-table .status-pill { padding: 1px 3px !important; font-size: 8.5px !important; }
           .range-table .fz { position: static; box-shadow: none; }
           .range-table .fz1, .range-table .fz2 { width: auto; min-width: 0; max-width: none; }
         }

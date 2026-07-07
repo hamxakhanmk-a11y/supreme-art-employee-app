@@ -237,8 +237,8 @@ export default function MonthlyRegisterClient({
             <tr>
               <th className="fz fz1">Emp ID</th>
               <th className="fz fz2">Full Name</th>
-              <th>Department</th>
-              <th>Designation</th>
+              <th className="col-dept">Department</th>
+              <th className="col-desig">Designation</th>
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                 <th key={day} className={`day-h ${isSunday(day) ? "day-sun" : ""}`}>
                   <div style={{ fontSize: 11, fontWeight: 700 }}>{day}</div>
@@ -369,19 +369,24 @@ export default function MonthlyRegisterClient({
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
         @media print {
-          @page { size: legal landscape; margin: 6mm; }
+          @page { size: A4 landscape; margin: 5mm; }
           .register-banner { display: table-row !important; }
           .register-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          /* Sized to fit Legal landscape natively (≈ the old 85% scale) so a
-             plain Print fits every column without touching the dialog. */
-          .register-table { font-size: 8px; width: 100%; }
+          /* Fits A4 landscape at 100%: Department + Designation are dropped on
+             paper, and the day/total header min-widths are released so those
+             columns shrink to content. */
+          .register-table { font-size: 8.5px; width: 100%; }
           .register-table th, .register-table td { padding: 2px 2px; }
-          .register-table thead th { font-size: 8px; }
-          .register-table .tot-c, .register-table .tot-h { font-size: 8px; }
+          .register-table thead th { font-size: 8.5px; }
+          .register-table .tot-c, .register-table .tot-h { font-size: 8.5px; }
+          .register-table .day-h { min-width: 0; padding: 2px 1px; }
           .register-table .day-c { width: auto; min-width: 0; padding: 2px 1px; }
+          .register-table .tot-h { min-width: 0; }
+          .register-table .col-dept, .register-table .emp-dept,
+          .register-table .col-desig, .register-table .emp-desig { display: none; }
           .register-table .emp-id { padding-left: 4px; }
           .register-table .emp-name { padding-left: 4px; }
-          .register-table .status-pill { padding: 1px 3px !important; font-size: 8px !important; }
+          .register-table .status-pill { padding: 1px 3px !important; font-size: 8.5px !important; }
           /* Un-freeze for print so columns lay out normally on paper. */
           .register-table .fz { position: static; box-shadow: none; }
           .register-table .fz1, .register-table .fz2 { width: auto; min-width: 0; max-width: none; }
