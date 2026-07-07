@@ -52,13 +52,15 @@ export function overtimeMinutes(checkOut: string | null | undefined): number {
 
 // Minutes credited for one day, given its status, how late the check-in was,
 // any personal hourly (mid-day) leave, and any overtime past check-out.
-// Present = full expected shift minus lateness minus personal leave, PLUS
-// overtime; half-day = half credit minus the same, plus overtime;
+// Present = full expected shift minus lateness minus personal leave;
+// half-day = half credit minus the same. Overtime (check-out past 16:45) is
+// added on top but the day is CAPPED at the expected total — so overtime can
+// make up for lateness/leave, but worked hours never cross the required hours.
 // absent/leave/holiday = 0 (the employee wasn't clocked in for the shift).
 // Official hourly leave is excused and never deducted — only personal is.
 export function workedMinutesForDay(status: string | null | undefined, late: number, personalLeaveMin = 0, overtimeMin = 0): number {
-  if (status === "present") return Math.max(0, DAILY_EXPECTED_MINUTES - late - personalLeaveMin) + overtimeMin;
-  if (status === "half-day") return Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late - personalLeaveMin) + overtimeMin;
+  if (status === "present") return Math.min(DAILY_EXPECTED_MINUTES, Math.max(0, DAILY_EXPECTED_MINUTES - late - personalLeaveMin) + overtimeMin);
+  if (status === "half-day") return Math.min(DAILY_EXPECTED_MINUTES / 2, Math.max(0, DAILY_EXPECTED_MINUTES / 2 - late - personalLeaveMin) + overtimeMin);
   return 0;
 }
 

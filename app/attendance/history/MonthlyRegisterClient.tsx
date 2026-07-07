@@ -213,7 +213,7 @@ export default function MonthlyRegisterClient({
         <LegendChip code="PL" label="Personal hourly leave (deducted like lateness, included in Late Time)" c="#9333EA" />
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45)</span>
+          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 to offset lateness/leave, capped at required)</span>
         </span>
       </div>
 
