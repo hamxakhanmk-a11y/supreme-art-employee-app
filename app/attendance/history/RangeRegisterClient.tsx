@@ -279,10 +279,12 @@ export default function RangeRegisterClient({
           @page { size: legal landscape; margin: 6mm; }
           .range-banner { display: table-row !important; }
           .range-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          /* Pre-scaled to ~85% so a plain Print fits Legal landscape without
-             touching the dialog's Scale setting. */
-          .range-table { font-size: 9.5px; width: 100%; zoom: 0.85; }
-          .range-table th, .range-table td { padding: 3px 3px; }
+          /* Sized to fit Legal landscape natively (≈ the old 85% scale) so a
+             plain Print fits every column without touching the dialog. */
+          .range-table { font-size: 8px; width: 100%; }
+          .range-table th, .range-table td { padding: 2px 2px; }
+          .range-table thead th { font-size: 8px; }
+          .range-table .status-pill { padding: 1px 3px !important; font-size: 8px !important; }
           .range-table .fz { position: static; box-shadow: none; }
           .range-table .fz1, .range-table .fz2 { width: auto; min-width: 0; max-width: none; }
         }

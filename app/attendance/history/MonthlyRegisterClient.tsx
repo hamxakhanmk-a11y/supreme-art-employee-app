@@ -372,13 +372,16 @@ export default function MonthlyRegisterClient({
           @page { size: legal landscape; margin: 6mm; }
           .register-banner { display: table-row !important; }
           .register-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          /* Pre-scaled to ~85% so a plain Print fits Legal landscape without
-             touching the dialog's Scale setting. */
-          .register-table { font-size: 9.5px; width: 100%; zoom: 0.85; }
-          .register-table th, .register-table td { padding: 3px 3px; }
-          .register-table .day-c { width: auto; min-width: 0; }
-          .register-table .emp-id { padding-left: 5px; }
-          .register-table .emp-name { padding-left: 5px; }
+          /* Sized to fit Legal landscape natively (≈ the old 85% scale) so a
+             plain Print fits every column without touching the dialog. */
+          .register-table { font-size: 8px; width: 100%; }
+          .register-table th, .register-table td { padding: 2px 2px; }
+          .register-table thead th { font-size: 8px; }
+          .register-table .tot-c, .register-table .tot-h { font-size: 8px; }
+          .register-table .day-c { width: auto; min-width: 0; padding: 2px 1px; }
+          .register-table .emp-id { padding-left: 4px; }
+          .register-table .emp-name { padding-left: 4px; }
+          .register-table .status-pill { padding: 1px 3px !important; font-size: 8px !important; }
           /* Un-freeze for print so columns lay out normally on paper. */
           .register-table .fz { position: static; box-shadow: none; }
           .register-table .fz1, .register-table .fz2 { width: auto; min-width: 0; max-width: none; }
@@ -505,7 +508,7 @@ export function RequiredHoursPanel({
 export function StatusBadge({ status, percent }: { status: WorkStatus; percent: number }) {
   const ok = status === "ok";
   return (
-    <span style={{
+    <span className="status-pill" style={{
       display: "inline-block", padding: "3px 9px", fontSize: 10, fontWeight: 800,
       borderRadius: 999, letterSpacing: 0.3,
       color: ok ? "#15803D" : "#DC2626", background: ok ? "#dcf5dc" : "#fcdada",
