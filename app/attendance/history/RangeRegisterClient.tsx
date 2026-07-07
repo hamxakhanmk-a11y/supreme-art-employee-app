@@ -266,7 +266,8 @@ export default function RangeRegisterClient({
         .range-table .sub-h { font-size: 10.5px; font-weight: 700; padding: 3px 6px; }
         .range-table .emp-id { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .range-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
-        .range-table .emp-dept, .range-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
+        .range-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
+        .range-table .emp-dept { text-align: left; padding-left: 10px; color: var(--text2); width: 82px; white-space: normal; line-height: 1.15; }
         /* Frozen Emp ID + Name columns — stay pinned while month columns scroll (Excel-style). */
         .range-table .fz { position: sticky; z-index: 3; }
         .range-table thead th.fz { z-index: 4; }
@@ -275,10 +276,12 @@ export default function RangeRegisterClient({
         .range-table tbody tr:hover td { background: var(--bg2); }
 
         @media print {
-          @page { size: A3 landscape; margin: 8mm; }
+          @page { size: legal landscape; margin: 6mm; }
           .range-banner { display: table-row !important; }
           .range-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          .range-table { font-size: 9.5px; width: 100%; }
+          /* Pre-scaled to ~85% so a plain Print fits Legal landscape without
+             touching the dialog's Scale setting. */
+          .range-table { font-size: 9.5px; width: 100%; zoom: 0.85; }
           .range-table th, .range-table td { padding: 3px 3px; }
           .range-table .fz { position: static; box-shadow: none; }
           .range-table .fz1, .range-table .fz2 { width: auto; min-width: 0; max-width: none; }

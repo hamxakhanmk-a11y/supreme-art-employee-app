@@ -358,8 +358,8 @@ export default function MonthlyRegisterClient({
         .register-table .tot-c { font-weight: 700; font-size: 12px; background: #fdf8ee; }
         .register-table .emp-id  { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .register-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
-        .register-table .emp-dept,
         .register-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
+        .register-table .emp-dept { text-align: left; padding-left: 10px; color: var(--text2); width: 82px; white-space: normal; line-height: 1.15; }
         /* Frozen Emp ID + Name columns — stay pinned while day columns scroll (Excel-style). */
         .register-table .fz { position: sticky; z-index: 3; }
         .register-table thead th.fz { z-index: 4; }
@@ -369,10 +369,12 @@ export default function MonthlyRegisterClient({
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
         @media print {
-          @page { size: A3 landscape; margin: 8mm; }
+          @page { size: legal landscape; margin: 6mm; }
           .register-banner { display: table-row !important; }
           .register-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          .register-table { font-size: 9.5px; width: 100%; }
+          /* Pre-scaled to ~85% so a plain Print fits Legal landscape without
+             touching the dialog's Scale setting. */
+          .register-table { font-size: 9.5px; width: 100%; zoom: 0.85; }
           .register-table th, .register-table td { padding: 3px 3px; }
           .register-table .day-c { width: auto; min-width: 0; }
           .register-table .emp-id { padding-left: 5px; }
