@@ -184,8 +184,8 @@ export default function RangeRegisterClient({
               </th>
             </tr>
             <tr>
-              <th rowSpan={2}>Emp ID</th>
-              <th rowSpan={2}>Full Name</th>
+              <th rowSpan={2} className="fz fz1">Emp ID</th>
+              <th rowSpan={2} className="fz fz2">Full Name</th>
               <th rowSpan={2}>Department</th>
               <th rowSpan={2}>Designation</th>
               {months.map(ym => (
@@ -224,8 +224,8 @@ export default function RangeRegisterClient({
               const t = totalsFor(emp);
               return (
                 <tr key={emp.id}>
-                  <td className="emp-id">{emp.employeeId}</td>
-                  <td className="emp-name">{emp.firstName} {emp.lastName}</td>
+                  <td className="emp-id fz fz1">{emp.employeeId}</td>
+                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}</td>
                   <td className="emp-dept">{emp.department || "—"}</td>
                   <td className="emp-desig">{emp.designation || "—"}</td>
                   {months.flatMap(ym => {
@@ -270,6 +270,11 @@ export default function RangeRegisterClient({
         .range-table .emp-id { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .range-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
         .range-table .emp-dept, .range-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
+        /* Frozen Emp ID + Name columns — stay pinned while month columns scroll (Excel-style). */
+        .range-table .fz { position: sticky; z-index: 3; }
+        .range-table thead th.fz { z-index: 4; }
+        .range-table .fz1 { left: 0; width: 120px; min-width: 120px; max-width: 120px; }
+        .range-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
         .range-table tbody tr:hover td { background: var(--bg2); }
 
         @media print {
@@ -278,6 +283,8 @@ export default function RangeRegisterClient({
           .range-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
           .range-table { font-size: 9.5px; width: 100%; }
           .range-table th, .range-table td { padding: 3px 3px; }
+          .range-table .fz { position: static; box-shadow: none; }
+          .range-table .fz1, .range-table .fz2 { width: auto; min-width: 0; max-width: none; }
         }
       `}</style>
     </>

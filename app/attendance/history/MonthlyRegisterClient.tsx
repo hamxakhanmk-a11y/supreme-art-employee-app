@@ -238,8 +238,8 @@ export default function MonthlyRegisterClient({
               </th>
             </tr>
             <tr>
-              <th>Emp ID</th>
-              <th>Full Name</th>
+              <th className="fz fz1">Emp ID</th>
+              <th className="fz fz2">Full Name</th>
               <th>Department</th>
               <th>Designation</th>
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
@@ -270,8 +270,8 @@ export default function MonthlyRegisterClient({
               const t = tally(emp);
               return (
                 <tr key={emp.id}>
-                  <td className="emp-id">{emp.employeeId}</td>
-                  <td className="emp-name">{emp.firstName} {emp.lastName}</td>
+                  <td className="emp-id fz fz1">{emp.employeeId}</td>
+                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}</td>
                   <td className="emp-dept">{emp.department || "—"}</td>
                   <td className="emp-desig">{emp.designation || "—"}</td>
                   {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -365,6 +365,11 @@ export default function MonthlyRegisterClient({
         .register-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
         .register-table .emp-dept,
         .register-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
+        /* Frozen Emp ID + Name columns — stay pinned while day columns scroll (Excel-style). */
+        .register-table .fz { position: sticky; z-index: 3; }
+        .register-table thead th.fz { z-index: 4; }
+        .register-table .fz1 { left: 0; width: 120px; min-width: 120px; max-width: 120px; }
+        .register-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
         .register-table tbody tr:hover td { background: var(--bg2); }
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
@@ -377,6 +382,9 @@ export default function MonthlyRegisterClient({
           .register-table .day-c { width: auto; min-width: 0; }
           .register-table .emp-id { padding-left: 5px; }
           .register-table .emp-name { padding-left: 5px; }
+          /* Un-freeze for print so columns lay out normally on paper. */
+          .register-table .fz { position: static; box-shadow: none; }
+          .register-table .fz1, .register-table .fz2 { width: auto; min-width: 0; max-width: none; }
         }
       `}</style>
     </>
