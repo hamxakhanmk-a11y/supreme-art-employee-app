@@ -21,6 +21,19 @@ type Emp = {
 // value state key: `${month}:${kpiIdx}:${inputKey}`
 const vk = (m: number, k: number, key: string) => `${m}:${k}:${key}`;
 
+// Date operands are stored as an epoch-day count (days since 1970-01-01 UTC)
+// so subtracting two of them yields a number of days for the compute engine.
+const MS_PER_DAY = 86400000;
+function dateToEpochDays(dateStr: string): string {
+  if (!dateStr) return "";
+  const t = Date.parse(`${dateStr}T00:00:00Z`);
+  return isNaN(t) ? "" : String(Math.floor(t / MS_PER_DAY));
+}
+function epochDaysToDate(days: number | undefined): string {
+  if (typeof days !== "number" || isNaN(days)) return "";
+  return new Date(days * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
 function fmt(n: number | null, unit: string): string {
   if (n === null) return "—";
   const r = Math.abs(n) >= 100 ? Math.round(n) : Math.round(n * 10) / 10;
@@ -276,15 +289,21 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
                   </td>
                   <td>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {kpi.inputs.map(inp => (
-                        <label key={inp.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-                          <span style={{ flex: 1, color: "var(--text2)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={inp.label}>{inp.label}</span>
-                          <input type="number" defaultValue={vals[vk(month, kpi.idx, inp.key)] ?? ""}
-                            key={`${empId}-${year}-${month}-${kpi.idx}-${inp.key}`}
-                            onBlur={e => saveOperand(kpi, inp.key, e.target.value)}
-                            style={{ width: 90, padding: "3px 6px", fontSize: 12 }} />
-                        </label>
-                      ))}
+                      {kpi.inputs.map(inp => {
+                        const stored = vals[vk(month, kpi.idx, inp.key)];
+                        const isDate = inp.type === "date";
+                        return (
+                          <label key={inp.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+                            <span style={{ flex: 1, color: "var(--text2)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={inp.label}>{inp.label}</span>
+                            <input
+                              type={isDate ? "date" : "number"}
+                              defaultValue={isDate ? epochDaysToDate(stored) : (stored ?? "")}
+                              key={`${empId}-${year}-${month}-${kpi.idx}-${inp.key}`}
+                              onBlur={e => saveOperand(kpi, inp.key, isDate ? dateToEpochDays(e.target.value) : e.target.value)}
+                              style={{ width: isDate ? 120 : 90, padding: "3px 6px", fontSize: 12 }} />
+                          </label>
+                        );
+                      })}
                     </div>
                   </td>
                   <td style={{ textAlign: "center", color: RAG_COLOR[mRag], fontWeight: 700 }}>

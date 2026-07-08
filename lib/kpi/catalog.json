@@ -1156,11 +1156,13 @@
      "inputs": [
       {
        "key": "offer_accept",
-       "label": "Offer Accept"
+       "label": "Offer Accept",
+       "type": "date"
       },
       {
        "key": "job_post",
-       "label": "Job Post"
+       "label": "Job Post",
+       "type": "date"
       },
       {
        "key": "no_of_hires",
@@ -1304,11 +1306,13 @@
      "inputs": [
       {
        "key": "resolve_date",
-       "label": "Resolve Date"
+       "label": "Resolve Date",
+       "type": "date"
       },
       {
        "key": "file_date",
-       "label": "File Date"
+       "label": "File Date",
+       "type": "date"
       },
       {
        "key": "no_of_grievances",
@@ -3672,11 +3676,13 @@
      "inputs": [
       {
        "key": "contract",
-       "label": "Contract"
+       "label": "Contract",
+       "type": "date"
       },
       {
        "key": "first_contact",
-       "label": "First Contact"
+       "label": "First Contact",
+       "type": "date"
       },
       {
        "key": "no_of_deals",

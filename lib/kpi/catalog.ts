@@ -1,7 +1,9 @@
 import catalogJson from "./catalog.json";
 
 // One measurable input (operand) HR types each month, e.g. "Invoices On Time".
-export type KpiInput = { key: string; label: string };
+// type "date" operands are entered as a calendar date and stored as an epoch-day
+// number, so a subtraction of two of them yields a count of days.
+export type KpiInput = { key: string; label: string; type?: "number" | "date" };
 
 // How the monthly value is computed from its operand inputs.
 export type ComputeType =
