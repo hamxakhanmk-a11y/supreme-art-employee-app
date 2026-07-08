@@ -5563,6 +5563,498 @@
      }
     }
    ]
+  },
+  {
+   "code": "DRV",
+   "sheet": "DRV Driver",
+   "title": "Driver",
+   "department": "Support Staff",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Safe Driving Compliance Rate",
+     "formulaText": "((Total Trips − Trips with Safety Violations) ÷ Total Trips) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "net_self_pct",
+     "inputs": [
+      {
+       "key": "total_trips",
+       "label": "Total Trips"
+      },
+      {
+       "key": "trips_with_safet",
+       "label": "Trips with Safety Violations"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "On-Time Arrival/Delivery Rate",
+     "formulaText": "(On-Time Trips ÷ Total Trips) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "on_time_trips",
+       "label": "On-Time Trips"
+      },
+      {
+       "key": "total_trips",
+       "label": "Total Trips"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Vehicle Inspection Compliance",
+     "formulaText": "(Completed Inspections ÷ Required Inspections) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "completed_inspec",
+       "label": "Completed Inspections"
+      },
+      {
+       "key": "required_inspect",
+       "label": "Required Inspections"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Vehicle Damage Incident Rate",
+     "formulaText": "Count of Preventable Vehicle Damage Incidents",
+     "unit": "Count",
+     "agg": "SUM",
+     "compute": "count",
+     "inputs": [
+      {
+       "key": "preventable_vehi",
+       "label": "Preventable Vehicle Damage Incidents"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 0,
+      "qualitative": false,
+      "raw": "0"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Fuel Efficiency Performance",
+     "formulaText": "(Standard Fuel Consumption ÷ Actual Fuel Consumption) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "standard_fuel_co",
+       "label": "Standard Fuel Consumption"
+      },
+      {
+       "key": "actual_fuel_cons",
+       "label": "Actual Fuel Consumption"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "≥ 100% (within std)"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Documentation Accuracy Rate",
+     "formulaText": "(Accurate Documents ÷ Total Documents Reviewed) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "accurate_documen",
+       "label": "Accurate Documents"
+      },
+      {
+       "key": "total_documents_",
+       "label": "Total Documents Reviewed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Delivery / Transport Completion Rate",
+     "formulaText": "(Completed Trips ÷ Assigned Trips) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "completed_trips",
+       "label": "Completed Trips"
+      },
+      {
+       "key": "assigned_trips",
+       "label": "Assigned Trips"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Vehicle Maintenance Reporting Compliance",
+     "formulaText": "(Issues Reported Timely ÷ Total Issues Identified) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "issues_reported_",
+       "label": "Issues Reported Timely"
+      },
+      {
+       "key": "total_issues_ide",
+       "label": "Total Issues Identified"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Attendance & Punctuality",
+     "formulaText": "(Days Attended On Time ÷ Total Scheduled Workdays) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "days_attended_on",
+       "label": "Days Attended On Time"
+      },
+      {
+       "key": "total_scheduled_",
+       "label": "Total Scheduled Workdays"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Customer Service Rating",
+     "formulaText": "(Total Customer Satisfaction Score ÷ Maximum Possible Score) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "total_customer_s",
+       "label": "Total Customer Satisfaction Score"
+      },
+      {
+       "key": "maximum_possible",
+       "label": "Maximum Possible Score"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 90,
+      "qualitative": false,
+      "raw": "≥ 90%"
+     }
+    }
+   ]
+  },
+  {
+   "code": "COOK",
+   "sheet": "COOK Cook",
+   "title": "Cook",
+   "department": "Support Staff",
+   "kpis": [
+    {
+     "idx": 0,
+     "name": "Food Preparation Accuracy Rate",
+     "formulaText": "(Correctly Prepared Batches ÷ Total Batches Prepared) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "correctly_prepar",
+       "label": "Correctly Prepared Batches"
+      },
+      {
+       "key": "total_batches_pr",
+       "label": "Total Batches Prepared"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 1,
+     "name": "Food Production Timeliness",
+     "formulaText": "(Orders Completed Within Standard Time ÷ Total Orders Prepared) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "orders_completed",
+       "label": "Orders Completed Within Standard Time"
+      },
+      {
+       "key": "total_orders_pre",
+       "label": "Total Orders Prepared"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 95,
+      "qualitative": false,
+      "raw": "≥ 95%"
+     }
+    },
+    {
+     "idx": 2,
+     "name": "Food Quality Compliance Rate",
+     "formulaText": "(Food Items Passing Quality Inspection ÷ Total Food Items Checked) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "food_items_passi",
+       "label": "Food Items Passing Quality Inspection"
+      },
+      {
+       "key": "total_food_items",
+       "label": "Total Food Items Checked"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 3,
+     "name": "Kitchen Hygiene Compliance Rate",
+     "formulaText": "(Hygiene Checks Passed ÷ Total Hygiene Checks Conducted) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "hygiene_checks_p",
+       "label": "Hygiene Checks Passed"
+      },
+      {
+       "key": "total_hygiene_ch",
+       "label": "Total Hygiene Checks Conducted"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 4,
+     "name": "Dishwashing Efficiency Rate",
+     "formulaText": "(Items Cleaned on Time ÷ Total Items Washed) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "items_cleaned_on",
+       "label": "Items Cleaned on Time"
+      },
+      {
+       "key": "total_items_wash",
+       "label": "Total Items Washed"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    },
+    {
+     "idx": 5,
+     "name": "Food Waste Control Rate",
+     "formulaText": "(Food Waste Weight ÷ Total Food Used Weight) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "food_waste_weigh",
+       "label": "Food Waste Weight"
+      },
+      {
+       "key": "total_food_used_",
+       "label": "Total Food Used Weight"
+      }
+     ],
+     "target": {
+      "op": "<=",
+      "value": 3,
+      "qualitative": false,
+      "raw": "≤ 3%"
+     }
+    },
+    {
+     "idx": 6,
+     "name": "Inventory & FIFO Compliance",
+     "formulaText": "(FIFO-Compliant Inventory Checks ÷ Total Inventory Checks) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "fifo_compliant_i",
+       "label": "FIFO-Compliant Inventory Checks"
+      },
+      {
+       "key": "total_inventory_",
+       "label": "Total Inventory Checks"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 7,
+     "name": "Equipment Care Compliance",
+     "formulaText": "(Equipment Maintenance Tasks Completed ÷ Scheduled Maintenance Tasks) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "equipment_mainte",
+       "label": "Equipment Maintenance Tasks Completed"
+      },
+      {
+       "key": "scheduled_mainte",
+       "label": "Scheduled Maintenance Tasks"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 8,
+     "name": "Health & Safety Compliance Rate",
+     "formulaText": "(Safety Checks Passed ÷ Total Safety Checks Conducted) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "safety_checks_pa",
+       "label": "Safety Checks Passed"
+      },
+      {
+       "key": "total_safety_che",
+       "label": "Total Safety Checks Conducted"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 100,
+      "qualitative": false,
+      "raw": "100%"
+     }
+    },
+    {
+     "idx": 9,
+     "name": "Attendance & Punctuality",
+     "formulaText": "(Shifts Attended On Time ÷ Total Scheduled Shifts) × 100",
+     "unit": "%",
+     "agg": "AVERAGE",
+     "compute": "ratio_pct",
+     "inputs": [
+      {
+       "key": "shifts_attended_",
+       "label": "Shifts Attended On Time"
+      },
+      {
+       "key": "total_scheduled_",
+       "label": "Total Scheduled Shifts"
+      }
+     ],
+     "target": {
+      "op": ">=",
+      "value": 98,
+      "qualitative": false,
+      "raw": "≥ 98%"
+     }
+    }
+   ]
   }
  ]
 }
