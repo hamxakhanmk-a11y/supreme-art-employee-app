@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -129,6 +130,11 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       if (rows.length) await db.insert(otherDocuments).values(rows);
     }
 
+    await logActivity({
+      user: guard, action: "employee.update", employeeId: empId,
+      employeeName: `${updated.firstName} ${updated.lastName}`,
+      summary: "profile updated",
+    });
     return NextResponse.json(updated);
   } catch (e: any) {
     console.error(e);
@@ -146,7 +152,15 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   try {
     const { id } = await ctx.params;
     const empId = parseInt(id);
+    // Snapshot the name before the row (and its FK'd children) disappear.
+    const [victim] = await db.select({ firstName: employees.firstName, lastName: employees.lastName, code: employees.employeeId })
+      .from(employees).where(eq(employees.id, empId));
     await db.delete(employees).where(eq(employees.id, empId));
+    await logActivity({
+      user: guard, action: "employee.delete", employeeId: empId,
+      employeeName: victim ? `${victim.firstName} ${victim.lastName}` : `#${empId}`,
+      summary: `deleted from employees${victim ? ` (${victim.code})` : ""}`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

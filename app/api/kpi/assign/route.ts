@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 import { getDesignation } from "@/lib/kpi/catalog";
 
 // POST /api/kpi/assign  { employeeId, templateCode }  (templateCode null = untrack)
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown template ${code}` }, { status: 400 });
     }
     await db.update(employees).set({ kpiTemplate: code }).where(eq(employees.id, employeeId));
+    await logActivity({
+      user: guard, action: "kpi.assign", employeeId,
+      summary: code ? `KPI template set to ${code}` : "KPI template removed (not tracked)",
+    });
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

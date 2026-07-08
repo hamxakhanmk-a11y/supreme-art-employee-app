@@ -39,6 +39,13 @@ export default function ReportsLanding() {
           urdu="تنخواہ کا ریکارڈ"
           desc="All generated salary slips by month, employee. Click any row to view & print the slip."
         />
+        <ReportCard
+          href="/reports/activity"
+          icon="🕘"
+          title="Activity Log"
+          urdu="سرگرمی کا ریکارڈ"
+          desc="Audit trail — who marked, edited, approved or generated what, and when."
+        />
       </div>
     </div>
   );

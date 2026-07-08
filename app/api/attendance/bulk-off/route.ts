@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { attendance, attendanceDays, employees } from "@/lib/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 // POST /api/attendance/bulk-off
 // Body: { dates: string[], status?: "holiday" | "week-off" }
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
       upserts += emps.length;
     }
 
+    await logActivity({ user: guard, action: "attendance.bulk-off", summary: `marked OFF (${status}) for all ${emps.length} active employees on ${allowed.join(", ")}` });
     return NextResponse.json({ ok: true, datesApplied: allowed, datesSkipped: dates.filter(d => closedSet.has(d)), totalUpserts: upserts });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

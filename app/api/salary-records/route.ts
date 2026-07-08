@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { salaryRecords, employees } from "@/lib/schema";
 import { and, eq, desc, asc, inArray } from "drizzle-orm";
+import { logActivity } from "@/lib/activity";
 import { guardWrite, getSession } from "@/lib/auth";
 import { computeSlip, MONTHS, DEFAULT_MIN_WAGE_PKR, DEFAULT_ESSI_CONTRIBUTION } from "@/lib/salary";
 
@@ -136,6 +137,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const ok = results.filter((r: any) => !r.error);
+    if (ok.length) {
+      const period = `${String(slipsIn[0]?.month || "")} ${slipsIn[0]?.year || ""}`.trim();
+      await logActivity({
+        user: guard, action: "salary.generate",
+        employeeId: ok.length === 1 ? ok[0].employeeId : null,
+        employeeName: ok.length === 1 ? ok[0].employeeName : null,
+        summary: ok.length === 1
+          ? `salary slip generated for ${period}`
+          : `generated ${ok.length} salary slips for ${period}`,
+      });
+    }
     if (results.length === 1) return NextResponse.json(results[0], { status: 201 });
     return NextResponse.json({ slips: results }, { status: 201 });
   } catch (e: any) {

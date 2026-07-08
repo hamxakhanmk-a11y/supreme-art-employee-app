@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { leaveRequests, attendance, leaveTypes } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 // PUT — approve/reject or edit request
 // On approval of a half-day request, auto-stamp attendance for that date
@@ -48,6 +49,12 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       }
     }
 
+    if (u && body.status) {
+      await logActivity({
+        user: guard, action: `leave.${body.status}`, employeeId: u.employeeId,
+        summary: `leave request ${body.status} (${u.startDate}${u.endDate !== u.startDate ? ` → ${u.endDate}` : ""}, ${u.days} day${u.days === 1 ? "" : "s"}${u.halfSegment ? ", half-day" : ""})`,
+      });
+    }
     return NextResponse.json(u);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

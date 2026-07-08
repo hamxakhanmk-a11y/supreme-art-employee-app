@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { desc } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 export async function GET() {
   const rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
@@ -119,6 +120,11 @@ export async function POST(req: NextRequest) {
       if (rows.length) await db.insert(otherDocuments).values(rows);
     }
 
+    await logActivity({
+      user: guard, action: "employee.create", employeeId: created.id,
+      employeeName: `${created.firstName} ${created.lastName}`,
+      summary: `added as new employee (${created.employeeId})`,
+    });
     return NextResponse.json(created, { status: 201 });
   } catch (e: any) {
     console.error(e);

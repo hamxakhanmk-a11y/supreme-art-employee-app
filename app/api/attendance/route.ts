@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { attendance, attendanceDays, employees } from "@/lib/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 // GET /api/attendance?date=YYYY-MM-DD         -> rows for a day with employee join (for marking form)
 // GET /api/attendance?from=&to=&employeeId=   -> filtered range (for history)
@@ -87,6 +88,11 @@ export async function POST(req: NextRequest) {
     } else {
       await db.insert(attendance).values({ employeeId, date, status, checkIn: checkIn || null, checkOut: checkOut || null, officialLeaveMin, personalLeaveMin, notes: notes || null });
     }
+    const times = [checkIn && `in ${checkIn}`, checkOut && `out ${checkOut}`].filter(Boolean).join(", ");
+    await logActivity({
+      user: guard, action: existing.length ? "attendance.update" : "attendance.mark", employeeId,
+      summary: `marked ${status} for ${date}${times ? ` (${times})` : ""}`,
+    });
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -113,6 +119,11 @@ export async function DELETE(req: NextRequest) {
       .where(employeeId
         ? and(eq(attendance.employeeId, parseInt(employeeId)), eq(attendance.date, date))
         : eq(attendance.date, date));
+    if (employeeId) {
+      await logActivity({ user: guard, action: "attendance.unmark", employeeId: parseInt(employeeId), summary: `unmarked ${date}` });
+    } else {
+      await logActivity({ user: guard, action: "attendance.unmark-all", summary: `unmarked ALL employees for ${date}` });
+    }
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

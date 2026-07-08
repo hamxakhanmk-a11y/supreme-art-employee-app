@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveRequests } from "@/lib/schema";
 import { and, eq, gte, lte, desc } from "drizzle-orm";
+import { logActivity } from "@/lib/activity";
 import { guardWrite } from "@/lib/auth";
 
 // GET /api/leave/requests?employeeId=&status=&from=&to=
@@ -55,6 +56,10 @@ export async function POST(req: NextRequest) {
       medicalCertAttached: body.medicalCertAttached || null,
       status: "pending",
     }).returning();
+    await logActivity({
+      user: guard, action: "leave.file", employeeId: c.employeeId,
+      summary: `leave request filed (${c.startDate}${c.endDate !== c.startDate ? ` → ${c.endDate}` : ""}, ${c.days} day${c.days === 1 ? "" : "s"}${c.halfSegment ? ", half-day" : ""})`,
+    });
     return NextResponse.json(c, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

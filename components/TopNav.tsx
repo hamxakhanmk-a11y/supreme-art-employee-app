@@ -69,6 +69,9 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       if (path.startsWith("/reports/salary")) {
         return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
       }
+      if (path.startsWith("/reports/activity")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/activity", label: "Activity Log" }];
+      }
       return [];
     }
     case "salary":

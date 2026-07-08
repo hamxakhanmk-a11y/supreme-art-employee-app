@@ -145,6 +145,22 @@ export const attendance = pgTable("attendance", {
 });
 
 // =====================
+// ACTIVITY LOG (audit trail)
+// =====================
+// One row per meaningful write: who did what, optionally to which employee.
+// employeeId is a plain integer (no FK) so history survives employee deletion;
+// userName is snapshotted for the same reason.
+export const activityLog = pgTable("activity_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id"),
+  userName: varchar("user_name", { length: 120 }).notNull(),
+  action: varchar("action", { length: 40 }).notNull(), // e.g. "attendance.mark"
+  employeeId: integer("employee_id"),
+  summary: text("summary").notNull(), // human-readable sentence
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
 // KPI VALUES (per employee, per month, raw operand inputs)
 // =====================
 // One row per operand HR types: (employee, year, month, kpiIdx, inputKey) -> value.
