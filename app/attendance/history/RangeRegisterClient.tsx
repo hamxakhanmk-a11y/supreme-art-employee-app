@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { downloadCSV } from "@/lib/csv";
+import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel } from "./MonthlyRegisterClient";
@@ -114,7 +114,7 @@ export default function RangeRegisterClient({
     });
   }, [records, months, activeEmps]);
 
-  const exportCSV = () => {
+  const exportXlsx = async () => {
     const headers = ["Emp ID", "Full Name", "Department", "Designation"];
     for (const ym of months) {
       const lbl = `${MONTHS[ym.m - 1].slice(0, 3)} ${String(ym.y).slice(2)}`;
@@ -133,7 +133,12 @@ export default function RangeRegisterClient({
         formatHoursHM(t.WorkedMin), formatPercent(t.percent));
       return r;
     });
-    downloadCSV(`attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}.csv`, headers, rows);
+    await downloadRegisterXlsx({
+      filename: `attendance-range-${from.y}-${from.m}-to-${to.y}-${to.m}`,
+      sheetName: `${from.m}-${String(from.y).slice(2)} to ${to.m}-${String(to.y).slice(2)}`,
+      title: `Attendance Register — ${rangeLabel}`,
+      headers, rows,
+    });
   };
 
   return (
@@ -146,7 +151,7 @@ export default function RangeRegisterClient({
         from={`${from.y}-${String(from.m).padStart(2, "0")}`}
         to={`${to.y}-${String(to.m).padStart(2, "0")}`}
         onPrint={printLandscape}
-        onExport={exportCSV}
+        onExport={exportXlsx}
         years={years}
         sort={sort}
         onSortChange={setSort}

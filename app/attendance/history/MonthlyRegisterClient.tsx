@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { downloadCSV } from "@/lib/csv";
+import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
@@ -133,7 +133,7 @@ export default function MonthlyRegisterClient({
   };
   const isSunday = (day: number) => new Date(year, month - 1, day).getDay() === 0;
 
-  const exportCSV = () => {
+  const buildExport = () => {
     const dayCols = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
     const headers = ["Emp ID", "Full Name", "Department", "Designation", ...dayCols, "P", "Half", "A", "L", "H", "Late Days", "Late Time (incl. personal lv)", "Official Lv", "Personal Lv", "Worked Hrs", "Status %"];
     const rows = activeEmps.map(e => {
@@ -157,7 +157,18 @@ export default function MonthlyRegisterClient({
         formatHoursHM(t.WorkedMin), formatPercent(t.percent),
       ];
     });
-    downloadCSV(`monthly-register-${MONTHS[month - 1]}-${year}.csv`, headers, rows);
+    return { headers, rows };
+  };
+
+  const exportXlsx = async () => {
+    const { headers, rows } = buildExport();
+    await downloadRegisterXlsx({
+      filename: `monthly-register-${MONTHS[month - 1]}-${year}`,
+      sheetName: `${MONTHS[month - 1].slice(0, 3)} ${year}`,
+      title: `Monthly Attendance Register — ${MONTHS[month - 1]} ${year}`,
+      headers, rows,
+      dayRange: [4, 4 + daysInMonth - 1],
+    });
   };
 
   const today = new Date();
@@ -178,7 +189,7 @@ export default function MonthlyRegisterClient({
           from={rangeFrom}
           to={rangeTo}
           onPrint={printLandscape}
-          onExport={exportCSV}
+          onExport={exportXlsx}
           years={years}
           sort={sort}
           onSortChange={setSort}
@@ -196,7 +207,7 @@ export default function MonthlyRegisterClient({
           <div style={{ flex: 1 }} />
           <SortSelect value={sort} onChange={setSort} />
           <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
-          <button onClick={exportCSV} className="btn btn-primary">⬇ Excel</button>
+          <button onClick={exportXlsx} className="btn btn-primary">⬇ Excel</button>
         </div>
       )}
 
