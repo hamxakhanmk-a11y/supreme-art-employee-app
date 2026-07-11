@@ -43,11 +43,15 @@
 
   --radius: 10px;
   --radius-sm: 7px;
-  --font: 'Segoe UI', system-ui, sans-serif;
+  --font: var(--font-inter), 'Segoe UI', system-ui, -apple-system, sans-serif;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 14px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  /* Layered shadows — softer and more dimensional than single-blur ones */
+  --shadow-sm: 0 1px 2px rgba(28,22,15,0.05), 0 1px 1px rgba(28,22,15,0.03);
+  --shadow-md: 0 2px 4px rgba(28,22,15,0.04), 0 6px 16px rgba(28,22,15,0.07);
+  --shadow-lg: 0 4px 8px rgba(28,22,15,0.05), 0 12px 28px rgba(28,22,15,0.10);
+
+  /* Brand-tinted focus ring used on all interactive elements */
+  --ring: 0 0 0 3px rgba(163,45,45,0.14);
 }
 
 html, body {
@@ -56,8 +60,23 @@ html, body {
   font-family: var(--font);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   min-height: 100vh;
 }
+
+h1, h2, h3 { letter-spacing: -0.02em; }
+
+::selection { background: var(--brand-soft); color: var(--brand-deep); }
+
+/* Keyboard focus — visible ring without mouse-click noise */
+:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* Slim scrollbars for wide tables (registers) and long lists */
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.22) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.30); }
 
 /* ---------- Cards ---------- */
 .card {
@@ -77,6 +96,7 @@ html, body {
 .btn {
   padding: 7px 16px;
   font-size: 13px;
+  line-height: 1.4;
   border: 1px solid var(--border2);
   border-radius: var(--radius-sm);
   background: var(--bg);
@@ -89,9 +109,11 @@ html, body {
   gap: 6px;
   text-decoration: none;
   transition: all 0.12s;
+  box-shadow: var(--shadow-sm);
 }
-.btn:hover { background: var(--bg2); }
-.btn-sm { padding: 4px 11px; font-size: 12px; }
+.btn:hover { background: var(--bg2); border-color: var(--text3); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
+.btn-sm { padding: 4px 11px; font-size: 12px; box-shadow: none; }
 
 .btn-primary {
   background: var(--brand);
@@ -212,17 +234,22 @@ input[type=date] { font-family: inherit; }
 .mode-btn:hover:not(.active) { color: var(--brand); background: var(--brand-soft); }
 
 /* ---------- Tables ---------- */
-table { width: 100%; border-collapse: collapse; background: var(--bg); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg);
+  font-variant-numeric: tabular-nums; /* digits align vertically in columns */
+}
 th {
   text-align: left;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text2);
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 td {
@@ -331,7 +358,7 @@ th.num, th.num-strong { text-align: right; }
 }
 .stat:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
 .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; font-weight: 600; }
-.stat-value { font-size: 26px; font-weight: 600; color: var(--text); line-height: 1; }
+.stat-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stat-value.warn { color: var(--brand); }
 
 /* ---------- Animations ---------- */
