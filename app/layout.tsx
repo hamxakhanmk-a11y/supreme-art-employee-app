@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import TopNav from "@/components/TopNav";
 import PrintWatermark from "@/components/PrintWatermark";
-
-// Self-hosted via next/font — consistent professional type on every OS
-// (Segoe UI only exists on Windows; Mac/Android users saw fallbacks).
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Supreme Art — Employee Management",
@@ -21,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
