@@ -47,6 +47,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   const [dept, setDept] = useState("");
   const [cat, setCat] = useState("");
   const [status, setStatus] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -57,13 +59,20 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     if (dept && r.department !== dept) return false;
     if (cat && r.category !== cat) return false;
     if (status && r.status !== status) return false;
+    // Date range (inclusive). Rows without a date are excluded once a bound is set.
+    if (fromDate || toDate) {
+      const d = r.date ? r.date.slice(0, 10) : "";
+      if (!d) return false;
+      if (fromDate && d < fromDate) return false;
+      if (toDate && d > toDate) return false;
+    }
     if (q.trim()) {
       const s = q.toLowerCase();
       const hay = `${r.prNo ?? ""} ${r.itemName ?? ""} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
-  }), [rows, q, dept, cat, status]);
+  }), [rows, q, dept, cat, status, fromDate, toDate]);
 
   const totalValue = useMemo(() => filtered.reduce((s, r) => s + (r.value ?? 0), 0), [filtered]);
 
@@ -170,8 +179,14 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
           <option value="">All statuses</option>
           {PR_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        {(q || dept || cat || status) && (
-          <button className="btn btn-sm" onClick={() => { setQ(""); setDept(""); setCat(""); setStatus(""); }}>Clear</button>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)" }}>
+          <span style={{ fontWeight: 600 }}>Date</span>
+          <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title="From date" style={{ width: 145 }} />
+          <span>→</span>
+          <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
+        </span>
+        {(q || dept || cat || status || fromDate || toDate) && (
+          <button className="btn btn-sm" onClick={() => { setQ(""); setDept(""); setCat(""); setStatus(""); setFromDate(""); setToDate(""); }}>Clear</button>
         )}
       </div>
 
