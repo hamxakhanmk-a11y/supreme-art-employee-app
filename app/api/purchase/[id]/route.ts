@@ -15,7 +15,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!b.date || !b.department || !b.itemName?.trim()) {
       return NextResponse.json({ error: "date, department and itemName are required" }, { status: 400 });
     }
+    const prNoParsed = b.prNo === null || b.prNo === "" || b.prNo === undefined ? NaN : parseInt(b.prNo);
     const [updated] = await db.update(purchaseRequisitions).set({
+      prNo: isNaN(prNoParsed) ? null : prNoParsed,
       date: b.date,
       department: b.department,
       concernedPerson: b.concernedPerson?.trim() || null,

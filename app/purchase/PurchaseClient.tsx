@@ -25,7 +25,7 @@ export type PrRow = {
 };
 
 type Draft = {
-  date: string; department: string; concernedPerson: string; category: string;
+  date: string; prNo: string; department: string; concernedPerson: string; category: string;
   itemName: string; quantity: string; uom: string; receivedByAdmin: boolean;
   value: string; requiredDate: string; hodApproval: string; status: string;
   poNo: string; remarks: string;
@@ -33,7 +33,7 @@ type Draft = {
 
 const emptyDraft = (): Draft => ({
   date: new Date().toISOString().slice(0, 10),
-  department: "", concernedPerson: "", category: "", itemName: "",
+  prNo: "", department: "", concernedPerson: "", category: "", itemName: "",
   quantity: "", uom: "", receivedByAdmin: true, value: "",
   requiredDate: "", hodApproval: "", status: "PR Raised", poNo: "", remarks: "",
 });
@@ -69,10 +69,16 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
 
   const set = (patch: Partial<Draft>) => setDraft(prev => ({ ...prev, ...patch }));
 
-  const openNew = () => { setDraft(emptyDraft()); setEditId(null); setShowForm(true); setError(null); };
+  const openNew = () => {
+    // Suggest the next number after the current max — still fully editable.
+    const maxPr = rows.reduce((m, r) => Math.max(m, r.prNo ?? 0), 0);
+    setDraft({ ...emptyDraft(), prNo: String(maxPr + 1) });
+    setEditId(null); setShowForm(true); setError(null);
+  };
   const openEdit = (r: PrRow) => {
     setDraft({
-      date: r.date ?? "", department: r.department ?? "", concernedPerson: r.concernedPerson ?? "",
+      date: r.date ?? "", prNo: r.prNo === null ? "" : String(r.prNo),
+      department: r.department ?? "", concernedPerson: r.concernedPerson ?? "",
       category: r.category ?? "", itemName: r.itemName ?? "",
       quantity: r.quantity === null ? "" : String(r.quantity), uom: r.uom ?? "",
       receivedByAdmin: r.receivedByAdmin, value: r.value === null ? "" : String(r.value),
@@ -83,8 +89,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   };
 
   const save = async () => {
-    if (!draft.date || !draft.department || !draft.itemName.trim()) {
-      setError("Date, Department and Item Name are required."); return;
+    if (!draft.date || !draft.prNo.trim() || !draft.department || !draft.itemName.trim()) {
+      setError("Date, PR No, Department and Item Name are required."); return;
     }
     setBusy(true); setError(null);
     try {
@@ -180,13 +186,15 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
         <div className="no-print card" style={{ marginBottom: 16, borderColor: "var(--brand)", borderWidth: 2 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 800 }}>
-              {editId === null ? "＋ New Requisition (PR No auto-assigned)" : `✏️ Edit PR #${rows.find(r => r.id === editId)?.prNo}`}
+              {editId === null ? "＋ New Requisition" : `✏️ Edit PR #${rows.find(r => r.id === editId)?.prNo ?? "—"}`}
             </div>
             <button onClick={() => setShowForm(false)} className="btn btn-sm">Cancel</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
             <div><label className="form-label">Date *</label>
               <input type="date" value={draft.date} onChange={e => set({ date: e.target.value })} /></div>
+            <div><label className="form-label">PR No *</label>
+              <input type="number" value={draft.prNo} onChange={e => set({ prNo: e.target.value })} placeholder="Requisition number" /></div>
             <div><label className="form-label">Department *</label>
               <select value={draft.department} onChange={e => set({ department: e.target.value })}>
                 <option value="">— Select —</option>

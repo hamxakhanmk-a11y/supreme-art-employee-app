@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 export async function GET() {
   try {
     const rows = await db.select().from(purchaseRequisitions)
-      .orderBy(sql`pr_no DESC NULLS LAST, date DESC NULLS LAST`);
+      .orderBy(sql`date DESC NULLS LAST, pr_no DESC NULLS LAST`);
     return NextResponse.json(rows);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -25,10 +25,15 @@ export async function POST(req: NextRequest) {
     if (!b.date || !b.department || !b.itemName?.trim()) {
       return NextResponse.json({ error: "date, department and itemName are required" }, { status: 400 });
     }
-    const [{ next }] = await db.select({ next: sql<number>`COALESCE(MAX(pr_no), 0) + 1` })
-      .from(purchaseRequisitions);
+    // PR No is entered manually; fall back to max+1 only if omitted.
+    let prNo = b.prNo === null || b.prNo === "" || b.prNo === undefined ? NaN : parseInt(b.prNo);
+    if (isNaN(prNo)) {
+      const [{ next }] = await db.select({ next: sql<number>`COALESCE(MAX(pr_no), 0) + 1` })
+        .from(purchaseRequisitions);
+      prNo = next;
+    }
     const [created] = await db.insert(purchaseRequisitions).values({
-      prNo: next,
+      prNo,
       date: b.date,
       department: b.department,
       concernedPerson: b.concernedPerson?.trim() || null,
