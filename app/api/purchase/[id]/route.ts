@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 
@@ -14,31 +14,27 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   try {
     const { id } = await ctx.params;
     const { action } = await req.json();
-    const [cur] = await db.select().from(purchaseRequisitions).where(eq(purchaseRequisitions.id, parseInt(id)));
-    if (!cur) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const col = purchaseRequisitions;
 
-    let patch: Record<string, unknown> | null = null;
-    let verb = "";
-    if (action === "approve") {
-      const on = cur.hrApproval !== "Approved";
-      patch = { hrApproval: on ? "Approved" : null };
-      verb = on ? "HR-approved" : "cleared HR approval on";
-    } else if (action === "reject") {
-      const on = cur.hrApproval !== "Rejected";
-      patch = { hrApproval: on ? "Rejected" : null };
-      verb = on ? "HR-rejected" : "cleared HR rejection on";
-    } else if (action === "received") {
-      const on = cur.status !== "Material Received";
-      // Un-receiving reverts the status to PR Raised (its prior state isn't stored).
-      patch = on ? { status: "Material Received", receivedByAdmin: true } : { status: "PR Raised", receivedByAdmin: false };
-      verb = on ? "marked received" : "un-marked received on";
-    }
+    // Single round-trip: toggle in-place with a CASE on the current value.
+    const patch =
+      action === "approve" ? { hrApproval: sql`CASE WHEN ${col.hrApproval} = 'Approved' THEN NULL ELSE 'Approved' END` } :
+      action === "reject"  ? { hrApproval: sql`CASE WHEN ${col.hrApproval} = 'Rejected' THEN NULL ELSE 'Rejected' END` } :
+      action === "received" ? {
+        status: sql`CASE WHEN ${col.status} = 'Material Received' THEN 'PR Raised' ELSE 'Material Received' END`,
+        receivedByAdmin: sql`CASE WHEN ${col.status} = 'Material Received' THEN false ELSE true END`,
+      } : null;
     if (!patch) return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 
-    const [updated] = await db.update(purchaseRequisitions)
+    const [updated] = await db.update(col)
       .set({ ...patch, updatedAt: new Date() })
-      .where(eq(purchaseRequisitions.id, parseInt(id))).returning();
+      .where(eq(col.id, parseInt(id))).returning();
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    const verb =
+      action === "approve" ? (updated.hrApproval === "Approved" ? "HR-approved" : "cleared HR approval on") :
+      action === "reject"  ? (updated.hrApproval === "Rejected" ? "HR-rejected" : "cleared HR rejection on") :
+      (updated.status === "Material Received" ? "marked received" : "un-marked received on");
     await logActivity({
       user: guard, action: `purchase.${action}`,
       summary: `PR #${updated.prNo ?? "—"} ${verb} — ${updated.itemName ?? ""}`.trim(),

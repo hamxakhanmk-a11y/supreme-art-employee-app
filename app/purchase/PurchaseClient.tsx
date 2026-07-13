@@ -130,9 +130,20 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     finally { setBusy(false); }
   };
 
-  // Quick workflow actions from the row buttons.
+  // Quick workflow actions from the row buttons. Optimistic: the row flips
+  // instantly and the server request reconciles in the background (reverting
+  // only if it fails), so the button feels immediate despite network latency.
   const act = async (r: PrRow, action: "approve" | "reject" | "received") => {
-    setBusy(true); setError(null);
+    const opt: PrRow = { ...r };
+    if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
+    else if (action === "reject") opt.hrApproval = r.hrApproval === "Rejected" ? null : "Rejected";
+    else if (action === "received") {
+      const on = r.status !== "Material Received";
+      opt.status = on ? "Material Received" : "PR Raised";
+      opt.receivedByAdmin = on;
+    }
+    setError(null);
+    setRows(prev => prev.map(x => (x.id === r.id ? opt : x)));
     try {
       const res = await fetch(`/api/purchase/${r.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
@@ -140,9 +151,11 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Action failed");
-      setRows(prev => prev.map(x => (x.id === r.id ? j : x)));
-    } catch (e: any) { setError(e.message); }
-    finally { setBusy(false); }
+      setRows(prev => prev.map(x => (x.id === r.id ? j : x))); // authoritative
+    } catch (e: any) {
+      setError(e.message);
+      setRows(prev => prev.map(x => (x.id === r.id ? r : x))); // revert on failure
+    }
   };
 
   const exportXlsx = async () => {
@@ -331,17 +344,17 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
                     <div style={{ display: "inline-flex", gap: 4 }}>
-                      <button onClick={() => act(r, "approve")} disabled={busy} title="HR Approve"
+                      <button onClick={() => act(r, "approve")} title="HR Approve"
                         style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
                           border: "1px solid #15803D", background: r.hrApproval === "Approved" ? "#15803D" : "#fff", color: r.hrApproval === "Approved" ? "#fff" : "#15803D" }}>
                         ✓ Approve
                       </button>
-                      <button onClick={() => act(r, "reject")} disabled={busy} title="HR Reject"
+                      <button onClick={() => act(r, "reject")} title="HR Reject"
                         style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
                           border: "1px solid #DC2626", background: r.hrApproval === "Rejected" ? "#DC2626" : "#fff", color: r.hrApproval === "Rejected" ? "#fff" : "#DC2626" }}>
                         ✗ Reject
                       </button>
-                      <button onClick={() => act(r, "received")} disabled={busy} title="Mark material received"
+                      <button onClick={() => act(r, "received")} title="Mark material received"
                         style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
                           border: "1px solid #0C447C", background: r.status === "Material Received" ? "#0C447C" : "#fff", color: r.status === "Material Received" ? "#fff" : "#0C447C" }}>
                         📦 Received
