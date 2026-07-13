@@ -7,25 +7,38 @@ import { logActivity } from "@/lib/activity";
 
 // PATCH /api/purchase/[id]  -> quick workflow action from the row buttons.
 //   { action: "approve" | "reject" | "received" }
+// Toggles: clicking an already-active action clears it back to pending.
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite();
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const { action } = await req.json();
-    const patch =
-      action === "approve"  ? { hrApproval: "Approved" as const } :
-      action === "reject"   ? { hrApproval: "Rejected" as const } :
-      action === "received" ? { status: "Material Received", receivedByAdmin: true } :
-      null;
+    const [cur] = await db.select().from(purchaseRequisitions).where(eq(purchaseRequisitions.id, parseInt(id)));
+    if (!cur) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    let patch: Record<string, unknown> | null = null;
+    let verb = "";
+    if (action === "approve") {
+      const on = cur.hrApproval !== "Approved";
+      patch = { hrApproval: on ? "Approved" : null };
+      verb = on ? "HR-approved" : "cleared HR approval on";
+    } else if (action === "reject") {
+      const on = cur.hrApproval !== "Rejected";
+      patch = { hrApproval: on ? "Rejected" : null };
+      verb = on ? "HR-rejected" : "cleared HR rejection on";
+    } else if (action === "received") {
+      const on = cur.status !== "Material Received";
+      // Un-receiving reverts the status to PR Raised (its prior state isn't stored).
+      patch = on ? { status: "Material Received", receivedByAdmin: true } : { status: "PR Raised", receivedByAdmin: false };
+      verb = on ? "marked received" : "un-marked received on";
+    }
     if (!patch) return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 
     const [updated] = await db.update(purchaseRequisitions)
       .set({ ...patch, updatedAt: new Date() })
       .where(eq(purchaseRequisitions.id, parseInt(id))).returning();
-    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const verb = action === "approve" ? "HR-approved" : action === "reject" ? "rejected" : "marked received";
     await logActivity({
       user: guard, action: `purchase.${action}`,
       summary: `PR #${updated.prNo ?? "—"} ${verb} — ${updated.itemName ?? ""}`.trim(),
