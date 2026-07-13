@@ -13,6 +13,7 @@ const MODULES_BASE: { key: string; label: string; roles: Role[] | null }[] = [
   { key: "reports",    label: "Reports",    roles: null },
   { key: "salary",     label: "Salary",     roles: null },
   { key: "kpi",        label: "KPI",        roles: null },
+  { key: "purchase",   label: "Purchase",   roles: null },
   { key: "users",      label: "Users",      roles: ["superadmin"] },
 ];
 
@@ -85,6 +86,8 @@ function getSubNav(path: string, module: string): { href: string; label: string 
         { href: "/kpi/entry", label: "Monthly Entry" },
         { href: "/kpi/reports", label: "Reports" },
       ];
+    case "purchase":
+      return [{ href: "/purchase", label: "PR Register" }];
     case "users":
       return [{ href: "/admin/users", label: "All Users" }];
     default:
@@ -101,6 +104,7 @@ const MODULE_HOME: Record<string, string> = {
   reports: "/reports",
   salary: "/salary",
   kpi: "/kpi",
+  purchase: "/purchase",
   users: "/admin/users",
 };
 
@@ -109,6 +113,7 @@ function pathToModule(path: string): string {
   if (path.startsWith("/reports")) return "reports";
   if (path.startsWith("/salary")) return "salary";
   if (path.startsWith("/kpi")) return "kpi";
+  if (path.startsWith("/purchase")) return "purchase";
   if (path.startsWith("/attendance")) return "attendance";
   if (path.startsWith("/admin/users")) return "users";
   // Legacy leave routes resolve to forms module.

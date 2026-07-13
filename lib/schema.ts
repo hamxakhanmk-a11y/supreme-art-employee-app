@@ -161,6 +161,31 @@ export const activityLog = pgTable("activity_log", {
 });
 
 // =====================
+// PURCHASE REQUISITIONS (PR Register)
+// =====================
+// Mirrors the columns of the company's Excel "PR REGISTER" sheet.
+export const purchaseRequisitions = pgTable("purchase_requisitions", {
+  id: serial("id").primaryKey(),
+  prNo: integer("pr_no").notNull().unique(),      // sequential requisition number
+  date: date("date").notNull(),                    // requisition date
+  department: varchar("department", { length: 60 }).notNull(),
+  concernedPerson: varchar("concerned_person", { length: 120 }),
+  category: varchar("category", { length: 60 }),
+  itemName: text("item_name").notNull(),
+  quantity: doublePrecision("quantity"),
+  uom: varchar("uom", { length: 20 }),             // unit of measure
+  receivedByAdmin: boolean("received_by_admin").notNull().default(false), // requisition received by HR & Admin
+  value: integer("value"),                         // PKR
+  requiredDate: date("required_date"),
+  hodApproval: varchar("hod_approval", { length: 20 }), // Approved | Not Approved | null (pending)
+  status: varchar("status", { length: 30 }).notNull().default("PR Raised"), // PR Raised | Approved | Material Received | Closed
+  poNo: varchar("po_no", { length: 40 }),
+  remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// =====================
 // KPI VALUES (per employee, per month, raw operand inputs)
 // =====================
 // One row per operand HR types: (employee, year, month, kpiIdx, inputKey) -> value.
