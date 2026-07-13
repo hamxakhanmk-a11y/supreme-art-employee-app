@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
-import { PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_HOD, PR_STATUS_STYLE } from "@/lib/purchase";
+import { PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_HOD, PR_HR, PR_STATUS_STYLE } from "@/lib/purchase";
 
 export type PrRow = {
   id: number;
@@ -19,6 +19,7 @@ export type PrRow = {
   value: number | null;
   requiredDate: string | null;
   hodApproval: string | null;
+  hrApproval: string | null;
   status: string;
   poNo: string | null;
   remarks: string | null;
@@ -27,7 +28,7 @@ export type PrRow = {
 type Draft = {
   date: string; prNo: string; department: string; concernedPerson: string; category: string;
   itemName: string; quantity: string; uom: string; receivedByAdmin: boolean;
-  value: string; requiredDate: string; hodApproval: string; status: string;
+  value: string; requiredDate: string; hodApproval: string; hrApproval: string; status: string;
   poNo: string; remarks: string;
 };
 
@@ -35,7 +36,7 @@ const emptyDraft = (): Draft => ({
   date: new Date().toISOString().slice(0, 10),
   prNo: "", department: "", concernedPerson: "", category: "", itemName: "",
   quantity: "", uom: "", receivedByAdmin: true, value: "",
-  requiredDate: "", hodApproval: "", status: "PR Raised", poNo: "", remarks: "",
+  requiredDate: "", hodApproval: "", hrApproval: "", status: "PR Raised", poNo: "", remarks: "",
 });
 
 const fmtDate = (d: string | null) =>
@@ -91,7 +92,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
       category: r.category ?? "", itemName: r.itemName ?? "",
       quantity: r.quantity === null ? "" : String(r.quantity), uom: r.uom ?? "",
       receivedByAdmin: r.receivedByAdmin, value: r.value === null ? "" : String(r.value),
-      requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "",
+      requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "", hrApproval: r.hrApproval ?? "",
       status: r.status, poNo: r.poNo ?? "", remarks: r.remarks ?? "",
     });
     setEditId(r.id); setShowForm(true); setError(null);
@@ -145,11 +146,11 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   };
 
   const exportXlsx = async () => {
-    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Received by HR & Admin", "Value", "Required Date", "HOD Approval", "Status", "PO No", "Remarks"];
+    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Received by HR & Admin", "Value", "Required Date", "HR Approval", "HOD Approval", "Status", "PO No", "Remarks"];
     const data = filtered.map(r => [
       fmtDate(r.date), r.prNo ?? "", r.department ?? "", r.concernedPerson ?? "", r.category ?? "", r.itemName ?? "",
       r.quantity ?? "", r.uom ?? "", r.receivedByAdmin ? "Yes" : "No", r.value ?? "",
-      fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate), r.hodApproval ?? "", r.status, r.poNo ?? "", r.remarks ?? "",
+      fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate), r.hrApproval ?? "", r.hodApproval ?? "", r.status, r.poNo ?? "", r.remarks ?? "",
     ]);
     await downloadRegisterXlsx({
       filename: "purchase-requisition-register",
@@ -250,6 +251,11 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
               <input type="number" value={draft.value} onChange={e => set({ value: e.target.value })} /></div>
             <div><label className="form-label">Required Date</label>
               <input type="date" value={draft.requiredDate} onChange={e => set({ requiredDate: e.target.value })} /></div>
+            <div><label className="form-label">HR Approval</label>
+              <select value={draft.hrApproval} onChange={e => set({ hrApproval: e.target.value })}>
+                <option value="">Pending</option>
+                {PR_HR.map(h => <option key={h} value={h}>{h}</option>)}
+              </select></div>
             <div><label className="form-label">HOD Approval</label>
               <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
                 <option value="">Pending</option>
@@ -285,13 +291,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
             <tr>
               <th>Date</th><th>PR#</th><th>Department</th><th>Person</th><th>Category</th>
               <th style={{ minWidth: 180 }}>Item</th><th>Qty</th><th>UoM</th><th title="Requisition received by HR & Admin">Rcvd</th>
-              <th className="num">Value</th><th>Required</th><th>HOD</th><th>Status</th><th>PO#</th><th>Remarks</th>
+              <th className="num">Value</th><th>Required</th><th>HR</th><th>HOD</th><th>Status</th><th>PO#</th><th>Remarks</th>
               <th className="no-print"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={16} className="empty">
+              <tr><td colSpan={17} className="empty">
                 {rows.length === 0 ? "No requisitions yet — raise the first one." : "Nothing matches the filters."}
               </td></tr>
             )}
@@ -310,6 +316,9 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                   <td style={{ textAlign: "center" }}>{r.receivedByAdmin ? "✓" : ""}</td>
                   <td className="num-strong">{r.value === null ? "" : r.value.toLocaleString()}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{fmtDate(r.requiredDate)}</td>
+                  <td style={{ fontSize: 11.5, fontWeight: 700, color: r.hrApproval === "Approved" ? "#15803D" : r.hrApproval === "Rejected" ? "#DC2626" : "var(--text3)" }}>
+                    {r.hrApproval || "Pending"}
+                  </td>
                   <td style={{ fontSize: 11.5, fontWeight: 700, color: r.hodApproval === "Approved" ? "#15803D" : r.hodApproval === "Not Approved" ? "#DC2626" : "var(--text3)" }}>
                     {r.hodApproval || "Pending"}
                   </td>
@@ -324,12 +333,12 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                     <div style={{ display: "inline-flex", gap: 4 }}>
                       <button onClick={() => act(r, "approve")} disabled={busy} title="HR Approve"
                         style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          border: "1px solid #15803D", background: r.hodApproval === "Approved" ? "#15803D" : "#fff", color: r.hodApproval === "Approved" ? "#fff" : "#15803D" }}>
+                          border: "1px solid #15803D", background: r.hrApproval === "Approved" ? "#15803D" : "#fff", color: r.hrApproval === "Approved" ? "#fff" : "#15803D" }}>
                         ✓ Approve
                       </button>
-                      <button onClick={() => act(r, "reject")} disabled={busy} title="Reject"
+                      <button onClick={() => act(r, "reject")} disabled={busy} title="HR Reject"
                         style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          border: "1px solid #DC2626", background: r.hodApproval === "Not Approved" ? "#DC2626" : "#fff", color: r.hodApproval === "Not Approved" ? "#fff" : "#DC2626" }}>
+                          border: "1px solid #DC2626", background: r.hrApproval === "Rejected" ? "#DC2626" : "#fff", color: r.hrApproval === "Rejected" ? "#fff" : "#DC2626" }}>
                         ✗ Reject
                       </button>
                       <button onClick={() => act(r, "received")} disabled={busy} title="Mark material received"

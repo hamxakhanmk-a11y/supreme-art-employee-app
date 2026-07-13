@@ -41,6 +41,7 @@ export const PR_STATUSES = ["PR Raised", "Approved", "Material Received", "Close
 export type PrStatus = typeof PR_STATUSES[number];
 
 export const PR_HOD = ["Approved", "Not Approved"] as const;
+export const PR_HR = ["Approved", "Rejected"] as const;
 
 export const PR_STATUS_STYLE: Record<string, { color: string; bg: string }> = {
   "PR Raised":         { color: "#0C447C", bg: "#E6F1FB" },

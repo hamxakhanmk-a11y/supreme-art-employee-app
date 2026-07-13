@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       value: b.value === null || b.value === "" || b.value === undefined ? null : Math.round(Number(b.value)),
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
+      hrApproval: b.hrApproval || null,
       status: b.status || "PR Raised",
       poNo: b.poNo?.trim() || null,
       remarks: b.remarks?.trim() || null,

@@ -181,6 +181,7 @@ export const purchaseRequisitions = pgTable("purchase_requisitions", {
   value: integer("value"),                         // PKR
   requiredDate: date("required_date"),
   hodApproval: varchar("hod_approval", { length: 20 }), // Approved | Not Approved | null (pending)
+  hrApproval: varchar("hr_approval", { length: 20 }),   // HR's own decision: Approved | Rejected | null (pending)
   status: varchar("status", { length: 30 }).notNull().default("PR Raised"), // PR Raised | Approved | Material Received | Closed
   poNo: varchar("po_no", { length: 40 }),
   remarks: text("remarks"),

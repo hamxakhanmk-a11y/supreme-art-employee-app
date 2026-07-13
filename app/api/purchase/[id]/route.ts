@@ -14,8 +14,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const { id } = await ctx.params;
     const { action } = await req.json();
     const patch =
-      action === "approve"  ? { hodApproval: "Approved" as const } :
-      action === "reject"   ? { hodApproval: "Not Approved" as const } :
+      action === "approve"  ? { hrApproval: "Approved" as const } :
+      action === "reject"   ? { hrApproval: "Rejected" as const } :
       action === "received" ? { status: "Material Received", receivedByAdmin: true } :
       null;
     if (!patch) return NextResponse.json({ error: "Unknown action" }, { status: 400 });
@@ -60,6 +60,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       value: b.value === null || b.value === "" || b.value === undefined ? null : Math.round(Number(b.value)),
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
+      hrApproval: b.hrApproval || null,
       status: b.status || "PR Raised",
       poNo: b.poNo?.trim() || null,
       remarks: b.remarks?.trim() || null,
