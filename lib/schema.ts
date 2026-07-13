@@ -166,12 +166,15 @@ export const activityLog = pgTable("activity_log", {
 // Mirrors the columns of the company's Excel "PR REGISTER" sheet.
 export const purchaseRequisitions = pgTable("purchase_requisitions", {
   id: serial("id").primaryKey(),
-  prNo: integer("pr_no").notNull().unique(),      // sequential requisition number
-  date: date("date").notNull(),                    // requisition date
-  department: varchar("department", { length: 60 }).notNull(),
+  // Sequential requisition number. NOT unique: one PR can span several item
+  // rows (e.g. PR 121 has 10 items in the legacy register), and a few legacy
+  // rows have no number at all.
+  prNo: integer("pr_no"),
+  date: date("date"),                              // requisition date (missing on some legacy rows)
+  department: varchar("department", { length: 60 }),
   concernedPerson: varchar("concerned_person", { length: 120 }),
   category: varchar("category", { length: 60 }),
-  itemName: text("item_name").notNull(),
+  itemName: text("item_name"),
   quantity: doublePrecision("quantity"),
   uom: varchar("uom", { length: 20 }),             // unit of measure
   receivedByAdmin: boolean("received_by_admin").notNull().default(false), // requisition received by HR & Admin

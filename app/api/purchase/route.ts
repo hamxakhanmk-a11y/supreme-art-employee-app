@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
-import { desc, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 
@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 export async function GET() {
   try {
     const rows = await db.select().from(purchaseRequisitions)
-      .orderBy(desc(purchaseRequisitions.prNo));
+      .orderBy(sql`pr_no DESC NULLS LAST, date DESC NULLS LAST`);
     return NextResponse.json(rows);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

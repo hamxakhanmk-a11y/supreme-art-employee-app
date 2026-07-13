@@ -7,12 +7,12 @@ import { PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_HOD, PR_STATUS
 
 export type PrRow = {
   id: number;
-  prNo: number;
-  date: string;
-  department: string;
+  prNo: number | null;      // legacy rows can lack a number
+  date: string | null;      // …or a date
+  department: string | null;
   concernedPerson: string | null;
   category: string | null;
-  itemName: string;
+  itemName: string | null;
   quantity: number | null;
   uom: string | null;
   receivedByAdmin: boolean;
@@ -59,7 +59,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     if (status && r.status !== status) return false;
     if (q.trim()) {
       const s = q.toLowerCase();
-      const hay = `${r.prNo} ${r.itemName} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
+      const hay = `${r.prNo ?? ""} ${r.itemName ?? ""} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
@@ -72,8 +72,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   const openNew = () => { setDraft(emptyDraft()); setEditId(null); setShowForm(true); setError(null); };
   const openEdit = (r: PrRow) => {
     setDraft({
-      date: r.date, department: r.department, concernedPerson: r.concernedPerson ?? "",
-      category: r.category ?? "", itemName: r.itemName,
+      date: r.date ?? "", department: r.department ?? "", concernedPerson: r.concernedPerson ?? "",
+      category: r.category ?? "", itemName: r.itemName ?? "",
       quantity: r.quantity === null ? "" : String(r.quantity), uom: r.uom ?? "",
       receivedByAdmin: r.receivedByAdmin, value: r.value === null ? "" : String(r.value),
       requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "",
@@ -104,7 +104,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   };
 
   const remove = async (r: PrRow) => {
-    if (!confirm(`Delete PR #${r.prNo} — ${r.itemName}? This cannot be undone.`)) return;
+    if (!confirm(`Delete PR #${r.prNo ?? "—"} — ${r.itemName ?? "(no item)"}? This cannot be undone.`)) return;
     setBusy(true); setError(null);
     try {
       const res = await fetch(`/api/purchase/${r.id}`, { method: "DELETE" });
@@ -117,7 +117,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   const exportXlsx = async () => {
     const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Received by HR & Admin", "Value", "Required Date", "HOD Approval", "Status", "PO No", "Remarks"];
     const data = filtered.map(r => [
-      fmtDate(r.date), r.prNo, r.department, r.concernedPerson ?? "", r.category ?? "", r.itemName,
+      fmtDate(r.date), r.prNo ?? "", r.department ?? "", r.concernedPerson ?? "", r.category ?? "", r.itemName ?? "",
       r.quantity ?? "", r.uom ?? "", r.receivedByAdmin ? "Yes" : "No", r.value ?? "",
       fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate), r.hodApproval ?? "", r.status, r.poNo ?? "", r.remarks ?? "",
     ]);
@@ -262,11 +262,11 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
               return (
                 <tr key={r.id}>
                   <td style={{ whiteSpace: "nowrap" }}>{fmtDate(r.date)}</td>
-                  <td style={{ fontWeight: 700, color: "var(--brand)" }}>{r.prNo}</td>
-                  <td style={{ fontSize: 12 }}>{r.department}</td>
+                  <td style={{ fontWeight: 700, color: "var(--brand)" }}>{r.prNo ?? "—"}</td>
+                  <td style={{ fontSize: 12 }}>{r.department || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.concernedPerson || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.category || "—"}</td>
-                  <td>{r.itemName}</td>
+                  <td>{r.itemName || "—"}</td>
                   <td className="num">{r.quantity ?? ""}</td>
                   <td style={{ fontSize: 12 }}>{r.uom || ""}</td>
                   <td style={{ textAlign: "center" }}>{r.receivedByAdmin ? "✓" : ""}</td>
