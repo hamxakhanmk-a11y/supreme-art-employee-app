@@ -5,6 +5,37 @@ import { eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 
+// PATCH /api/purchase/[id]  -> quick workflow action from the row buttons.
+//   { action: "approve" | "reject" | "received" }
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite();
+  if (guard instanceof NextResponse) return guard;
+  try {
+    const { id } = await ctx.params;
+    const { action } = await req.json();
+    const patch =
+      action === "approve"  ? { hodApproval: "Approved" as const } :
+      action === "reject"   ? { hodApproval: "Not Approved" as const } :
+      action === "received" ? { status: "Material Received", receivedByAdmin: true } :
+      null;
+    if (!patch) return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+
+    const [updated] = await db.update(purchaseRequisitions)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(purchaseRequisitions.id, parseInt(id))).returning();
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const verb = action === "approve" ? "HR-approved" : action === "reject" ? "rejected" : "marked received";
+    await logActivity({
+      user: guard, action: `purchase.${action}`,
+      summary: `PR #${updated.prNo ?? "—"} ${verb} — ${updated.itemName ?? ""}`.trim(),
+    });
+    return NextResponse.json(updated);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
 // PUT /api/purchase/[id]  -> update any editable fields
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite();

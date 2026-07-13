@@ -129,6 +129,21 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     finally { setBusy(false); }
   };
 
+  // Quick workflow actions from the row buttons.
+  const act = async (r: PrRow, action: "approve" | "reject" | "received") => {
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch(`/api/purchase/${r.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Action failed");
+      setRows(prev => prev.map(x => (x.id === r.id ? j : x)));
+    } catch (e: any) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
   const exportXlsx = async () => {
     const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Received by HR & Admin", "Value", "Required Date", "HOD Approval", "Status", "PO No", "Remarks"];
     const data = filtered.map(r => [
@@ -306,8 +321,25 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                   <td style={{ fontSize: 12 }}>{r.poNo || ""}</td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
-                    <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>{" "}
-                    <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">✕</button>
+                    <div style={{ display: "inline-flex", gap: 4 }}>
+                      <button onClick={() => act(r, "approve")} disabled={busy} title="HR Approve"
+                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          border: "1px solid #15803D", background: r.hodApproval === "Approved" ? "#15803D" : "#fff", color: r.hodApproval === "Approved" ? "#fff" : "#15803D" }}>
+                        ✓ Approve
+                      </button>
+                      <button onClick={() => act(r, "reject")} disabled={busy} title="Reject"
+                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          border: "1px solid #DC2626", background: r.hodApproval === "Not Approved" ? "#DC2626" : "#fff", color: r.hodApproval === "Not Approved" ? "#fff" : "#DC2626" }}>
+                        ✗ Reject
+                      </button>
+                      <button onClick={() => act(r, "received")} disabled={busy} title="Mark material received"
+                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          border: "1px solid #0C447C", background: r.status === "Material Received" ? "#0C447C" : "#fff", color: r.status === "Material Received" ? "#fff" : "#0C447C" }}>
+                        📦 Received
+                      </button>
+                      <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
+                      <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
+                    </div>
                   </td>
                 </tr>
               );
