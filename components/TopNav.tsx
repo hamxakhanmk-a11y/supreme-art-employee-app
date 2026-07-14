@@ -126,7 +126,7 @@ function pathToModule(path: string): string {
   return "profile";
 }
 
-const HIDE_ON = ["/login", "/setup", "/set-password"];
+const HIDE_ON = ["/login"];
 
 interface MeUser { id: number; email: string; name: string; role: Role }
 

@@ -4,17 +4,12 @@ const COOKIE_NAME = "sae_session";
 
 const PUBLIC_PATHS = [
   "/login",
-  "/setup",
-  "/set-password",
 ];
 
 const PUBLIC_API_PREFIXES = [
-  "/api/auth/login",
+  "/api/auth/google",   // start + callback (unauthenticated by nature)
   "/api/auth/logout",
   "/api/auth/me",
-  "/api/auth/setup",
-  "/api/auth/set-password",
-  "/api/auth/forgot-password",
 ];
 
 export function middleware(req: NextRequest) {

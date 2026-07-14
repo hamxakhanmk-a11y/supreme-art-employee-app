@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { eq, sql, and, gt } from "drizzle-orm";
@@ -26,12 +25,6 @@ export interface SessionUser {
   role: Role;
 }
 
-export function hashPassword(plain: string) {
-  return bcrypt.hash(plain, 10);
-}
-export function verifyPassword(plain: string, hash: string) {
-  return bcrypt.compare(plain, hash);
-}
 export function generateToken() {
   return crypto.randomBytes(32).toString("hex");
 }

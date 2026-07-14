@@ -10,23 +10,9 @@ interface User {
   active: boolean;
   lastLoginAt: string | null;
   createdAt: string;
-  hasPassword: boolean;
 }
 
-const ROLE_LABEL: Record<Role, string> = {
-  superadmin: "Super Admin",
-  admin: "Admin",
-  hr: "HR",
-  ceo: "CEO (view-only)",
-};
 const ROLE_COLOR: Record<Role, string> = {
-  superadmin: "#5B21B6",
-  admin: "#A32D2D",
-  hr: "#185FA5",
-  ceo: "#0F766E",
-};
-
-const AVATAR_BG: Record<Role, string> = {
   superadmin: "#5B21B6",
   admin: "#A32D2D",
   hr: "#185FA5",
@@ -44,15 +30,13 @@ function fmtDate(d: string | null) {
 export default function AdminUsersClient({ currentUserId }: { currentUserId: number }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [emailConfigured, setEmailConfigured] = useState(false);
   const [error, setError] = useState("");
 
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [iName, setIName] = useState("");
   const [iEmail, setIEmail] = useState("");
   const [iRole, setIRole] = useState<Role>("hr");
-  const [inviting, setInviting] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{ url: string; emailSent: boolean } | null>(null);
+  const [adding, setAdding] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -60,25 +44,22 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     if (!r.ok) { setError("Failed to load users"); setLoading(false); return; }
     const d = await r.json();
     setUsers(d.users);
-    setEmailConfigured(!!d.emailConfigured);
     setLoading(false);
   }
   useEffect(() => { refresh(); }, []);
 
-  async function invite(e: React.FormEvent) {
+  async function addUser(e: React.FormEvent) {
     e.preventDefault();
-    setInviting(true);
+    setAdding(true);
     setError("");
-    setInviteResult(null);
     const r = await fetch("/api/users", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: iName, email: iEmail, role: iRole }),
     });
     const d = await r.json().catch(() => ({}));
-    setInviting(false);
-    if (!r.ok) { setError(d.error || "Failed to invite"); return; }
-    setInviteResult({ url: d.setupUrl, emailSent: d.emailSent });
-    setIName(""); setIEmail(""); setIRole("hr");
+    setAdding(false);
+    if (!r.ok) { setError(d.error || "Failed to add user"); return; }
+    setIName(""); setIEmail(""); setIRole("hr"); setAddOpen(false);
     refresh();
   }
 
@@ -95,17 +76,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     refresh();
   }
 
-  async function reInvite(id: number, name: string) {
-    if (!confirm(`Send a fresh invite link to ${name}?`)) return;
-    const r = await fetch(`/api/users/${id}/invite`, { method: "POST" });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error || "Failed"); return; }
-    if (d.emailSent) alert("Invite email sent.");
-    else prompt("Email not configured — copy this link and send it manually:", d.setupUrl);
-  }
-
   async function del(id: number, name: string) {
-    if (!confirm(`Remove user "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Remove "${name}" from the allowlist? They'll lose access at their next sign-in.`)) return;
     const r = await fetch(`/api/users/${id}`, { method: "DELETE" });
     if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || "Delete failed"); return; }
     refresh();
@@ -128,7 +100,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Users</h1>
           <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
-            Invite, edit roles, or deactivate portal users.
+            Approved Google accounts. Add an email here and that person can sign in with Google.
           </p>
         </div>
       </div>
@@ -146,62 +118,41 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         <Tile label="CEO" value={counts.ceo} accent={ROLE_COLOR.ceo} />
       </div>
 
-      {!emailConfigured && (
-        <div style={{ padding: "10px 14px", background: "#FFF7E6", border: "1px solid #FBBF24",
-          borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#7C4A03" }}>
-          <b>Resend not configured.</b> Set the <code>RESEND_API_KEY</code> env var on Vercel to send invite/reset emails automatically. Until then, the app will give you a setup link to send to invitees manually.
-        </div>
-      )}
+      <div style={{ padding: "10px 14px", background: "#EFF6FF", border: "1px solid #BFDBFE",
+        borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#1E3A8A" }}>
+        Sign-in is via <b>Google</b>. The email you add below must match their Google account exactly.
+      </div>
 
       {error && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
-      {/* === Authorized users header + invite button === */}
+      {/* === Authorized users header + add button === */}
       <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
         <div style={{ flex: 1, fontSize: 16, fontWeight: 700 }}>Authorized Users</div>
-        <button onClick={() => { setInviteOpen(true); setInviteResult(null); }} style={btnDark}>
-          + Invite User
+        <button onClick={() => setAddOpen(o => !o)} style={btnDark}>
+          {addOpen ? "Cancel" : "+ Add User"}
         </button>
       </div>
 
-      {inviteOpen && (
+      {addOpen && (
         <div style={{
           background: "var(--bg)", border: "1px solid var(--border)",
           borderRadius: 12, padding: 18, marginBottom: 16,
         }}>
-          {inviteResult ? (
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--brand)" }}>Invite created ✓</div>
-              {inviteResult.emailSent
-                ? <p style={{ fontSize: 13, color: "var(--text2)", marginTop: 6 }}>Email sent. The user has 72 hours to set their password.</p>
-                : <>
-                  <p style={{ fontSize: 13, color: "var(--text2)", marginTop: 6 }}>Email wasn't sent. Copy this link and give it to the user (valid for 72 hours):</p>
-                  <input readOnly value={inviteResult.url}
-                    style={{ width: "100%", padding: 8, border: "1px solid var(--border)", borderRadius: 6, fontFamily: "monospace", fontSize: 12 }}
-                    onFocus={(e) => e.currentTarget.select()} />
-                </>}
-              <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                <button onClick={() => setInviteResult(null)} style={btnSecondary}>Invite another</button>
-                <button onClick={() => { setInviteOpen(false); setInviteResult(null); }} style={btnSecondary}>Close</button>
-              </div>
+          <form onSubmit={addUser} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px auto", gap: 10, alignItems: "end" }}>
+            <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
+            <Field label="Google email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} placeholder="person@gmail.com" /></Field>
+            <Field label="Role">
+              <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as Role)}>
+                <option value="superadmin">Super Admin</option>
+                <option value="admin">Admin (full access)</option>
+                <option value="hr">HR (full access)</option>
+                <option value="ceo">CEO (view & print only)</option>
+              </select>
+            </Field>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="submit" disabled={adding} style={btnPrimary}>{adding ? "Adding…" : "Add"}</button>
             </div>
-          ) : (
-            <form onSubmit={invite} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px auto", gap: 10, alignItems: "end" }}>
-              <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
-              <Field label="Email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} /></Field>
-              <Field label="Role">
-                <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as Role)}>
-                  <option value="superadmin">Super Admin</option>
-                  <option value="admin">Admin (full access)</option>
-                  <option value="hr">HR (full access)</option>
-                  <option value="ceo">CEO (view & print only)</option>
-                </select>
-              </Field>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={inviting} style={btnPrimary}>{inviting ? "Sending…" : "Send Invite"}</button>
-                <button type="button" onClick={() => setInviteOpen(false)} style={btnSecondary}>Cancel</button>
-              </div>
-            </form>
-          )}
+          </form>
         </div>
       )}
 
@@ -224,7 +175,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: "50%",
-                  background: AVATAR_BG[u.role], color: "#fff",
+                  background: ROLE_COLOR[u.role], color: "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontWeight: 700, fontSize: 12, flexShrink: 0,
                 }}>{initials(u.name)}</div>
@@ -242,12 +193,6 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                         padding: "1px 6px", borderRadius: 999, background: "#FEE2E2", color: "#7C1F1F",
                         fontSize: 9, fontWeight: 700,
                       }}>DISABLED</span>
-                    )}
-                    {u.active && !u.hasPassword && (
-                      <span style={{
-                        padding: "1px 6px", borderRadius: 999, background: "#FEF3C7", color: "#92400E",
-                        fontSize: 9, fontWeight: 700,
-                      }}>INVITED</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -267,24 +212,20 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   <option value="hr">HR</option>
                   <option value="ceo">CEO (view-only)</option>
                 </select>
-                {u.active ? (
-                  <button onClick={() => reInvite(u.id, u.name)} style={{ ...btnOutline, flexShrink: 0 }} title="Resend invite link">
-                    Resend
-                  </button>
-                ) : (
-                  <button onClick={() => patch(u.id, { active: true })} style={{ ...btnOutline, flexShrink: 0 }}>
-                    Enable
-                  </button>
-                )}
                 {!isSelf && (
                   u.active ? (
                     <button onClick={() => patch(u.id, { active: false })} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
                       Disable
                     </button>
                   ) : (
-                    <button onClick={() => del(u.id, u.name)} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
-                      Remove
-                    </button>
+                    <>
+                      <button onClick={() => patch(u.id, { active: true })} style={{ ...btnOutline, flexShrink: 0 }}>
+                        Enable
+                      </button>
+                      <button onClick={() => del(u.id, u.name)} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
+                        Remove
+                      </button>
+                    </>
                   )
                 )}
               </div>
@@ -320,6 +261,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const btnPrimary: React.CSSProperties = { background: "var(--brand)", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
 const btnDark: React.CSSProperties = { background: "#1f1f1f", color: "#fff", border: "none", padding: "9px 16px", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer" };
-const btnSecondary: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "9px 14px", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" };
 const btnOutline: React.CSSProperties = { background: "var(--bg)", color: "var(--text)", border: "1px solid var(--border)", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, cursor: "pointer" };
 const btnOutlineDanger: React.CSSProperties = { background: "var(--bg)", color: "#A32D2D", border: "1px solid #E5B8B8", padding: "4px 10px", borderRadius: 6, fontWeight: 600, fontSize: 11, cursor: "pointer" };
