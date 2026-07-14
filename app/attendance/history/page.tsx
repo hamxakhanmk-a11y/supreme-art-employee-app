@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees, attendance } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
+import { stationMinutesByEmpDay } from "@/lib/stationServer";
 import MonthlyRegisterClient from "./MonthlyRegisterClient";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,13 @@ export default async function AttendanceHistoryPage({ searchParams }: { searchPa
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),
   ]);
 
+  // Hourly-leave minutes now come from the Station terminal, not manual entry.
+  const stMap = await stationMinutesByEmpDay(firstISO, lastISO);
+  const records = rows.map(r => {
+    const a = stMap.get(`${r.employeeId}-${r.date}`);
+    return { ...r, officialLeaveMin: a?.official ?? 0, personalLeaveMin: a?.personal ?? 0 };
+  });
+
   return (
     <div className="fade-up">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -56,7 +64,7 @@ export default async function AttendanceHistoryPage({ searchParams }: { searchPa
         month={month}
         daysInMonth={daysInMonth}
         employees={emps}
-        records={rows}
+        records={records}
       />
     </div>
   );

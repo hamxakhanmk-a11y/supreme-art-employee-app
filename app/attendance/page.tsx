@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
-import { DEFAULT_CHECK_IN, lateMinutes, formatLate, formatHoursHM, parseDurationToMinutes } from "@/lib/attendance";
+import { DEFAULT_CHECK_IN, lateMinutes, formatLate } from "@/lib/attendance";
 
 type Row = {
   id: number;
@@ -16,9 +16,6 @@ type Row = {
   status: "present" | "absent" | "leave" | "half-day" | "holiday" | null;
   checkIn: string | null;
   checkOut: string | null;
-  // Hourly (mid-day) leave drafts as typed by HR ("h:mm"); parsed to minutes on save.
-  officialLeave: string;
-  personalLeave: string;
   notes: string | null;
 };
 
@@ -79,11 +76,7 @@ export default function AttendancePage() {
       const res = await fetch(`/api/attendance?date=${d}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setRows(data.rows.map((r: Row & { officialLeaveMin?: number; personalLeaveMin?: number }) => ({
-        ...r,
-        officialLeave: r.officialLeaveMin ? formatHoursHM(r.officialLeaveMin) : "",
-        personalLeave: r.personalLeaveMin ? formatHoursHM(r.personalLeaveMin) : "",
-      })));
+      setRows(data.rows);
       setClosed(data.closed);
     } catch (e: any) {
       setError(e.message);
@@ -114,8 +107,6 @@ export default function AttendancePage() {
           status: merged.status,
           checkIn: merged.checkIn || null,
           checkOut: merged.checkOut || null,
-          officialLeaveMin: parseDurationToMinutes(merged.officialLeave),
-          personalLeaveMin: parseDurationToMinutes(merged.personalLeave),
           notes: merged.notes || null,
         }),
       });
@@ -166,8 +157,6 @@ export default function AttendancePage() {
           status: "half-day",
           checkIn: emp.checkIn || null,
           checkOut: emp.checkOut || null,
-          officialLeaveMin: parseDurationToMinutes(emp.officialLeave),
-          personalLeaveMin: parseDurationToMinutes(emp.personalLeave),
           notes: emp.notes || "Half-day (filed after day close)",
         }),
       });
@@ -194,7 +183,7 @@ export default function AttendancePage() {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "Unmark failed");
       }
-      updateRow(emp.id, { status: null, checkIn: null, checkOut: null, officialLeave: "", personalLeave: "", notes: null });
+      updateRow(emp.id, { status: null, checkIn: null, checkOut: null, notes: null });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -216,7 +205,7 @@ export default function AttendancePage() {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "Unmark all failed");
       }
-      setRows(prev => prev.map(r => ({ ...r, status: null, checkIn: null, checkOut: null, officialLeave: "", personalLeave: "", notes: null })));
+      setRows(prev => prev.map(r => ({ ...r, status: null, checkIn: null, checkOut: null, notes: null })));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -242,11 +231,11 @@ export default function AttendancePage() {
 
   const exportCSV = () => {
     downloadCSV(`attendance-${date}`,
-      ["Employee ID", "Name", "Designation", "Department", "Status", "Check-in", "Check-out", "Official Leave", "Personal Leave", "Notes"],
+      ["Employee ID", "Name", "Designation", "Department", "Status", "Check-in", "Check-out", "Notes"],
       rows.map(r => [
         r.employeeId, `${r.firstName} ${r.lastName}`, r.designation || "", r.department || "",
         r.status ? ((STATUS as any)[r.status]?.label ?? r.status) : "Unmarked",
-        r.checkIn || "", r.checkOut || "", r.officialLeave || "", r.personalLeave || "", r.notes || "",
+        r.checkIn || "", r.checkOut || "", r.notes || "",
       ])
     );
   };
@@ -407,7 +396,6 @@ export default function AttendancePage() {
                 <th>Status</th>
                 <th style={{ width: 110 }}>Check-in</th>
                 <th style={{ width: 110 }}>Check-out</th>
-                <th style={{ width: 150 }} title="Mid-day leave in hours. Official is excused; Personal is deducted like lateness.">Hourly Leave</th>
                 <th>Notes</th>
                 <th style={{ width: 50, textAlign: "center" }} className="no-print">·</th>
               </tr>
@@ -498,31 +486,6 @@ export default function AttendancePage() {
                       onChange={e => updateRow(r.id, { checkOut: e.target.value })}
                       onBlur={() => persist(r, {})}
                       style={{ padding: "5px 8px", fontSize: 12 }} />
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <span title="Official leave — excused, not deducted"
-                        style={{ fontSize: 9.5, fontWeight: 800, color: "#0E7490", width: 20 }}>OFF</span>
-                      <input type="text" value={r.officialLeave} disabled={closed}
-                        placeholder="h:mm"
-                        onChange={e => updateRow(r.id, { officialLeave: e.target.value })}
-                        onBlur={() => persist(r, {})}
-                        style={{ padding: "4px 6px", fontSize: 11.5, width: 62 }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-                      <span title="Personal leave — deducted like lateness"
-                        style={{ fontSize: 9.5, fontWeight: 800, color: "#9333EA", width: 20 }}>PER</span>
-                      <input type="text" value={r.personalLeave} disabled={closed}
-                        placeholder="h:mm"
-                        onChange={e => updateRow(r.id, { personalLeave: e.target.value })}
-                        onBlur={() => persist(r, {})}
-                        style={{ padding: "4px 6px", fontSize: 11.5, width: 62, borderColor: parseDurationToMinutes(r.personalLeave) > 0 ? "#9333EA" : undefined }} />
-                    </div>
-                    {parseDurationToMinutes(r.personalLeave) > 0 && (
-                      <div style={{ fontSize: 9.5, color: "#9333EA", fontWeight: 700, marginTop: 2 }}>
-                        −{formatHoursHM(parseDurationToMinutes(r.personalLeave))} from worked time
-                      </div>
-                    )}
                   </td>
                   <td>
                     <input type="text" value={r.notes ?? ""} disabled={closed}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees, attendance } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
+import { stationMinutesByEmpDay } from "@/lib/stationServer";
 import MonthlyRegisterClient from "@/app/attendance/history/MonthlyRegisterClient";
 import RangeRegisterClient from "@/app/attendance/history/RangeRegisterClient";
 
@@ -86,6 +87,13 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
     }).from(attendance).where(and(gte(attendance.date, firstISO), lte(attendance.date, lastISO))),
   ]);
 
+  // Hourly-leave minutes come from the Station terminal, not manual entry.
+  const stMap = await stationMinutesByEmpDay(firstISO, lastISO);
+  const records = rows.map(r => {
+    const a = stMap.get(`${r.employeeId}-${r.date}`);
+    return { ...r, officialLeaveMin: a?.official ?? 0, personalLeaveMin: a?.personal ?? 0 };
+  });
+
   const isSingleMonth = months.length === 1;
 
   return (
@@ -107,7 +115,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           month={from.m}
           daysInMonth={new Date(from.y, from.m, 0).getDate()}
           employees={emps}
-          records={rows}
+          records={records}
           rangeFrom={`${from.y}-${String(from.m).padStart(2, "0")}`}
           rangeTo={`${to.y}-${String(to.m).padStart(2, "0")}`}
         />
@@ -117,7 +125,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           to={to}
           months={months}
           employees={emps}
-          records={rows}
+          records={records}
         />
       )}
     </div>
