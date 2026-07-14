@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // POST — append a single document. Used by the quick "File Form" upload flow.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
 // DELETE /api/employees/[id]/documents?docId=N — delete a single document
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
   try {
     await ctx.params;

@@ -8,7 +8,7 @@ import { guardWrite } from "@/lib/auth";
 // Identify the employee by PIN and return their current open leave (if any),
 // plus a summary of today's trips. Used before showing the punch buttons.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("station");
   if (guard instanceof NextResponse) return guard;
   try {
     const { pin } = await req.json();

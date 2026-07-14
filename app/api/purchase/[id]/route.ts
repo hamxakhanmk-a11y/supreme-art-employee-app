@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 //   { action: "approve" | "reject" | "received" }
 // Toggles: clicking an already-active action clears it back to pending.
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
 // PUT /api/purchase/[id]  -> update any editable fields
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
@@ -88,7 +88,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // DELETE /api/purchase/[id]
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;

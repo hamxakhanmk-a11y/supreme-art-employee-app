@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 // Toggle: if the employee has an open trip, punch them back IN (fills inAt +
 // minutes). Otherwise punch them OUT with the given type (personal/official).
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("station");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();

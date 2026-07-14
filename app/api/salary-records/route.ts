@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 // Each slip requires { employeeId, month, year }. The server snapshots employee structure
 // (basic, conveyance, percentages) at generation time and recomputes all derived amounts.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("salary");
   if (guard instanceof NextResponse) return guard;
   const session = await getSession();
   const generatedBy = session ? `${session.name} <${session.email}>` : null;
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/salary-records?id=1
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("salary");
   if (guard instanceof NextResponse) return guard;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });

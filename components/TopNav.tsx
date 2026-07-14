@@ -6,16 +6,18 @@ import { useEffect, useState } from "react";
 
 type Role = "superadmin" | "admin" | "hr" | "ceo";
 
-const MODULES_BASE: { key: string; label: string; roles: Role[] | null }[] = [
-  { key: "profile",    label: "Profile",    roles: null },
-  { key: "attendance", label: "Attendance", roles: null },
-  { key: "forms",      label: "Forms",      roles: null },
-  { key: "reports",    label: "Reports",    roles: null },
-  { key: "salary",     label: "Salary",     roles: null },
-  { key: "kpi",        label: "KPI",        roles: null },
-  { key: "purchase",   label: "Purchase",   roles: null },
-  { key: "station",    label: "Station",    roles: ["superadmin", "admin", "hr"] },
-  { key: "users",      label: "Users",      roles: ["superadmin"] },
+// `module` gates the tab on the role's permission set (see lib/permissions.ts).
+// `superadminOnly` is reserved for the owner. Profile has neither — always shown.
+const MODULES_BASE: { key: string; label: string; module?: string; superadminOnly?: boolean }[] = [
+  { key: "profile",    label: "Profile" },
+  { key: "attendance", label: "Attendance", module: "attendance" },
+  { key: "forms",      label: "Forms",      module: "forms" },
+  { key: "reports",    label: "Reports",    module: "reports" },
+  { key: "salary",     label: "Salary",     module: "salary" },
+  { key: "kpi",        label: "KPI",        module: "kpi" },
+  { key: "purchase",   label: "Purchase",   module: "purchase" },
+  { key: "station",    label: "Station",    module: "station" },
+  { key: "users",      label: "Users",      superadminOnly: true },
 ];
 
 const OVERVIEW_FORMS = { href: "/forms", label: "← Overview" };
@@ -92,7 +94,10 @@ function getSubNav(path: string, module: string): { href: string; label: string 
     case "station":
       return [{ href: "/station", label: "Terminal" }, { href: "/station/report", label: "Report" }];
     case "users":
-      return [{ href: "/admin/users", label: "All Users" }];
+      return [
+        { href: "/admin/users", label: "All Users" },
+        { href: "/admin/roles", label: "Role Permissions" },
+      ];
     default:
       return [];
   }
@@ -120,7 +125,7 @@ function pathToModule(path: string): string {
   if (path.startsWith("/purchase")) return "purchase";
   if (path.startsWith("/station")) return "station";
   if (path.startsWith("/attendance")) return "attendance";
-  if (path.startsWith("/admin/users")) return "users";
+  if (path.startsWith("/admin/")) return "users";
   // Legacy leave routes resolve to forms module.
   if (path.startsWith("/leave")) return "forms";
   return "profile";
@@ -128,7 +133,7 @@ function pathToModule(path: string): string {
 
 const HIDE_ON = ["/login"];
 
-interface MeUser { id: number; email: string; name: string; role: Role }
+interface MeUser { id: number; email: string; name: string; role: Role; modules: string[]; canEdit: boolean }
 
 export default function TopNav() {
   const pathname = usePathname();
@@ -140,14 +145,25 @@ export default function TopNav() {
   useEffect(() => {
     if (hidden) return;
     fetch("/api/auth/me").then(r => r.json()).then(d => {
-      if (d.authenticated) setMe(d.user);
+      if (d.authenticated) setMe({ ...d.user, modules: d.modules ?? [], canEdit: d.canEdit ?? true });
     }).catch(() => {});
   }, [hidden, pathname]);
 
   if (hidden) return null;
   const activeModule = pathToModule(pathname);
-  const links = getSubNav(pathname, activeModule);
-  const modules = MODULES_BASE.filter(m => !m.roles || (me && m.roles.includes(me.role)));
+  const canModule = (key: string) => !!me && (me.role === "superadmin" || me.modules.includes(key));
+
+  let links = getSubNav(pathname, activeModule);
+  // Hide the Employees management tab from roles without that permission.
+  if (activeModule === "profile" && me && !canModule("employees")) {
+    links = links.filter(l => l.href !== "/employees");
+  }
+
+  const modules = MODULES_BASE.filter(m => {
+    if (m.superadminOnly) return me?.role === "superadmin";
+    if (m.module) return canModule(m.module);
+    return true; // Profile — always available
+  });
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });

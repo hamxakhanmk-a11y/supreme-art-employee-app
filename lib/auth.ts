@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { eq, sql, and, gt } from "drizzle-orm";
 import { db } from "./db";
 import { users, sessions } from "./schema";
+import { getPerm, type ModuleKey } from "./permissions";
 
 export const COOKIE_NAME = "sae_session";
 export const SESSION_DAYS = 30;
@@ -111,7 +112,24 @@ export async function guardAuth(allowedRoles?: Role[]): Promise<SessionUser | Ne
   }
   return user;
 }
-export const guardWrite = () => guardAuth(WRITE_ROLES);
+
+// Gate a write. Optionally scope it to a module — the user must both be allowed
+// to edit (role isn't view-only) and have that module in their permission set.
+// superadmin always passes. Called with no module it just enforces edit rights.
+export async function guardWrite(module?: ModuleKey): Promise<SessionUser | NextResponse> {
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (user.role === "superadmin") return user;
+  const perm = await getPerm(user.role);
+  if (!perm.canEdit) {
+    return NextResponse.json({ error: "Your role is view-only and can't make changes." }, { status: 403 });
+  }
+  if (module && !perm.modules.includes(module)) {
+    return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
+  }
+  return user;
+}
+
 export const guardSuperAdmin = () => guardAuth(USER_MGMT_ROLES);
 
 export async function countUsers(): Promise<number> {

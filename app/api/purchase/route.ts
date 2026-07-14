@@ -18,7 +18,7 @@ export async function GET() {
 
 // POST /api/purchase  { date, department, itemName, ... }  (prNo auto-assigned)
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
     const b = await req.json();

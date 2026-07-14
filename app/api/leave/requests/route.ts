@@ -32,7 +32,7 @@ function daysBetween(start: string, end: string): number {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("forms");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();

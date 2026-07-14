@@ -11,7 +11,7 @@ import { logActivity } from "@/lib/activity";
 // Skips dates that are already closed. Upserts (replaces) existing rows
 // for the same (employee_id, date).
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("attendance");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();

@@ -425,3 +425,17 @@ export const setupTokens = pgTable("setup_tokens", {
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// =====================
+// AUTH: ROLE PERMISSIONS
+// =====================
+// One row per role. `modules` is a comma-separated list of module keys the
+// role may open (see lib/permissions.ts). `canEdit=false` makes the role
+// view-only across everything (like the CEO role). superadmin is always
+// full-access and is never read from this table.
+export const rolePermissions = pgTable("role_permissions", {
+  role: varchar("role", { length: 20 }).primaryKey(),
+  modules: text("modules").notNull().default(""),
+  canEdit: boolean("can_edit").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

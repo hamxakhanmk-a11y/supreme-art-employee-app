@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 // On approval of a half-day request, auto-stamp attendance for that date
 // with status="half-day" so the Monthly Register shows P with the ½ marker.
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("forms");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("forms");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;

@@ -5,7 +5,7 @@ import { guardWrite } from "@/lib/auth";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
   try {
     const formData = await req.formData();

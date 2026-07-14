@@ -8,7 +8,7 @@ import { getDesignation } from "@/lib/kpi/catalog";
 
 // POST /api/kpi/assign  { employeeId, templateCode }  (templateCode null = untrack)
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("kpi");
   if (guard instanceof NextResponse) return guard;
   try {
     const { employeeId, templateCode } = await req.json();

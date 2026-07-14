@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 //   { employeeId, templateCode, year, month, kpiIdx, inputKey, value }   -> upsert one operand
 //   { employeeId, year, kpiIdx, target }                                 -> upsert one target override
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("kpi");
   if (guard instanceof NextResponse) return guard;
   try {
     const b = await req.json();

@@ -10,7 +10,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("forms");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();

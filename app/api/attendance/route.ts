@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/attendance  { employeeId, date, status, checkIn?, checkOut?, officialLeaveMin?, personalLeaveMin?, notes? }
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("attendance");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 // DELETE /api/attendance?employeeId=&date=   -> unmark (clear) one employee's record for a day
 // DELETE /api/attendance?date=                -> unmark (clear) every employee's record for a day
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("attendance");
   if (guard instanceof NextResponse) return guard;
   try {
     const url = req.nextUrl;

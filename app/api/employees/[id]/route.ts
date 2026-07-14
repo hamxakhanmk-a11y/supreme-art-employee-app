@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
@@ -147,7 +147,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite();
+  const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
