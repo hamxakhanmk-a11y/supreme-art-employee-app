@@ -17,6 +17,7 @@ const FAMILY: Record<string, { label: string; color: string; bg: string }> = {
   employee:   { label: "Employee",   color: "#A32D2D", bg: "#fdecec" },
   kpi:        { label: "KPI",        color: "#9333EA", bg: "#f3e8ff" },
   purchase:   { label: "Purchase",   color: "#0E7490", bg: "#cffafe" },
+  station:    { label: "Station",    color: "#9333EA", bg: "#f3e8ff" },
 };
 
 function familyOf(action: string) {

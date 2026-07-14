@@ -63,6 +63,9 @@ export const employees = pgTable("employees", {
   status: varchar("status", { length: 20 }).notNull().default("active"),
   contractExpiry: date("contract_expiry"),
   resignationDate: date("resignation_date"),
+  // Short numeric PIN the employee types at the Station terminal to punch
+  // hourly (mid-day) leaves in/out. Unique among employees.
+  stationPin: varchar("station_pin", { length: 6 }),
   // Manually-assigned KPI template code (a designation code from lib/kpi/catalog,
   // e.g. "FIN"). Null = employee is not KPI-tracked.
   kpiTemplate: varchar("kpi_template", { length: 10 }),
@@ -157,6 +160,26 @@ export const activityLog = pgTable("activity_log", {
   action: varchar("action", { length: 40 }).notNull(), // e.g. "attendance.mark"
   employeeId: integer("employee_id"),
   summary: text("summary").notNull(), // human-readable sentence
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// =====================
+// STATION LEAVES (hourly in/out punches at the Station terminal)
+// =====================
+// One row per "trip" outside the factory. outAt is set when the employee
+// punches out; inAt is filled when they punch back in (null = still out).
+// minutes is the closed duration (round((inAt-outAt)/60s)); only "personal"
+// minutes are deducted from worked hours — "official" is excused.
+export const stationLeaves = pgTable("station_leaves", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),                 // local day of the punch-out
+  outAt: timestamp("out_at", { withTimezone: true }).notNull(),
+  inAt: timestamp("in_at", { withTimezone: true }),
+  type: varchar("type", { length: 12 }).notNull().default("personal"), // personal | official
+  minutes: integer("minutes"),                  // filled on punch-in
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
