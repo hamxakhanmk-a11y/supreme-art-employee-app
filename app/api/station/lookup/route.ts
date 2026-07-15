@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees, stationLeaves } from "@/lib/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { ensureStationReasonColumn } from "@/lib/stationServer";
 
 // POST /api/station/lookup  { pin }
 // Identify the employee by PIN and return their current open leave (if any),
@@ -11,6 +12,7 @@ export async function POST(req: NextRequest) {
   const guard = await guardWrite("station");
   if (guard instanceof NextResponse) return guard;
   try {
+    await ensureStationReasonColumn();
     const { pin } = await req.json();
     const p = String(pin || "").trim();
     if (!p) return NextResponse.json({ error: "Enter your PIN" }, { status: 400 });

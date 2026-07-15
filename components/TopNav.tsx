@@ -2,9 +2,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
-type Role = "superadmin" | "admin" | "hr" | "ceo";
+import { useState } from "react";
+import { useMe } from "@/components/MeProvider";
 
 // `module` gates the tab on the role's permission set (see lib/permissions.ts).
 // `superadminOnly` is reserved for the owner. Profile has neither — always shown.
@@ -73,6 +72,9 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       if (path.startsWith("/reports/salary")) {
         return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
       }
+      if (path.startsWith("/reports/station")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/station", label: "Hourly Leaves" }];
+      }
       if (path.startsWith("/reports/activity")) {
         return [OVERVIEW_REPORTS, { href: "/reports/activity", label: "Activity Log" }];
       }
@@ -133,21 +135,15 @@ function pathToModule(path: string): string {
 
 const HIDE_ON = ["/login"];
 
-interface MeUser { id: number; email: string; name: string; role: Role; modules: string[]; canEdit: boolean }
-
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [me, setMe] = useState<MeUser | null>(null);
+  const meState = useMe();
+  const me = meState.user
+    ? { ...meState.user, modules: meState.modules, canEdit: meState.canEdit }
+    : null;
   const [menuOpen, setMenuOpen] = useState(false);
   const hidden = HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"));
-
-  useEffect(() => {
-    if (hidden) return;
-    fetch("/api/auth/me").then(r => r.json()).then(d => {
-      if (d.authenticated) setMe({ ...d.user, modules: d.modules ?? [], canEdit: d.canEdit ?? true });
-    }).catch(() => {});
-  }, [hidden, pathname]);
 
   if (hidden) return null;
   const activeModule = pathToModule(pathname);

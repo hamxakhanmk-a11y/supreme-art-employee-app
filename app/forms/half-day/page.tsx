@@ -2,10 +2,13 @@ import { db } from "@/lib/db";
 import { employees, leaveTypes } from "@/lib/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import ApplyHalfDayClient from "./ApplyHalfDayClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function HalfDayFormPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   const [emps, halfTypeRow] = await Promise.all([
     db.select({
       id: employees.id, employeeId: employees.employeeId,

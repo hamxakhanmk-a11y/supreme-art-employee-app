@@ -1,8 +1,11 @@
 import LeaveSettingsClient from "./LeaveSettingsClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
-export default function LeaveSettingsPage() {
+export default async function LeaveSettingsPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 16 }}>

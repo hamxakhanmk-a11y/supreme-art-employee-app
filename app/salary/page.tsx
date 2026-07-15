@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { MONTHS, computeSlip } from "@/lib/salary";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -38,6 +39,7 @@ type RowState = {
 const fmt = (n: number) => n.toLocaleString("en-PK");
 
 export default function SalaryGeneratorPage() {
+  const canEdit = useCanEdit();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
   const [year, setYear] = useState<number>(CURRENT_YEAR);
@@ -178,6 +180,8 @@ export default function SalaryGeneratorPage() {
 
   const totalNet = rows.reduce((s, r) => s + computeRow(r).netPay, 0);
   const totalGross = rows.reduce((s, r) => s + computeRow(r).grossEarnings, 0);
+
+  if (!canEdit) return <ViewOnlyNotice title="Salary generation is edit-only" />;
 
   return (
     <div className="fade-up">

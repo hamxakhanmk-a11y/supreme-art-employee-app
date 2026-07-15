@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string; designation: string | null; photoUrl: string | null };
-type Leave = { id: number; outAt: string; inAt: string | null; type: string; minutes: number | null };
+type Leave = { id: number; outAt: string; inAt: string | null; type: string; minutes: number | null; reason: string | null };
 type Lookup = { employee: Emp; open: Leave | null; todays: Leave[] };
 
 const PIN_LEN = 3;
@@ -15,9 +15,10 @@ export default function StationClient() {
   const [data, setData] = useState<Lookup | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
   const [flash, setFlash] = useState<{ msg: string; color: string } | null>(null);
 
-  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); }, []);
+  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); setReason(""); }, []);
 
   const lookup = useCallback(async (p: string) => {
     setBusy(true); setError(null);
@@ -60,7 +61,7 @@ export default function StationClient() {
     try {
       const res = await fetch("/api/station/punch", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin, type }),
+        body: JSON.stringify({ pin, type, reason }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Punch failed");
@@ -144,7 +145,22 @@ export default function StationClient() {
             </>
           ) : (
             <>
-              <div style={{ margin: "16px 0 8px", fontSize: 15, color: "var(--text2)" }}>Going out — pick the reason:</div>
+              <div style={{ margin: "16px 0 6px", fontSize: 15, color: "var(--text2)", textAlign: "left" }}>
+                Going out — reason <span style={{ fontSize: 12, color: "var(--text3)" }}>(optional)</span>
+              </div>
+              <input
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                disabled={busy}
+                maxLength={200}
+                placeholder="e.g. Bank work, doctor visit, delivery pickup…"
+                style={{
+                  width: "100%", padding: "12px 14px", fontSize: 15, borderRadius: 10,
+                  border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)",
+                  marginBottom: 12,
+                }}
+              />
+              <div style={{ margin: "0 0 8px", fontSize: 14, color: "var(--text2)", textAlign: "left" }}>Now pick the type:</div>
               <div style={{ display: "flex", gap: 12 }}>
                 <button onClick={() => punch("personal")} disabled={busy} style={bigBtn("#9333EA")}>Out · Personal</button>
                 <button onClick={() => punch("official")} disabled={busy} style={bigBtn("#0E7490")}>Out · Official</button>
@@ -157,11 +173,14 @@ export default function StationClient() {
             <div className="card" style={{ marginTop: 16, textAlign: "left", padding: "10px 14px" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Today&apos;s trips</div>
               {data.todays.map(t => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "3px 0", borderBottom: "1px solid var(--border)" }}>
-                  <span>{hhmm(t.outAt)} → {t.inAt ? hhmm(t.inAt) : <span style={{ color: "#DC2626", fontWeight: 700 }}>still out</span>}</span>
-                  <span style={{ color: LEAVE_STYLE[t.type as LeaveType].color, fontWeight: 700 }}>
-                    {LEAVE_STYLE[t.type as LeaveType].label}{t.minutes != null ? ` · ${formatMins(t.minutes)}` : ""}
-                  </span>
+                <div key={t.id} style={{ padding: "4px 0", borderBottom: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
+                    <span>{hhmm(t.outAt)} → {t.inAt ? hhmm(t.inAt) : <span style={{ color: "#DC2626", fontWeight: 700 }}>still out</span>}</span>
+                    <span style={{ color: LEAVE_STYLE[t.type as LeaveType].color, fontWeight: 700 }}>
+                      {LEAVE_STYLE[t.type as LeaveType].label}{t.minutes != null ? ` · ${formatMins(t.minutes)}` : ""}
+                    </span>
+                  </div>
+                  {t.reason && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>{t.reason}</div>}
                 </div>
               ))}
             </div>

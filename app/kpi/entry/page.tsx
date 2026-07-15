@@ -3,10 +3,13 @@ import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
 import { and, eq, isNotNull } from "drizzle-orm";
 import EntryClient from "./EntryClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function KpiEntryPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   const emps = await db.select({
     id: employees.id,
     employeeId: employees.employeeId,

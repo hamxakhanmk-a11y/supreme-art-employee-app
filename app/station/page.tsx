@@ -1,7 +1,10 @@
 import StationClient from "./StationClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
-export default function StationPage() {
+export default async function StationPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   return <StationClient />;
 }

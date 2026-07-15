@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { getSession } from "@/lib/auth";
+import { getPerm } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
-export default function ReportsLanding() {
+export default async function ReportsLanding() {
+  const user = await getSession();
+  const perm = user ? await getPerm(user.role) : null;
+  const canSalary = user?.role === "superadmin" || !!perm?.modules.includes("salary");
+  const canStation = user?.role === "superadmin" || !!perm?.modules.includes("station");
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 20 }}>
@@ -32,13 +38,24 @@ export default function ReportsLanding() {
           urdu="آدھے دن کی تاریخ"
           desc="All half-day requests by employee, status, date range."
         />
-        <ReportCard
-          href="/reports/salary"
-          icon="💰"
-          title="Salary Records"
-          urdu="تنخواہ کا ریکارڈ"
-          desc="All generated salary slips by month, employee. Click any row to view & print the slip."
-        />
+        {canSalary && (
+          <ReportCard
+            href="/reports/salary"
+            icon="💰"
+            title="Salary Records"
+            urdu="تنخواہ کا ریکارڈ"
+            desc="All generated salary slips by month, employee. Click any row to view & print the slip."
+          />
+        )}
+        {canStation && (
+          <ReportCard
+            href="/reports/station"
+            icon="🏭"
+            title="Hourly Leaves (Station)"
+            urdu="گھنٹہ وار رخصت"
+            desc="Every trip outside the factory — check-out / check-in times, duration, type and reason. Exports to Excel."
+          />
+        )}
         <ReportCard
           href="/reports/activity"
           icon="🕘"

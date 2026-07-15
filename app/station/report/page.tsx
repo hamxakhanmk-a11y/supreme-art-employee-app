@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { employees, stationLeaves } from "@/lib/schema";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { employees } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { formatMins, LEAVE_STYLE } from "@/lib/station";
+import { stationTrips } from "@/lib/stationServer";
+import StationReportClient from "./StationReportClient";
 
 export const dynamic = "force-dynamic";
 
@@ -15,19 +17,18 @@ export default async function StationReportPage({ searchParams }: { searchParams
   const from = sp.from || first;
   const to = sp.to || now.toISOString().slice(0, 10);
 
-  const [emps, leaves] = await Promise.all([
+  const [emps, trips] = await Promise.all([
     db.select({
       id: employees.id, employeeId: employees.employeeId,
       firstName: employees.firstName, lastName: employees.lastName,
       department: employees.department, stationPin: employees.stationPin,
     }).from(employees).where(eq(employees.status, "active")).orderBy(employees.firstName),
-    db.select().from(stationLeaves)
-      .where(and(gte(stationLeaves.date, from), lte(stationLeaves.date, to))),
+    stationTrips(from, to),
   ]);
 
   type Agg = { personal: number; official: number; trips: number; open: number };
   const byEmp = new Map<number, Agg>();
-  for (const l of leaves) {
+  for (const l of trips) {
     const a = byEmp.get(l.employeeId) ?? { personal: 0, official: 0, trips: 0, open: 0 };
     a.trips++;
     if (l.inAt === null) a.open++;
@@ -36,11 +37,12 @@ export default async function StationReportPage({ searchParams }: { searchParams
     byEmp.set(l.employeeId, a);
   }
 
-  const rows = emps.map(e => ({ ...e, agg: byEmp.get(e.id) ?? { personal: 0, official: 0, trips: 0, open: 0 } }))
+  const summary = emps
+    .map(e => ({ ...e, agg: byEmp.get(e.id) ?? { personal: 0, official: 0, trips: 0, open: 0 } }))
     .sort((a, b) => b.agg.personal - a.agg.personal || a.firstName.localeCompare(b.firstName));
 
-  const totPersonal = rows.reduce((s, r) => s + r.agg.personal, 0);
-  const totOfficial = rows.reduce((s, r) => s + r.agg.official, 0);
+  const totPersonal = summary.reduce((s, r) => s + r.agg.personal, 0);
+  const totOfficial = summary.reduce((s, r) => s + r.agg.official, 0);
 
   return (
     <div className="fade-up">
@@ -54,15 +56,11 @@ export default async function StationReportPage({ searchParams }: { searchParams
         <Link href="/station" className="btn">🏭 Terminal</Link>
       </div>
 
-      <form method="GET" className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14, fontSize: 13, color: "var(--text2)" }}>
-        <span style={{ fontWeight: 600 }}>From</span>
-        <input type="date" name="from" defaultValue={from} style={{ width: 150 }} />
-        <span>→</span>
-        <input type="date" name="to" defaultValue={to} style={{ width: 150 }} />
-        <button type="submit" className="btn btn-primary btn-sm">Apply</button>
-      </form>
+      <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>Every trip</h2>
+      <StationReportClient trips={trips} from={from} to={to} />
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <h2 className="no-print" style={{ fontSize: 15, fontWeight: 700, margin: "26px 0 8px" }}>Per-employee totals</h2>
+      <div className="card no-print" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
             <tr>
@@ -74,7 +72,7 @@ export default async function StationReportPage({ searchParams }: { searchParams
             </tr>
           </thead>
           <tbody>
-            {rows.map(r => {
+            {summary.map(r => {
               const total = r.agg.personal + r.agg.official;
               return (
                 <tr key={r.id}>
@@ -94,8 +92,8 @@ export default async function StationReportPage({ searchParams }: { searchParams
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 10 }}>
-        The <strong>PIN</strong> column is each employee&apos;s Station PIN — share it with them so they can punch in/out. Only <strong style={{ color: LEAVE_STYLE.personal.color }}>Personal</strong> time is subtracted from worked hours in the attendance register.
+      <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 10 }}>
+        The <strong>PIN</strong> column is each employee&apos;s Station PIN — share it with them so they can punch in/out.
       </div>
     </div>
   );

@@ -2,10 +2,13 @@ import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
 import { asc, eq } from "drizzle-orm";
 import FileFormClient from "./FileFormClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function FileFormPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   const emps = await db.select({
     id: employees.id, employeeId: employees.employeeId,
     firstName: employees.firstName, lastName: employees.lastName,

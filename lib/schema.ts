@@ -179,6 +179,7 @@ export const stationLeaves = pgTable("station_leaves", {
   outAt: timestamp("out_at", { withTimezone: true }).notNull(),
   inAt: timestamp("in_at", { withTimezone: true }),
   type: varchar("type", { length: 12 }).notNull().default("personal"), // personal | official
+  reason: varchar("reason", { length: 200 }),   // free-text, captured at punch-out
   minutes: integer("minutes"),                  // filled on punch-in
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

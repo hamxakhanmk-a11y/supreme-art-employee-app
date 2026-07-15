@@ -32,6 +32,7 @@ export async function downloadRegisterXlsx(opts: {
   rows: Cell[][];
   dayRange?: [number, number]; // inclusive 0-based column indices to color by code
   freezeCols?: number;         // sticky leading columns (default 2)
+  colWidths?: number[];        // explicit per-column widths (else sized for the register)
 }) {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
@@ -89,7 +90,8 @@ export async function downloadRegisterXlsx(opts: {
 
   // Column widths
   ws.columns.forEach((col, i) => {
-    if (i === 0) col.width = 14;
+    if (opts.colWidths) col.width = opts.colWidths[i] ?? 12;
+    else if (i === 0) col.width = 14;
     else if (i === 1) col.width = 22;
     else if (opts.dayRange && i >= opts.dayRange[0] && i <= opts.dayRange[1]) col.width = 4.5;
     else col.width = 11;

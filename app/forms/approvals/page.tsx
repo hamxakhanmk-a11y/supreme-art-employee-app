@@ -4,10 +4,13 @@ import { db } from "@/lib/db";
 import { employees, leaveTypes, leaveRequests } from "@/lib/schema";
 import { asc, desc } from "drizzle-orm";
 import LeaveRequestsClient from "@/app/leave/LeaveRequestsClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApprovalsPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice title="Approvals are edit-only" />;
   const [requests, emps, types] = await Promise.all([
     db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt)),
     db.select({

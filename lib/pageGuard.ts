@@ -12,3 +12,13 @@ export async function requireModule(moduleKey: ModuleKey) {
   if (!perm.modules.includes(moduleKey)) redirect(`/?denied=${moduleKey}`);
   return user;
 }
+
+// True when the signed-in role is view-only (can't edit). Used by pure-edit
+// pages to render a read-only notice instead of the form.
+export async function isViewOnly(): Promise<boolean> {
+  const user = await getSession();
+  if (!user) return false;              // unauthenticated → other guards handle it
+  if (user.role === "superadmin") return false;
+  const perm = await getPerm(user.role);
+  return !perm.canEdit;
+}

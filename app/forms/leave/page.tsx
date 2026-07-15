@@ -3,10 +3,13 @@ import { db } from "@/lib/db";
 import { employees, leaveTypes } from "@/lib/schema";
 import { asc, eq } from "drizzle-orm";
 import ApplyLeaveClient from "@/app/leave/apply/ApplyLeaveClient";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeaveFormPage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   const [emps, types] = await Promise.all([
     db.select({
       id: employees.id, employeeId: employees.employeeId,

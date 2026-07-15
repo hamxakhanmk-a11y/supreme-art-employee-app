@@ -1,7 +1,12 @@
 import Link from "next/link";
 import EmployeeForm from "@/components/EmployeeForm";
+import { isViewOnly } from "@/lib/pageGuard";
+import { ViewOnlyNotice } from "@/components/MeProvider";
 
-export default function NewEmployeePage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewEmployeePage() {
+  if (await isViewOnly()) return <ViewOnlyNotice />;
   return (
     <div>
       <div style={{ marginBottom: 20 }}>

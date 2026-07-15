@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import { DEFAULT_CHECK_IN, lateMinutes, formatLate } from "@/lib/attendance";
@@ -32,6 +33,7 @@ const DEFAULT_CHECK_OUT = "16:45";
 const ROW_PILLS = ["present", "absent", "leave"] as const;
 
 export default function AttendancePage() {
+  const canEdit = useCanEdit();
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [rows, setRows] = useState<Row[]>([]);
@@ -247,6 +249,8 @@ export default function AttendancePage() {
     halfday: rows.filter(r => r.status === "half-day").length,
     unmarked:rows.filter(r => r.status === null).length,
   };
+
+  if (!canEdit) return <ViewOnlyNotice title="Attendance marking is edit-only" />;
 
   return (
     <div className="fade-up">
