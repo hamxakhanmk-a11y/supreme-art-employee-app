@@ -39,15 +39,17 @@ export interface RolePerm {
 }
 
 // Editable roles shown in the permissions UI (superadmin is fixed/full).
-export const EDITABLE_ROLES = ["admin", "hr", "ceo"] as const;
+export const EDITABLE_ROLES = ["admin", "hr", "ceo", "procurement"] as const;
 
 // Out-of-the-box defaults preserve the app's previous behaviour exactly:
 // admin & hr can do everything; ceo sees everything but can't edit.
+// procurement starts narrow (purchase only) — tune it in Role Permissions.
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
-  superadmin: { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  admin:      { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  hr:         { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  ceo:        { modules: [...ALL_MODULE_KEYS], canEdit: false },
+  superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
+  admin:       { modules: [...ALL_MODULE_KEYS], canEdit: true },
+  hr:          { modules: [...ALL_MODULE_KEYS], canEdit: true },
+  ceo:         { modules: [...ALL_MODULE_KEYS], canEdit: false },
+  procurement: { modules: ["purchase"], canEdit: true },
 };
 
 function fullAccess(): RolePerm {
@@ -73,11 +75,12 @@ export function invalidatePermsCache() {
 export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
 
-  const data: Record<string, RolePerm> = {
-    admin: { ...DEFAULT_PERMS.admin, modules: [...DEFAULT_PERMS.admin.modules] },
-    hr: { ...DEFAULT_PERMS.hr, modules: [...DEFAULT_PERMS.hr.modules] },
-    ceo: { ...DEFAULT_PERMS.ceo, modules: [...DEFAULT_PERMS.ceo.modules] },
-  };
+  // Seed every editable role from its default, then let stored rows override.
+  const data: Record<string, RolePerm> = {};
+  for (const role of EDITABLE_ROLES) {
+    const d = DEFAULT_PERMS[role];
+    data[role] = { modules: [...d.modules], canEdit: d.canEdit };
+  }
 
   try {
     const rows = await db.select().from(rolePermissions);

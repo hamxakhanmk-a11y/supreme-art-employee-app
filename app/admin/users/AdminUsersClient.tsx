@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
-type Role = "superadmin" | "admin" | "hr" | "ceo";
+type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement";
 interface User {
   id: number;
   email: string;
@@ -17,6 +17,7 @@ const ROLE_COLOR: Record<Role, string> = {
   admin: "#A32D2D",
   hr: "#185FA5",
   ceo: "#0F766E",
+  procurement: "#B45309",
 };
 
 function initials(name: string) {
@@ -85,7 +86,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
 
   // Counts for summary tiles (only active users counted in role buckets)
   const counts = useMemo(() => {
-    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0 };
+    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, procurement: 0 };
     for (const u of users) {
       c.total++;
       if (u.active) c[u.role]++;
@@ -116,6 +117,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         <Tile label="ADMINS" value={counts.admin} accent={ROLE_COLOR.admin} />
         <Tile label="HR" value={counts.hr} accent={ROLE_COLOR.hr} />
         <Tile label="CEO" value={counts.ceo} accent={ROLE_COLOR.ceo} />
+        <Tile label="PROCUREMENT" value={counts.procurement} accent={ROLE_COLOR.procurement} />
       </div>
 
       <div style={{ padding: "10px 14px", background: "#EFF6FF", border: "1px solid #BFDBFE",
@@ -147,6 +149,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                 <option value="admin">Admin (full access)</option>
                 <option value="hr">HR (full access)</option>
                 <option value="ceo">CEO (view & print only)</option>
+                <option value="procurement">Procurement (purchase only)</option>
               </select>
             </Field>
             <div style={{ display: "flex", gap: 8 }}>
@@ -211,6 +214,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   <option value="admin">Admin</option>
                   <option value="hr">HR</option>
                   <option value="ceo">CEO (view-only)</option>
+                  <option value="procurement">Procurement</option>
                 </select>
                 {!isSelf && (
                   u.active ? (

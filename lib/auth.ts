@@ -9,12 +9,11 @@ import { getPerm, type ModuleKey } from "./permissions";
 export const COOKIE_NAME = "sae_session";
 export const SESSION_DAYS = 30;
 
-export type Role = "superadmin" | "admin" | "hr" | "ceo";
-export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo"];
-// Roles that can perform any write (create/update/delete) action in the app.
-// CEO is view-only.
-export const WRITE_ROLES: Role[] = ["superadmin", "admin", "hr"];
-// Roles that can manage / invite users.
+export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement";
+export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo", "procurement"];
+// What each role may open/edit now lives in the role_permissions table —
+// see lib/permissions.ts and guardWrite().
+// Roles that can manage users.
 export const USER_MGMT_ROLES: Role[] = ["superadmin"];
 // Backwards-compat alias (older code may import ADMIN_ROLES).
 export const ADMIN_ROLES: Role[] = USER_MGMT_ROLES;

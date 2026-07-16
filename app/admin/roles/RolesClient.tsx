@@ -8,6 +8,7 @@ const ROLE_COLOR: Record<string, string> = {
   admin: "#A32D2D",
   hr: "#185FA5",
   ceo: "#0F766E",
+  procurement: "#B45309",
 };
 
 export default function RolesClient() {

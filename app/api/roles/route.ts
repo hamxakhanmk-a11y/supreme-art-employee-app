@@ -19,6 +19,7 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
   hr: "HR",
   ceo: "CEO",
+  procurement: "Procurement",
 };
 
 export async function GET() {
