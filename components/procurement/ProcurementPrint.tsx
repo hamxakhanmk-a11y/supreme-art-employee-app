@@ -69,11 +69,14 @@ export default function ProcurementPrint({
         .pf-sign .line { border-top: 1px solid #000; margin-top: 34px; padding-top: 4px; font-size: 12px; }
         .pf-remark { margin-top: 14px; font-size: 12px; }
         @media print {
-          @page { size: A4 portrait; margin: 12mm; }
-          body { background: #fff; }
+          /* Zero page margin leaves the browser no room to draw its own
+             date / title / URL / page-number headers. The sheet supplies the
+             real margin as padding instead. */
+          @page { size: A4 portrait; margin: 0; }
+          html, body { background: #fff; margin: 0 !important; padding: 0 !important; }
           .no-print, header, nav { display: none !important; }
-          .pf-sheet { border: none; max-width: 100%; padding: 0; }
-          .pf-band { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .pf-sheet { border: none; max-width: 100%; padding: 14mm 12mm; }
+          .pf-formtitle { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
     </div>
