@@ -7,7 +7,7 @@ import { useMe } from "@/components/MeProvider";
 
 // `module` gates the tab on the role's permission set (see lib/permissions.ts).
 // `superadminOnly` is reserved for the owner. Profile has neither — always shown.
-const MODULES_BASE: { key: string; label: string; module?: string; superadminOnly?: boolean }[] = [
+const MODULES_BASE: { key: string; label: string; module?: string; anyModule?: string[]; superadminOnly?: boolean }[] = [
   { key: "profile",    label: "Profile" },
   { key: "attendance", label: "Attendance", module: "attendance" },
   { key: "forms",      label: "Forms",      module: "forms" },
@@ -16,6 +16,7 @@ const MODULES_BASE: { key: string; label: string; module?: string; superadminOnl
   { key: "kpi",        label: "KPI",        module: "kpi" },
   { key: "purchase",   label: "Purchase",   module: "purchase" },
   { key: "station",    label: "Station",    module: "station" },
+  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
   { key: "users",      label: "Users",      superadminOnly: true },
 ];
 
@@ -95,6 +96,13 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       return [{ href: "/purchase", label: "PR Register" }];
     case "station":
       return [{ href: "/station", label: "Terminal" }, { href: "/station/report", label: "Report" }];
+    case "procurement":
+      // Filtered per-stage permission in the component below.
+      return [
+        { href: "/procurement/demand", label: "Demand" },
+        { href: "/procurement/po", label: "Purchase Order" },
+        { href: "/procurement/grn", label: "GRN" },
+      ];
     case "users":
       return [
         { href: "/admin/users", label: "All Users" },
@@ -116,6 +124,7 @@ const MODULE_HOME: Record<string, string> = {
   kpi: "/kpi",
   purchase: "/purchase",
   station: "/station",
+  procurement: "/procurement",
   users: "/admin/users",
 };
 
@@ -126,6 +135,7 @@ function pathToModule(path: string): string {
   if (path.startsWith("/kpi")) return "kpi";
   if (path.startsWith("/purchase")) return "purchase";
   if (path.startsWith("/station")) return "station";
+  if (path.startsWith("/procurement")) return "procurement";
   if (path.startsWith("/attendance")) return "attendance";
   if (path.startsWith("/admin/")) return "users";
   // Legacy leave routes resolve to forms module.
@@ -154,9 +164,17 @@ export default function TopNav() {
   if (activeModule === "profile" && me && !canModule("employees")) {
     links = links.filter(l => l.href !== "/employees");
   }
+  // Show only the procurement stages the role can access.
+  if (activeModule === "procurement" && me) {
+    const stageOf: Record<string, string> = {
+      "/procurement/demand": "demand", "/procurement/po": "po", "/procurement/grn": "grn",
+    };
+    links = links.filter(l => !stageOf[l.href] || canModule(stageOf[l.href]));
+  }
 
   const modules = MODULES_BASE.filter(m => {
     if (m.superadminOnly) return me?.role === "superadmin";
+    if (m.anyModule) return m.anyModule.some(canModule);
     if (m.module) return canModule(m.module);
     return true; // Profile — always available
   });

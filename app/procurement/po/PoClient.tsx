@@ -1,0 +1,185 @@
+"use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useCanEdit } from "@/components/MeProvider";
+import { parseItems, fmtDate, PO_DEFAULT_REMARKS, type PoItem, type DemandItem } from "@/lib/procurement";
+
+interface Po {
+  id: number; poNo: number; demandNo: number | null; date: string;
+  demandByName: string | null; supplierName: string | null; expectedDate: string | null;
+  orderPlacedBy: string | null; approvedBy: string | null; remarks: string | null;
+  items: string; status: string;
+}
+interface OpenDemand {
+  id: number; demandNo: number; demandBy: string | null; items: string;
+}
+
+const blankItem = (n: number): PoItem => ({ srNo: n, item: "", specifications: "", quality: "", quantity: "" });
+
+export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemands: OpenDemand[] }) {
+  const router = useRouter();
+  const canEdit = useCanEdit();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const [demandId, setDemandId] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [demandByName, setDemandByName] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [expectedDate, setExpectedDate] = useState("");
+  const [orderPlacedBy, setOrderPlacedBy] = useState("");
+  const [approvedBy, setApprovedBy] = useState("");
+  const [remarks, setRemarks] = useState(PO_DEFAULT_REMARKS);
+  const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
+
+  function resetForm() {
+    setDemandId(""); setDate(new Date().toISOString().slice(0, 10)); setDemandByName("");
+    setSupplierName(""); setExpectedDate(""); setOrderPlacedBy(""); setApprovedBy("");
+    setRemarks(PO_DEFAULT_REMARKS); setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
+  }
+  // Prefill items + demand-by when a demand is picked.
+  function pickDemand(id: string) {
+    setDemandId(id);
+    const d = openDemands.find(x => String(x.id) === id);
+    if (!d) return;
+    setDemandByName(d.demandBy || "");
+    const dItems = parseItems<DemandItem>(d.items);
+    if (dItems.length) {
+      setItems(dItems.map((it, i) => ({ srNo: i + 1, item: it.material, specifications: "", quality: "", quantity: it.quantity })));
+    }
+  }
+  function setItem(i: number, k: keyof PoItem, v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
+  function addRow() { setItems(l => [...l, blankItem(l.length + 1)]); }
+  function removeRow(i: number) { setItems(l => l.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
+
+  async function save() {
+    setBusy(true); setErr("");
+    try {
+      const clean = items.filter(it => it.item.trim());
+      const res = await fetch("/api/procurement/pos", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ demandId: demandId || null, date, demandByName, supplierName, expectedDate, orderPlacedBy, approvedBy, remarks, items: clean }),
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
+      setOpen(false); resetForm(); router.refresh();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); }
+    finally { setBusy(false); }
+  }
+  async function del(p: Po) {
+    if (!confirm(`Delete PO #${p.poNo}?`)) return;
+    const res = await fetch(`/api/procurement/pos/${p.id}`, { method: "DELETE" });
+    if (res.ok) router.refresh(); else alert("Delete failed");
+  }
+
+  return (
+    <div className="fade-up">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
+          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Create a PO from a demand, or standalone. <span style={{ color: "var(--text3)" }}>PUR/QR/006</span></p>
+        </div>
+        {canEdit && <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New PO"}</button>}
+      </div>
+
+      {open && canEdit && (
+        <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+          {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
+            <Field label="From demand (optional)">
+              <select value={demandId} onChange={e => pickDemand(e.target.value)} className="auth-input">
+                <option value="">— None (standalone PO) —</option>
+                {openDemands.map(d => <option key={d.id} value={d.id}>Demand #{d.demandNo}{d.demandBy ? ` · ${d.demandBy}` : ""}</option>)}
+              </select>
+            </Field>
+            <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
+            <Field label="Demand by"><input value={demandByName} onChange={e => setDemandByName(e.target.value)} className="auth-input" /></Field>
+            <Field label="Supplier name"><input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="auth-input" /></Field>
+            <Field label="Expected date"><input type="date" value={expectedDate} onChange={e => setExpectedDate(e.target.value)} className="auth-input" /></Field>
+          </div>
+
+          <ItemsGrid items={items} setItem={setItem} addRow={addRow} removeRow={removeRow} />
+
+          <div style={{ margin: "14px 0" }}>
+            <Field label="Remarks"><input value={remarks} onChange={e => setRemarks(e.target.value)} className="auth-input" /></Field>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
+            <Field label="Order placed by"><input value={orderPlacedBy} onChange={e => setOrderPlacedBy(e.target.value)} className="auth-input" /></Field>
+            <Field label="Approved by"><input value={approvedBy} onChange={e => setApprovedBy(e.target.value)} className="auth-input" /></Field>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={save} disabled={busy} className="btn btn-primary">{busy ? "Saving…" : "Save PO"}</button>
+            <button onClick={() => setOpen(false)} className="btn">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+        <table>
+          <thead>
+            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Expected</th><th className="num">Items</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders yet.</td></tr>
+            ) : rows.map(p => (
+              <tr key={p.id}>
+                <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{p.poNo}</td>
+                <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
+                <td>{fmtDate(p.date)}</td>
+                <td>{p.supplierName || "—"}</td>
+                <td>{fmtDate(p.expectedDate)}</td>
+                <td className="num">{parseItems<PoItem>(p.items).length}</td>
+                <td><StatusBadge status={p.status} /></td>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
+                  {canEdit && <button onClick={() => del(p)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ItemsGrid({ items, setItem, addRow, removeRow }: {
+  items: PoItem[]; setItem: (i: number, k: keyof PoItem, v: string) => void; addRow: () => void; removeRow: (i: number) => void;
+}) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 6 }}>ITEMS</div>
+      <div style={{ overflow: "auto" }}>
+        <table style={{ width: "100%" }}>
+          <thead><tr><th style={{ width: 44 }}>S.No</th><th>Items</th><th>Specifications</th><th>Quality</th><th style={{ width: 110 }}>Quantity</th><th style={{ width: 40 }}></th></tr></thead>
+          <tbody>
+            {items.map((it, i) => (
+              <tr key={i}>
+                <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
+                <td><input value={it.item} onChange={e => setItem(i, "item", e.target.value)} className="auth-input" style={cellInput} /></td>
+                <td><input value={it.specifications} onChange={e => setItem(i, "specifications", e.target.value)} className="auth-input" style={cellInput} /></td>
+                <td><input value={it.quality} onChange={e => setItem(i, "quality", e.target.value)} className="auth-input" style={cellInput} /></td>
+                <td><input value={it.quantity} onChange={e => setItem(i, "quantity", e.target.value)} className="auth-input" style={cellInput} /></td>
+                <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button onClick={addRow} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add row</button>
+    </div>
+  );
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label><span className="auth-field-label">{label}</span>{children}</label>;
+}
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { fg: string; bg: string }> = {
+    open: { fg: "#185FA5", bg: "#e0f2fe" }, received: { fg: "#15803D", bg: "#dcf5dc" }, closed: { fg: "#475569", bg: "#e2e8f0" },
+  };
+  const c = map[status] || map.open;
+  return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{status}</span>;
+}
+const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };

@@ -18,7 +18,10 @@ export type ModuleKey =
   | "salary"
   | "kpi"
   | "purchase"
-  | "station";
+  | "station"
+  | "demand"
+  | "po"
+  | "grn";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "employees",  label: "Employees",   hint: "Add / edit employee records & documents" },
@@ -29,6 +32,9 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "kpi",        label: "KPI",         hint: "Assign templates & enter monthly KPI values" },
   { key: "purchase",   label: "Purchase",    hint: "Purchase requisition register" },
   { key: "station",    label: "Station",     hint: "Station terminal & hourly-leave report" },
+  { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
+  { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
+  { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
 ];
 
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
@@ -49,7 +55,7 @@ export const DEFAULT_PERMS: Record<string, RolePerm> = {
   admin:       { modules: [...ALL_MODULE_KEYS], canEdit: true },
   hr:          { modules: [...ALL_MODULE_KEYS], canEdit: true },
   ceo:         { modules: [...ALL_MODULE_KEYS], canEdit: false },
-  procurement: { modules: ["purchase"], canEdit: true },
+  procurement: { modules: ["purchase", "po"], canEdit: true },
 };
 
 function fullAccess(): RolePerm {

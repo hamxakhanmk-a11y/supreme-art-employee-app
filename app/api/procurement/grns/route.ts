@@ -1,0 +1,57 @@
+import { NextResponse } from "next/server";
+import { desc, eq, max } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { grns, purchaseOrders } from "@/lib/schema";
+import { guardWrite, getSession } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
+import { ensureProcurementTables } from "@/lib/procurement";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  await ensureProcurementTables();
+  const rows = await db.select().from(grns).orderBy(desc(grns.grnNo));
+  return NextResponse.json({ grns: rows });
+}
+
+export async function POST(req: Request) {
+  const guard = await guardWrite("grn");
+  if (guard instanceof NextResponse) return guard;
+  await ensureProcurementTables();
+  const b = await req.json().catch(() => ({}));
+
+  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns);
+  const grnNo = Number(n ?? 0) + 1;
+
+  // Optional link to a PO.
+  let poId: number | null = null;
+  let poNo: number | null = null;
+  if (b.poId) {
+    const [p] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, Number(b.poId)));
+    if (p) { poId = p.id; poNo = p.poNo; }
+  }
+
+  const items = Array.isArray(b.items) ? b.items : [];
+  const [row] = await db.insert(grns).values({
+    grnNo,
+    poId,
+    poNo,
+    date: b.date || new Date().toISOString().slice(0, 10),
+    receivedBy: b.receivedBy || null,
+    verifiedBy: b.verifiedBy || null,
+    items: JSON.stringify(items),
+    createdByUserId: guard.id,
+    createdByName: guard.name,
+  }).returning();
+
+  // Mark the source PO as received.
+  if (poId) await db.update(purchaseOrders).set({ status: "received" }).where(eq(purchaseOrders.id, poId));
+
+  await logActivity({
+    user: guard, action: "grn.create",
+    summary: `created GRN #${grnNo}${poNo ? ` (for PO #${poNo})` : ""}`,
+  });
+  return NextResponse.json({ grn: row });
+}

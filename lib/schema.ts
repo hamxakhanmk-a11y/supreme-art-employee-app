@@ -440,3 +440,57 @@ export const rolePermissions = pgTable("role_permissions", {
   canEdit: boolean("can_edit").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// =====================
+// PROCUREMENT: Demand → PO → GRN
+// Line items are stored as a JSON string in `items` (one row per form).
+// =====================
+export const demands = pgTable("demands", {
+  id: serial("id").primaryKey(),
+  demandNo: integer("demand_no").notNull(),          // auto running serial
+  date: date("date").notNull(),
+  requiredBy: date("required_by"),                   // "arrange by ___"
+  demandBy: varchar("demand_by", { length: 160 }),
+  department: varchar("department", { length: 120 }),
+  preparedBy: varchar("prepared_by", { length: 120 }),
+  approvedBy: varchar("approved_by", { length: 120 }),
+  sectionIncharge: varchar("section_incharge", { length: 120 }),
+  items: text("items").notNull().default("[]"),      // [{srNo,material,requiredFor,quantity,remarks}]
+  status: varchar("status", { length: 20 }).notNull().default("open"), // open | ordered | closed
+  createdByUserId: integer("created_by_user_id"),
+  createdByName: varchar("created_by_name", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  poNo: integer("po_no").notNull(),                  // auto running serial
+  demandId: integer("demand_id"),                    // nullable — PO can be standalone
+  demandNo: integer("demand_no"),                    // denormalised for display
+  date: date("date").notNull(),
+  demandByName: varchar("demand_by_name", { length: 160 }),
+  supplierName: varchar("supplier_name", { length: 200 }),
+  expectedDate: date("expected_date"),
+  orderPlacedBy: varchar("order_placed_by", { length: 120 }),
+  approvedBy: varchar("approved_by", { length: 120 }),
+  remarks: text("remarks"),
+  items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
+  status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
+  createdByUserId: integer("created_by_user_id"),
+  createdByName: varchar("created_by_name", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const grns = pgTable("grns", {
+  id: serial("id").primaryKey(),
+  grnNo: integer("grn_no").notNull(),                // auto running serial
+  poId: integer("po_id"),                            // nullable — GRN can be standalone
+  poNo: integer("po_no"),                            // denormalised for display
+  date: date("date").notNull(),
+  receivedBy: varchar("received_by", { length: 120 }),
+  verifiedBy: varchar("verified_by", { length: 120 }),
+  items: text("items").notNull().default("[]"),      // [{srNo,gatePassNo,supplierName,item,quantity,remarks}]
+  createdByUserId: integer("created_by_user_id"),
+  createdByName: varchar("created_by_name", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

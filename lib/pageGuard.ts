@@ -13,6 +13,17 @@ export async function requireModule(moduleKey: ModuleKey) {
   return user;
 }
 
+// Redirect unless the user can access at least one of the given modules.
+// Used by container sections (e.g. Procurement) that hold several stages.
+export async function requireAnyModule(keys: ModuleKey[]) {
+  const user = await getSession();
+  if (!user) redirect("/login");
+  if (user.role === "superadmin") return user;
+  const perm = await getPerm(user.role);
+  if (!keys.some(k => perm.modules.includes(k))) redirect("/?denied=procurement");
+  return user;
+}
+
 // True when the signed-in role is view-only (can't edit). Used by pure-edit
 // pages to render a read-only notice instead of the form.
 export async function isViewOnly(): Promise<boolean> {
