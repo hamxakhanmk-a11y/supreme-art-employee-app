@@ -20,17 +20,12 @@ export default function ProcurementPrint({
 
       <div className="pf-sheet">
         <div className="pf-head">
-          <div className="pf-code">{code}</div>
-          <div className="pf-headrow">
-            <div className="pf-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Supreme Art (Pvt) Ltd." />
-            </div>
-            <div className="pf-titles">
-              <div className="pf-band">QUALITY &amp; ENVIRONMENTAL SYSTEM</div>
-              <div className="pf-band pf-formtitle">{title}</div>
-            </div>
+          <div className="pf-headtop">
+            <div className="pf-code">{code}</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="pf-logo" src="/logo.png" alt="Supreme Art (Pvt) Ltd." />
           </div>
+          <div className="pf-formtitle">{title}</div>
         </div>
 
         {children}
@@ -43,18 +38,15 @@ export default function ProcurementPrint({
           padding: 26px 30px; font-size: 14px;
           font-family: "Times New Roman", Times, serif;
         }
-        /* --- document header (borderless) --- */
-        .pf-head { margin-bottom: 24px; }
-        .pf-code { font-weight: 700; font-size: 13px; margin-bottom: 10px; }
-        .pf-headrow { display: flex; align-items: center; gap: 18px; }
-        .pf-logo { width: 210px; flex-shrink: 0; text-align: center; }
-        .pf-logo img { width: 165px; height: auto; object-fit: contain; }
-        .pf-titles { flex: 1; }
-        .pf-band {
+        /* --- document header (borderless): code left, logo top-right, title centred --- */
+        .pf-head { margin-bottom: 26px; }
+        .pf-headtop { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+        .pf-code { font-weight: 700; font-size: 13px; }
+        .pf-logo { width: 160px; height: auto; object-fit: contain; flex-shrink: 0; }
+        .pf-formtitle {
           text-align: center; font-weight: 700; color: #595959;
-          font-size: 17px; letter-spacing: 0.3px; padding: 6px 8px;
+          font-size: 21px; letter-spacing: 0.4px; margin-top: 6px;
         }
-        .pf-formtitle { font-size: 19px; }
 
         /* --- body --- */
         .pf-meta { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 6px 0 14px; font-size: 13px; }
