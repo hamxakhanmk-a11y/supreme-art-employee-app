@@ -27,13 +27,12 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const [department, setDepartment] = useState("");
   const [preparedBy, setPreparedBy] = useState("");
   const [approvedBy, setApprovedBy] = useState("");
-  const [sectionIncharge, setSectionIncharge] = useState("");
   const [items, setItems] = useState<DemandItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
     setDate(new Date().toISOString().slice(0, 10));
     setRequiredBy(""); setDemandBy(""); setDepartment(""); setPreparedBy("");
-    setApprovedBy(""); setSectionIncharge(""); setItems([blankItem(1), blankItem(2), blankItem(3)]);
+    setApprovedBy(""); setItems([blankItem(1), blankItem(2), blankItem(3)]);
     setErr("");
   }
   function setItem(i: number, k: keyof DemandItem, v: string) {
@@ -48,7 +47,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
       const clean = items.filter(it => it.material.trim());
       const res = await fetch("/api/procurement/demands", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, requiredBy, demandBy, department, preparedBy, approvedBy, sectionIncharge, items: clean }),
+        body: JSON.stringify({ date, requiredBy, demandBy, department, preparedBy, approvedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -91,7 +90,6 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, margin: "14px 0" }}>
             <Field label="Prepared by"><input value={preparedBy} onChange={e => setPreparedBy(e.target.value)} className="auth-input" /></Field>
             <Field label="Approved by"><input value={approvedBy} onChange={e => setApprovedBy(e.target.value)} className="auth-input" /></Field>
-            <Field label="Worker Section In-charge"><input value={sectionIncharge} onChange={e => setSectionIncharge(e.target.value)} className="auth-input" /></Field>
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>

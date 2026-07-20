@@ -22,7 +22,7 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
       <ProcurementPrint code={m.code} title={m.title} backHref="/procurement/demand">
         <div className="pf-metarow">
           <div className="pf-left"><span><b>Demand form number:</b> {d.demandNo}</span></div>
-          <div className="pf-right"><b>Date:</b> {fmtDate(d.date)}</div>
+          <div className="pf-right"><b>Issue date:</b> {fmtDate(d.date)}</div>
         </div>
         <div className="pf-remark">Kindly allow to arrange the following particulars by <b>{fmtDate(d.requiredBy) || "____________"}</b>.</div>
         <div className="pf-meta" style={{ marginTop: 8 }}>
@@ -49,7 +49,6 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
         <div className="pf-sign">
           <div><div className="line">Prepared By{d.preparedBy ? ` — ${d.preparedBy}` : ""}</div></div>
           <div><div className="line">Approved By{d.approvedBy ? ` — ${d.approvedBy}` : ""}</div></div>
-          <div><div className="line">Worker Section In-charge{d.sectionIncharge ? ` — ${d.sectionIncharge}` : ""}</div></div>
         </div>
       </ProcurementPrint>
     </div>

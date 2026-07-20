@@ -25,7 +25,7 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
             <span><b>No.:</b> {g.grnNo}</span>
             {g.poNo != null && <span><b>PO No.:</b> {g.poNo}</span>}
           </div>
-          <div className="pf-right"><b>Date:</b> {fmtDate(g.date)}</div>
+          <div className="pf-right"><b>Issue date:</b> {fmtDate(g.date)}</div>
         </div>
 
         <table className="pf-table">

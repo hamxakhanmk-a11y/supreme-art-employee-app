@@ -26,7 +26,7 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
             <span><b>Demand by:</b> {p.demandByName || "____________"}</span>
             <span><b>Demand Form No.:</b> {p.demandNo ?? "____________"}</span>
           </div>
-          <div className="pf-right"><b>Date:</b> {fmtDate(p.date)}</div>
+          <div className="pf-right"><b>Issue date:</b> {fmtDate(p.date)}</div>
         </div>
         <div className="pf-metarow">
           <div className="pf-left"><span><b>Supplier Name:</b> {p.supplierName || "____________"}</span></div>
