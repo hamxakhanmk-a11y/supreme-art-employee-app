@@ -47,7 +47,7 @@ export default function ProcurementPrint({
         /* Serif throughout so the printed sheet reads like the Word original. */
         .pf-sheet {
           background: #fff; color: #000; max-width: 820px; margin: 0 auto;
-          border: 1px solid #ccc; padding: 26px 30px; font-size: 14px;
+          padding: 26px 30px; font-size: 14px;
           font-family: "Times New Roman", Times, serif;
         }
         /* --- controlled-document header --- */
