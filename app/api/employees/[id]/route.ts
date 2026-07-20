@@ -146,6 +146,46 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 }
 
+// PATCH — lightweight status change only (Exit / Re-activate from the list).
+// Never touches the employee's history; attendance/salary/kpi/etc. already
+// filter to active employees, so a non-active status simply stops new records.
+const STATUS_VALUES = ["active", "inactive", "resigned"] as const;
+
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite("employees");
+  if (guard instanceof NextResponse) return guard;
+  try {
+    const { id } = await ctx.params;
+    const empId = parseInt(id);
+    const body = await req.json().catch(() => ({}));
+    const status = String(body.status || "");
+    if (!(STATUS_VALUES as readonly string[]).includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const [emp] = await db.select({
+      firstName: employees.firstName, lastName: employees.lastName, code: employees.employeeId,
+    }).from(employees).where(eq(employees.id, empId));
+    if (!emp) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+
+    const today = new Date().toISOString().slice(0, 10);
+    await db.update(employees).set({
+      status,
+      resignationDate: status === "resigned" ? (body.resignationDate || today) : null,
+      updatedAt: new Date(),
+    }).where(eq(employees.id, empId));
+
+    await logActivity({
+      user: guard, action: "employee.status", employeeId: empId,
+      employeeName: `${emp.firstName} ${emp.lastName}`,
+      summary: status === "active" ? "re-activated" : `marked ${status} (exited)`,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite("employees");
   if (guard instanceof NextResponse) return guard;
