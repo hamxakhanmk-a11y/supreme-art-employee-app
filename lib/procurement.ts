@@ -9,11 +9,11 @@ export interface DemandItem { srNo: number; material: string; requiredFor: strin
 export interface PoItem { srNo: number; item: string; specifications: string; quality: string; quantity: string }
 export interface GrnItem { srNo: number; gatePassNo: string; supplierName: string; item: string; quantity: string; remarks: string }
 
-// Document-control codes printed on each form (bottom-left of the originals).
+// Document-control code + title printed at the top of each form.
 export const FORM_META = {
-  demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "09-07-2026" },
-  po:     { code: "PUR/QR/006", title: "PURCHASE ORDER",       issue: "01", issueDate: "13-04-2023" },
-  grn:    { code: "STR/QR/003", title: "GOODS RECEIVING REPORT", issue: "01", issueDate: "09-07-2026" },
+  demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM" },
+  po:     { code: "PUR/QR/006", title: "PURCHASE ORDER" },
+  grn:    { code: "STR/QR/003", title: "GOODS RECEIVING REPORT" },
 } as const;
 
 export const PO_DEFAULT_REMARKS =

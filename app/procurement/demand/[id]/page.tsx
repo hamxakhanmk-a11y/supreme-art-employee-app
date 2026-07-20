@@ -19,7 +19,7 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/demand">
+      <ProcurementPrint code={m.code} title={m.title} backHref="/procurement/demand">
         <div className="pf-metarow">
           <div className="pf-left"><span><b>Demand form number:</b> {d.demandNo}</span></div>
           <div className="pf-right"><b>Date:</b> {fmtDate(d.date)}</div>

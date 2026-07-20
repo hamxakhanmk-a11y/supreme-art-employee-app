@@ -19,7 +19,7 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/po">
+      <ProcurementPrint code={m.code} title={m.title} backHref="/procurement/po">
         <div className="pf-metarow">
           <div className="pf-left">
             <span><b>PO No.:</b> {p.poNo}</span>

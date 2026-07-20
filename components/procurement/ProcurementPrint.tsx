@@ -6,9 +6,9 @@ import Link from "next/link";
 // The header reproduces the controlled-document block from the Word originals:
 // a 4-cell control strip over a logo cell beside the system + form title.
 export default function ProcurementPrint({
-  code, title, issue, issueDate, backHref, children,
+  code, title, backHref, children,
 }: {
-  code: string; title: string; issue: string; issueDate: string;
+  code: string; title: string;
   backHref: string; children: React.ReactNode;
 }) {
   return (
@@ -19,26 +19,19 @@ export default function ProcurementPrint({
       </div>
 
       <div className="pf-sheet">
-        <table className="pf-head">
-          <tbody>
-            <tr className="pf-ctrl">
-              <td style={{ width: "22%" }}><b>{code}</b></td>
-              <td style={{ width: "26%" }}>Issue Status:&nbsp;&nbsp;&nbsp;&nbsp;{issue}</td>
-              <td style={{ width: "30%" }}>Issue date {issueDate}</td>
-              <td style={{ width: "22%" }}>Page 1 of 1</td>
-            </tr>
-            <tr>
-              <td className="pf-logo" rowSpan={2}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.png" alt="Supreme Art (Pvt) Ltd." />
-              </td>
-              <td className="pf-band" colSpan={3}>QUALITY &amp; ENVIRONMENTAL SYSTEM</td>
-            </tr>
-            <tr>
-              <td className="pf-band pf-formtitle" colSpan={3}>{title}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="pf-head">
+          <div className="pf-code">{code}</div>
+          <div className="pf-headrow">
+            <div className="pf-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Supreme Art (Pvt) Ltd." />
+            </div>
+            <div className="pf-titles">
+              <div className="pf-band">QUALITY &amp; ENVIRONMENTAL SYSTEM</div>
+              <div className="pf-band pf-formtitle">{title}</div>
+            </div>
+          </div>
+        </div>
 
         {children}
       </div>
@@ -50,16 +43,16 @@ export default function ProcurementPrint({
           padding: 26px 30px; font-size: 14px;
           font-family: "Times New Roman", Times, serif;
         }
-        /* --- controlled-document header --- */
-        .pf-head { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
-        .pf-head td { border: 1px solid #000; padding: 5px 8px; }
-        .pf-ctrl td { font-size: 12px; }
-        .pf-logo { width: 210px; text-align: center; vertical-align: middle; padding: 8px !important; }
+        /* --- document header (borderless) --- */
+        .pf-head { margin-bottom: 24px; }
+        .pf-code { font-weight: 700; font-size: 13px; margin-bottom: 10px; }
+        .pf-headrow { display: flex; align-items: center; gap: 18px; }
+        .pf-logo { width: 210px; flex-shrink: 0; text-align: center; }
         .pf-logo img { width: 165px; height: auto; object-fit: contain; }
+        .pf-titles { flex: 1; }
         .pf-band {
           text-align: center; font-weight: 700; color: #595959;
-          background: #f2f2f2; font-size: 17px; letter-spacing: 0.3px;
-          padding: 12px 8px !important;
+          font-size: 17px; letter-spacing: 0.3px; padding: 6px 8px;
         }
         .pf-formtitle { font-size: 19px; }
 
