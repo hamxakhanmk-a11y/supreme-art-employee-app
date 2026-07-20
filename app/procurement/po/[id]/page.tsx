@@ -20,15 +20,17 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
   return (
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/po">
-        <div className="pf-meta">
-          <span><b>PO No.:</b> {p.poNo}</span>
-          <span><b>Demand by:</b> {p.demandByName || "____________"}</span>
-          <span><b>Demand Form No.:</b> {p.demandNo ?? "____________"}</span>
-          <span><b>Date:</b> {fmtDate(p.date)}</span>
+        <div className="pf-metarow">
+          <div className="pf-left">
+            <span><b>PO No.:</b> {p.poNo}</span>
+            <span><b>Demand by:</b> {p.demandByName || "____________"}</span>
+            <span><b>Demand Form No.:</b> {p.demandNo ?? "____________"}</span>
+          </div>
+          <div className="pf-right"><b>Date:</b> {fmtDate(p.date)}</div>
         </div>
-        <div className="pf-meta">
-          <span><b>Supplier Name:</b> {p.supplierName || "____________"}</span>
-          <span><b>Expected Date:</b> {fmtDate(p.expectedDate) || "____________"}</span>
+        <div className="pf-metarow">
+          <div className="pf-left"><span><b>Supplier Name:</b> {p.supplierName || "____________"}</span></div>
+          <div className="pf-right"><b>Expected Date:</b> {fmtDate(p.expectedDate) || "____________"}</div>
         </div>
         <div className="pf-remark" style={{ marginBottom: 6 }}>Dear Sir, You are requested to supply the following items:</div>
 
