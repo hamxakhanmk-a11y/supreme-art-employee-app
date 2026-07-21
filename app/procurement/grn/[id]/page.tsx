@@ -24,7 +24,7 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
           <table className="pf-fieldtable">
             <tbody>
               <tr><td>GRN No:</td><td className="u">{g.grnNo}</td></tr>
-              <tr><td>PO No:</td><td className="u">{g.poNo ?? ""}</td></tr>
+              <tr><td>PO Ref No:</td><td className="u">{g.poNo ?? ""}</td></tr>
             </tbody>
           </table>
           <table className="pf-fieldtable">

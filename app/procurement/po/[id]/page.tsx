@@ -33,7 +33,7 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
               <tr><td>P.O. No:</td><td className="u">{p.poNo}</td></tr>
               <tr><td>Date:</td><td className="u">{fmtDate(p.date)}</td></tr>
               <tr><td>Delivery Date:</td><td className="u">{fmtDate(p.expectedDate)}</td></tr>
-              <tr><td>Demand Form No:</td><td className="u">{p.demandNo ?? ""}</td></tr>
+              <tr><td>Demand Form Ref No:</td><td className="u">{p.demandNo ?? ""}</td></tr>
             </tbody>
           </table>
         </div>
