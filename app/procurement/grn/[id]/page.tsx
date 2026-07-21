@@ -19,13 +19,13 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} backHref="/procurement/grn">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/grn">
         <div className="pf-metarow">
           <div className="pf-left">
             <span><b>No.:</b> {g.grnNo}</span>
             {g.poNo != null && <span><b>PO No.:</b> {g.poNo}</span>}
           </div>
-          <div className="pf-right"><b>Issue date:</b> {fmtDate(g.date)}</div>
+          <div className="pf-right"><b>Date:</b> {fmtDate(g.date)}</div>
         </div>
 
         <table className="pf-table">

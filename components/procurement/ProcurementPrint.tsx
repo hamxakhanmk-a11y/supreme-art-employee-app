@@ -1,14 +1,15 @@
 "use client";
 import Link from "next/link";
+import { COMPANY } from "@/lib/procurement";
 
 // Shared A4 print shell for the three procurement forms. Client component so
 // styled-jsx is allowed (it breaks the build in a Server Component).
 // The header reproduces the controlled-document block from the Word originals:
 // a 4-cell control strip over a logo cell beside the system + form title.
 export default function ProcurementPrint({
-  code, title, backHref, children,
+  code, title, issue, issueDate, backHref, children,
 }: {
-  code: string; title: string;
+  code: string; title: string; issue: string; issueDate: string;
   backHref: string; children: React.ReactNode;
 }) {
   return (
@@ -19,14 +20,32 @@ export default function ProcurementPrint({
       </div>
 
       <div className="pf-sheet">
-        <div className="pf-head">
-          <div className="pf-headtop">
-            <div className="pf-code">{code}</div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="pf-logo" src="/logo.png" alt="Supreme Art (Pvt) Ltd." />
-          </div>
-          <div className="pf-formtitle">{title}</div>
-        </div>
+        <table className="pf-head">
+          <tbody>
+            <tr className="pf-ctrl">
+              <td style={{ width: "26%" }}><b>{code}</b></td>
+              <td style={{ width: "24%" }}>Issue Status:&nbsp;&nbsp;&nbsp;&nbsp;{issue}</td>
+              <td style={{ width: "28%" }}>Issue date {issueDate}</td>
+              <td style={{ width: "22%" }}>Page 1 of 1</td>
+            </tr>
+            <tr>
+              <td className="pf-logo" rowSpan={2}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt={COMPANY.name} />
+                <div className="pf-org">
+                  <div className="pf-orgname">{COMPANY.name}</div>
+                  <div>{COMPANY.address}</div>
+                  <div>Phone: {COMPANY.phone}</div>
+                  <div>NTN: {COMPANY.ntn} &nbsp;·&nbsp; STRN: {COMPANY.strn}</div>
+                </div>
+              </td>
+              <td className="pf-band" colSpan={3}>QUALITY &amp; ENVIRONMENTAL SYSTEM</td>
+            </tr>
+            <tr>
+              <td className="pf-band pf-formtitle" colSpan={3}>{title}</td>
+            </tr>
+          </tbody>
+        </table>
 
         {children}
       </div>
@@ -38,15 +57,19 @@ export default function ProcurementPrint({
           padding: 26px 30px; font-size: 14px;
           font-family: "Times New Roman", Times, serif;
         }
-        /* --- document header (borderless): code left, logo top-right, title centred --- */
-        .pf-head { margin-bottom: 26px; }
-        .pf-headtop { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-        .pf-code { font-weight: 700; font-size: 13px; }
-        .pf-logo { width: 160px; height: auto; object-fit: contain; flex-shrink: 0; }
-        .pf-formtitle {
+        /* --- controlled-document header --- */
+        .pf-head { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .pf-head td { border: 1px solid #000; padding: 5px 8px; }
+        .pf-ctrl td { font-size: 12px; }
+        .pf-logo { width: 250px; text-align: center; vertical-align: middle; padding: 8px !important; }
+        .pf-logo img { width: 150px; height: auto; object-fit: contain; }
+        .pf-org { font-size: 9px; line-height: 1.45; color: #222; margin-top: 4px; }
+        .pf-orgname { font-weight: 700; font-size: 10px; }
+        .pf-band {
           text-align: center; font-weight: 700; color: #595959;
-          font-size: 21px; letter-spacing: 0.4px; margin-top: 6px;
+          font-size: 17px; letter-spacing: 0.3px; padding: 12px 8px !important;
         }
+        .pf-formtitle { font-size: 19px; }
 
         /* --- body --- */
         .pf-meta { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 6px 0 14px; font-size: 13px; }

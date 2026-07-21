@@ -474,6 +474,12 @@ export const purchaseOrders = pgTable("purchase_orders", {
   orderPlacedBy: varchar("order_placed_by", { length: 120 }),
   approvedBy: varchar("approved_by", { length: 120 }),
   remarks: text("remarks"),
+  supplierAddress: text("supplier_address"),
+  supplierContact: varchar("supplier_contact", { length: 160 }),
+  supplierPhone: varchar("supplier_phone", { length: 60 }),
+  specification: text("specification"),
+  terms: text("terms"),
+  discount: doublePrecision("discount").default(0),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
   createdByUserId: integer("created_by_user_id"),

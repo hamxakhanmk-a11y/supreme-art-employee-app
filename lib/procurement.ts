@@ -6,14 +6,37 @@ import { db } from "./db";
 export type Stage = "demand" | "po" | "grn";
 
 export interface DemandItem { srNo: number; material: string; requiredFor: string; quantity: string; remarks: string }
-export interface PoItem { srNo: number; item: string; specifications: string; quality: string; quantity: string }
+export interface PoItem {
+  srNo: number; itemCode: string; item: string; specifications: string;
+  quantity: string; uom: string; price: string;
+}
+
+// Numeric value of a PO line (quantity × price); tolerates commas / blanks.
+export function lineTotal(it: { quantity?: string; price?: string }): number {
+  const q = parseFloat(String(it.quantity ?? "").replace(/,/g, "")) || 0;
+  const p = parseFloat(String(it.price ?? "").replace(/,/g, "")) || 0;
+  return q * p;
+}
+
+export function money(n: number): string {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 export interface GrnItem { srNo: number; gatePassNo: string; supplierName: string; item: string; quantity: string; remarks: string }
 
-// Document-control code + title printed at the top of each form.
+// Our organisation's details, printed on every form.
+export const COMPANY = {
+  name: "Supreme Art Private Limited",
+  address: "Plot 148-B, Industrial Estate Hayatabad Peshawar Pakistan.",
+  phone: "0092915602036",
+  ntn: "7226736-6",
+  strn: "3277 8761 32353",
+} as const;
+
+// Document-control block printed at the top of each form.
 export const FORM_META = {
-  demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM" },
-  po:     { code: "PUR/QR/006", title: "PURCHASE ORDER" },
-  grn:    { code: "STR/QR/003", title: "GOODS RECEIVING REPORT" },
+  demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "09-07-2026" },
+  po:     { code: "PUR/QR/006", title: "PURCHASE ORDER",        issue: "01", issueDate: "13-04-2023" },
+  grn:    { code: "STR/QR/003", title: "GOODS RECEIVING REPORT", issue: "01", issueDate: "09-07-2026" },
 } as const;
 
 export const PO_DEFAULT_REMARKS =
@@ -85,5 +108,12 @@ export async function ensureProcurementTables() {
       created_by_name varchar(120),
       created_at timestamp NOT NULL DEFAULT now()
     )`);
+  // Shaigan-style PO fields, added after the table already existed.
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text`);
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160)`);
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_phone varchar(60)`);
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text`);
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text`);
+  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0`);
   ensured = true;
 }
