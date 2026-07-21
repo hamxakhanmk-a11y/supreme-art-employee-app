@@ -31,13 +31,12 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   const [expectedDate, setExpectedDate] = useState("");
   const [terms, setTerms] = useState("");
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
-  const [approvedBy, setApprovedBy] = useState("");
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
     setDemandId(""); setDate(new Date().toISOString().slice(0, 10));
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
-    setExpectedDate(""); setTerms(""); setOrderPlacedBy(""); setApprovedBy("");
+    setExpectedDate(""); setTerms(""); setOrderPlacedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
   function pickDemand(id: string) {
@@ -61,7 +60,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           demandId: demandId || null, date, supplierName, supplierAddress, supplierPhone,
-          expectedDate, terms, orderPlacedBy, approvedBy, items: clean,
+          expectedDate, terms, orderPlacedBy, items: clean,
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -140,7 +139,6 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
           </div>
           <div style={grid}>
             <Field label="Order placed by"><input value={orderPlacedBy} onChange={e => setOrderPlacedBy(e.target.value)} className="auth-input" /></Field>
-            <Field label="Approved by"><input value={approvedBy} onChange={e => setApprovedBy(e.target.value)} className="auth-input" /></Field>
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>

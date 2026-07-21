@@ -78,10 +78,6 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
             <div className="lbl">Order Placed By:</div>
             <div className="line">{p.orderPlacedBy || ""}</div>
           </div>
-          <div>
-            <div className="lbl">Approved By:</div>
-            <div className="line">{p.approvedBy || ""}</div>
-          </div>
         </div>
       </ProcurementPrint>
     </div>

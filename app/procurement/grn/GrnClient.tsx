@@ -23,10 +23,13 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   const [poId, setPoId] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [verifiedBy, setVerifiedBy] = useState("");
+  const [receivedBy, setReceivedBy] = useState("");
   const [items, setItems] = useState<GrnItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
     setPoId(""); setDate(new Date().toISOString().slice(0, 10));
+    setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
   function pickPo(id: string) {
@@ -48,7 +51,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       const clean = items.filter(it => it.item.trim());
       const res = await fetch("/api/procurement/grns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, date, items: clean }),
+        body: JSON.stringify({ poId: poId || null, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -101,6 +104,12 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
             </table>
           </div>
           <button onClick={addRow} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add row</button>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px" }}>SIGN-OFF</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+            <Field label="Checked by"><input value={verifiedBy} onChange={e => setVerifiedBy(e.target.value)} className="auth-input" /></Field>
+            <Field label="Received by (Store In-Charge)"><input value={receivedBy} onChange={e => setReceivedBy(e.target.value)} className="auth-input" /></Field>
+          </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <button onClick={save} disabled={busy} className="btn btn-primary">{busy ? "Saving…" : "Save GRN"}</button>

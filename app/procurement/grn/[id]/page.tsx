@@ -52,6 +52,17 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
             ))}
           </tbody>
         </table>
+
+        <div className="pf-sign">
+          <div>
+            <div className="lbl">Checked By</div>
+            <div className="line">{g.verifiedBy || ""}</div>
+          </div>
+          <div>
+            <div className="lbl">Received by:<br />Store In-Charge</div>
+            <div className="line">{g.receivedBy || ""}</div>
+          </div>
+        </div>
       </ProcurementPrint>
     </div>
   );

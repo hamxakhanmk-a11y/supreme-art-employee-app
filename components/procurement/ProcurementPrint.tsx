@@ -50,10 +50,12 @@ export default function ProcurementPrint({
       </div>
 
       <style jsx global>{`
+        /* Column layout so the signature block can be pushed to the page foot. */
         .pf-sheet {
           background: #fff; color: #000; max-width: 850px; margin: 0 auto;
           padding: 24px 28px; font-size: 13px;
           font-family: "Times New Roman", Times, serif;
+          display: flex; flex-direction: column; min-height: 1040px;
         }
         /* --- shared document header --- */
         .pf-head { width: 100%; border-collapse: collapse; }
@@ -94,7 +96,8 @@ export default function ProcurementPrint({
         .pf-terms ol { margin: 0; padding-left: 22px; }
         .pf-terms li { font-size: 12.5px; line-height: 1.6; margin-bottom: 2px; }
         .pf-termsbox { min-height: 90px; border: 1px solid #000; }
-        .pf-sign { display: flex; justify-content: space-between; gap: 40px; margin-top: 42px; flex-wrap: wrap; }
+        /* margin-top:auto drops the sign-off to the foot of the sheet */
+        .pf-sign { display: flex; justify-content: space-between; gap: 40px; margin-top: auto; padding-top: 42px; flex-wrap: wrap; }
         .pf-sign > div { min-width: 220px; }
         .pf-sign .lbl { font-weight: 700; font-size: 13px; }
         .pf-sign .line { border-top: 1px solid #000; margin-top: 30px; padding-top: 3px; font-size: 12px; text-align: center; }
@@ -106,7 +109,7 @@ export default function ProcurementPrint({
           @page { size: A4 portrait; margin: 0; }
           html, body { background: #fff; margin: 0 !important; padding: 0 !important; }
           .no-print, header, nav { display: none !important; }
-          .pf-sheet { max-width: 100%; padding: 12mm 11mm; }
+          .pf-sheet { max-width: 100%; padding: 12mm 11mm; min-height: calc(297mm - 24mm); }
           .pf-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
