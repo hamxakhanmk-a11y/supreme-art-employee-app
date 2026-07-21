@@ -109,10 +109,35 @@ export default function ProcurementPrint({
           /* Zero page margin leaves the browser no room to draw its own
              date / title / URL / page-number strips. */
           @page { size: A4 portrait; margin: 0; }
-          html, body { background: #fff; margin: 0 !important; padding: 0 !important; }
+          html, body { background: #fff; margin: 0 !important; padding: 0 !important; width: 100%; }
           .no-print, header, nav { display: none !important; }
-          .pf-sheet { max-width: 100%; padding: 12mm 11mm; min-height: calc(297mm - 24mm); }
+          /* The app shell (max-width 1400px + padding) would make the printed
+             document wider than A4, which makes Chrome shrink the whole page.
+             Collapse it so the sheet maps 1:1 onto the paper. */
+          main { max-width: none !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+          .fade-up { margin: 0 !important; padding: 0 !important; }
+          .pf-sheet {
+            max-width: none !important; width: 100% !important;
+            box-sizing: border-box; margin: 0 !important;
+            padding: 12mm 11mm; min-height: calc(297mm - 24mm);
+          }
           .pf-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+          /* globals.css has a print block for the attendance register that
+             shrinks body text to 8.5pt and forces every table to 100% width.
+             That squashed these forms and broke the side-by-side field blocks,
+             so restore this sheet's own typography and table sizing. */
+          .pf-sheet { font-size: 13px !important; }
+          .pf-sheet table { font-size: inherit !important; width: auto !important; }
+          .pf-sheet .pf-head,
+          .pf-sheet .pf-table,
+          .pf-sheet .pf-termsbox { width: 100% !important; }
+          .pf-sheet .pf-head td { padding: 5px 8px !important; }
+          .pf-sheet .pf-fieldtable td { padding: 3px 8px !important; }
+          .pf-sheet .pf-table th,
+          .pf-sheet .pf-table td { padding: 6px 8px !important; font-size: 13px !important; }
+          .pf-sheet .pf-band { font-size: 17px !important; }
+          .pf-sheet .pf-formtitle { font-size: 19px !important; }
         }
       `}</style>
     </div>
