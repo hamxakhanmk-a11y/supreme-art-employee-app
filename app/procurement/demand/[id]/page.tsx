@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { demands } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, FORM_META, type DemandItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, FORM_META, FORM_COPIES, type DemandItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/demand">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={FORM_COPIES.demand} backHref="/procurement/demand">
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>

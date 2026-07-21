@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, FORM_META, type PoItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, FORM_META, FORM_COPIES, type PoItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/po">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={FORM_COPIES.po} backHref="/procurement/po">
         <div className="pf-metarow">
           <div className="pf-to">
             <div className="pf-tohead">To:</div>

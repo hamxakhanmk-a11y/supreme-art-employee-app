@@ -19,6 +19,13 @@ export const COMPANY = {
   phone: "0092915602036",
 } as const;
 
+// Each form prints one page per copy, named at the foot of the page.
+export const FORM_COPIES: Record<Stage, string[]> = {
+  demand: ["Store Copy", "Procurement Copy"],
+  po: ["Procurement Copy", "Supplier Copy", "Finance Copy"],
+  grn: ["Finance Copy", "Store Copy"],
+};
+
 // Document-control block printed at the top of each form.
 export const FORM_META = {
   demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "21-07-2026" },

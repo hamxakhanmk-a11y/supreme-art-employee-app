@@ -7,47 +7,59 @@ import { COMPANY } from "@/lib/procurement";
 // The header reproduces the block used across the Word templates: a control
 // strip (Doc No / Issue Status / Issue date) above the company details.
 export default function ProcurementPrint({
-  code, title, issue, issueDate, backHref, children,
+  code, title, issue, issueDate, backHref, copies, children,
 }: {
   code: string; title: string; issue: string; issueDate: string;
-  backHref: string; children: React.ReactNode;
+  backHref: string; copies?: string[]; children: React.ReactNode;
 }) {
+  // One identical page per copy, each named at the foot. Falls back to a
+  // single unnamed page if a form has no copy set.
+  const sheets = copies?.length ? copies : [""];
   return (
     <div>
-      <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
         <Link href={backHref} className="btn">← Back</Link>
         <button onClick={() => window.print()} className="btn btn-primary">🖨 Print</button>
+        {sheets.length > 1 && (
+          <span style={{ fontSize: 12.5, color: "var(--text2)" }}>
+            Prints {sheets.length} pages — {sheets.join(", ")}
+          </span>
+        )}
       </div>
 
-      <div className="pf-sheet">
-        <table className="pf-head">
-          <tbody>
-            <tr className="pf-ctrl">
-              <td style={{ width: "34%" }}>Doc No. {code}</td>
-              <td style={{ width: "28%" }}>Issue Status: {issue}</td>
-              <td style={{ width: "38%" }}>Issue date {issueDate}</td>
-            </tr>
-            <tr>
-              <td className="pf-orgcell" colSpan={3}>
-                <div className="pf-orginner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt={COMPANY.name} />
-                  <div className="pf-org">
-                    <div className="pf-orgname">{COMPANY.name}</div>
-                    <div>Address: {COMPANY.address}</div>
-                    <div>NTN: {COMPANY.ntn} &nbsp;&nbsp; STRN: {COMPANY.strn}</div>
-                    <div>EMAIL: {COMPANY.email} &nbsp;&nbsp; Phone: {COMPANY.phone}</div>
+      {sheets.map((copy, i) => (
+        <div className="pf-sheet" key={i}>
+          <table className="pf-head">
+            <tbody>
+              <tr className="pf-ctrl">
+                <td style={{ width: "34%" }}>Doc No. {code}</td>
+                <td style={{ width: "28%" }}>Issue Status: {issue}</td>
+                <td style={{ width: "38%" }}>Issue date {issueDate}</td>
+              </tr>
+              <tr>
+                <td className="pf-orgcell" colSpan={3}>
+                  <div className="pf-orginner">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.png" alt={COMPANY.name} />
+                    <div className="pf-org">
+                      <div className="pf-orgname">{COMPANY.name}</div>
+                      <div>Address: {COMPANY.address}</div>
+                      <div>NTN: {COMPANY.ntn} &nbsp;&nbsp; STRN: {COMPANY.strn}</div>
+                      <div>EMAIL: {COMPANY.email} &nbsp;&nbsp; Phone: {COMPANY.phone}</div>
+                    </div>
                   </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        <div className="pf-title">{title}</div>
+          <div className="pf-title">{title}</div>
 
-        {children}
-      </div>
+          {children}
+
+          {copy && <div className="pf-copy">{copy}</div>}
+        </div>
+      ))}
 
       <style jsx global>{`
         /* Column layout so the signature block can be pushed to the page foot. */
@@ -56,6 +68,14 @@ export default function ProcurementPrint({
           padding: 24px 28px; font-size: 13px;
           font-family: "Times New Roman", Times, serif;
           display: flex; flex-direction: column; min-height: 1040px;
+        }
+        /* On screen, separate the stacked copies so they read as pages. */
+        .pf-sheet + .pf-sheet { margin-top: 26px; border-top: 2px dashed #d8d0c2; }
+        /* Copy name, centred at the very foot of each page. */
+        .pf-copy {
+          margin-top: 14px; text-align: center;
+          font-weight: 700; font-size: 12.5px; letter-spacing: 0.6px;
+          text-transform: uppercase;
         }
         /* --- shared document header --- */
         .pf-head { width: 100%; border-collapse: collapse; }
@@ -120,6 +140,11 @@ export default function ProcurementPrint({
             max-width: none !important; width: 100% !important;
             box-sizing: border-box; margin: 0 !important;
             padding: 12mm 11mm; min-height: calc(297mm - 24mm);
+          }
+          /* Every copy starts its own sheet of paper. */
+          .pf-sheet + .pf-sheet {
+            break-before: page; page-break-before: always;
+            border-top: none !important; margin-top: 0 !important;
           }
           .pf-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
