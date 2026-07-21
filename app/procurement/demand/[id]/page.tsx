@@ -21,34 +21,58 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/demand">
         <div className="pf-metarow">
-          <div className="pf-left"><span><b>Demand form number:</b> {d.demandNo}</span></div>
-          <div className="pf-right"><b>Date:</b> {fmtDate(d.date)}</div>
+          <table className="pf-fieldtable">
+            <tbody>
+              <tr><td>Demand Form No:</td><td className="u">{d.demandNo}</td></tr>
+              <tr><td>Demand By:</td><td className="u">{d.demandBy || ""}</td></tr>
+            </tbody>
+          </table>
+          <table className="pf-fieldtable">
+            <tbody>
+              <tr><td>Date:</td><td className="u">{fmtDate(d.date)}</td></tr>
+              <tr><td>Department:</td><td className="u">{d.department || ""}</td></tr>
+            </tbody>
+          </table>
         </div>
-        <div className="pf-remark">Kindly allow to arrange the following particulars by <b>{fmtDate(d.requiredBy) || "____________"}</b>.</div>
-        <div className="pf-meta" style={{ marginTop: 8 }}>
-          {d.demandBy && <span><b>Demand by:</b> {d.demandBy}</span>}
-          {d.department && <span><b>Department:</b> {d.department}</span>}
+
+        <div className="pf-intro">
+          Kindly allow to arrange the following particulars by <b>{fmtDate(d.requiredBy) || "____________"}</b>.
         </div>
 
         <table className="pf-table">
           <thead>
-            <tr><th style={{ width: 44 }}>Sr. No.</th><th>Material required</th><th>Required for</th><th style={{ width: 110 }}>Quantity</th><th>Remarks</th></tr>
+            <tr>
+              <th style={{ width: 50 }}>Sr. No.</th>
+              <th>Material required</th>
+              <th>Required for</th>
+              <th style={{ width: 110 }}>Quantity</th>
+              <th>Remarks</th>
+            </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr><td className="c">1</td><td></td><td></td><td></td><td></td></tr>
             ) : items.map(it => (
               <tr key={it.srNo}>
-                <td className="c">{it.srNo}</td><td>{it.material}</td><td>{it.requiredFor}</td>
-                <td className="c">{it.quantity}</td><td>{it.remarks}</td>
+                <td className="c">{it.srNo}</td>
+                <td>{it.material}</td>
+                <td>{it.requiredFor}</td>
+                <td className="c">{it.quantity}</td>
+                <td>{it.remarks}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         <div className="pf-sign">
-          <div><div className="line">Prepared By{d.preparedBy ? ` — ${d.preparedBy}` : ""}</div></div>
-          <div><div className="line">Approved By{d.approvedBy ? ` — ${d.approvedBy}` : ""}</div></div>
+          <div>
+            <div className="lbl">Prepared By:</div>
+            <div className="line">{d.preparedBy || ""}</div>
+          </div>
+          <div>
+            <div className="lbl">Approved By:</div>
+            <div className="line">{d.approvedBy || ""}</div>
+          </div>
         </div>
       </ProcurementPrint>
     </div>

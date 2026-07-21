@@ -21,32 +21,37 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} backHref="/procurement/grn">
         <div className="pf-metarow">
-          <div className="pf-left">
-            <span><b>No.:</b> {g.grnNo}</span>
-            {g.poNo != null && <span><b>PO No.:</b> {g.poNo}</span>}
-          </div>
-          <div className="pf-right"><b>Date:</b> {fmtDate(g.date)}</div>
+          <table className="pf-fieldtable">
+            <tbody>
+              <tr><td>GRN No:</td><td className="u">{g.grnNo}</td></tr>
+              <tr><td>PO No:</td><td className="u">{g.poNo ?? ""}</td></tr>
+            </tbody>
+          </table>
+          <table className="pf-fieldtable">
+            <tbody>
+              <tr><td>Date:</td><td className="u">{fmtDate(g.date)}</td></tr>
+            </tbody>
+          </table>
         </div>
 
         <table className="pf-table">
           <thead>
-            <tr><th style={{ width: 44 }}>S.No</th><th>Gate Pass No.</th><th>Supplier&apos;s Name</th><th>Item</th><th style={{ width: 90 }}>Quantity</th><th>Remarks</th></tr>
+            <tr>
+              <th>Item(s)</th>
+              <th style={{ width: 140 }}>Quantity</th>
+            </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td className="c">1</td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td></td><td></td></tr>
             ) : items.map(it => (
               <tr key={it.srNo}>
-                <td className="c">{it.srNo}</td><td>{it.gatePassNo}</td><td>{it.supplierName}</td><td>{it.item}</td><td className="c">{it.quantity}</td><td>{it.remarks}</td>
+                <td>{it.item}</td>
+                <td className="c">{it.quantity}</td>
               </tr>
             ))}
           </tbody>
         </table>
-
-        <div className="pf-sign">
-          <div><div className="line">Received by{g.receivedBy ? ` — ${g.receivedBy}` : ""}</div><div style={{ fontSize: 11, color: "#555" }}>Store keeper</div></div>
-          <div><div className="line">Verified by{g.verifiedBy ? ` — ${g.verifiedBy}` : ""}</div><div style={{ fontSize: 11, color: "#555" }}>Store Manager</div></div>
-        </div>
       </ProcurementPrint>
     </div>
   );
