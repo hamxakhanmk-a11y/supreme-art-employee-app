@@ -9,6 +9,8 @@ export default async function ReportsLanding() {
   const perm = user ? await getPerm(user.role) : null;
   const canSalary = user?.role === "superadmin" || !!perm?.modules.includes("salary");
   const canStation = user?.role === "superadmin" || !!perm?.modules.includes("station");
+  const canProcurement = user?.role === "superadmin"
+    || ["demand", "po", "grn"].some(m => !!perm?.modules.includes(m as never));
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 20 }}>
@@ -45,6 +47,15 @@ export default async function ReportsLanding() {
             title="Salary Records"
             urdu="تنخواہ کا ریکارڈ"
             desc="All generated salary slips by month, employee. Click any row to view & print the slip."
+          />
+        )}
+        {canProcurement && (
+          <ReportCard
+            href="/reports/procurement"
+            icon="📦"
+            title="Procurement"
+            urdu="خریداری کا ریکارڈ"
+            desc="Demands, purchase orders and goods received. Filter by stage — demand created, PO created, delivered — and by date."
           />
         )}
         {canStation && (

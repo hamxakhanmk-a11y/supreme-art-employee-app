@@ -73,6 +73,9 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       if (path.startsWith("/reports/salary")) {
         return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
       }
+      if (path.startsWith("/reports/procurement")) {
+        return [OVERVIEW_REPORTS, { href: "/reports/procurement", label: "Procurement" }];
+      }
       if (path.startsWith("/reports/station")) {
         return [OVERVIEW_REPORTS, { href: "/reports/station", label: "Hourly Leaves" }];
       }
