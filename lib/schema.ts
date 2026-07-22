@@ -487,6 +487,21 @@ export const purchaseOrders = pgTable("purchase_orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const inspections = pgTable("inspections", {
+  id: serial("id").primaryKey(),
+  inspNo: integer("insp_no").notNull(),              // auto running serial
+  poId: integer("po_id"),                            // nullable — can be standalone
+  poNo: integer("po_no"),                            // denormalised for display
+  date: date("date").notNull(),
+  materialType: varchar("material_type", { length: 160 }),
+  supplierName: varchar("supplier_name", { length: 200 }),
+  results: text("results").notNull().default("[]"),  // [{parameter,standard,samples[4]}]
+  inspectedBy: varchar("inspected_by", { length: 120 }),
+  createdByUserId: integer("created_by_user_id"),
+  createdByName: varchar("created_by_name", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const grns = pgTable("grns", {
   id: serial("id").primaryKey(),
   grnNo: integer("grn_no").notNull(),                // auto running serial

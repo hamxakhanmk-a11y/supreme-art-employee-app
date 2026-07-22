@@ -3,7 +3,24 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 
-export type Stage = "demand" | "po" | "grn";
+export type Stage = "demand" | "po" | "grn" | "inspection";
+
+// Fixed observation rows on the incoming-material inspection form (QC/QR/004).
+export const INSPECTION_PARAMS = [
+  "Purity",
+  "Physical appearance",
+  "Solubility",
+  "Cleanliness",
+  "Expiry",
+  "Packing",
+  "According to Order placed",
+] as const;
+
+export interface InspectionRow { parameter: string; standard: string; samples: string[] }
+
+export function blankInspectionRows(): InspectionRow[] {
+  return INSPECTION_PARAMS.map(p => ({ parameter: p, standard: "", samples: ["", "", "", ""] }));
+}
 
 export interface DemandItem { srNo: number; material: string; requiredFor: string; quantity: string; remarks: string }
 export interface PoItem { srNo: number; item: string; specifications: string; quantity: string }
@@ -24,6 +41,7 @@ export const FORM_COPIES: Record<Stage, string[]> = {
   demand: ["Store Copy", "Procurement Copy"],
   po: ["Procurement Copy", "Supplier Copy", "Finance Copy"],
   grn: ["Finance Copy", "Store Copy"],
+  inspection: [],
 };
 
 // Document-control block printed at the top of each form.
@@ -31,6 +49,7 @@ export const FORM_META = {
   demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "21-07-2026" },
   po:     { code: "PUR/QR/006", title: "PURCHASE ORDER", issue: "01", issueDate: "21-07-2026" },
   grn:    { code: "PUR/QR/006", title: "GOODS RECEIPTS REPORT (Store)", issue: "01", issueDate: "21-07-2026" },
+  inspection: { code: "QC/QR/004", title: "INCOMMING MATERIAL INSPECTION FORM", issue: "01", issueDate: "09-07-2026" },
 } as const;
 
 export const PO_DEFAULT_REMARKS =
@@ -109,5 +128,20 @@ export async function ensureProcurementTables() {
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text`);
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text`);
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS inspections (
+      id serial PRIMARY KEY,
+      insp_no integer NOT NULL,
+      po_id integer,
+      po_no integer,
+      date date NOT NULL,
+      material_type varchar(160),
+      supplier_name varchar(200),
+      results text NOT NULL DEFAULT '[]',
+      inspected_by varchar(120),
+      created_by_user_id integer,
+      created_by_name varchar(120),
+      created_at timestamp NOT NULL DEFAULT now()
+    )`);
   ensured = true;
 }

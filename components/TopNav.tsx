@@ -16,7 +16,7 @@ const MODULES_BASE: { key: string; label: string; module?: string; anyModule?: s
   { key: "kpi",        label: "KPI",        module: "kpi" },
   { key: "purchase",   label: "Purchase",   module: "purchase" },
   { key: "station",    label: "Station",    module: "station" },
-  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
+  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
   { key: "users",      label: "Users",      superadminOnly: true },
 ];
 
@@ -105,6 +105,7 @@ function getSubNav(path: string, module: string): { href: string; label: string 
         { href: "/procurement/demand", label: "Demand" },
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRN" },
+        { href: "/procurement/inspection", label: "Inspection" },
       ];
     case "users":
       return [
@@ -171,6 +172,7 @@ export default function TopNav() {
   if (activeModule === "procurement" && me) {
     const stageOf: Record<string, string> = {
       "/procurement/demand": "demand", "/procurement/po": "po", "/procurement/grn": "grn",
+      "/procurement/inspection": "inspection",
     };
     links = links.filter(l => !stageOf[l.href] || canModule(stageOf[l.href]));
   }

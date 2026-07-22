@@ -21,7 +21,8 @@ export type ModuleKey =
   | "station"
   | "demand"
   | "po"
-  | "grn";
+  | "grn"
+  | "inspection";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "employees",  label: "Employees",   hint: "Add / edit employee records & documents" },
@@ -35,6 +36,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
+  { key: "inspection", label: "Inspection",   hint: "Procurement — incoming material inspection (QC)" },
 ];
 
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
