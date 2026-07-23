@@ -2285,9 +2285,11 @@ function renderAll(){renderDashboard();renderInventory();renderStockIn();renderS
 // ---- AUTH ----
 function applyModuleToUI(){
   const m=state.module;
-  document.getElementById('mod-machinery').classList.toggle('active',m==='machinery');
-  document.getElementById('mod-consumables').classList.toggle('active',m==='consumables');
-  const sub=document.querySelector('.logo-sub');if(sub)sub.textContent=MODULE_LABEL[m];
+  // The two in-iframe module pills were removed after the merge —
+  // module switching lives in the employee-app top nav now.
+  const mm=document.getElementById('mod-machinery'); if(mm) mm.classList.toggle('active',m==='machinery');
+  const mc=document.getElementById('mod-consumables'); if(mc) mc.classList.toggle('active',m==='consumables');
+  const sub=document.querySelector('.logo-sub'); if(sub) sub.textContent=MODULE_LABEL[m];
 }
 
 function renderUserBar(){
