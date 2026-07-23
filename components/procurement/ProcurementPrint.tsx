@@ -120,7 +120,9 @@ export default function ProcurementPrint({
         .pf-sign { display: flex; justify-content: space-between; gap: 40px; margin-top: auto; padding-top: 42px; flex-wrap: wrap; }
         /* Each block is a column whose label grows, so the signature rules line
            up even when one label wraps to two lines. */
-        .pf-sign > div { min-width: 220px; display: flex; flex-direction: column; }
+        /* Equal-width blocks so the signature rules match in length and line up.
+           The cap stops a lone signature (e.g. the PO) stretching page-wide. */
+        .pf-sign > div { flex: 1 1 0; min-width: 200px; max-width: 300px; display: flex; flex-direction: column; }
         .pf-sign .lbl { font-weight: 700; font-size: 13px; flex: 1; min-height: 46px; }
         .pf-sign .line { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; text-align: center; }
         .pf-remark { margin-top: 12px; font-size: 12.5px; }

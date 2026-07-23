@@ -22,6 +22,13 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
+  if (!String(b.demandBy || "").trim()) {
+    return NextResponse.json({ error: "Demand by (person's name) is required." }, { status: 400 });
+  }
+  if (!String(b.department || "").trim()) {
+    return NextResponse.json({ error: "Department is required." }, { status: 400 });
+  }
+
   const [{ n }] = await db.select({ n: max(demands.demandNo) }).from(demands);
   const demandNo = nextNumber(n, NUMBER_START.demand);
 

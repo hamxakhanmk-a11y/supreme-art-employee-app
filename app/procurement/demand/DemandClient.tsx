@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, DEPARTMENTS, type DemandItem } from "@/lib/procurement";
 
 interface Demand {
   id: number; demandNo: number; date: string; requiredBy: string | null;
@@ -42,6 +42,9 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   function removeRow(i: number) { setItems(list => list.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
 
   async function save() {
+    // The controls sit outside a <form>, so `required` alone wouldn't block us.
+    if (!demandBy.trim()) { setErr("Please enter the name of the person raising this demand."); return; }
+    if (!department) { setErr("Please choose a department."); return; }
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.material.trim());
@@ -81,8 +84,16 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
             <Field label="Required by (arrange by)"><input type="date" value={requiredBy} onChange={e => setRequiredBy(e.target.value)} className="auth-input" /></Field>
-            <Field label="Demand by"><input value={demandBy} onChange={e => setDemandBy(e.target.value)} className="auth-input" placeholder="Person / section" /></Field>
-            <Field label="Department"><input value={department} onChange={e => setDepartment(e.target.value)} className="auth-input" /></Field>
+            <Field label="Demand by (person's name) *">
+              <input value={demandBy} onChange={e => setDemandBy(e.target.value)} className="auth-input"
+                required placeholder="e.g. Waqar Ahmed" />
+            </Field>
+            <Field label="Department *">
+              <select value={department} onChange={e => setDepartment(e.target.value)} className="auth-input" required>
+                <option value="">— Select department —</option>
+                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </Field>
           </div>
 
           <ItemsGrid items={items} setItem={setItem} addRow={addRow} removeRow={removeRow} />

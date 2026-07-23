@@ -36,6 +36,18 @@ export const COMPANY = {
   phone: "0092915602036",
 } as const;
 
+// Departments that can raise a demand. The chosen one also names the demand's
+// first printed copy, so it goes to the department that asked for the material.
+export const DEPARTMENTS = [
+  "Accounts & Finance",
+  "Production & Design",
+  "Sales & Marketing",
+  "HR & Admin",
+  "Procurement",
+  "Repair & Maintainance",
+  "Warehouse / Inventory Mgt / Import & Export",
+] as const;
+
 // Each stage's running number starts at its own block, so a number identifies
 // the document type at a glance. Numbering never goes backwards: if a stage
 // already has higher numbers, it simply continues from there.

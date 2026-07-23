@@ -16,10 +16,16 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
   if (!d) notFound();
   const items = parseItems<DemandItem>(d.items);
   const m = FORM_META.demand;
+  // The requesting department keeps the first copy; older demands saved before
+  // the department was mandatory fall back to the original label.
+  const copies = [
+    d.department ? `${d.department} Copy` : FORM_COPIES.demand[0],
+    ...FORM_COPIES.demand.slice(1),
+  ];
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={FORM_COPIES.demand} backHref="/procurement/demand">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={copies} backHref="/procurement/demand">
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>
