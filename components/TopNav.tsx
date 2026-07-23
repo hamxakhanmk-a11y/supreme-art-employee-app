@@ -307,30 +307,31 @@ export default function TopNav() {
         </div>
       </div>
 
-      {/* Sub-nav row */}
+      {/* Sub-nav row — segmented-pill switcher sits below the top row */}
       {links.length > 0 && (
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            padding: "8px 1.5rem",
-            gap: 6,
+            padding: "10px 1.5rem",
             background: "var(--bg2)",
             borderTop: "1px solid var(--border)",
           }}
         >
-          {links.map((link) => {
-            const active = isSubActive(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`tab ${active ? "active" : ""}`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+          <div className="tabs">
+            {links.map((link) => {
+              const active = isSubActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`tab ${active ? "active" : ""}`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
     </header>
