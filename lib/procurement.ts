@@ -97,78 +97,80 @@ export function fmtDate(d: string | null | undefined): string {
 let ensured = false;
 export async function ensureProcurementTables() {
   if (ensured) return;
+  // All of this runs in ONE round-trip. Issued as separate statements it cost
+  // ~5s per request against Neon, which showed up as laggy buttons — every
+  // procurement page and API call waits on it.
   await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS demands (
-      id serial PRIMARY KEY,
-      demand_no integer NOT NULL,
-      date date NOT NULL,
-      required_by date,
-      demand_by varchar(160),
-      department varchar(120),
-      prepared_by varchar(120),
-      approved_by varchar(120),
-      section_incharge varchar(120),
-      items text NOT NULL DEFAULT '[]',
-      status varchar(20) NOT NULL DEFAULT 'open',
-      created_by_user_id integer,
-      created_by_name varchar(120),
-      created_at timestamp NOT NULL DEFAULT now()
-    )`);
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS purchase_orders (
-      id serial PRIMARY KEY,
-      po_no integer NOT NULL,
-      demand_id integer,
-      demand_no integer,
-      date date NOT NULL,
-      demand_by_name varchar(160),
-      supplier_name varchar(200),
-      expected_date date,
-      order_placed_by varchar(120),
-      approved_by varchar(120),
-      remarks text,
-      items text NOT NULL DEFAULT '[]',
-      status varchar(20) NOT NULL DEFAULT 'open',
-      created_by_user_id integer,
-      created_by_name varchar(120),
-      created_at timestamp NOT NULL DEFAULT now()
-    )`);
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS grns (
-      id serial PRIMARY KEY,
-      grn_no integer NOT NULL,
-      po_id integer,
-      po_no integer,
-      date date NOT NULL,
-      received_by varchar(120),
-      verified_by varchar(120),
-      items text NOT NULL DEFAULT '[]',
-      created_by_user_id integer,
-      created_by_name varchar(120),
-      created_at timestamp NOT NULL DEFAULT now()
-    )`);
-  // Shaigan-style PO fields, added after the table already existed.
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text`);
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160)`);
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_phone varchar(60)`);
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text`);
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text`);
-  await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0`);
-  await db.execute(sql`ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60)`);
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS inspections (
-      id serial PRIMARY KEY,
-      insp_no integer NOT NULL,
-      po_id integer,
-      po_no integer,
-      date date NOT NULL,
-      material_type varchar(160),
-      supplier_name varchar(200),
-      results text NOT NULL DEFAULT '[]',
-      inspected_by varchar(120),
-      created_by_user_id integer,
-      created_by_name varchar(120),
-      created_at timestamp NOT NULL DEFAULT now()
-    )`);
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS demands (
+    id serial PRIMARY KEY,
+    demand_no integer NOT NULL,
+    date date NOT NULL,
+    required_by date,
+    demand_by varchar(160),
+    department varchar(120),
+    prepared_by varchar(120),
+    approved_by varchar(120),
+    section_incharge varchar(120),
+    items text NOT NULL DEFAULT '[]',
+    status varchar(20) NOT NULL DEFAULT 'open',
+    created_by_user_id integer,
+    created_by_name varchar(120),
+    created_at timestamp NOT NULL DEFAULT now()
+  );
+  CREATE TABLE IF NOT EXISTS purchase_orders (
+    id serial PRIMARY KEY,
+    po_no integer NOT NULL,
+    demand_id integer,
+    demand_no integer,
+    date date NOT NULL,
+    demand_by_name varchar(160),
+    supplier_name varchar(200),
+    expected_date date,
+    order_placed_by varchar(120),
+    approved_by varchar(120),
+    remarks text,
+    items text NOT NULL DEFAULT '[]',
+    status varchar(20) NOT NULL DEFAULT 'open',
+    created_by_user_id integer,
+    created_by_name varchar(120),
+    created_at timestamp NOT NULL DEFAULT now()
+  );
+  CREATE TABLE IF NOT EXISTS grns (
+    id serial PRIMARY KEY,
+    grn_no integer NOT NULL,
+    po_id integer,
+    po_no integer,
+    date date NOT NULL,
+    received_by varchar(120),
+    verified_by varchar(120),
+    items text NOT NULL DEFAULT '[]',
+    created_by_user_id integer,
+    created_by_name varchar(120),
+    created_at timestamp NOT NULL DEFAULT now()
+  );
+  CREATE TABLE IF NOT EXISTS inspections (
+    id serial PRIMARY KEY,
+    insp_no integer NOT NULL,
+    po_id integer,
+    po_no integer,
+    date date NOT NULL,
+    material_type varchar(160),
+    supplier_name varchar(200),
+    results text NOT NULL DEFAULT '[]',
+    inspected_by varchar(120),
+    created_by_user_id integer,
+    created_by_name varchar(120),
+    created_at timestamp NOT NULL DEFAULT now()
+  );
+  -- Columns added after their tables already existed.
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_phone varchar(60);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
+END $$;`);
   ensured = true;
 }
