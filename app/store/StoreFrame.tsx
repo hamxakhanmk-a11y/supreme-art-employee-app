@@ -8,8 +8,9 @@ export default function StoreFrame({ module }: { module: "machinery" | "consumab
   return (
     <div style={{
       position: "fixed",
-      // Sit just below the topbar + sub-nav row (~96px total).
-      top: 96, left: 0, right: 0, bottom: 0,
+      // Sit just below the 56px topbar. There's no employee-app sub-nav
+      // row here — the store's iframe brings its own sidebar.
+      top: 56, left: 0, right: 0, bottom: 0,
       background: "#f5f5f3",
     }}>
       <iframe

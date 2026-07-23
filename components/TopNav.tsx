@@ -4,156 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMe } from "@/components/MeProvider";
-
-// `module` gates the tab on the role's permission set (see lib/permissions.ts).
-// `superadminOnly` is reserved for the owner. Profile has neither — always shown.
-const MODULES_BASE: { key: string; label: string; module?: string; anyModule?: string[]; superadminOnly?: boolean }[] = [
-  { key: "profile",    label: "Profile" },
-  { key: "attendance", label: "Attendance", module: "attendance" },
-  { key: "forms",      label: "Forms",      module: "forms" },
-  { key: "reports",    label: "Reports",    module: "reports" },
-  { key: "salary",     label: "Salary",     module: "salary" },
-  { key: "kpi",        label: "KPI",        module: "kpi" },
-  { key: "purchase",   label: "Purchase",   module: "purchase" },
-  { key: "station",    label: "Station",    module: "station" },
-  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
-  { key: "store",      label: "Store",      module: "store" },
-  { key: "users",      label: "Users",      superadminOnly: true },
-];
-
-const OVERVIEW_FORMS = { href: "/forms", label: "← Overview" };
-const OVERVIEW_REPORTS = { href: "/reports", label: "← Overview" };
-
-// Sub-nav is context-aware: on an overview page no tabs are shown (the page
-// itself lists every module as a card). Once the user enters a module, only
-// that module's tabs are shown, with a back-to-overview tab on the left.
-function getSubNav(path: string, module: string): { href: string; label: string }[] {
-  switch (module) {
-    case "profile":
-      return [
-        { href: "/", label: "Dashboard" },
-        { href: "/employees", label: "Employees" },
-      ];
-    case "attendance":
-      return [{ href: "/attendance", label: "Mark Today" }];
-    case "forms": {
-      if (path === "/forms") return []; // overview
-      if (path === "/forms/leave" || path === "/forms/leave-settings") {
-        return [
-          OVERVIEW_FORMS,
-          { href: "/forms/leave", label: "Leave Form" },
-          { href: "/forms/leave-settings", label: "Leave Settings" },
-        ];
-      }
-      if (path === "/forms/half-day") {
-        return [OVERVIEW_FORMS, { href: "/forms/half-day", label: "Half-Day Form" }];
-      }
-      if (path === "/forms/file") {
-        return [OVERVIEW_FORMS, { href: "/forms/file", label: "File Signed Form" }];
-      }
-      if (path === "/forms/approvals") {
-        return [OVERVIEW_FORMS, { href: "/forms/approvals", label: "Pending Approvals" }];
-      }
-      // Legacy /leave routes
-      if (path.startsWith("/leave")) {
-        return [OVERVIEW_FORMS, { href: "/forms/leave", label: "Leave Form" }];
-      }
-      return [];
-    }
-    case "reports": {
-      if (path === "/reports") return []; // overview
-      if (path.startsWith("/reports/attendance")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/attendance", label: "Attendance Register" }];
-      }
-      if (path.startsWith("/reports/leaves")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/leaves", label: "Leave History" }];
-      }
-      if (path.startsWith("/reports/half-day")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/half-day", label: "Half-Day History" }];
-      }
-      if (path.startsWith("/reports/salary")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
-      }
-      if (path.startsWith("/reports/procurement")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/procurement", label: "Procurement" }];
-      }
-      if (path.startsWith("/reports/station")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/station", label: "Hourly Leaves" }];
-      }
-      if (path.startsWith("/reports/activity")) {
-        return [OVERVIEW_REPORTS, { href: "/reports/activity", label: "Activity Log" }];
-      }
-      return [];
-    }
-    case "salary":
-      return [{ href: "/salary", label: "Generate Slips" }];
-    case "kpi":
-      // Always show the KPI tabs (including on the overview) so Reports etc.
-      // are reachable from anywhere in the section.
-      return [
-        { href: "/kpi", label: "Overview" },
-        { href: "/kpi/assign", label: "Assign Templates" },
-        { href: "/kpi/entry", label: "Monthly Entry" },
-        { href: "/kpi/reports", label: "Reports" },
-      ];
-    case "purchase":
-      return [{ href: "/purchase", label: "PR Register" }];
-    case "station":
-      return [{ href: "/station", label: "Terminal" }, { href: "/station/report", label: "Report" }];
-    case "procurement":
-      // Filtered per-stage permission in the component below.
-      return [
-        { href: "/procurement/demand", label: "Demand" },
-        { href: "/procurement/po", label: "Purchase Order" },
-        { href: "/procurement/grn", label: "GRN" },
-        { href: "/procurement/inspection", label: "Inspection" },
-      ];
-    case "store":
-      return [
-        { href: "/store/machinery",   label: "Machinery & Electrical" },
-        { href: "/store/consumables", label: "Inks & Consumables" },
-      ];
-    case "users":
-      return [
-        { href: "/admin/users", label: "All Users" },
-        { href: "/admin/roles", label: "Role Permissions" },
-      ];
-    default:
-      return [];
-  }
-}
-
-// Default landing page for each top-nav module (used when the user clicks the
-// module name in the topbar). Always lands on the module's overview.
-const MODULE_HOME: Record<string, string> = {
-  profile: "/",
-  attendance: "/attendance",
-  forms: "/forms",
-  reports: "/reports",
-  salary: "/salary",
-  kpi: "/kpi",
-  purchase: "/purchase",
-  station: "/station",
-  procurement: "/procurement",
-  store: "/store/machinery",
-  users: "/admin/users",
-};
-
-function pathToModule(path: string): string {
-  if (path.startsWith("/forms")) return "forms";
-  if (path.startsWith("/reports")) return "reports";
-  if (path.startsWith("/salary")) return "salary";
-  if (path.startsWith("/kpi")) return "kpi";
-  if (path.startsWith("/purchase")) return "purchase";
-  if (path.startsWith("/station")) return "station";
-  if (path.startsWith("/procurement")) return "procurement";
-  if (path.startsWith("/store")) return "store";
-  if (path.startsWith("/attendance")) return "attendance";
-  if (path.startsWith("/admin/")) return "users";
-  // Legacy leave routes resolve to forms module.
-  if (path.startsWith("/leave")) return "forms";
-  return "profile";
-}
+import { MODULES_BASE, MODULE_HOME, pathToModule } from "@/components/nav-config";
 
 const HIDE_ON = ["/login"];
 
@@ -171,20 +22,6 @@ export default function TopNav() {
   const activeModule = pathToModule(pathname);
   const canModule = (key: string) => !!me && (me.role === "superadmin" || me.modules.includes(key));
 
-  let links = getSubNav(pathname, activeModule);
-  // Hide the Employees management tab from roles without that permission.
-  if (activeModule === "profile" && me && !canModule("employees")) {
-    links = links.filter(l => l.href !== "/employees");
-  }
-  // Show only the procurement stages the role can access.
-  if (activeModule === "procurement" && me) {
-    const stageOf: Record<string, string> = {
-      "/procurement/demand": "demand", "/procurement/po": "po", "/procurement/grn": "grn",
-      "/procurement/inspection": "inspection",
-    };
-    links = links.filter(l => !stageOf[l.href] || canModule(stageOf[l.href]));
-  }
-
   const modules = MODULES_BASE.filter(m => {
     if (m.superadminOnly) return me?.role === "superadmin";
     if (m.anyModule) return m.anyModule.some(canModule);
@@ -196,18 +33,6 @@ export default function TopNav() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
   }
-
-  const isSubActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    if (href === "/kpi") return pathname === "/kpi";
-    if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    // Sibling routes can share a prefix (e.g. /forms/leave vs /forms/leave-settings),
-    // so for the explicit sub-nav entries we require either an exact match or the
-    // path to continue with a "/" (a nested sub-page).
-    if (href === pathname) return true;
-    if (pathname.startsWith(href + "/")) return true;
-    return false;
-  };
 
   return (
     <header
@@ -310,33 +135,7 @@ export default function TopNav() {
         </div>
       </div>
 
-      {/* Sub-nav row — segmented-pill switcher sits below the top row */}
-      {links.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "10px 1.5rem",
-            background: "var(--bg2)",
-            borderTop: "1px solid var(--border)",
-          }}
-        >
-          <div className="tabs">
-            {links.map((link) => {
-              const active = isSubActive(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`tab ${active ? "active" : ""}`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Sub-nav lives in the left sidebar now — see components/Sidebar.tsx */}
     </header>
   );
 }

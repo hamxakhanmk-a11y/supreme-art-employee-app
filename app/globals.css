@@ -175,6 +175,31 @@ input[type=date] { font-family: inherit; }
 .badge-inactive { background: #6B7280; box-shadow: 0 1px 3px rgba(107,114,128,0.35); }
 .badge-warning  { background: #D97706; box-shadow: 0 1px 3px rgba(217,119,6,0.35); }
 
+/* ---------- Sub-nav sidebar (left column, matches the Store's sidebar) ---------- */
+.app-sidebar { position: sticky; top: 56px; align-self: flex-start; height: calc(100vh - 56px); overflow-y: auto; }
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 1.1rem;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #5b5249;
+  text-decoration: none;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  margin: 1px 0;
+}
+.sb-item:hover { background: var(--bg2); color: var(--text); }
+.sb-item.active {
+  background: rgba(140,35,38,0.08);
+  color: var(--brand);
+  font-weight: 700;
+  border-left-color: var(--brand);
+}
+@media print { .app-sidebar { display: none !important; } }
+
 /* ---------- Tabs (segmented pill switcher, matches the Store module toggle) ---------- */
 .tabs {
   display: inline-flex;
