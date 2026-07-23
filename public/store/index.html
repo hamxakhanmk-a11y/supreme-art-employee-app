@@ -338,7 +338,6 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="nav-item" onclick="showPage('categories',this)"><i class="ti ti-tag"></i> Categories</div>
     <div class="nav-item" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
     <div class="nav-item" onclick="showPage('trash',this)"><i class="ti ti-trash"></i> Trash</div>
-    <div class="nav-item admin-only" onclick="showPage('users',this)"><i class="ti ti-users"></i> Users</div>
   </div>
 
   <div class="main">
@@ -357,32 +356,10 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="mod-pill active" id="mod-machinery" onclick="switchModule('machinery')"><i class="ti ti-tools"></i> Machinery &amp; Electrical</button>
         <button class="mod-pill" id="mod-consumables" onclick="switchModule('consumables')"><i class="ti ti-droplet"></i> Inks &amp; Consumables</button>
       </div>
-      <div class="user-bar" id="user-bar" style="display:none">
-        <div class="user-info">
-          <span class="user-name" id="user-name"></span>
-          <span class="user-role" id="user-role"></span>
-        </div>
-        <div class="user-avatar" id="user-avatar"></div>
-        <button class="btn btn-sm" onclick="openModal('changePw');clearChangePwFields()" title="Change your password"><i class="ti ti-key"></i> Password</button>
-        <button class="btn btn-sm" onclick="logout()" title="Sign out"><i class="ti ti-logout"></i> Logout</button>
-      </div>
     </div>
 
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-      <!-- Hero banner (slim strip) -->
-      <div class="hero no-print">
-        <div class="hero-content">
-          <div class="hero-greet"><span id="hero-greet-text">Good morning</span> <i class="ti ti-hand-wave"></i></div>
-          <div class="hero-actions write-only">
-            <button class="hero-btn hero-btn-primary" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add New Part</button>
-            <button class="hero-btn hero-btn-ghost" onclick="openModal('addIn')"><i class="ti ti-arrow-bar-to-down"></i> Record Stock In</button>
-          </div>
-        </div>
-        <div class="hero-mark">
-          <img src="/logo.png?v=4" alt="Supreme Art (Pvt) Ltd." class="hero-logo-img">
-        </div>
-      </div>
       <div class="page-header">
         <div class="page-title">Dashboard</div>
         <span style="font-size:12px;color:var(--muted)" id="dash-date"></span>
