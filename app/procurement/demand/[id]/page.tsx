@@ -74,10 +74,13 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
           <div>
             <div className="lbl">Prepared By:</div>
             <div className="line">{d.preparedBy || ""}</div>
+            {/* empty caption slot keeps this rule level with the captioned one */}
+            <div className="cap" />
           </div>
           <div>
             <div className="lbl">Approved By:</div>
             <div className="line">{d.approvedBy || ""}</div>
+            <div className="cap">DIRECTOR/CEO</div>
           </div>
         </div>
       </ProcurementPrint>

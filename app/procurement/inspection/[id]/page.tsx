@@ -23,7 +23,7 @@ export default async function InspectionView({ params }: { params: Promise<{ id:
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>
-              <tr><td>PO No.:</td><td className="u">{r.poNo ?? ""}</td></tr>
+              <tr><td>PO Ref No:</td><td className="u">{r.poNo ?? ""}</td></tr>
             </tbody>
           </table>
           <table className="pf-fieldtable">

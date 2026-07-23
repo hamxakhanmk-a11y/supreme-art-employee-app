@@ -6,7 +6,7 @@ import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, type GrnItem, type PoItem } from "@/lib/procurement";
 
 interface Grn {
-  id: number; grnNo: number; poNo: number | null; date: string; items: string;
+  id: number; grnNo: number; gatePassNo: string | null; poNo: number | null; date: string; items: string;
 }
 interface OpenPo {
   id: number; poNo: number; supplierName: string | null; items: string;
@@ -22,13 +22,14 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [err, setErr] = useState("");
 
   const [poId, setPoId] = useState("");
+  const [gatePassNo, setGatePassNo] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [verifiedBy, setVerifiedBy] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
   const [items, setItems] = useState<GrnItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
-    setPoId(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setGatePassNo(""); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
@@ -46,12 +47,13 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   function removeRow(i: number) { setItems(l => l.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
 
   async function save() {
+    if (!gatePassNo.trim()) { setErr("Please enter the inward gate pass number."); return; }
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.item.trim());
       const res = await fetch("/api/procurement/grns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, gatePassNo, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -59,7 +61,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     finally { setBusy(false); }
   }
   async function del(g: Grn) {
-    if (!confirm(`Delete GRN #${g.grnNo}?`)) return;
+    if (!confirm(`Delete GRR #${g.grnNo}?`)) return;
     const res = await fetch(`/api/procurement/grns/${g.id}`, { method: "DELETE" });
     if (res.ok) router.refresh(); else alert("Delete failed");
   }
@@ -71,7 +73,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Goods Receipts Reports (Store)</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Record goods received against a PO, or standalone.</p>
         </div>
-        {canEdit && <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New GRN"}</button>}
+        {canEdit && <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New GRR"}</button>}
       </div>
 
       {open && canEdit && (
@@ -80,9 +82,13 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 14 }}>
             <Field label="For PO (optional)">
               <select value={poId} onChange={e => pickPo(e.target.value)} className="auth-input">
-                <option value="">— None (standalone GRN) —</option>
+                <option value="">— None (standalone GRR) —</option>
                 {openPos.map(p => <option key={p.id} value={p.id}>PO #{p.poNo}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
               </select>
+            </Field>
+            <Field label="Inward gate pass No. *">
+              <input value={gatePassNo} onChange={e => setGatePassNo(e.target.value)} className="auth-input"
+                required placeholder="e.g. 12001" />
             </Field>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
           </div>
@@ -112,7 +118,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={save} disabled={busy} className="btn btn-primary">{busy ? "Saving…" : "Save GRN"}</button>
+            <button onClick={save} disabled={busy} className="btn btn-primary">{busy ? "Saving…" : "Save GRR"}</button>
             <button onClick={() => setOpen(false)} className="btn">Cancel</button>
           </div>
         </div>
@@ -120,13 +126,14 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
-          <thead><tr><th>GRN #</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No.</th><th>GRR #</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRNs yet.</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs yet.</td></tr>
             ) : rows.map(g => (
               <tr key={g.id}>
-                <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{g.grnNo}</td>
+                <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
+                <td>#{g.grnNo}</td>
                 <td>{g.poNo ? `#${g.poNo}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>

@@ -44,7 +44,7 @@ export const DEPARTMENTS = [
   "Sales & Marketing",
   "HR & Admin",
   "Procurement",
-  "Repair & Maintainance",
+  "Repair & Maintenance",
   "Warehouse / Inventory Mgt / Import & Export",
 ] as const;
 
@@ -154,6 +154,7 @@ export async function ensureProcurementTables() {
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text`);
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text`);
   await db.execute(sql`ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0`);
+  await db.execute(sql`ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60)`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS inspections (
       id serial PRIMARY KEY,

@@ -124,7 +124,20 @@ export default function ProcurementPrint({
            The cap stops a lone signature (e.g. the PO) stretching page-wide. */
         .pf-sign > div { flex: 1 1 0; min-width: 200px; max-width: 300px; display: flex; flex-direction: column; }
         .pf-sign .lbl { font-weight: 700; font-size: 13px; flex: 1; min-height: 46px; }
-        .pf-sign .line { border-top: 1px solid #000; padding-top: 3px; font-size: 12px; text-align: center; }
+        /* min-height keeps an empty signature the same height as a filled one,
+           so both rules sit at the same level. */
+        .pf-sign .line {
+          border-top: 1px solid #000; padding-top: 3px; font-size: 12px;
+          text-align: center; box-sizing: border-box; height: 22px;
+        }
+        /* Role caption under a signature rule, e.g. DIRECTOR/CEO. Render this
+           slot in every block of a row (empty is fine) — the fixed height keeps
+           the rules level whether or not a block is captioned. */
+        .pf-sign .cap {
+          text-align: center; font-size: 11.5px; font-weight: 700;
+          letter-spacing: 0.4px; margin-top: 2px;
+          height: 18px; line-height: 18px;
+        }
         .pf-remark { margin-top: 12px; font-size: 12.5px; }
 
         @media print {

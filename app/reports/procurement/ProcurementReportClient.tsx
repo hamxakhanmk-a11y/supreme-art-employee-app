@@ -29,7 +29,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 const KIND = {
   demand: { label: "Demand", fg: "#185FA5", bg: "#e0f2fe", href: "/procurement/demand" },
   po: { label: "PO", fg: "#B45309", bg: "#fef3c7", href: "/procurement/po" },
-  grn: { label: "GRN", fg: "#15803D", bg: "#dcf5dc", href: "/procurement/grn" },
+  grn: { label: "GRR", fg: "#15803D", bg: "#dcf5dc", href: "/procurement/grn" },
   inspection: { label: "Inspection", fg: "#7C3AED", bg: "#ede9fe", href: "/procurement/inspection" },
 } as const;
 

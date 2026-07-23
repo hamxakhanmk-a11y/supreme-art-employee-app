@@ -26,6 +26,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const b = await req.json().catch(() => ({}));
   const items = Array.isArray(b.items) ? b.items : [];
   await db.update(grns).set({
+    gatePassNo: b.gatePassNo || null,
     date: b.date || new Date().toISOString().slice(0, 10),
     receivedBy: b.receivedBy || null,
     verifiedBy: b.verifiedBy || null,

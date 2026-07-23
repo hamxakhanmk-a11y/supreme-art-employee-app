@@ -104,7 +104,7 @@ function getSubNav(path: string, module: string): { href: string; label: string 
       return [
         { href: "/procurement/demand", label: "Demand" },
         { href: "/procurement/po", label: "Purchase Order" },
-        { href: "/procurement/grn", label: "GRN" },
+        { href: "/procurement/grn", label: "GRR" },
         { href: "/procurement/inspection", label: "Inspection" },
       ];
     case "users":
