@@ -6,8 +6,8 @@ import PrintWatermark from "@/components/PrintWatermark";
 import { MeProvider } from "@/components/MeProvider";
 
 export const metadata: Metadata = {
-  title: "Supreme Art — Employee Management",
-  description: "Employee records and onboarding",
+  title: "Supreme Art ERP",
+  description: "Supreme Art enterprise portal — HR, forms, reports, salary, KPI, procurement, station, and store.",
 };
 
 export default function RootLayout({

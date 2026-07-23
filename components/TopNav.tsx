@@ -57,7 +57,7 @@ export default function TopNav() {
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" }}>
           <Image src="/logo.png" alt="Supreme Art" width={28} height={28} priority style={{ width: 28, height: 28, objectFit: "contain" }} />
           <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
-            Supreme Art <span style={{ color: "var(--brand)" }}>HR Portal</span>
+            Supreme Art <span style={{ color: "var(--brand)" }}>ERP</span>
           </span>
         </Link>
 
