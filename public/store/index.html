@@ -863,14 +863,17 @@ async function apiFetch(url, method='GET', body=null){
   const opts={method,headers:{'Content-Type':'application/json'}};
   if(body!==null)opts.body=JSON.stringify(body);
   const r=await fetch(url,opts);
-  const data=await r.json();
+  let data;
+  try { data = await r.json(); } catch(_) { data = { error: r.statusText || 'Bad response' }; }
   if(!r.ok){
-    if(r.status===401 && state.user){
-      // Session expired or revoked — drop user back to login
-      state.user=null;
-      renderUserBar();
-      showAuthScreen('login');
-      showAuthError('login','Your session has expired. Please sign in again.');
+    if(r.status===401){
+      // Session died on the employee-app side. Bounce the whole tab back
+      // to the main-app login rather than showing the (removed) store login.
+      const target = '/login?next=/store';
+      try {
+        if (window.top && window.top !== window) window.top.location.href = target;
+        else window.location.href = target;
+      } catch(_) { window.location.href = target; }
     }
     const err=new Error(data.error||'Request failed');
     err.status=r.status;
@@ -2284,7 +2287,7 @@ async function showSetupLinkDialog(url,hours,name,email,purpose,emailed){
   });
 }
 
-function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderActivity();renderTrash();renderUsers();}
+function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderActivity();renderTrash();/* renderUsers removed after merge */}
 
 // ---- AUTH ----
 function applyModuleToUI(){
