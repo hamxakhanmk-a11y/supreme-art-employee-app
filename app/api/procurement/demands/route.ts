@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables } from "@/lib/procurement";
+import { ensureProcurementTables, nextNumber, NUMBER_START } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
 
   const [{ n }] = await db.select({ n: max(demands.demandNo) }).from(demands);
-  const demandNo = Number(n ?? 0) + 1;
+  const demandNo = nextNumber(n, NUMBER_START.demand);
 
   const items = Array.isArray(b.items) ? b.items : [];
   const [row] = await db.insert(demands).values({

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables } from "@/lib/procurement";
+import { ensureProcurementTables, nextNumber, NUMBER_START } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
 
   const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns);
-  const grnNo = Number(n ?? 0) + 1;
+  const grnNo = nextNumber(n, NUMBER_START.grn);
 
   // Optional link to a PO.
   let poId: number | null = null;

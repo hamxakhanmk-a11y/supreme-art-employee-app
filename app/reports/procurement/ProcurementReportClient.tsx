@@ -5,36 +5,39 @@ import { fmtDate } from "@/lib/procurement";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 
 export interface DocRow {
-  kind: "demand" | "po" | "grn";
+  kind: "demand" | "po" | "grn" | "inspection";
   id: number;
   no: number;
   date: string;
-  ref: number | null;      // demand no on a PO, PO no on a GRN
+  ref: number | null;      // demand no on a PO, PO no on a GRN / inspection
   party: string;           // requester / supplier / receiver
-  items: number;
-  status: string;          // Demand created | PO created | Delivered
+  items: number | null;    // null where a count is meaningless (inspection)
+  status: string;          // Demand created | PO created | Delivered | Inspected
   by: string;
 }
 
-type Filter = "all" | "demand" | "po" | "delivered";
+type Filter = "all" | "demand" | "po" | "delivered" | "inspection";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "demand", label: "Demand created" },
   { key: "po", label: "PO created" },
   { key: "delivered", label: "Delivered" },
+  { key: "inspection", label: "Inspected" },
 ];
 
 const KIND = {
   demand: { label: "Demand", fg: "#185FA5", bg: "#e0f2fe", href: "/procurement/demand" },
   po: { label: "PO", fg: "#B45309", bg: "#fef3c7", href: "/procurement/po" },
   grn: { label: "GRN", fg: "#15803D", bg: "#dcf5dc", href: "/procurement/grn" },
+  inspection: { label: "Inspection", fg: "#7C3AED", bg: "#ede9fe", href: "/procurement/inspection" },
 } as const;
 
 function matches(r: DocRow, f: Filter) {
   if (f === "all") return true;
   if (f === "demand") return r.kind === "demand";
   if (f === "po") return r.kind === "po";
+  if (f === "inspection") return r.kind === "inspection";
   return r.status === "Delivered";   // delivered = goods received
 }
 
@@ -54,6 +57,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
     demand: rows.filter(r => r.kind === "demand").length,
     po: rows.filter(r => r.kind === "po").length,
     delivered: rows.filter(r => r.status === "Delivered").length,
+    inspection: rows.filter(r => r.kind === "inspection").length,
   }), [rows]);
 
   function exportXlsx() {
@@ -63,7 +67,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
       title: `Supreme Art — Procurement Report   ${fmtDate(from)} → ${fmtDate(to)}`,
       headers: ["Type", "No", "Date", "Ref No", "Party", "Items", "Status", "Created by"],
       rows: shown.map(r => [
-        KIND[r.kind].label, r.no, fmtDate(r.date), r.ref ?? "", r.party, r.items, r.status, r.by,
+        KIND[r.kind].label, r.no, fmtDate(r.date), r.ref ?? "", r.party, r.items ?? "", r.status, r.by,
       ]),
       freezeCols: 2,
       colWidths: [12, 10, 13, 12, 26, 8, 16, 18],
@@ -75,7 +79,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
       <div className="no-print" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Report</h1>
         <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-          Demands, purchase orders and goods received — filter by stage and date.
+          Demands, purchase orders, goods received and inspections — filter by stage and date.
         </p>
       </div>
 
@@ -142,11 +146,13 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
                   <td>{fmtDate(r.date)}</td>
                   <td>{r.ref != null ? `#${r.ref}` : "—"}</td>
                   <td>{r.party || "—"}</td>
-                  <td className="num">{r.items}</td>
+                  <td className="num">{r.items ?? "—"}</td>
                   <td>
                     <span style={{
                       fontSize: 11.5, fontWeight: 700,
-                      color: r.status === "Delivered" ? "#15803D" : r.status === "PO created" ? "#B45309" : "#185FA5",
+                      color: r.status === "Delivered" ? "#15803D"
+                        : r.status === "Inspected" ? "#7C3AED"
+                        : r.status === "PO created" ? "#B45309" : "#185FA5",
                     }}>{r.status}</span>
                   </td>
                   <td style={{ fontSize: 12, color: "var(--text2)" }}>{r.by || "—"}</td>
@@ -163,6 +169,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
       <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 10 }}>
         A demand shows as <strong>PO created</strong> once it has been ordered, and a PO shows as
         <strong> Delivered</strong> once its goods are received against a GRN.
+        Numbers run in blocks — demands from 5000, POs from 10000, GRNs from 15000, inspections from 20000.
       </div>
     </div>
   );

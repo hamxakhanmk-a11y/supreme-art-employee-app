@@ -36,6 +36,20 @@ export const COMPANY = {
   phone: "0092915602036",
 } as const;
 
+// Each stage's running number starts at its own block, so a number identifies
+// the document type at a glance. Numbering never goes backwards: if a stage
+// already has higher numbers, it simply continues from there.
+export const NUMBER_START: Record<Stage, number> = {
+  demand: 5000,
+  po: 10000,
+  grn: 15000,
+  inspection: 20000,
+};
+
+export function nextNumber(currentMax: number | null | undefined, start: number): number {
+  return Math.max(Number(currentMax ?? 0), start - 1) + 1;
+}
+
 // Each form prints one page per copy, named at the foot of the page.
 export const FORM_COPIES: Record<Stage, string[]> = {
   demand: ["Store Copy", "Procurement Copy"],

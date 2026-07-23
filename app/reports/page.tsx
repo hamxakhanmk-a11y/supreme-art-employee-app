@@ -10,7 +10,7 @@ export default async function ReportsLanding() {
   const canSalary = user?.role === "superadmin" || !!perm?.modules.includes("salary");
   const canStation = user?.role === "superadmin" || !!perm?.modules.includes("station");
   const canProcurement = user?.role === "superadmin"
-    || ["demand", "po", "grn"].some(m => !!perm?.modules.includes(m as never));
+    || ["demand", "po", "grn", "inspection"].some(m => !!perm?.modules.includes(m as never));
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 20 }}>
@@ -55,7 +55,7 @@ export default async function ReportsLanding() {
             icon="📦"
             title="Procurement"
             urdu="خریداری کا ریکارڈ"
-            desc="Demands, purchase orders and goods received. Filter by stage — demand created, PO created, delivered — and by date."
+            desc="Demands, purchase orders, goods received and inspections. Filter by stage — demand created, PO created, delivered, inspected — and by date."
           />
         )}
         {canStation && (

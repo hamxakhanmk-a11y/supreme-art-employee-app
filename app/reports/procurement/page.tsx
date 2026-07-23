@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { demands, purchaseOrders, grns } from "@/lib/schema";
+import { demands, purchaseOrders, grns, inspections } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
 import { ensureProcurementTables, parseItems } from "@/lib/procurement";
 import ProcurementReportClient, { type DocRow } from "./ProcurementReportClient";
@@ -16,10 +16,11 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
   const to = sp.to || now.toISOString().slice(0, 10);
 
   await ensureProcurementTables();
-  const [ds, ps, gs] = await Promise.all([
+  const [ds, ps, gs, is] = await Promise.all([
     db.select().from(demands).where(and(gte(demands.date, from), lte(demands.date, to))),
     db.select().from(purchaseOrders).where(and(gte(purchaseOrders.date, from), lte(purchaseOrders.date, to))),
     db.select().from(grns).where(and(gte(grns.date, from), lte(grns.date, to))),
+    db.select().from(inspections).where(and(gte(inspections.date, from), lte(inspections.date, to))),
   ]);
 
   const rows: DocRow[] = [
@@ -56,6 +57,18 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       items: parseItems<unknown>(g.items).length,
       status: "Delivered",
       by: g.createdByName || "",
+    })),
+    ...is.map(i => ({
+      kind: "inspection" as const,
+      id: i.id,
+      no: i.inspNo,
+      date: i.date,
+      ref: i.poNo,
+      party: i.supplierName || i.materialType || "",
+      // Item count is meaningless here — the grid is a fixed parameter list.
+      items: null,
+      status: "Inspected",
+      by: i.inspectedBy || i.createdByName || "",
     })),
   ].sort((a, b) => (a.date === b.date ? b.no - a.no : b.date.localeCompare(a.date)));
 
