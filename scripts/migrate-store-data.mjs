@@ -94,7 +94,8 @@ async function wipeTargetTables() {
 }
 
 async function copyCategories() {
-  const rows = (await store.query(`SELECT id, name, module FROM categories ORDER BY id`)).rows ?? [];
+  const q = await store.query(`SELECT id, name, module FROM categories ORDER BY id`);
+  const rows = Array.isArray(q) ? q : (q.rows ?? []);
   for (const r of rows) {
     await emp.query(
       `INSERT INTO categories (id, name, module) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
@@ -108,7 +109,8 @@ async function copyMachines() {
   // Older store DBs might not have the machines table yet — swallow that.
   let rows = [];
   try {
-    rows = (await store.query(`SELECT id, name, module FROM machines ORDER BY id`)).rows ?? [];
+    const q = await store.query(`SELECT id, name, module FROM machines ORDER BY id`);
+    rows = Array.isArray(q) ? q : (q.rows ?? []);
   } catch (e) {
     if (/relation .* does not exist/i.test(e.message)) return 0;
     throw e;
@@ -123,11 +125,12 @@ async function copyMachines() {
 }
 
 async function copyParts() {
-  const rows = (await store.query(`
+  const q = await store.query(`
     SELECT id, sku, name, category, module, machine, unit, qty, min_qty, description,
            image_url, deleted_at::text AS deleted_at
     FROM parts ORDER BY id
-  `)).rows ?? [];
+  `);
+  const rows = Array.isArray(q) ? q : (q.rows ?? []);
   for (const r of rows) {
     await emp.query(
       `INSERT INTO parts (id, sku, name, category, module, machine, unit, qty, min_qty, description, image_url, deleted_at)
@@ -141,10 +144,11 @@ async function copyParts() {
 }
 
 async function copyTransactions() {
-  const rows = (await store.query(`
+  const q = await store.query(`
     SELECT id, type, part_id, qty, date::text AS date, ref, notes, issued_to, purpose
     FROM transactions ORDER BY id
-  `)).rows ?? [];
+  `);
+  const rows = Array.isArray(q) ? q : (q.rows ?? []);
   for (const r of rows) {
     await emp.query(
       `INSERT INTO transactions (id, type, part_id, qty, date, ref, notes, issued_to, purpose)
