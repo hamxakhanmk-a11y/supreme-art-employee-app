@@ -351,12 +351,7 @@ body:not(.role-admin) .admin-only{display:none!important}
     </div>
 
     <!-- TOP BAR: module switcher + user info -->
-    <div class="top-bar no-print">
-      <div class="mod-switcher">
-        <button class="mod-pill active" id="mod-machinery" onclick="switchModule('machinery')"><i class="ti ti-tools"></i> Machinery &amp; Electrical</button>
-        <button class="mod-pill" id="mod-consumables" onclick="switchModule('consumables')"><i class="ti ti-droplet"></i> Inks &amp; Consumables</button>
-      </div>
-    </div>
+    <!-- Module switcher moved into the employee-app top nav; nothing here now. -->
 
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
@@ -832,7 +827,7 @@ let state = {
   user: null,
   users: [],
   emailConfigured: false,
-  module: localStorage.getItem('activeModule') || 'machinery',
+  module: (new URLSearchParams(location.search).get('module') === 'consumables' ? 'consumables' : 'machinery'),
   categories: [],
   machines: [],
   parts: [],
@@ -846,9 +841,7 @@ const MODULE_LABEL = {machinery:'Machinery & Electrical', consumables:'Inks & Co
 async function switchModule(m){
   if(state.module===m)return;
   state.module=m;
-  localStorage.setItem('activeModule',m);
-  document.getElementById('mod-machinery').classList.toggle('active',m==='machinery');
-  document.getElementById('mod-consumables').classList.toggle('active',m==='consumables');
+  // Internal buttons are gone — nav lives in the employee-app topbar now.
   const sub=document.querySelector('.logo-sub');if(sub)sub.textContent=MODULE_LABEL[m];
   await loadAll();
 }

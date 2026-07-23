@@ -109,7 +109,10 @@ function getSubNav(path: string, module: string): { href: string; label: string 
         { href: "/procurement/inspection", label: "Inspection" },
       ];
     case "store":
-      return [{ href: "/store", label: "Parts Store" }];
+      return [
+        { href: "/store/machinery",   label: "Machinery & Electrical" },
+        { href: "/store/consumables", label: "Inks & Consumables" },
+      ];
     case "users":
       return [
         { href: "/admin/users", label: "All Users" },
@@ -132,7 +135,7 @@ const MODULE_HOME: Record<string, string> = {
   purchase: "/purchase",
   station: "/station",
   procurement: "/procurement",
-  store: "/store",
+  store: "/store/machinery",
   users: "/admin/users",
 };
 
