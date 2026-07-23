@@ -86,7 +86,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 {openPos.map(p => <option key={p.id} value={p.id}>PO #{p.poNo}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
               </select>
             </Field>
-            <Field label="Inward gate pass No. *">
+            <Field label="Inward gate pass No *">
               <input value={gatePassNo} onChange={e => setGatePassNo(e.target.value)} className="auth-input"
                 required placeholder="e.g. 12001" />
             </Field>
@@ -126,7 +126,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
-          <thead><tr><th>Gate Pass No.</th><th>GRR #</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {rows.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs yet.</td></tr>

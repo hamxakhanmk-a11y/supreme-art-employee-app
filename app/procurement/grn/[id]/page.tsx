@@ -23,7 +23,7 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>
-              <tr><td>Inward gate pass No.:</td><td className="u">{g.gatePassNo || ""}</td></tr>
+              <tr><td>Inward gate pass No:</td><td className="u">{g.gatePassNo || ""}</td></tr>
               <tr><td>PO Ref No:</td><td className="u">{g.poNo ?? ""}</td></tr>
             </tbody>
           </table>
