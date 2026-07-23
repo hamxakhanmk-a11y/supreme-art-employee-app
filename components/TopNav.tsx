@@ -17,6 +17,7 @@ const MODULES_BASE: { key: string; label: string; module?: string; anyModule?: s
   { key: "purchase",   label: "Purchase",   module: "purchase" },
   { key: "station",    label: "Station",    module: "station" },
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
+  { key: "store",      label: "Store",      module: "store" },
   { key: "users",      label: "Users",      superadminOnly: true },
 ];
 
@@ -107,6 +108,8 @@ function getSubNav(path: string, module: string): { href: string; label: string 
         { href: "/procurement/grn", label: "GRN" },
         { href: "/procurement/inspection", label: "Inspection" },
       ];
+    case "store":
+      return [{ href: "/store", label: "Parts Store" }];
     case "users":
       return [
         { href: "/admin/users", label: "All Users" },
@@ -129,6 +132,7 @@ const MODULE_HOME: Record<string, string> = {
   purchase: "/purchase",
   station: "/station",
   procurement: "/procurement",
+  store: "/store",
   users: "/admin/users",
 };
 
@@ -140,6 +144,7 @@ function pathToModule(path: string): string {
   if (path.startsWith("/purchase")) return "purchase";
   if (path.startsWith("/station")) return "station";
   if (path.startsWith("/procurement")) return "procurement";
+  if (path.startsWith("/store")) return "store";
   if (path.startsWith("/attendance")) return "attendance";
   if (path.startsWith("/admin/")) return "users";
   // Legacy leave routes resolve to forms module.
