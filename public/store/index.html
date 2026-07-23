@@ -2295,17 +2295,11 @@ function applyModuleToUI(){
 }
 
 function renderUserBar(){
-  const bar=document.getElementById('user-bar');
-  // Apply / clear role class on <body> for CSS-based UI gating
-  document.body.classList.remove('role-admin','role-user','role-ceo');
-  if(!state.user){bar.style.display='none';return;}
-  document.body.classList.add('role-'+state.user.role);
-  document.getElementById('user-name').textContent=state.user.name;
-  const roleDisplay={admin:'Admin',machinery:'Machinery Engineer',consumables:'Consumables Staff',ceo:'CEO'}[state.user.role]||state.user.role;
-  document.getElementById('user-role').textContent=roleDisplay;
-  const initials=(state.user.name||'?').split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
-  document.getElementById('user-avatar').textContent=initials||'?';
-  bar.style.display='flex';
+  // The user bar DOM was removed after the merge — the employee-app topbar
+  // shows the current user. We still apply the role class on <body> so the
+  // .admin-only / .write-only CSS gating keeps working.
+  document.body.classList.remove('role-admin','role-user','role-ceo','role-machinery','role-consumables');
+  if(state.user && state.user.role) document.body.classList.add('role-'+state.user.role);
 }
 
 function showAuthScreen(mode){
@@ -2372,27 +2366,20 @@ function cleanUrl(){
 }
 
 async function initAuth(){
-  // If user landed via ?setup=TOKEN / ?reset=TOKEN / ?invite=TOKEN, show set-password screen
-  if(await initAuthFromUrl())return;
-  try{
-    const r=await fetch('/api/store/auth?action=me');
-    const data=await r.json();
-    state.emailConfigured=!!data.emailConfigured;
-    if(data.authenticated){
-      state.user=data.user;
-      hideAuthScreen();
-      renderUserBar();
-      applyModuleToUI();
-      await loadAll();
-    } else if(data.needsSetup){
-      showAuthScreen('setup');
-    } else {
-      showAuthScreen('login');
-    }
-  }catch(e){
-    showAuthScreen('login');
-    showAuthError('login','Could not reach the server. Please try again.');
-  }
+  // Auth is handled by the parent employee app — the store never shows its
+  // own login screen. We still fetch /api/store/auth?action=me to pick up
+  // the role (used for admin-only UI gating), but fall back to 'admin' if
+  // the request fails so the store always loads.
+  let user = { id: 0, name: '', email: '', role: 'admin' };
+  try {
+    const r = await fetch('/api/store/auth?action=me');
+    const data = await r.json();
+    if (data && data.authenticated && data.user) user = data.user;
+  } catch (_) { /* keep the fallback */ }
+  state.user = user;
+  hideAuthScreen();
+  applyModuleToUI();
+  await loadAll();
 }
 
 async function submitSetPassword(){
