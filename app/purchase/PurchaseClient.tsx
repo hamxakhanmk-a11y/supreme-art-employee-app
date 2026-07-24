@@ -210,6 +210,46 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
     }
   };
 
+  // Enter/adjust the value of a single item from the register (after receipt).
+  const editItemValue = async (r: PrRow, itemIndex: number) => {
+    const item = r.items[itemIndex];
+    if (!item) return;
+    const raw = window.prompt(`Value for "${item.itemName}" (PKR)\nLeave blank to clear.`,
+      item.value === null ? "" : String(item.value));
+    if (raw === null) return; // cancelled
+    const trimmed = raw.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value !== null && (!isFinite(value) || value < 0)) {
+      setError("Value must be a positive number.");
+      return;
+    }
+    setError(null);
+    try {
+      const res = await fetch(`/api/purchase/${r.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-item-value", itemIndex, value }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Save failed");
+      setRows(prev => prev.map(x => (x.id === r.id ? normalize(j) : x)));
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const editRemarks = async (r: PrRow) => {
+    const raw = window.prompt(`Remarks for PR #${r.prNo ?? "—"}`, r.remarks ?? "");
+    if (raw === null) return; // cancelled
+    setError(null);
+    try {
+      const res = await fetch(`/api/purchase/${r.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-remarks", remarks: raw }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Save failed");
+      setRows(prev => prev.map(x => (x.id === r.id ? normalize(j) : x)));
+    } catch (e: any) { setError(e.message); }
+  };
+
   const exportXlsx = async () => {
     const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "PO No", "Remarks"];
     // One spreadsheet line per item so multi-item PRs expand out fully.
@@ -314,10 +354,10 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
               <input type="date" value={draft.requiredDate} onChange={e => set({ requiredDate: e.target.value })} /></div>
           </div>
 
-          {/* ② Items */}
+          {/* ② Items — value is added from the register after receipt */}
           <div className="pr-section" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>② Items</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text3)" }}>Value is entered after the material is received.</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text3)" }}>Value, HOD/HR approvals and remarks are set from the register.</span>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table className="pr-item-form">
@@ -328,7 +368,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   <th style={{ minWidth: 150 }}>Category</th>
                   <th style={{ width: 90 }}>Quantity</th>
                   <th style={{ width: 120 }}>UoM</th>
-                  <th style={{ width: 120 }}>Value (PKR)</th>
                   <th style={{ width: 34 }}></th>
                 </tr>
               </thead>
@@ -350,7 +389,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                         {PR_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </td>
-                    <td><input type="number" value={it.value} onChange={e => setItem(idx, { value: e.target.value })} placeholder="after receipt" /></td>
                     <td style={{ textAlign: "center" }}>
                       <button type="button" onClick={() => removeItem(idx)} disabled={draft.items.length === 1}
                         title="Remove item" className="pr-item-x">✕</button>
@@ -362,21 +400,9 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
           </div>
           <button type="button" onClick={addItem} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add item</button>
 
-          {/* ③ Approvals & receipt */}
-          <div className="pr-section" style={{ marginTop: 16 }}>③ Approvals &amp; receipt</div>
+          {/* ③ Receipt & PO tracking */}
+          <div className="pr-section" style={{ marginTop: 16 }}>③ Receipt &amp; PO</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
-            <div><label className="form-label">HOD Approval <span style={{ color: "var(--text3)", fontWeight: 400 }}>(by requester)</span></label>
-              <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
-                <option value="">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Not Approved">Not Approved</option>
-              </select></div>
-            <div><label className="form-label">HR Approval</label>
-              <select value={draft.hrApproval} onChange={e => set({ hrApproval: e.target.value })}>
-                <option value="">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select></div>
             <div><label className="form-label">Received Date <span style={{ color: "var(--text3)", fontWeight: 400 }}>(Admin)</span></label>
               <input type="date" value={draft.receivedDate}
                 onChange={e => set({ receivedDate: e.target.value, receivedByAdmin: !!e.target.value })} /></div>
@@ -392,8 +418,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
               </select></div>
             <div><label className="form-label">PO No</label>
               <input value={draft.poNo} onChange={e => set({ poNo: e.target.value })} /></div>
-            <div style={{ gridColumn: "1 / -1" }}><label className="form-label">Remarks</label>
-              <input value={draft.remarks} onChange={e => set({ remarks: e.target.value })} /></div>
           </div>
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
@@ -439,7 +463,15 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                               <span style={{ color: "var(--text2)" }}> · {i.quantity ?? ""}{i.uom ? ` ${i.uom}` : ""}</span>
                             )}
                             {i.category && <span className="pr-cat">{i.category}</span>}
-                            {i.value != null && <span style={{ color: "var(--text3)" }}> · ₨{i.value.toLocaleString()}</span>}
+                            <button
+                              type="button"
+                              onClick={() => editItemValue(r, k)}
+                              className={`pr-val no-print ${i.value == null ? "pr-val-empty" : ""}`}
+                              title={i.value == null ? "Add value (after receipt)" : "Edit value"}
+                            >
+                              {i.value == null ? "＋ ₨" : `₨${i.value.toLocaleString()} ✎`}
+                            </button>
+                            {i.value != null && <span className="only-print" style={{ color: "var(--text3)" }}> · ₨{i.value.toLocaleString()}</span>}
                           </li>
                         ))}
                       </ul>
@@ -466,17 +498,18 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   <td style={{ fontSize: 12 }}>{r.poNo || ""}</td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
-                    <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 250 }}>
+                    <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 280 }}>
                       <button onClick={() => act(r, "hod-approve")} title="HOD approved"
-                        style={pillBtn("#15803D", r.hodApproval === "Approved")}>H✓</button>
+                        style={pillBtn("#15803D", r.hodApproval === "Approved")}>HOD ✓</button>
                       <button onClick={() => act(r, "hod-reject")} title="HOD not approved"
-                        style={pillBtn("#DC2626", r.hodApproval === "Not Approved")}>H✗</button>
+                        style={pillBtn("#DC2626", r.hodApproval === "Not Approved")}>HOD ✗</button>
                       <button onClick={() => act(r, "approve")} title="HR approve"
-                        style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR✓</button>
+                        style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR ✓</button>
                       <button onClick={() => act(r, "reject")} title="HR reject"
-                        style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR✗</button>
+                        style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR ✗</button>
                       <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
                         style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
+                      <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
                       <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
                       <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
                     </div>
@@ -506,11 +539,19 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         .pr-item-x { border: 1px solid var(--border); background: var(--bg); color: var(--danger);
           border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-weight: 700; }
         .pr-item-x:disabled { opacity: 0.3; cursor: not-allowed; }
+        .pr-val { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px;
+          font-size: 10.5px; font-weight: 700; cursor: pointer;
+          border: 1px solid #15803D; color: #15803D; background: #EAF3DE; }
+        .pr-val:hover { background: #15803D; color: #fff; }
+        .pr-val-empty { border-style: dashed; background: transparent; color: var(--text3); border-color: var(--border); }
+        .pr-val-empty:hover { background: var(--bg2); color: var(--text); }
+        .only-print { display: none; }
         @media print {
           @page { size: A4 landscape; margin: 6mm; }
           .pr-table { font-size: 8.5px; }
           .pr-table th, .pr-table td { padding: 2px 4px; }
           .pr-cat { display: none; }
+          .only-print { display: inline; }
         }
       `}</style>
     </div>

@@ -5,19 +5,69 @@ import { eq, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensurePurchaseColumns, buildPrFields } from "@/lib/purchaseServer";
+import { parsePrItems, prItemsTotal } from "@/lib/purchase";
 
 // PATCH /api/purchase/[id]  -> quick workflow action from the row buttons.
 //   { action: "hod-approve" | "hod-reject" | "approve" | "reject" | "received" }
+//   { action: "set-item-value", itemIndex, value }   // per-item cost, after receipt
+//   { action: "set-remarks", remarks }
 // hod-* is the requester's record of the HOD's decision; approve/reject is HR's;
-// received is the Admin's. All toggle: clicking an active action clears it.
+// received is the Admin's. Toggle actions clear when the state already matches.
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();
     const { id } = await ctx.params;
-    const { action } = await req.json();
+    const body = await req.json();
+    const action = body?.action;
     const col = purchaseRequisitions;
+    const rowId = parseInt(id);
+
+    // Per-item value and remarks need to read the current row (items JSON is
+    // opaque to CASE), so they take a second round-trip. The toggles below are
+    // still single-shot.
+    if (action === "set-item-value" || action === "set-remarks") {
+      const [current] = await db.select().from(col).where(eq(col.id, rowId));
+      if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+      if (action === "set-item-value") {
+        const idx = Number(body.itemIndex);
+        if (!Number.isInteger(idx) || idx < 0) {
+          return NextResponse.json({ error: "itemIndex is required" }, { status: 400 });
+        }
+        const items = parsePrItems(current);
+        if (idx >= items.length) return NextResponse.json({ error: "itemIndex out of range" }, { status: 400 });
+        const v = body.value === null || body.value === "" || body.value === undefined ? null : Number(body.value);
+        if (v !== null && (!isFinite(v) || v < 0)) {
+          return NextResponse.json({ error: "value must be a positive number" }, { status: 400 });
+        }
+        items[idx] = { ...items[idx], value: v };
+        const total = prItemsTotal(items);
+        const [updated] = await db.update(col).set({
+          items: JSON.stringify(items),
+          value: total === null ? null : Math.round(total),
+          updatedAt: new Date(),
+        }).where(eq(col.id, rowId)).returning();
+        await logActivity({
+          user: guard, action: "purchase.set-item-value",
+          summary: `PR #${updated.prNo ?? "—"} value set for "${items[idx].itemName}" — ${v === null ? "(cleared)" : `₨${v}`}`,
+        });
+        return NextResponse.json(updated);
+      }
+
+      // set-remarks
+      const remarks = typeof body.remarks === "string" ? body.remarks.trim() : "";
+      const [updated] = await db.update(col).set({
+        remarks: remarks || null,
+        updatedAt: new Date(),
+      }).where(eq(col.id, rowId)).returning();
+      await logActivity({
+        user: guard, action: "purchase.set-remarks",
+        summary: `PR #${updated.prNo ?? "—"} remarks updated`,
+      });
+      return NextResponse.json(updated);
+    }
 
     // Single round-trip: toggle in-place with a CASE on the current value.
     const patch =
@@ -34,7 +84,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
     const [updated] = await db.update(col)
       .set({ ...patch, updatedAt: new Date() })
-      .where(eq(col.id, parseInt(id))).returning();
+      .where(eq(col.id, rowId)).returning();
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const verb =
