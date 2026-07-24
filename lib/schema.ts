@@ -516,3 +516,53 @@ export const grns = pgTable("grns", {
   createdByName: varchar("created_by_name", { length: 120 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// =====================
+// PARTS STORE (spare-parts inventory)
+// Migrated from the standalone supreme-art-store-app. Column names match
+// the live store DB exactly so historical data restores 1:1.
+// Rows are scoped by `module` ('machinery' | 'consumables'); each module
+// has its own categories, machines, and parts.
+// =====================
+export const storeCategories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  module: text("module").notNull().default("machinery"),
+}, (t) => ({
+  moduleName: uniqueIndex("categories_module_name_key").on(t.module, t.name),
+}));
+
+export const storeMachines = pgTable("machines", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  module: text("module").notNull().default("machinery"),
+}, (t) => ({
+  moduleName: uniqueIndex("machines_module_name_key").on(t.module, t.name),
+}));
+
+export const storeParts = pgTable("parts", {
+  id: serial("id").primaryKey(),
+  sku: text("sku"),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  module: text("module").notNull().default("machinery"),
+  machine: text("machine").default(""),         // comma-separated machine names
+  unit: text("unit").notNull().default("pcs"),
+  qty: integer("qty").notNull().default(0),
+  minQty: integer("min_qty").notNull().default(0),
+  description: text("description").default(""),
+  imageUrl: text("image_url"),                  // Vercel Blob URL
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),  // soft delete (7-day trash)
+});
+
+export const storeTransactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 4 }).notNull(),      // 'in' | 'out'
+  partId: integer("part_id").notNull().references(() => storeParts.id, { onDelete: "cascade" }),
+  qty: integer("qty").notNull(),
+  date: date("date").notNull(),
+  ref: text("ref").default(""),
+  notes: text("notes").default(""),
+  issuedTo: text("issued_to").default(""),
+  purpose: text("purpose").default(""),
+});

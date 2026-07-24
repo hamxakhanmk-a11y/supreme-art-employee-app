@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import TopNav from "@/components/TopNav";
+import Sidebar from "@/components/Sidebar";
 import PrintWatermark from "@/components/PrintWatermark";
 import { MeProvider } from "@/components/MeProvider";
 
 export const metadata: Metadata = {
-  title: "Supreme Art — Employee Management",
-  description: "Employee records and onboarding",
+  title: "Supreme Art ERP",
+  description: "Supreme Art enterprise portal — HR, forms, reports, salary, KPI, procurement, station, and store.",
 };
 
 export default function RootLayout({
@@ -23,9 +24,12 @@ export default function RootLayout({
         <MeProvider>
           <PrintWatermark />
           <TopNav />
-          <main style={{ padding: "1.75rem", minHeight: "calc(100vh - 100px)", maxWidth: 1400, margin: "0 auto" }}>
-            {children}
-          </main>
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            <Sidebar />
+            <main style={{ flex: 1, minWidth: 0, padding: "1.75rem", minHeight: "calc(100vh - 56px)" }}>
+              {children}
+            </main>
+          </div>
         </MeProvider>
       </body>
     </html>

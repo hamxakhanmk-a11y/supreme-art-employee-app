@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parts Store — Stock Management</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root{
+  --primary:#8C2326;
+  --primary-dark:#6B1A1C;
+  --primary-soft:#fbefef;
+  --primary-glow:rgba(140,35,38,0.10);
+  --accent:#B8862A;
+  --page-bg:#f4ede2;
+  --surface:#ffffff;
+  --surface-hover:#fbf6ee;
+  --border:#e8e1d3;
+  --border-soft:#f1ead9;
+  --text:#1f1a17;
+  --muted:#8a7f73;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);background:var(--page-bg);height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}
+.sidebar{width:222px;min-width:222px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:14px 12px;gap:4px}
+.logo{padding:1.1rem 1.2rem 1rem;border-bottom:1px solid var(--border);margin-bottom:0.5rem;background:transparent}
+.logo-title{font-size:17px;font-weight:700;color:var(--primary);letter-spacing:0.2px}
+.logo-sub{font-size:10.5px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:1.2px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13.5px;font-weight:600;letter-spacing:0.1px;cursor:pointer;color:var(--text);transition:all 0.15s;border-radius:999px;margin:2px 0}
+.nav-item:not(.active):hover{background:rgba(140,35,38,0.06);color:var(--primary)}
+.nav-item.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;font-weight:700;box-shadow:0 3px 10px rgba(140,35,38,0.25)}
+.nav-item i{font-size:17px}
+.main{flex:1;overflow-y:auto;padding:0 1.75rem 1.75rem;background:var(--page-bg)}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:8px}
+.page-title{font-size:20px;font-weight:600}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid #d0d0cc;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;font-family:inherit}
+.btn:hover{background:#fbf6ee}
+.btn-primary{background:#8C2326;color:#fff;border-color:#8C2326}
+.btn-primary:hover{background:#6B1A1C}
+.btn-success{background:#2d6a10;color:#fff;border-color:#2d6a10}
+.btn-success:hover{background:#1e4d09}
+.btn-excel{background:#1D6F42;color:#fff;border-color:#1D6F42}
+.btn-excel:hover{background:#155232}
+.btn-print{background:#444;color:#fff;border-color:#444}
+.btn-print:hover{background:#222}
+.btn-danger-soft{background:#fff;color:#A32D2D;border-color:#e8e1d3}
+.btn-danger-soft:hover{background:#fff5f5}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:5px 8px;font-size:12px;min-width:28px;justify-content:center}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:1.5rem}
+.stat-card{background:#fff;border-radius:10px;padding:1.1rem;border:1px solid #e8e1d3}
+.stat-label{font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
+.stat-value{font-size:26px;font-weight:700}
+.stat-sub{font-size:11px;color:#aaa;margin-top:2px}
+.c-green{color:#2d6a10}.c-amber{color:#854F0B}.c-red{color:#A32D2D}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;font-weight:600;color:#888;padding:8px 12px;border-bottom:1px solid #e8e1d3;text-transform:uppercase;letter-spacing:0.5px;background:#fafafa}
+td{padding:10px 12px;border-bottom:1px solid #f1ead9;color:#1a1a1a;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-in{background:#eaf3de;color:#2d6a10}
+.badge-out{background:#faece7;color:#993C1D}
+.badge-low{background:#faeeda;color:#854F0B}
+.badge-ok{background:#eaf3de;color:#2d6a10}
+.badge-critical{background:#fcebeb;color:#A32D2D}
+.card{background:#fff;border:1px solid #e8e1d3;border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;border:1px solid #e8e1d3;padding:1.75rem;width:460px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.14)}
+.modal-wide{width:700px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:1rem}
+.form-label{font-size:12px;color:#555;margin-bottom:5px;display:block;font-weight:600;text-transform:uppercase;letter-spacing:0.3px}
+input,select,textarea{width:100%;padding:9px 12px;border-radius:8px;border:1px solid #d8d8d4;background:#fff;color:#1a1a1a;font-size:13px;font-family:inherit;transition:border 0.15s}
+input[type=checkbox]{width:16px;height:16px;padding:0;cursor:pointer;accent-color:#8C2326}
+input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px rgba(140,35,38,0.12)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #f1ead9}
+.search-bar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.search-bar input[type=text]{max-width:240px}
+.empty{text-align:center;padding:3rem;color:#aaa;font-size:13px}
+.empty i{display:block;font-size:32px;margin-bottom:8px;opacity:0.4}
+.divider{height:1px;background:#f1ead9;margin:0.5rem 1rem}
+.section-title{font-size:13px;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:6px;color:#555}
+.qty-positive{color:#2d6a10;font-weight:600}
+.qty-negative{color:#993C1D;font-weight:600}
+.mod-switcher{display:inline-flex;background:#fff;border:1px solid #e8e1d3;border-radius:999px;padding:4px;gap:2px;margin-bottom:1.25rem}
+.mod-pill{padding:8px 18px;border-radius:999px;border:none;background:transparent;color:#555;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s}
+.mod-pill:hover{color:#1a1a1a}
+.mod-pill.active{background:#1a1a1a;color:#fff}
+.mod-pill i{font-size:15px}
+.sel-controls{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.preset-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;padding:8px 10px;background:#fbf6ee;border-radius:8px;border:1px solid #e8e1d3}
+.preset-row .preset-label{font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-right:4px}
+.preset-btn{padding:5px 11px;border-radius:999px;border:1px solid #d0d0cc;background:#fff;color:#333;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
+.preset-btn:hover{background:#8C2326;color:#fff;border-color:#8C2326}
+.multi-box{border:1px solid #d8d8d4;border-radius:8px;padding:8px 10px;max-height:140px;overflow-y:auto;background:#fff}
+.multi-box .multi-row{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:13px;cursor:pointer;border-radius:4px}
+.multi-box .multi-row:hover{background:#fbf6ee}
+.multi-box .multi-row input{width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:#8C2326;margin:0}
+.multi-box .multi-row label{cursor:pointer;flex:1}
+.multi-empty{color:#aaa;font-size:12px;text-align:center;padding:8px 0}
+.multi-add{margin-top:6px;font-size:12px;color:#8C2326;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:500}
+.multi-add:hover{text-decoration:underline}
+.machine-chip{display:inline-block;padding:2px 8px;margin:1px 2px 1px 0;border-radius:12px;background:#fbefef;color:#8C2326;font-size:11px;font-weight:500}
+.combo{position:relative}
+.combo-input-wrap{position:relative}
+.combo-input-wrap .combo-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#aaa;font-size:16px;pointer-events:none}
+.combo-input-wrap input{padding-right:32px}
+.combo-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #d8d8d4;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.10);max-height:260px;overflow-y:auto;z-index:50}
+.combo-dropdown.open{display:block}
+.combo-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid #fbf6ee;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.combo-item:last-child{border-bottom:none}
+.combo-item:hover,.combo-item.active{background:#fbefef}
+.combo-main{min-width:0;flex:1}
+.combo-name{font-size:13px;font-weight:600;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combo-sku{font-family:monospace;color:#8C2326;font-size:11px;margin-right:6px}
+.combo-sub{font-size:11px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combo-qty{font-size:12px;color:#2d6a10;font-weight:600;white-space:nowrap;flex-shrink:0}
+.combo-qty.low{color:#854F0B}.combo-qty.out{color:#A32D2D}
+.combo-empty{padding:18px;text-align:center;color:#aaa;font-size:12px}
+.bulk-info{font-size:12px;color:#888;font-weight:500}
+.btn-danger-strong{background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600;box-shadow:0 0 0 1px #A32D2D inset}
+.btn-danger-strong:hover{background:#7d1f1f;border-color:#7d1f1f}
+.btn-danger-strong i{font-size:14px}
+.part-sku{color:#8C2326;font-family:monospace;font-weight:600;font-size:12px;margin-right:4px}
+/* ===== Branded dialog system (replaces native alert/confirm/prompt) ===== */
+.app-dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:2000;opacity:0;transition:opacity 0.15s}
+.app-dialog-overlay.open{opacity:1}
+.app-dialog{background:#fff;border-radius:14px;padding:1.75rem 1.5rem 1.25rem;width:440px;max-width:92vw;box-shadow:0 12px 48px rgba(0,0,0,0.20);text-align:center;transform:scale(0.94) translateY(6px);transition:transform 0.18s cubic-bezier(0.34,1.56,0.64,1);font-family:inherit}
+.app-dialog-overlay.open .app-dialog{transform:scale(1) translateY(0)}
+.app-dialog-icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.app-dialog-icon i{font-size:30px}
+.app-dialog-icon-danger{background:#fcebeb;color:#A32D2D}
+.app-dialog-icon-confirm{background:#fdf4e3;color:#854F0B}
+.app-dialog-icon-warn{background:#fdf4e3;color:#854F0B}
+.app-dialog-icon-success{background:#eaf3de;color:#2d6a10}
+.app-dialog-icon-error{background:#fcebeb;color:#A32D2D}
+.app-dialog-icon-info{background:#fbefef;color:#8C2326}
+.app-dialog-icon-prompt{background:#fbefef;color:#8C2326}
+.app-dialog-title{font-size:17px;font-weight:600;color:#1a1a1a;margin-bottom:8px;line-height:1.3}
+.app-dialog-message{font-size:13px;color:#555;line-height:1.55;white-space:pre-wrap;margin-bottom:16px;text-align:left}
+.app-dialog-input{margin:0 0 14px}
+.app-dialog-actions{display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #f1ead9;padding-top:14px;margin-top:6px}
+.app-dialog-actions .btn{padding:8px 18px;font-size:13px}
+.app-dialog-confirm-danger{background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600}
+.app-dialog-confirm-danger:hover{background:#7d1f1f;border-color:#7d1f1f}
+.app-dialog-confirm-warn{background:#A36B17;color:#fff;border-color:#A36B17;font-weight:600}
+.app-dialog-confirm-warn:hover{background:#7d4f0f;border-color:#7d4f0f}
+/* ===== Auth screen + user bar ===== */
+.auth-screen{position:fixed;inset:0;background:#fbf6ee;display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem}
+.auth-card{background:#fff;border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,0.10);padding:2rem 1.75rem;width:400px;max-width:96vw}
+.auth-logo{text-align:center;margin-bottom:1.5rem}
+.auth-logo-img{display:block;margin:0 auto 10px;max-width:240px;max-height:110px;width:auto;height:auto;object-fit:contain}
+.auth-logo-title{font-size:16px;font-weight:600;color:#1a1a1a}
+.auth-logo-sub{font-size:12px;color:#888;margin-top:2px}
+.auth-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:6px}
+.auth-sub{font-size:13px;color:#666;text-align:center;margin-bottom:1.5rem;line-height:1.5}
+.auth-error{background:#fcebeb;color:#A32D2D;border:1px solid #f5cccc;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:1rem;display:none}
+.auth-error.show{display:block}
+.auth-form .form-group{margin-bottom:0.9rem}
+.auth-submit{width:100%;padding:11px;font-size:13px;font-weight:600;margin-top:6px}
+.top-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:1.25rem;flex-wrap:wrap}
+.top-bar .mod-switcher{margin-bottom:0}
+.user-bar{display:flex;align-items:center;gap:12px}
+.user-info{text-align:right;line-height:1.25}
+.user-name{font-size:13px;font-weight:600;color:#1a1a1a}
+.user-role{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;display:block}
+.user-avatar{width:36px;height:36px;border-radius:50%;background:#8C2326;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
+/* Role gates */
+body.role-ceo .write-only{display:none!important}
+body:not(.role-admin) .admin-only{display:none!important}
+.role-tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.role-tag-admin{background:#fbefef;color:#8C2326}
+.role-tag-user{background:#eaf3de;color:#2d6a10}
+.role-tag-machinery{background:#fbefef;color:#8C2326}
+.role-tag-consumables{background:#e6f4f1;color:#0d6b5e}
+.role-tag-ceo{background:#fdf4e3;color:#854F0B}
+.user-row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.user-row-actions select{padding:5px 8px;font-size:12px;width:auto;min-width:80px}
+.invite-link-box{background:#fbf6ee;border:1px solid #e8e1d3;border-radius:8px;padding:10px;font-family:monospace;font-size:11px;word-break:break-all;color:#8C2326;margin:8px 0 14px;line-height:1.5}
+.sel-count{font-size:12px;color:#888;margin-left:auto;font-weight:600}
+.sel-table{width:100%;border-collapse:collapse;font-size:12px}
+.sel-table th{background:#fbf6ee;padding:7px 10px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;border-bottom:1px solid #e8e1d3;text-align:left}
+.sel-table td{padding:7px 10px;border-bottom:1px solid #fbf6ee;vertical-align:middle}
+.sel-table tr:hover td{background:#fafaf8}
+/* ===== Image upload (parts) ===== */
+.img-uploader{display:flex;gap:12px;align-items:flex-start}
+.img-preview{width:110px;height:110px;border:2px dashed #d8cdb5;border-radius:10px;background:#fbf6ee;display:flex;align-items:center;justify-content:center;color:#b3a489;font-size:11px;overflow:hidden;flex-shrink:0;cursor:pointer;text-align:center;padding:6px}
+.img-preview:hover{border-color:var(--primary);color:var(--primary)}
+.img-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.img-controls{flex:1;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#666}
+.img-controls .img-hint{font-size:11px;color:#999}
+.img-controls input[type=file]{display:none}
+.img-controls .btn-sm{align-self:flex-start}
+.img-status{font-size:11px;color:var(--primary);font-weight:600;min-height:14px}
+/* ===== Inventory thumbnail ===== */
+.inv-name-cell{display:flex;align-items:center;gap:10px}
+.inv-thumb{width:44px;height:44px;border-radius:8px;background:#fbf6ee;border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbac90;font-size:18px;cursor:pointer;transition:transform 0.15s}
+.inv-thumb:hover{transform:scale(1.05);border-color:var(--primary)}
+.inv-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+/* ===== Image lightbox ===== */
+.img-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.78);display:none;align-items:center;justify-content:center;z-index:3000;padding:2rem;cursor:zoom-out}
+.img-lightbox.open{display:flex}
+.img-lightbox img{max-width:92vw;max-height:88vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.img-lightbox-close{position:absolute;top:20px;right:24px;color:#fff;font-size:30px;background:rgba(0,0,0,0.4);width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#d6cdb9;border-radius:3px}
+/* ===== Brand header (top strip across main) ===== */
+.brand-header{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:14px 0 12px;margin:0 0 1.1rem;border-bottom:1px solid var(--border);background:transparent;flex-wrap:wrap}
+.brand-name{font-size:15px;font-weight:700;color:var(--primary);letter-spacing:0.2px}
+.brand-sub{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-top:3px}
+.brand-date{text-align:right;line-height:1.25;color:var(--muted)}
+.brand-date-day{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--primary)}
+.brand-date-full{font-size:13px;font-weight:600;color:var(--text);margin-top:2px}
+/* ===== Hero banner (matches HR Portal slim banner) ===== */
+.hero{position:relative;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;border-radius:16px;padding:18px 26px;margin-bottom:1.25rem;overflow:hidden;box-shadow:0 10px 28px rgba(140,35,38,0.20);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;min-height:130px}
+.hero::before{content:"";position:absolute;right:-50px;top:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none}
+.hero-content{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;flex:1;min-width:0}
+.hero-greet{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;opacity:0.95;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+.hero-btn{padding:9px 18px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-family:inherit;transition:all 0.15s}
+.hero-btn-primary{background:#fff;color:var(--primary)}
+.hero-btn-primary:hover{background:#fdf4f4;transform:translateY(-1px)}
+.hero-btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.50)}
+.hero-btn-ghost:hover{background:rgba(255,255,255,0.12)}
+.hero-mark{position:relative;z-index:1;display:flex;align-items:center;flex-shrink:0}
+.hero-logo-img{height:84px;width:auto;object-fit:contain;display:block;filter:brightness(0) invert(1)}
+@media (max-width:680px){.hero-mark{display:none}.hero{padding:14px 18px}}
+/* ===== Stat cards — HR-style with icon tile ===== */
+.stats-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.stat-card{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:14px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(60,40,15,0.04);transition:transform 0.18s,box-shadow 0.18s;overflow:hidden}
+.stat-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--card-accent,var(--primary));border-radius:4px 0 0 4px}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(60,40,15,0.08)}
+.stat-main{flex:1;min-width:0}
+.stat-label{font-size:10.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.stat-value{font-size:30px;font-weight:800;letter-spacing:-0.5px;line-height:1;color:var(--card-accent,var(--text))}
+.stat-sub{font-size:11.5px;color:var(--muted);margin-top:6px;font-weight:500}
+.stat-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--card-icon-bg,var(--primary-soft));color:var(--card-accent,var(--primary));flex-shrink:0}
+.stat-card.tone-red{--card-accent:#A32D2D;--card-icon-bg:#fcebeb}
+.stat-card.tone-green{--card-accent:#2d6a10;--card-icon-bg:#eaf3de}
+.stat-card.tone-amber{--card-accent:#854F0B;--card-icon-bg:#fdf4e3}
+.stat-card.tone-blue{--card-accent:#185FA5;--card-icon-bg:#eef2f8}
+.stat-card.tone-primary{--card-accent:#8C2326;--card-icon-bg:#fbefef}
+/* ===== Section cards & headings ===== */
+.card{border-radius:14px;box-shadow:0 2px 10px rgba(60,40,15,0.04)}
+.section-title{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--primary);font-weight:700}
+.section-title i{font-size:16px}
+.page-title{letter-spacing:-0.3px}
+.page-title::before{content:"";display:inline-block;width:4px;height:20px;background:var(--primary);border-radius:3px;vertical-align:-3px;margin-right:10px}
+/* ===== Buttons polish ===== */
+.btn-primary{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border-color:var(--primary-dark);box-shadow:0 4px 12px rgba(140,35,38,0.22)}
+.btn-primary:hover{background:linear-gradient(135deg,var(--primary-dark) 0%,#530F11 100%);box-shadow:0 6px 16px rgba(140,35,38,0.32)}
+/* ===== Module pill switcher tweak ===== */
+.mod-pill.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;box-shadow:0 3px 10px rgba(140,35,38,0.25)}
+/* ===== Top bar spacing now that brand-header sits above ===== */
+.top-bar{margin-top:0}
+@media print{
+  .brand-header,.hero{display:none!important}
+}
+@media print{
+  body{background:#fff;overflow:auto;height:auto}
+  .app{display:block;height:auto}
+  .sidebar,.no-print{display:none!important}
+  .main{overflow:visible;padding:0;background:#fff}
+  .page{display:none!important}
+  .card{border:none;border-radius:0;padding:0}
+  table{font-size:11px}
+  th,td{padding:6px 8px}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN (shown until user is signed in) -->
+<div class="auth-screen" id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="/logo.png?v=3" alt="Supreme Art (Pvt) Ltd." class="auth-logo-img">
+      <div class="auth-logo-title">Parts Store</div>
+      <div class="auth-logo-sub">Stock Management System</div>
+    </div>
+
+    <!-- SETUP form (first run) -->
+    <form class="auth-form" id="auth-setup-form" style="display:none" onsubmit="event.preventDefault();submitSetup()">
+      <div class="auth-title">Set up your account</div>
+      <div class="auth-sub">No users exist yet. Create the first admin to get started.</div>
+      <div class="auth-error" id="setup-error"></div>
+      <div class="form-group"><label class="form-label">Your name *</label><input id="setup-name" placeholder="e.g. Muhammad Hamza" required></div>
+      <div class="form-group"><label class="form-label">Email *</label><input id="setup-email" type="email" placeholder="you@example.com" required></div>
+      <div class="form-group"><label class="form-label">Password *</label><input id="setup-pw" type="password" placeholder="At least 8 characters" required minlength="8"></div>
+      <div class="form-group"><label class="form-label">Confirm password *</label><input id="setup-pw2" type="password" placeholder="Repeat password" required minlength="8"></div>
+      <button type="submit" class="btn btn-primary auth-submit">Create Admin Account</button>
+    </form>
+
+    <!-- SET PASSWORD form (invited / password-reset) -->
+    <form class="auth-form" id="auth-setpw-form" style="display:none" onsubmit="event.preventDefault();submitSetPassword()">
+      <div class="auth-title" id="setpw-title">Set your password</div>
+      <div class="auth-sub" id="setpw-sub">Welcome! Choose a password to finish setting up your account.</div>
+      <div class="auth-error" id="setpw-error"></div>
+      <div class="form-group"><label class="form-label">Email</label><input id="setpw-email" type="email" disabled></div>
+      <div class="form-group"><label class="form-label">New password *</label><input id="setpw-pw" type="password" placeholder="At least 8 characters" required minlength="8"></div>
+      <div class="form-group"><label class="form-label">Confirm password *</label><input id="setpw-pw2" type="password" placeholder="Repeat password" required minlength="8"></div>
+      <button type="submit" class="btn btn-primary auth-submit">Save Password &amp; Sign In</button>
+    </form>
+
+    <!-- LOGIN form (returning users) -->
+    <form class="auth-form" id="auth-login-form" style="display:none" onsubmit="event.preventDefault();submitLogin()">
+      <div class="auth-title">Sign in</div>
+      <div class="auth-sub">Welcome back. Enter your credentials to continue.</div>
+      <div class="auth-error" id="login-error"></div>
+      <div class="form-group"><label class="form-label">Email *</label><input id="login-email" type="email" placeholder="you@example.com" required></div>
+      <div class="form-group"><label class="form-label">Password *</label><input id="login-pw" type="password" placeholder="Your password" required></div>
+      <button type="submit" class="btn btn-primary auth-submit">Sign In</button>
+      <div style="text-align:center;margin-top:14px;font-size:12px"><a href="#" onclick="event.preventDefault();showForgotPassword()" style="color:#8C2326;text-decoration:none">Forgot your password?</a></div>
+    </form>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+    <div class="nav-item" onclick="showPage('inventory',this)"><i class="ti ti-package"></i> Inventory</div>
+    <div class="nav-item" onclick="showPage('stockin',this)"><i class="ti ti-arrow-bar-to-down"></i> Stock In</div>
+    <div class="nav-item" onclick="showPage('stockout',this)"><i class="ti ti-arrow-bar-up"></i> Stock Out</div>
+    <div class="nav-item" onclick="showPage('issuance',this)"><i class="ti ti-clipboard-list"></i> Issuance Log</div>
+    <div class="nav-item" onclick="showPage('activity',this)"><i class="ti ti-history"></i> Activity Log</div>
+    <div class="divider"></div>
+    <div class="nav-item" onclick="showPage('categories',this)"><i class="ti ti-tag"></i> Categories</div>
+    <div class="nav-item" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
+    <div class="nav-item" onclick="showPage('trash',this)"><i class="ti ti-trash"></i> Trash</div>
+  </div>
+
+  <div class="main">
+
+    <!-- BRAND HEADER (date strip; sidebar already shows the logo + name) -->
+    <div class="brand-header no-print">
+      <div class="brand-date">
+        <div class="brand-date-day" id="brand-date-day">—</div>
+        <div class="brand-date-full" id="brand-date-full">—</div>
+      </div>
+    </div>
+
+    <!-- TOP BAR: module switcher + user info -->
+    <!-- Module switcher moved into the employee-app top nav; nothing here now. -->
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <span style="font-size:12px;color:var(--muted)" id="dash-date"></span>
+      </div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="card">
+        <div class="section-title"><i class="ti ti-alert-triangle" style="color:#BA7517"></i> Low Stock Alerts</div>
+        <div id="low-stock-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><i class="ti ti-history"></i> Recent Transactions</div>
+        <div id="recent-txns"></div>
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="page" id="page-inventory">
+      <div class="page-header">
+        <div class="page-title">Inventory</div>
+        <div class="header-actions no-print">
+          <button class="btn btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
+          <button class="btn btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
+        </div>
+      </div>
+      <div class="search-bar no-print">
+        <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
+        <select id="inv-cat-filter" onchange="renderInventory()" style="width:170px"></select>
+        <select id="inv-machine-filter" onchange="renderInventory()" style="width:170px"></select>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th>SKU / Part No.</th><th>Part Name</th><th>Category</th><th>Machine</th><th>Unit</th><th>Qty on Hand</th><th>Min Qty</th><th>Status</th><th class="no-print" style="width:110px">Actions</th></tr></thead>
+          <tbody id="inv-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STOCK IN -->
+    <div class="page" id="page-stockin">
+      <div class="page-header">
+        <div class="page-title">Stock In</div>
+        <div class="header-actions no-print">
+          <button class="btn btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
+          <button class="btn btn-success write-only" onclick="openModal('addIn')"><i class="ti ti-plus"></i> Record Stock In</button>
+        </div>
+      </div>
+      <div class="search-bar no-print">
+        <input type="text" placeholder="Search by part, supplier, notes..." id="in-search" oninput="renderStockIn()">
+        <span style="font-size:12px;color:#666">From</span>
+        <input type="date" id="in-date-from" onchange="renderStockIn()" style="width:150px">
+        <span style="font-size:12px;color:#666">To</span>
+        <input type="date" id="in-date-to" onchange="renderStockIn()" style="width:150px">
+        <button class="btn btn-sm" onclick="clearLogFilters('in')">Clear</button>
+        <span class="bulk-info" id="in-bulk-info" style="margin-left:auto"></span>
+        <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
+        <button class="btn btn-sm btn-danger-strong write-only" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>Date</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Supplier / Ref</th><th>Notes</th><th class="no-print" style="width:60px"></th></tr></thead>
+          <tbody id="stockin-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STOCK OUT -->
+    <div class="page" id="page-stockout">
+      <div class="page-header">
+        <div class="page-title">Stock Out</div>
+        <div class="header-actions no-print">
+          <button class="btn btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
+          <button class="btn btn-danger-soft write-only" onclick="openModal('addOut')"><i class="ti ti-plus"></i> Record Stock Out</button>
+        </div>
+      </div>
+      <div class="search-bar no-print">
+        <input type="text" placeholder="Search by part, issued to, purpose..." id="out-search" oninput="renderStockOut()">
+        <span style="font-size:12px;color:#666">From</span>
+        <input type="date" id="out-date-from" onchange="renderStockOut()" style="width:150px">
+        <span style="font-size:12px;color:#666">To</span>
+        <input type="date" id="out-date-to" onchange="renderStockOut()" style="width:150px">
+        <button class="btn btn-sm" onclick="clearLogFilters('out')">Clear</button>
+        <span class="bulk-info" id="out-bulk-info" style="margin-left:auto"></span>
+        <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
+        <button class="btn btn-sm btn-danger-strong write-only" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>Date</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th class="no-print" style="width:60px"></th></tr></thead>
+          <tbody id="stockout-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ISSUANCE LOG -->
+    <div class="page" id="page-issuance">
+      <div class="page-header">
+        <div class="page-title">Issuance Log</div>
+        <div class="header-actions no-print">
+          <button class="btn btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
+        </div>
+      </div>
+      <div class="search-bar no-print">
+        <input type="text" placeholder="Search by part, issued to..." id="iss-search" oninput="renderIssuance()">
+        <span style="font-size:12px;color:#666">From</span>
+        <input type="date" id="iss-date-from" onchange="renderIssuance()" style="width:150px">
+        <span style="font-size:12px;color:#666">To</span>
+        <input type="date" id="iss-date-to" onchange="renderIssuance()" style="width:150px">
+        <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
+        <span class="bulk-info" id="iss-bulk-info" style="margin-left:auto"></span>
+        <button class="btn btn-sm btn-danger-strong write-only" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
+          <tbody id="issuance-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="page" id="page-categories">
+      <div class="page-header">
+        <div class="page-title">Categories</div>
+        <button class="btn btn-primary write-only" onclick="openModal('addCat')"><i class="ti ti-plus"></i> Add Category</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>Category Name</th><th>Parts Count</th><th style="width:80px">Actions</th></tr></thead>
+          <tbody id="cat-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MACHINES -->
+    <div class="page" id="page-machines">
+      <div class="page-header">
+        <div class="page-title">Machines / Equipment</div>
+        <button class="btn btn-primary write-only" onclick="openModal('addMachine')"><i class="ti ti-plus"></i> Add Machine</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>Machine Name</th><th>Parts Count</th><th style="width:80px">Actions</th></tr></thead>
+          <tbody id="machine-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="page" id="page-activity">
+      <div class="page-header">
+        <div class="page-title">Activity Log</div>
+        <span style="font-size:12px;color:#888">Tracks deletions, qty edits, and user management actions.</span>
+      </div>
+      <div class="search-bar no-print">
+        <select id="act-user-filter" onchange="renderActivity()" style="width:220px"></select>
+        <button class="btn btn-sm" onclick="document.getElementById('act-user-filter').value='';renderActivity()">Clear</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th style="width:160px">When</th><th style="width:130px">Action</th><th style="width:170px">By</th><th>Details</th></tr></thead>
+          <tbody id="activity-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS (admin-only) -->
+    <div class="page admin-only" id="page-users">
+      <div class="page-header">
+        <div class="page-title">Authorized Users</div>
+        <button class="btn btn-primary" onclick="openInviteUserModal()"><i class="ti ti-plus"></i> Invite User</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Invited By</th><th>Last Login</th><th style="width:240px">Actions</th></tr></thead>
+          <tbody id="users-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRASH -->
+    <div class="page" id="page-trash">
+      <div class="page-header">
+        <div class="page-title">Trash</div>
+        <span style="font-size:12px;color:#888">Deleted parts are kept for 7 days, then permanently removed.</span>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>SKU / Part No.</th><th>Part Name</th><th>Category</th><th>Qty</th><th>Deleted</th><th>Auto-deletes</th><th style="width:180px">Actions</th></tr></thead>
+          <tbody id="trash-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== DATA MODALS ===== -->
+<div class="modal-overlay" id="modal-addPart">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-package"></i> Add New Part</div>
+    <div class="form-group">
+      <label class="form-label">Photo</label>
+      <div class="img-uploader">
+        <div class="img-preview" id="f-part-img-preview" onclick="document.getElementById('f-part-img-file').click()">
+          <span><i class="ti ti-camera" style="font-size:22px;display:block;margin-bottom:4px"></i>Click to add photo</span>
+        </div>
+        <div class="img-controls">
+          <input type="file" id="f-part-img-file" accept="image/*" onchange="handleImagePick('add',this.files[0])">
+          <button type="button" class="btn btn-sm" onclick="document.getElementById('f-part-img-file').click()"><i class="ti ti-upload"></i> Choose photo</button>
+          <button type="button" class="btn btn-sm" id="f-part-img-clear" style="display:none" onclick="clearImagePick('add')"><i class="ti ti-x"></i> Remove</button>
+          <div class="img-hint">JPG / PNG / WEBP — auto-resized to 1200 px, ~5 MB max.</div>
+          <div class="img-status" id="f-part-img-status"></div>
+          <input type="hidden" id="f-part-img-url">
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">SKU / Part No.</label><input id="f-part-sku" placeholder="e.g. BRG-6204"></div>
+    <div class="form-group"><label class="form-label">Part Name *</label><input id="f-part-name" placeholder="e.g. Bearing 6204"></div>
+    <div class="form-group"><label class="form-label">Category *</label><select id="f-part-cat"></select></div>
+    <div class="form-group">
+      <label class="form-label">Machine / Equipment <span style="color:#aaa;font-weight:400;text-transform:none">(select one or more)</span></label>
+      <div class="multi-box" id="f-part-machine"></div>
+      <span class="multi-add" onclick="addMachineInline('f-part-machine')"><i class="ti ti-plus"></i> Add new machine</span>
+    </div>
+    <div class="form-group"><label class="form-label">Unit of Measure</label>
+      <select id="f-part-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Opening Qty</label><input id="f-part-qty" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Min Qty (alert)</label><input id="f-part-min" type="number" min="0" placeholder="5"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Description / Notes</label><input id="f-part-desc" placeholder="Optional description"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addPart')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePart()">Save Part</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addIn">
+  <div class="modal">
+    <div class="modal-title" style="color:#2d6a10"><i class="ti ti-arrow-bar-to-down"></i> Record Stock In</div>
+    <div class="form-group">
+      <label class="form-label">Part *</label>
+      <div class="combo" id="f-in-part-combo">
+        <div class="combo-input-wrap">
+          <input type="text" id="f-in-part-input" placeholder="Click to choose, or type to search..." autocomplete="off">
+          <i class="ti ti-chevron-down combo-icon"></i>
+        </div>
+        <input type="hidden" id="f-in-part">
+        <div class="combo-dropdown" id="f-in-part-dropdown"></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Quantity *</label><input id="f-in-qty" type="number" min="1" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Date *</label><input id="f-in-date" type="date"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Supplier / Reference No.</label><input id="f-in-supplier" placeholder="Supplier name or PO number"></div>
+    <div class="form-group"><label class="form-label">Notes</label><input id="f-in-notes" placeholder="Optional notes"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addIn')">Cancel</button>
+      <button class="btn btn-success" onclick="saveStockIn()">Confirm Stock In</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addOut">
+  <div class="modal">
+    <div class="modal-title" style="color:#993C1D"><i class="ti ti-arrow-bar-up"></i> Record Stock Out / Issue</div>
+    <div class="form-group">
+      <label class="form-label">Part *</label>
+      <div class="combo" id="f-out-part-combo">
+        <div class="combo-input-wrap">
+          <input type="text" id="f-out-part-input" placeholder="Click to choose, or type to search..." autocomplete="off">
+          <i class="ti ti-chevron-down combo-icon"></i>
+        </div>
+        <input type="hidden" id="f-out-part">
+        <div class="combo-dropdown" id="f-out-part-dropdown"></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-group"><label class="form-label">Quantity *</label><input id="f-out-qty" type="number" min="1" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Date *</label><input id="f-out-date" type="date"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Issued To *</label><input id="f-out-issued" placeholder="Person / Department / Machine"></div>
+    <div class="form-group"><label class="form-label">Purpose</label><input id="f-out-purpose" placeholder="Repair, maintenance, production..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addOut')">Cancel</button>
+      <button class="btn" style="background:#A32D2D;color:#fff;border-color:#A32D2D" onclick="saveStockOut()">Confirm Issue</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addCat">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-tag"></i> Add Category</div>
+    <div class="form-group"><label class="form-label">Category Name *</label><input id="f-cat-name" placeholder="e.g. Bearings, Inks, Seals..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addCat')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCat()">Save Category</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addMachine">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-building-factory-2"></i> Add Machine / Equipment</div>
+    <div class="form-group"><label class="form-label">Machine Name *</label><input id="f-machine-name" placeholder="e.g. Heidelberg Press, Komori 8-Color..."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('addMachine')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMachine()">Save Machine</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-changePw">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-lock"></i> Change Your Password</div>
+    <div class="form-group"><label class="form-label">Current Password *</label><input id="f-chgpw-cur" type="password" autocomplete="current-password"></div>
+    <div style="font-size:11px;margin-top:-6px;margin-bottom:10px"><a href="#" onclick="event.preventDefault();forgotPasswordFromModal()" style="color:#8C2326;text-decoration:none">Don’t remember your current password?</a></div>
+    <div class="form-group"><label class="form-label">New Password *</label><input id="f-chgpw-new" type="password" placeholder="At least 8 characters" autocomplete="new-password"></div>
+    <div class="form-group"><label class="form-label">Confirm New Password *</label><input id="f-chgpw-new2" type="password" autocomplete="new-password"></div>
+    <div style="font-size:11px;color:#888;margin-top:-6px;margin-bottom:6px">All your other sessions on other devices will be signed out.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('changePw')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-inviteUser">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-user-plus"></i> Invite New User</div>
+    <div class="form-group"><label class="form-label">Full Name *</label><input id="f-invite-name" placeholder="e.g. Jawad Zaheer Khan"></div>
+    <div class="form-group"><label class="form-label">Email *</label><input id="f-invite-email" type="email" placeholder="person@example.com"></div>
+    <div class="form-group">
+      <label class="form-label">Role *</label>
+      <select id="f-invite-role">
+        <option value="machinery">Machinery Engineer — full access to record and edit</option>
+        <option value="consumables">Consumables Staff — full access to record and edit</option>
+        <option value="admin">Admin — full access, can manage other users</option>
+        <option value="ceo">CEO — view-only access for dashboards and reports</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('inviteUser')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitInviteUser()">Create Invite</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-editPart">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-edit"></i> Edit Part</div>
+    <input type="hidden" id="f-edit-id">
+    <div class="form-group">
+      <label class="form-label">Photo</label>
+      <div class="img-uploader">
+        <div class="img-preview" id="f-edit-img-preview" onclick="document.getElementById('f-edit-img-file').click()">
+          <span><i class="ti ti-camera" style="font-size:22px;display:block;margin-bottom:4px"></i>Click to add photo</span>
+        </div>
+        <div class="img-controls">
+          <input type="file" id="f-edit-img-file" accept="image/*" onchange="handleImagePick('edit',this.files[0])">
+          <button type="button" class="btn btn-sm" onclick="document.getElementById('f-edit-img-file').click()"><i class="ti ti-upload"></i> Choose / Replace</button>
+          <button type="button" class="btn btn-sm" id="f-edit-img-clear" style="display:none" onclick="clearImagePick('edit')"><i class="ti ti-x"></i> Remove</button>
+          <div class="img-hint">JPG / PNG / WEBP — auto-resized to 1200 px, ~5 MB max.</div>
+          <div class="img-status" id="f-edit-img-status"></div>
+          <input type="hidden" id="f-edit-img-url">
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">SKU / Part No.</label><input id="f-edit-sku"></div>
+    <div class="form-group"><label class="form-label">Part Name *</label><input id="f-edit-name"></div>
+    <div class="form-group"><label class="form-label">Category *</label><select id="f-edit-cat"></select></div>
+    <div class="form-group">
+      <label class="form-label">Machine / Equipment <span style="color:#aaa;font-weight:400;text-transform:none">(select one or more)</span></label>
+      <div class="multi-box" id="f-edit-machine"></div>
+      <span class="multi-add" onclick="addMachineInline('f-edit-machine')"><i class="ti ti-plus"></i> Add new machine</span>
+    </div>
+    <div class="form-group"><label class="form-label">Unit of Measure</label>
+      <select id="f-edit-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Qty on Hand</label><input id="f-edit-qty" type="number" min="0"></div>
+      <div class="form-group"><label class="form-label">Min Qty (alert threshold)</label><input id="f-edit-min" type="number" min="0"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Description / Notes</label><input id="f-edit-desc"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('editPart')">Cancel</button>
+      <button class="btn btn-primary" onclick="updatePart()">Update Part</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT SELECTION MODAL -->
+<div class="modal-overlay" id="modal-print">
+  <div class="modal modal-wide">
+    <div class="modal-title"><i class="ti ti-printer"></i> Select Entries to Print</div>
+    <div class="preset-row" id="preset-row-print">
+      <span class="preset-label"><i class="ti ti-calendar"></i> Quick range:</span>
+      <button class="preset-btn" onclick="applyDatePreset('print','today')">Today</button>
+      <button class="preset-btn" onclick="applyDatePreset('print','week')">This Week</button>
+      <button class="preset-btn" onclick="applyDatePreset('print','month')">This Month</button>
+      <button class="preset-btn" onclick="applyDatePreset('print','lastmonth')">Last Month</button>
+      <button class="preset-btn" onclick="applyDatePreset('print','year')">This Year</button>
+      <button class="preset-btn" onclick="applyDatePreset('print','all')">All</button>
+    </div>
+    <div class="sel-controls">
+      <button class="btn btn-sm" onclick="selAll('print',true)">Select All</button>
+      <button class="btn btn-sm" onclick="selAll('print',false)">Deselect All</button>
+      <span class="sel-count" id="sel-print-count">0 selected</span>
+    </div>
+    <div style="max-height:360px;overflow-y:auto;border:1px solid #e8e1d3;border-radius:8px">
+      <table class="sel-table">
+        <thead id="sel-print-thead"></thead>
+        <tbody id="sel-print-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('print')">Cancel</button>
+      <button class="btn btn-print" onclick="doPrint()"><i class="ti ti-printer"></i> Print Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT SELECTION MODAL -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal modal-wide">
+    <div class="modal-title"><i class="ti ti-file-spreadsheet" style="color:#1D6F42"></i> Select Entries to Export to Excel</div>
+    <div class="preset-row" id="preset-row-export">
+      <span class="preset-label"><i class="ti ti-calendar"></i> Quick range:</span>
+      <button class="preset-btn" onclick="applyDatePreset('export','today')">Today</button>
+      <button class="preset-btn" onclick="applyDatePreset('export','week')">This Week</button>
+      <button class="preset-btn" onclick="applyDatePreset('export','month')">This Month</button>
+      <button class="preset-btn" onclick="applyDatePreset('export','lastmonth')">Last Month</button>
+      <button class="preset-btn" onclick="applyDatePreset('export','year')">This Year</button>
+      <button class="preset-btn" onclick="applyDatePreset('export','all')">All</button>
+    </div>
+    <div class="sel-controls">
+      <button class="btn btn-sm" onclick="selAll('export',true)">Select All</button>
+      <button class="btn btn-sm" onclick="selAll('export',false)">Deselect All</button>
+      <span class="sel-count" id="sel-export-count">0 selected</span>
+    </div>
+    <div style="max-height:360px;overflow-y:auto;border:1px solid #e8e1d3;border-radius:8px">
+      <table class="sel-table">
+        <thead id="sel-export-thead"></thead>
+        <tbody id="sel-export-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('export')">Cancel</button>
+      <button class="btn btn-excel" onclick="doExport()"><i class="ti ti-file-spreadsheet"></i> Export to Excel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image lightbox (click thumbnails to enlarge) -->
+<div class="img-lightbox" id="img-lightbox" onclick="closeLightbox()">
+  <button class="img-lightbox-close" onclick="event.stopPropagation();closeLightbox()" aria-label="Close"><i class="ti ti-x"></i></button>
+  <img id="img-lightbox-img" alt="">
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let state = {
+  user: null,
+  users: [],
+  emailConfigured: false,
+  module: (new URLSearchParams(location.search).get('module') === 'consumables' ? 'consumables' : 'machinery'),
+  categories: [],
+  machines: [],
+  parts: [],
+  transactions: [],
+  trash: [],
+  activity: []
+};
+
+const MODULE_LABEL = {machinery:'Machinery & Electrical', consumables:'Inks & Consumables'};
+
+async function switchModule(m){
+  if(state.module===m)return;
+  state.module=m;
+  // Internal buttons are gone — nav lives in the employee-app topbar now.
+  const sub=document.querySelector('.logo-sub');if(sub)sub.textContent=MODULE_LABEL[m];
+  await loadAll();
+}
+
+let _activeSection = '';
+
+function today(){return new Date().toISOString().split('T')[0]}
+function fmtDate(d){if(!d)return'';return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}
+function nowStr(){return new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+
+async function apiFetch(url, method='GET', body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body!==null)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  let data;
+  try { data = await r.json(); } catch(_) { data = { error: r.statusText || 'Bad response' }; }
+  if(!r.ok){
+    if(r.status===401){
+      // Session died on the employee-app side. Bounce the whole tab back
+      // to the main-app login rather than showing the (removed) store login.
+      const target = '/login?next=/store';
+      try {
+        if (window.top && window.top !== window) window.top.location.href = target;
+        else window.location.href = target;
+      } catch(_) { window.location.href = target; }
+    }
+    const err=new Error(data.error||'Request failed');
+    err.status=r.status;
+    err.data=data;
+    throw err;
+  }
+  return data;
+}
+
+async function loadAll(){
+  try{
+    const m='?module='+encodeURIComponent(state.module);
+    const [categories,machines,parts,transactions,trash,activity]=await Promise.all([
+      apiFetch('/api/store/categories'+m),
+      apiFetch('/api/store/machines'+m),
+      apiFetch('/api/store/parts'+m),
+      apiFetch('/api/store/transactions'),
+      apiFetch('/api/store/trash'+m),
+      apiFetch('/api/store/activity'+m)
+    ]);
+    state.categories=categories;
+    state.machines=machines;
+    state.parts=parts;
+    state.trash=trash.items||[];
+    state.activity=activity||[];
+    // Only transactions for parts in this module
+    const partIds=new Set(parts.map(p=>p.id));
+    state.transactions=transactions.filter(t=>partIds.has(t.partId));
+  }catch(e){console.error('Failed to load data:',e);}
+  if(state.user && state.user.role==='admin'){
+    try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
+  } else {
+    state.users=[];
+  }
+  window._balCache=null;
+  renderAll();
+}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  // Tab switches no longer refetch — state is kept fresh by mutations and the
+  // initial load. Use the module switcher or reload the page to force a refresh.
+  refresh();
+}
+
+function openModal(id){
+  if(id==='addIn'){document.getElementById('f-in-date').value=today();resetPartCombo('f-in-part')}
+  if(id==='addOut'){document.getElementById('f-out-date').value=today();resetPartCombo('f-out-part')}
+  if(id==='addPart'){populateCatSelect('f-part-cat');populateMachineSelect('f-part-machine','');resetImagePick('add')}
+  document.getElementById('modal-'+id).classList.add('open');
+}
+function closeModal(id){document.getElementById('modal-'+id).classList.remove('open')}
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+
+function populateCatSelect(id){
+  const el=document.getElementById(id);
+  const prev=el.value;
+  el.innerHTML=state.categories.map(c=>`<option>${c}</option>`).join('')+'<option value="__add__" style="font-style:italic;color:#8C2326">+ Add new category…</option>';
+  if(prev && state.categories.includes(prev)) el.value=prev;
+  el.onchange=async function(){
+    if(this.value!=='__add__')return;
+    const name=((await promptDialog({title:'New category',placeholder:'e.g. Bearings, Inks, Seals...',confirmText:'Add'}))||'').trim();
+    if(!name){populateCatSelect(id);return;}
+    if(state.categories.some(c=>c.toLowerCase()===name.toLowerCase())){
+      await warnDialog('Category already exists','That category is already in the list — selecting it.');
+      this.value=state.categories.find(c=>c.toLowerCase()===name.toLowerCase());
+      return;
+    }
+    try{
+      await apiFetch('/api/store/categories','POST',{name,module:state.module});
+      await loadAll();
+      populateCatSelect(id);
+      document.getElementById(id).value=name;
+    }catch(e){await errorDialog('Could not add category',e.message);populateCatSelect(id);}
+  };
+}
+// Multi-select machine list rendered as a scrollable checkbox box.
+// `selectedCsv` is a comma-separated string of currently-selected machine names.
+function populateMachineSelect(id, selectedCsv){
+  const el=document.getElementById(id);
+  const current=el?getMachineMultiValue(id):'';
+  const csv=(selectedCsv!==undefined?selectedCsv:current)||'';
+  const selected=parseMachines(csv);
+  const selSet=new Set(selected.map(s=>s.toLowerCase()));
+  // Show all known machines + any selected ones that aren't in state (legacy data)
+  const all=Array.from(new Set([...state.machines, ...selected]));
+  all.sort((a,b)=>a.localeCompare(b));
+  if(!all.length){
+    el.innerHTML='<div class="multi-empty">No machines yet — click "Add new machine" below</div>';
+    return;
+  }
+  el.innerHTML=all.map(m=>{
+    const checked=selSet.has(m.toLowerCase())?'checked':'';
+    const escId='mch-'+id+'-'+m.replace(/[^a-z0-9]/gi,'_');
+    return `<div class="multi-row"><input type="checkbox" id="${escId}" data-name="${m.replace(/"/g,'&quot;')}" ${checked}><label for="${escId}">${m}</label></div>`;
+  }).join('');
+}
+
+function getMachineMultiValue(id){
+  const el=document.getElementById(id);
+  if(!el)return '';
+  const names=[];
+  el.querySelectorAll('input[type=checkbox]:checked').forEach(c=>names.push(c.dataset.name));
+  return names.join(', ');
+}
+
+function parseMachines(s){
+  if(!s)return [];
+  return s.split(',').map(x=>x.trim()).filter(Boolean);
+}
+
+async function addMachineInline(targetId){
+  const name=((await promptDialog({title:'New machine / equipment',placeholder:'e.g. Heidelberg Press, Komori 8-Color...',confirmText:'Add'}))||'').trim();
+  if(!name)return;
+  if(state.machines.some(m=>m.toLowerCase()===name.toLowerCase())){
+    await warnDialog('Machine already exists','That machine is already in the list — selecting it.');
+    const existing=state.machines.find(m=>m.toLowerCase()===name.toLowerCase());
+    const current=parseMachines(getMachineMultiValue(targetId));
+    if(!current.some(c=>c.toLowerCase()===existing.toLowerCase())){
+      current.push(existing);
+      populateMachineSelect(targetId,current.join(', '));
+    }
+    return;
+  }
+  try{
+    await apiFetch('/api/store/machines','POST',{name,module:state.module});
+    state.machines.push(name);state.machines.sort();
+    const current=parseMachines(getMachineMultiValue(targetId));
+    current.push(name);
+    populateMachineSelect(targetId,current.join(', '));
+  }catch(e){await errorDialog('Could not add machine',e.message);}
+}
+// ---- Part combobox (Stock In / Stock Out) ----
+const _comboInited=new Set();
+
+function partLabel(p){return (p.sku?'['+p.sku+'] ':'')+p.name;}
+function partSearchString(p){
+  return ((p.sku||'')+' '+p.name+' '+(p.category||'')+' '+parseMachines(p.machine).join(' ')).toLowerCase();
+}
+
+function renderComboList(prefix,query){
+  const dd=document.getElementById(prefix+'-dropdown');
+  const q=(query||'').trim().toLowerCase();
+  const items=state.parts.filter(p=>!q||partSearchString(p).includes(q)).slice(0,60);
+  if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching parts</div>';return;}
+  dd.innerHTML=items.map(p=>{
+    const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
+    const subParts=[p.category];
+    const machines=parseMachines(p.machine);if(machines.length)subParts.push(machines.join(', '));
+    return `<div class="combo-item" data-id="${p.id}" data-label="${partLabel(p).replace(/"/g,'&quot;')}">
+      <div class="combo-main">
+        <div class="combo-name">${p.sku?'<span class="combo-sku">'+p.sku+'</span>':''}${p.name}</div>
+        <div class="combo-sub">${subParts.filter(Boolean).join(' · ')||'—'}</div>
+      </div>
+      <div class="combo-qty ${cls}">${p.qty} ${p.unit}</div>
+    </div>`;
+  }).join('');
+}
+
+function setActiveComboItem(dd,idx){
+  const items=dd.querySelectorAll('.combo-item');
+  items.forEach(i=>i.classList.remove('active'));
+  if(items[idx]){items[idx].classList.add('active');items[idx].scrollIntoView({block:'nearest'});}
+}
+
+function getActiveComboIndex(dd){
+  const items=Array.from(dd.querySelectorAll('.combo-item'));
+  return items.findIndex(i=>i.classList.contains('active'));
+}
+
+function pickComboItem(prefix,item){
+  if(!item)return;
+  document.getElementById(prefix).value=item.dataset.id;
+  document.getElementById(prefix+'-input').value=item.dataset.label;
+  document.getElementById(prefix+'-dropdown').classList.remove('open');
+}
+
+function setupPartCombo(prefix){
+  if(_comboInited.has(prefix))return;
+  _comboInited.add(prefix);
+  const input=document.getElementById(prefix+'-input');
+  const hidden=document.getElementById(prefix);
+  const dd=document.getElementById(prefix+'-dropdown');
+  const combo=document.getElementById(prefix+'-combo');
+
+  input.addEventListener('focus',()=>{renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
+  input.addEventListener('click',()=>{dd.classList.add('open');});
+  input.addEventListener('input',()=>{hidden.value='';renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
+  input.addEventListener('keydown',e=>{
+    if(!dd.classList.contains('open'))return;
+    const items=dd.querySelectorAll('.combo-item');
+    if(!items.length)return;
+    const cur=getActiveComboIndex(dd);
+    if(e.key==='ArrowDown'){e.preventDefault();setActiveComboItem(dd,Math.min(cur+1,items.length-1));}
+    else if(e.key==='ArrowUp'){e.preventDefault();setActiveComboItem(dd,Math.max(cur-1,0));}
+    else if(e.key==='Enter'){e.preventDefault();pickComboItem(prefix,items[cur>=0?cur:0]);}
+    else if(e.key==='Escape'){dd.classList.remove('open');}
+  });
+  // mousedown so it fires before input blur kills the dropdown
+  dd.addEventListener('mousedown',e=>{
+    const item=e.target.closest('.combo-item');
+    if(!item)return;
+    e.preventDefault();
+    pickComboItem(prefix,item);
+  });
+  document.addEventListener('mousedown',e=>{
+    if(!combo.contains(e.target))dd.classList.remove('open');
+  });
+}
+
+function resetPartCombo(prefix){
+  setupPartCombo(prefix);
+  document.getElementById(prefix).value='';
+  document.getElementById(prefix+'-input').value='';
+  document.getElementById(prefix+'-dropdown').classList.remove('open');
+}
+
+function getPartName(id){
+  const p=state.parts.find(x=>x.id===id);
+  if(!p)return 'Unknown';
+  return (p.sku?'['+p.sku+'] ':'')+p.name;
+}
+function getPartLabel(id){
+  const p=state.parts.find(x=>x.id===id);
+  if(!p)return 'Unknown';
+  return (p.sku?`<span class="part-sku">[${p.sku}]</span>`:'')+p.name;
+}
+function getPartCat(id){const p=state.parts.find(x=>x.id===id);return p?p.category:''}
+function getPartUnit(id){const p=state.parts.find(x=>x.id===id);return p?p.unit:''}
+function stockStatus(p){
+  if(p.qty===0)return{label:'Out of stock',cls:'badge-critical'};
+  if(p.qty<=p.minQty)return{label:'Low stock',cls:'badge-low'};
+  return{label:'In stock',cls:'badge-ok'};
+}
+
+// ---- Section data helpers ----
+function getSectionData(sec){
+  if(sec==='inventory'){
+    const s=(document.getElementById('inv-search')||{value:''}).value.toLowerCase();
+    const c=(document.getElementById('inv-cat-filter')||{value:''}).value;
+    const m=(document.getElementById('inv-machine-filter')||{value:''}).value;
+    return state.parts.filter(p=>{
+      const machList=parseMachines(p.machine);
+      const txt=!s||p.name.toLowerCase().includes(s)||(p.sku||'').toLowerCase().includes(s)||p.category.toLowerCase().includes(s)||machList.some(x=>x.toLowerCase().includes(s));
+      const cat=!c||p.category===c;
+      const mach=!m||(m==='__none__'?machList.length===0:machList.includes(m));
+      return txt&&cat&&mach;
+    });
+  }
+  if(sec==='stockin'){
+    const s=(document.getElementById('in-search')||{value:''}).value.toLowerCase();
+    const dF=(document.getElementById('in-date-from')||{value:''}).value;
+    const dT=(document.getElementById('in-date-to')||{value:''}).value;
+    return [...state.transactions].filter(t=>t.type==='in').sort((a,b)=>b.id-a.id).filter(t=>{
+      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||((t.ref||'')+' '+(t.notes||'')).toLowerCase().includes(s);
+      return ms&&inDateRange(t.date,dF,dT);
+    });
+  }
+  if(sec==='stockout'){
+    const s=(document.getElementById('out-search')||{value:''}).value.toLowerCase();
+    const dF=(document.getElementById('out-date-from')||{value:''}).value;
+    const dT=(document.getElementById('out-date-to')||{value:''}).value;
+    return [...state.transactions].filter(t=>t.type==='out').sort((a,b)=>b.id-a.id).filter(t=>{
+      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||((t.issuedTo||'')+' '+(t.purpose||'')).toLowerCase().includes(s);
+      return ms&&inDateRange(t.date,dF,dT);
+    });
+  }
+  if(sec==='issuance'){
+    const s=(document.getElementById('iss-search')||{value:''}).value.toLowerCase();
+    const dF=(document.getElementById('iss-date-from')||{value:''}).value;
+    const dT=(document.getElementById('iss-date-to')||{value:''}).value;
+    return [...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
+      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||(t.issuedTo+t.ref+t.purpose).toLowerCase().includes(s);
+      return ms&&inDateRange(t.date,dF,dT);
+    });
+  }
+  return [];
+}
+
+function getHeaders(sec){
+  if(sec==='inventory') return['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
+  if(sec==='stockin')   return['#','Date','Part Name','Category','Qty Added','Balance','Supplier / Ref','Notes'];
+  if(sec==='stockout')  return['#','Date','Part Name','Category','Qty Issued','Balance','Issued To','Purpose'];
+  if(sec==='issuance')  return['#','Date','Part Name','Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
+  return[];
+}
+
+function rowCells(sec,item,i){
+  if(sec==='inventory'){
+    const s=stockStatus(item);
+    return[i+1,item.sku||'—',item.name,item.category,parseMachines(item.machine).join(', ')||'—',item.unit,item.qty,item.minQty,s.label];
+  }
+  const bal=(window._balCache=window._balCache||computeBalances());
+  if(sec==='stockin')  return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'+'+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.ref||'—',item.notes||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'-'+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.issuedTo||'—',item.purpose||'—'];
+  if(sec==='issuance') return[i+1,fmtDate(item.date),getPartName(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
+  return[];
+}
+
+// ---- PRINT ----
+let _activeData=[];
+
+function openPrintModal(sec){
+  _activeSection=sec;
+  const data=getSectionData(sec);
+  _activeData=data;
+  const headers=getHeaders(sec);
+  const thead=document.getElementById('sel-print-thead');
+  const tbody=document.getElementById('sel-print-tbody');
+  thead.innerHTML='<tr><th style="width:32px"><input type="checkbox" id="chk-all-print" checked onchange="selAll(\'print\',this.checked)"></th>'+headers.slice(1).map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  tbody.innerHTML=data.length?data.map((item,i)=>{
+    const cells=rowCells(sec,item,i);
+    return`<tr><td><input type="checkbox" class="sel-chk-print" data-i="${i}" checked onchange="updCount('print')"></td>${cells.slice(1).map(c=>`<td>${c}</td>`).join('')}</tr>`;
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:#aaa;padding:1.5rem">No data to show</td></tr>';
+  document.getElementById('preset-row-print').style.display=sec==='inventory'?'none':'flex';
+  updCount('print');
+  openModal('print');
+}
+
+function openExportModal(sec){
+  _activeSection=sec;
+  const data=getSectionData(sec);
+  _activeData=data;
+  const headers=getHeaders(sec);
+  const thead=document.getElementById('sel-export-thead');
+  const tbody=document.getElementById('sel-export-tbody');
+  thead.innerHTML='<tr><th style="width:32px"><input type="checkbox" id="chk-all-export" checked onchange="selAll(\'export\',this.checked)"></th>'+headers.slice(1).map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  tbody.innerHTML=data.length?data.map((item,i)=>{
+    const cells=rowCells(sec,item,i);
+    return`<tr><td><input type="checkbox" class="sel-chk-export" data-i="${i}" checked onchange="updCount('export')"></td>${cells.slice(1).map(c=>`<td>${c}</td>`).join('')}</tr>`;
+  }).join(''):'<tr><td colspan="8" style="text-align:center;color:#aaa;padding:1.5rem">No data to show</td></tr>';
+  document.getElementById('preset-row-export').style.display=sec==='inventory'?'none':'flex';
+  updCount('export');
+  openModal('export');
+}
+
+function dateRangeFor(preset){
+  const now=new Date();now.setHours(0,0,0,0);
+  const today=new Date(now);
+  let start,end;
+  if(preset==='today'){start=new Date(today);end=new Date(today);end.setHours(23,59,59,999);}
+  else if(preset==='week'){
+    const dow=(today.getDay()+6)%7; // Mon=0
+    start=new Date(today);start.setDate(today.getDate()-dow);
+    end=new Date(start);end.setDate(start.getDate()+6);end.setHours(23,59,59,999);
+  } else if(preset==='month'){
+    start=new Date(today.getFullYear(),today.getMonth(),1);
+    end=new Date(today.getFullYear(),today.getMonth()+1,0,23,59,59,999);
+  } else if(preset==='lastmonth'){
+    start=new Date(today.getFullYear(),today.getMonth()-1,1);
+    end=new Date(today.getFullYear(),today.getMonth(),0,23,59,59,999);
+  } else if(preset==='year'){
+    start=new Date(today.getFullYear(),0,1);
+    end=new Date(today.getFullYear(),11,31,23,59,59,999);
+  }
+  return{start,end};
+}
+
+function applyDatePreset(type,preset){
+  if(preset==='all'){selAll(type,true);return;}
+  if(_activeSection==='inventory')return; // no dates
+  const{start,end}=dateRangeFor(preset);
+  let inRange=0;
+  document.querySelectorAll('.sel-chk-'+type).forEach(c=>{
+    const idx=parseInt(c.dataset.i);
+    const item=_activeData[idx];
+    if(!item||!item.date){c.checked=false;return;}
+    const d=new Date(item.date+'T00:00:00');
+    const hit=d>=start&&d<=end;
+    c.checked=hit;
+    if(hit)inRange++;
+  });
+  const ca=document.getElementById('chk-all-'+type);if(ca)ca.checked=false;
+  updCount(type);
+  if(inRange===0){
+    const labels={today:'Today',week:'This Week',month:'This Month',lastmonth:'Last Month',year:'This Year'};
+    infoDialog('No matches','No entries found for '+(labels[preset]||preset)+'.');
+  }
+}
+
+function selAll(type,v){
+  document.querySelectorAll('.sel-chk-'+type).forEach(c=>c.checked=v);
+  const ca=document.getElementById('chk-all-'+type);
+  if(ca)ca.checked=v;
+  updCount(type);
+}
+
+function updCount(type){
+  const all=document.querySelectorAll('.sel-chk-'+type).length;
+  const sel=document.querySelectorAll('.sel-chk-'+type+':checked').length;
+  const el=document.getElementById('sel-'+type+'-count');
+  if(el)el.textContent=sel+' of '+all+' selected';
+}
+
+function doPrint(){
+  const idxs=[];
+  document.querySelectorAll('.sel-chk-print:checked').forEach(c=>idxs.push(parseInt(c.dataset.i)));
+  if(!idxs.length){warnDialog('Nothing selected','Please select at least one entry to print.');return;}
+  const sec=_activeSection;
+  const data=getSectionData(sec);
+  const headers=getHeaders(sec);
+  const selected=idxs.map(i=>data[i]);
+  const titleMap={inventory:'Inventory Report',stockin:'Stock In Report',stockout:'Stock Out Report',issuance:'Issuance Log'};
+  const rows=selected.map((item,i)=>{
+    const cells=rowCells(sec,item,i);
+    return'<tr>'+cells.map((c,ci)=>`<td style="${ci===0?'color:#aaa;width:32px;':''}">${c}</td>`).join('')+'</tr>';
+  }).join('');
+  const win=window.open('','_blank','width=900,height=700');
+  if(!win){warnDialog('Pop-up blocked','Please allow pop-ups in your browser to print.');return;}
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titleMap[sec]||sec}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;padding:28px;color:#1a1a1a;background:#fff}
+    .header{border-bottom:3px solid #8C2326;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end}
+    .header h1{font-size:20px;color:#8C2326;font-weight:700}
+    .header .meta{font-size:12px;color:#888;text-align:right;line-height:1.6}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+    thead tr{background:#8C2326}
+    thead th{color:#fff;padding:9px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.4px}
+    tbody td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:middle}
+    tbody tr:nth-child(even) td{background:#f8f8f6}
+    .footer{margin-top:18px;font-size:11px;color:#bbb;text-align:right;padding-top:10px;border-top:1px solid #eee}
+    @media print{@page{margin:1.5cm}body{padding:0}}
+  </style></head><body>
+  <div class="header">
+    <div><h1>Parts Store</h1><div style="font-size:14px;color:#555;margin-top:3px">${titleMap[sec]||sec}</div></div>
+    <div class="meta">Printed: ${nowStr()}<br>Total entries: ${selected.length}</div>
+  </div>
+  <table>
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">Parts Store — Stock Management System</div>
+  <script>window.onload=function(){setTimeout(()=>window.print(),300)}<\/script>
+  </body></html>`);
+  win.document.close();
+  closeModal('print');
+}
+
+function doExport(){
+  const idxs=[];
+  document.querySelectorAll('.sel-chk-export:checked').forEach(c=>idxs.push(parseInt(c.dataset.i)));
+  if(!idxs.length){warnDialog('Nothing selected','Please select at least one entry to export.');return;}
+  const sec=_activeSection;
+  const data=getSectionData(sec);
+  const headers=getHeaders(sec);
+  const selected=idxs.map(i=>data[i]);
+  const titleMap={inventory:'Inventory',stockin:'Stock In',stockout:'Stock Out',issuance:'Issuance Log'};
+  const sheetName=titleMap[sec]||sec;
+
+  const wb=XLSX.utils.book_new();
+  // Build rows: title block + headers + data
+  const dataRows=selected.map((item,i)=>rowCells(sec,item,i));
+  const sheetData=[
+    ['Parts Store — '+sheetName+' Report'],
+    ['Exported on: '+nowStr(),'','','Total entries: '+selected.length],
+    [],
+    headers,
+    ...dataRows
+  ];
+  const ws=XLSX.utils.aoa_to_sheet(sheetData);
+
+  // Auto col widths
+  ws['!cols']=headers.map((_,ci)=>{
+    const maxW=Math.max(headers[ci].length,...dataRows.map(r=>String(r[ci]===undefined?'':r[ci]).length));
+    return{wch:Math.min(Math.max(maxW+3,12),42)};
+  });
+
+  // Merge title row across all columns
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:headers.length-1}},
+    {s:{r:1,c:0},e:{r:1,c:2}}
+  ];
+
+  XLSX.utils.book_append_sheet(wb,ws,sheetName.substring(0,31));
+  XLSX.writeFile(wb,'PartsStore_'+sheetName.replace(/ /g,'_')+'_'+today()+'.xlsx');
+  closeModal('export');
+}
+
+// ---- Branded dialogs (replace native alert/confirm/prompt) ----
+function _escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function showDialog(opts){
+  return new Promise(resolve=>{
+    const variant=opts.variant||'info';
+    const icons={danger:'ti-alert-triangle',warn:'ti-alert-triangle',confirm:'ti-help',success:'ti-circle-check',error:'ti-x',info:'ti-info-circle',prompt:'ti-pencil'};
+    const ov=document.createElement('div');
+    ov.className='app-dialog-overlay';
+    ov.innerHTML=`<div class="app-dialog" role="dialog" aria-modal="true">
+      <div class="app-dialog-icon app-dialog-icon-${variant}"><i class="ti ${icons[variant]||'ti-info-circle'}"></i></div>
+      <div class="app-dialog-title">${_escHtml(opts.title||'')}</div>
+      ${opts.message?`<div class="app-dialog-message">${_escHtml(opts.message)}</div>`:''}
+      ${opts.prompt?`<input type="text" class="app-dialog-input" placeholder="${_escHtml(opts.placeholder||'')}" value="${_escHtml(opts.defaultValue||'')}">`:''}
+      <div class="app-dialog-actions">
+        ${opts.showCancel?`<button class="btn app-dialog-cancel">${_escHtml(opts.cancelText||'Cancel')}</button>`:''}
+        <button class="btn app-dialog-confirm ${opts.confirmCls||'btn-primary'}">${_escHtml(opts.confirmText||'OK')}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>ov.classList.add('open'));
+    const input=ov.querySelector('.app-dialog-input');
+    const confirmBtn=ov.querySelector('.app-dialog-confirm');
+    const cancelBtn=ov.querySelector('.app-dialog-cancel');
+    function cleanup(val){
+      ov.classList.remove('open');
+      document.removeEventListener('keydown',onKey,true);
+      setTimeout(()=>ov.remove(),200);
+      resolve(val);
+    }
+    function onKey(e){
+      if(e.key==='Enter'){e.preventDefault();e.stopPropagation();confirmBtn.click();}
+      else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();(cancelBtn||confirmBtn).click();}
+    }
+    confirmBtn.onclick=()=>cleanup(opts.prompt?((input&&input.value!=null)?input.value:''):true);
+    if(cancelBtn)cancelBtn.onclick=()=>cleanup(opts.prompt?null:false);
+    ov.onclick=e=>{if(e.target===ov)cleanup(opts.prompt?null:false);};
+    document.addEventListener('keydown',onKey,true);
+    setTimeout(()=>{(input||confirmBtn).focus();if(input)input.select();},60);
+  });
+}
+
+function alertDialog(opts){
+  if(typeof opts==='string')opts={title:opts};
+  const v=opts.variant||'info';
+  const cls=(v==='danger'||v==='error')?'app-dialog-confirm-danger':(v==='warn'?'app-dialog-confirm-warn':'btn-primary');
+  return showDialog({title:opts.title||'',message:opts.message||'',variant:v,confirmText:opts.confirmText||'OK',confirmCls:cls});
+}
+
+function confirmDialog(opts){
+  if(typeof opts==='string')opts={title:opts};
+  const v=opts.variant||'confirm';
+  const cls=v==='danger'?'app-dialog-confirm-danger':(v==='warn'?'app-dialog-confirm-warn':'btn-primary');
+  return showDialog({title:opts.title||'Are you sure?',message:opts.message||'',variant:v,showCancel:true,confirmText:opts.confirmText||'Confirm',cancelText:opts.cancelText||'Cancel',confirmCls:cls});
+}
+
+function promptDialog(opts){
+  if(typeof opts==='string')opts={title:opts};
+  return showDialog({title:opts.title||'',message:opts.message||'',variant:'prompt',prompt:true,showCancel:true,placeholder:opts.placeholder||'',defaultValue:opts.defaultValue||'',confirmText:opts.confirmText||'OK',cancelText:opts.cancelText||'Cancel',confirmCls:'btn-primary'});
+}
+
+// Shortcut helpers
+const warnDialog=(title,message)=>alertDialog({title,message,variant:'warn'});
+const errorDialog=(title,message)=>alertDialog({title,message,variant:'error'});
+const successDialog=(title,message)=>alertDialog({title,message,variant:'success'});
+const infoDialog=(title,message)=>alertDialog({title,message,variant:'info'});
+
+// ---- CRUD ----
+// Local-state refresh: re-render without hitting the network.
+function refresh(){window._balCache=null;renderAll();}
+
+// ===== Image upload (parts) =====
+// Picked-file state per modal: { add: {blob, previewUrl}, edit: {...} }
+const pickedImage = { add: null, edit: null };
+
+function setImageStatus(which, msg, isErr){
+  const el = document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-status');
+  if (el) { el.textContent = msg || ''; el.style.color = isErr ? '#A32D2D' : 'var(--primary)'; }
+}
+
+function showImageInPreview(which, src){
+  const id = which==='add' ? 'f-part-img-preview' : 'f-edit-img-preview';
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (src) {
+    el.innerHTML = '<img src="'+src+'" alt="Preview">';
+    document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-clear').style.display = '';
+  } else {
+    el.innerHTML = '<span><i class="ti ti-camera" style="font-size:22px;display:block;margin-bottom:4px"></i>Click to add photo</span>';
+    document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-clear').style.display = 'none';
+  }
+}
+
+function resetImagePick(which){
+  const cur = pickedImage[which];
+  if (cur && cur.previewUrl) try { URL.revokeObjectURL(cur.previewUrl); } catch(_){}
+  pickedImage[which] = null;
+  const fileInput = document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-file');
+  if (fileInput) fileInput.value = '';
+  document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-url').value = '';
+  showImageInPreview(which, null);
+  setImageStatus(which, '');
+}
+
+function clearImagePick(which){
+  resetImagePick(which);
+}
+
+async function handleImagePick(which, file){
+  if (!file) return;
+  if (!/^image\//.test(file.type)) { await warnDialog('Not an image','Please choose a JPG, PNG, or WEBP file.'); return; }
+  // Show local preview immediately
+  const previewUrl = URL.createObjectURL(file);
+  pickedImage[which] = { file, previewUrl };
+  showImageInPreview(which, previewUrl);
+  // Clear any previously saved URL — the new file will replace it
+  document.getElementById('f-'+(which==='add'?'part':'edit')+'-img-url').value = '';
+  setImageStatus(which, 'Ready to upload on save');
+}
+
+// Resize an image File/Blob to a max edge of `maxDim` and re-encode as JPEG.
+async function resizeImage(file, maxDim=1200, quality=0.85){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+        else       { w = Math.round(w * (maxDim / h)); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        URL.revokeObjectURL(url);
+        if (!blob) return reject(new Error('Could not encode image'));
+        resolve(blob);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.src = url;
+  });
+}
+
+// Upload the currently picked image for `which` modal. Returns the public URL,
+// or null if nothing is picked. Throws on error.
+async function uploadPickedImage(which){
+  const picked = pickedImage[which];
+  if (!picked) return null;
+  setImageStatus(which, 'Uploading…');
+  const blob = await resizeImage(picked.file);
+  const safe = (picked.file.name || 'part.jpg').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,60) + '.jpg';
+  const resp = await fetch('/api/store/upload?filename=' + encodeURIComponent(safe), {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/jpeg' },
+    body: blob,
+    credentials: 'same-origin'
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.error || ('Upload failed ('+resp.status+')'));
+  setImageStatus(which, 'Uploaded');
+  return data.url;
+}
+
+// Best-effort delete of a previously stored blob (e.g. when replacing an image)
+async function deleteRemoteImage(url){
+  if (!url) return;
+  try { await fetch('/api/store/upload?url='+encodeURIComponent(url), { method:'DELETE', credentials:'same-origin' }); } catch(_){}
+}
+
+function openLightbox(src){
+  const lb = document.getElementById('img-lightbox');
+  const im = document.getElementById('img-lightbox-img');
+  if (!lb || !im) return;
+  im.src = src;
+  lb.classList.add('open');
+}
+function closeLightbox(){
+  const lb = document.getElementById('img-lightbox');
+  if (lb) lb.classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+async function savePart(){
+  const sku=document.getElementById('f-part-sku').value.trim();
+  const name=document.getElementById('f-part-name').value.trim();
+  if(!name){await warnDialog('Part name required','Enter a name for this part.');return;}
+  const qty=parseInt(document.getElementById('f-part-qty').value)||0;
+  const fields=['f-part-sku','f-part-name','f-part-qty','f-part-min','f-part-desc'];
+
+  async function mergeIntoExisting(existing){
+    if(qty>0){
+      try{
+        const txn=await apiFetch('/api/store/transactions','POST',{type:'in',partId:existing.id,qty,date:today(),ref:'Added to existing',notes:'Qty added (matched by SKU)'});
+        const p=state.parts.find(x=>x.id===existing.id);
+        if(p){p.qty+=qty;state.transactions.unshift(txn);}
+      }catch(e){await errorDialog('Could not add qty',e.message);return;}
+    }
+    closeModal('addPart');
+    fields.forEach(id=>document.getElementById(id).value='');
+    resetImagePick('add');
+    refresh();
+  }
+
+  const local=sku?state.parts.find(p=>(p.sku||'').toLowerCase()===sku.toLowerCase()):null;
+  if(local){
+    const msg='Existing part: "'+local.name+'" — '+local.qty+' '+local.unit+' on hand.\n\n'
+      +(qty>0?'Add '+qty+' '+local.unit+' to this existing part?':'Open it instead of creating a new one?');
+    if(!await confirmDialog({title:'SKU "'+local.sku+'" already exists',message:msg,confirmText:qty>0?'Add to existing':'OK',variant:'confirm'}))return;
+    return mergeIntoExisting(local);
+  }
+
+  // Upload picked image (if any) — only after we've confirmed this is a new part.
+  let imageUrl = document.getElementById('f-part-img-url').value || null;
+  try {
+    const uploaded = await uploadPickedImage('add');
+    if (uploaded) imageUrl = uploaded;
+  } catch (e) { await errorDialog('Photo upload failed', e.message); return; }
+
+  try{
+    const newPart=await apiFetch('/api/store/parts','POST',{
+      sku,name,
+      module:state.module,
+      category:document.getElementById('f-part-cat').value,
+      machine:getMachineMultiValue('f-part-machine'),
+      unit:document.getElementById('f-part-unit').value,
+      minQty:parseInt(document.getElementById('f-part-min').value)||0,
+      desc:document.getElementById('f-part-desc').value.trim(),
+      imageUrl:imageUrl
+    });
+    state.parts.push(newPart);
+    if(qty>0){
+      const txn=await apiFetch('/api/store/transactions','POST',{type:'in',partId:newPart.id,qty,date:today(),ref:'Opening Stock',notes:'Opening balance'});
+      newPart.qty+=qty;
+      state.transactions.unshift(txn);
+    }
+    closeModal('addPart');
+    fields.forEach(id=>document.getElementById(id).value='');
+    resetImagePick('add');
+    refresh();
+  }catch(e){
+    if(e.status===409 && e.data && e.data.existing){
+      const ex=e.data.existing;
+      const sameMod=ex.module===state.module;
+      const modLabel=MODULE_LABEL[ex.module]||ex.module;
+      if(sameMod){
+        if(await confirmDialog({title:'SKU "'+ex.sku+'" already exists',message:'Existing part: "'+ex.name+'".\n\n'+(qty>0?'Add '+qty+' '+ex.unit+' to it?':'OK to skip creating a duplicate?'),confirmText:qty>0?'Add to existing':'OK',variant:'confirm'})){
+          return mergeIntoExisting(ex);
+        }
+        return;
+      }
+      if(await confirmDialog({title:'SKU exists in '+modLabel,message:'"'+ex.name+'" already uses this SKU in '+modLabel+'.\n\n'+(qty>0?'Add '+qty+' '+ex.unit+' to that existing part instead?':'Switch to that module to use it?'),confirmText:qty>0?'Add to existing':'OK',variant:'confirm'})){
+        return mergeIntoExisting(ex);
+      }
+      return;
+    }
+    await errorDialog('Could not save part',e.message);
+  }
+}
+
+async function saveStockIn(){
+  const partId=parseInt(document.getElementById('f-in-part').value);
+  const qty=parseInt(document.getElementById('f-in-qty').value);
+  const date=document.getElementById('f-in-date').value;
+  if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
+  if(!qty||qty<1){await warnDialog('Quantity required','Enter a valid quantity (1 or more).');return;}
+  if(!date){await warnDialog('Date required','Please choose a date.');return;}
+  try{
+    const txn=await apiFetch('/api/store/transactions','POST',{
+      type:'in',partId,qty,date,
+      ref:document.getElementById('f-in-supplier').value.trim(),
+      notes:document.getElementById('f-in-notes').value.trim()
+    });
+    const p=state.parts.find(x=>x.id===partId);
+    if(p)p.qty+=qty;
+    state.transactions.unshift(txn);
+    closeModal('addIn');
+    ['f-in-qty','f-in-supplier','f-in-notes'].forEach(id=>document.getElementById(id).value='');
+    refresh();
+  }catch(e){await errorDialog('Could not record stock in',e.message);}
+}
+
+async function saveStockOut(){
+  const partId=parseInt(document.getElementById('f-out-part').value);
+  const qty=parseInt(document.getElementById('f-out-qty').value);
+  const date=document.getElementById('f-out-date').value;
+  const issuedTo=document.getElementById('f-out-issued').value.trim();
+  if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
+  if(!qty||qty<1){await warnDialog('Quantity required','Enter a valid quantity (1 or more).');return;}
+  if(!date){await warnDialog('Date required','Please choose a date.');return;}
+  if(!issuedTo){await warnDialog('Issued To required','Enter the person, department, or machine receiving the item.');return;}
+  try{
+    const txn=await apiFetch('/api/store/transactions','POST',{
+      type:'out',partId,qty,date,issuedTo,
+      purpose:document.getElementById('f-out-purpose').value.trim()
+    });
+    const p=state.parts.find(x=>x.id===partId);
+    if(p)p.qty-=qty;
+    state.transactions.unshift(txn);
+    closeModal('addOut');
+    ['f-out-qty','f-out-issued','f-out-purpose'].forEach(id=>document.getElementById(id).value='');
+    refresh();
+  }catch(e){await errorDialog('Could not record stock out',e.message);}
+}
+
+async function saveCat(){
+  const name=document.getElementById('f-cat-name').value.trim();
+  if(!name){await warnDialog('Category name required','Enter a name for this category.');return;}
+  if(state.categories.includes(name)){await warnDialog('Already exists','A category with that name is already in the list.');return;}
+  try{
+    await apiFetch('/api/store/categories','POST',{name,module:state.module});
+    state.categories.push(name);state.categories.sort();
+    closeModal('addCat');
+    document.getElementById('f-cat-name').value='';
+    refresh();
+  }catch(e){await errorDialog('Could not add category',e.message);}
+}
+
+async function saveMachine(){
+  const name=document.getElementById('f-machine-name').value.trim();
+  if(!name){await warnDialog('Machine name required','Enter a name for this machine.');return;}
+  if(state.machines.some(m=>m.toLowerCase()===name.toLowerCase())){await warnDialog('Already exists','A machine with that name is already in the list.');return;}
+  try{
+    await apiFetch('/api/store/machines','POST',{name,module:state.module});
+    state.machines.push(name);state.machines.sort();
+    closeModal('addMachine');
+    document.getElementById('f-machine-name').value='';
+    refresh();
+  }catch(e){await errorDialog('Could not add machine',e.message);}
+}
+
+async function deleteMachine(name){
+  if(state.parts.some(p=>parseMachines(p.machine).includes(name))){await warnDialog('Cannot delete machine','Parts are still assigned to this machine. Reassign them first.');return;}
+  if(!await confirmDialog({title:'Delete machine "'+name+'"?',message:'It will be removed from the list. Existing parts that referenced it are unaffected.',variant:'danger',confirmText:'Delete'}))return;
+  try{
+    await apiFetch('/api/store/machines?module='+encodeURIComponent(state.module)+'&name='+encodeURIComponent(name),'DELETE');
+    state.machines=state.machines.filter(m=>m!==name);
+    refresh();
+  }catch(e){await errorDialog('Could not delete machine',e.message);}
+}
+
+function openEditPart(id){
+  const p=state.parts.find(x=>x.id===id);
+  if(!p)return;
+  document.getElementById('f-edit-id').value=p.id;
+  document.getElementById('f-edit-sku').value=p.sku||'';
+  document.getElementById('f-edit-name').value=p.name;
+  populateCatSelect('f-edit-cat');
+  document.getElementById('f-edit-cat').value=p.category;
+  populateMachineSelect('f-edit-machine',p.machine||'');
+  document.getElementById('f-edit-unit').value=p.unit;
+  document.getElementById('f-edit-qty').value=p.qty;
+  document.getElementById('f-edit-min').value=p.minQty;
+  document.getElementById('f-edit-desc').value=p.desc||'';
+  // Reset any prior pick, then preload the saved image (if the part has one).
+  resetImagePick('edit');
+  document.getElementById('f-edit-img-url').value = p.imageUrl || '';
+  if (p.imageUrl) showImageInPreview('edit', p.imageUrl);
+  openModal('editPart');
+}
+
+async function updatePart(){
+  const id=parseInt(document.getElementById('f-edit-id').value);
+  const sku=document.getElementById('f-edit-sku').value.trim();
+  const name=document.getElementById('f-edit-name').value.trim();
+  if(!name){await warnDialog('Part name required','Enter a name for this part.');return;}
+
+  // Resolve final image URL:
+  //   - if a new file is picked, upload it
+  //   - else use whatever is in the hidden field (existing URL or '' after Remove)
+  const partBefore = state.parts.find(x=>x.id===id);
+  const oldImageUrl = partBefore ? (partBefore.imageUrl || null) : null;
+  let finalImageUrl = document.getElementById('f-edit-img-url').value || null;
+  try {
+    const uploaded = await uploadPickedImage('edit');
+    if (uploaded) finalImageUrl = uploaded;
+  } catch (e) { await errorDialog('Photo upload failed', e.message); return; }
+
+  try{
+    const qtyRaw=document.getElementById('f-edit-qty').value;
+    const qty=qtyRaw===''?undefined:Math.max(0,parseInt(qtyRaw)||0);
+    const payload={
+      id,sku,name,
+      category:document.getElementById('f-edit-cat').value,
+      machine:getMachineMultiValue('f-edit-machine'),
+      unit:document.getElementById('f-edit-unit').value,
+      qty,
+      minQty:parseInt(document.getElementById('f-edit-min').value)||0,
+      desc:document.getElementById('f-edit-desc').value.trim(),
+      imageUrl:finalImageUrl
+    };
+    await apiFetch('/api/store/parts','PUT',payload);
+    const p=state.parts.find(x=>x.id===id);
+    if(p){
+      p.sku=sku||null;p.name=name;p.category=payload.category;p.machine=payload.machine;
+      p.unit=payload.unit;p.minQty=payload.minQty;p.desc=payload.desc;
+      p.imageUrl=finalImageUrl;
+      if(qty!==undefined)p.qty=qty;
+    }
+    // Best-effort: clean up the previous blob if the image was replaced or removed.
+    if (oldImageUrl && oldImageUrl !== finalImageUrl) deleteRemoteImage(oldImageUrl);
+    closeModal('editPart');
+    resetImagePick('edit');
+    refresh();
+  }catch(e){await errorDialog('Could not update part',e.message);}
+}
+
+async function deletePart(id){
+  if(!await confirmDialog({title:'Move this part to Trash?',message:'It will be permanently deleted after 7 days. You can restore it from the Trash page before then.',variant:'danger',confirmText:'Move to Trash'}))return;
+  try{
+    await apiFetch('/api/store/parts?id='+id,'DELETE');
+    const idx=state.parts.findIndex(p=>p.id===id);
+    if(idx>=0){
+      const p=state.parts.splice(idx,1)[0];
+      const now=new Date();
+      const purge=new Date(now.getTime()+7*86400000);
+      state.trash.unshift({...p,deletedAt:now.toISOString(),purgeAt:purge.toISOString()});
+      state.transactions=state.transactions.filter(t=>t.partId!==id);
+    }
+    refresh();
+  }catch(e){await errorDialog('Could not delete part',e.message);}
+}
+
+async function restoreTrashPart(id){
+  try{
+    await apiFetch('/api/store/trash','POST',{id});
+    await loadAll();
+  }catch(e){await errorDialog('Could not restore part',e.message);}
+}
+
+async function purgeTrashPart(id){
+  if(!await confirmDialog({title:'Permanently delete this part?',message:'The part and all its transaction records will be gone for good. This cannot be undone.',variant:'danger',confirmText:'Delete forever'}))return;
+  try{
+    await apiFetch('/api/store/trash?id='+id,'DELETE');
+    state.trash=state.trash.filter(p=>p.id!==id);
+    refresh();
+  }catch(e){await errorDialog('Could not delete part',e.message);}
+}
+
+function toggleAllTxns(kind,checked){
+  document.querySelectorAll('.txn-chk-'+kind).forEach(c=>c.checked=checked);
+  updateBulkInfo(kind);
+}
+
+function updateBulkInfo(kind){
+  const checked=document.querySelectorAll('.txn-chk-'+kind+':checked').length;
+  const total=document.querySelectorAll('.txn-chk-'+kind).length;
+  const info=document.getElementById(kind+'-bulk-info');
+  const btn=document.getElementById(kind+'-bulk-delete');
+  const purge=document.getElementById(kind+'-bulk-purge');
+  if(info)info.textContent=checked?(checked+' of '+total+' selected'):'';
+  if(btn)btn.style.display=checked?'inline-flex':'none';
+  if(purge)purge.style.display=checked?'inline-flex':'none';
+  const all=document.getElementById(kind+'-chk-all');
+  if(all)all.checked=total>0&&checked===total;
+}
+
+async function bulkDeleteTxns(kind,historyOnly){
+  const ids=Array.from(document.querySelectorAll('.txn-chk-'+kind+':checked')).map(c=>parseInt(c.dataset.id));
+  if(!ids.length)return;
+  const label=kind==='in'?'stock in':(kind==='out'?'stock out':'transaction');
+  const plural=ids.length===1?'':'s';
+  let confirmed;
+  if(historyOnly){
+    confirmed=await confirmDialog({
+      title:'Permanently delete '+ids.length+' record'+plural+' from history?',
+      message:'• Current stock quantities will NOT be adjusted (use this for cleaning up old records).\n• The records will be gone from Stock In / Out / Issuance views.\n• An entry is written to the Activity Log so you can see what was purged.\n\nThis cannot be undone.',
+      variant:'danger',
+      confirmText:'Delete from History'
+    });
+  } else {
+    confirmed=await confirmDialog({
+      title:'Reverse '+ids.length+' '+label+' record'+plural+'?',
+      message:'Qty changes will be undone and the records removed. This cannot be undone.',
+      variant:'warn',
+      confirmText:'Reverse'
+    });
+  }
+  if(!confirmed)return;
+  try{
+    await apiFetch('/api/store/transactions','DELETE',{ids,historyOnly:!!historyOnly});
+    const delSet=new Set(ids);
+    if(!historyOnly){
+      state.transactions.forEach(t=>{
+        if(delSet.has(t.id)){
+          const p=state.parts.find(x=>x.id===t.partId);
+          if(p)p.qty+=t.type==='in'?-t.qty:t.qty;
+        }
+      });
+    }
+    state.transactions=state.transactions.filter(t=>!delSet.has(t.id));
+    refresh();
+  }catch(e){await errorDialog('Could not delete records',e.message);}
+}
+
+async function deleteTxn(id){
+  const t=state.transactions.find(x=>x.id===id);
+  if(!t)return;
+  if(!await confirmDialog({
+    title:'Reverse this '+(t.type==='in'?'stock in':'stock out')+' record?',
+    message:'The qty change will be undone and the record removed.\n\nUse "Delete from History" instead if you only want to clean up old records without touching stock.',
+    variant:'warn',
+    confirmText:'Reverse'
+  }))return;
+  try{
+    await apiFetch('/api/store/transactions?id='+id,'DELETE');
+    const p=state.parts.find(x=>x.id===t.partId);
+    if(p)p.qty+=t.type==='in'?-t.qty:t.qty;
+    state.transactions=state.transactions.filter(x=>x.id!==id);
+    refresh();
+  }catch(e){await errorDialog('Could not reverse record',e.message);}
+}
+
+async function deleteCat(name){
+  if(state.parts.some(p=>p.category===name)){await warnDialog('Cannot delete category','Parts are still using this category. Reassign them first.');return;}
+  if(!await confirmDialog({title:'Delete category "'+name+'"?',message:'It will be removed from the dropdown for future parts.',variant:'danger',confirmText:'Delete'}))return;
+  try{
+    await apiFetch('/api/store/categories?module='+encodeURIComponent(state.module)+'&name='+encodeURIComponent(name),'DELETE');
+    state.categories=state.categories.filter(c=>c!==name);
+    refresh();
+  }catch(e){await errorDialog('Could not delete category',e.message);}
+}
+
+// ---- RENDER ----
+function renderDashboard(){
+  const now=new Date();
+  const d=document.getElementById('dash-date');
+  if(d)d.textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  // Brand-header date strip
+  const bdDay=document.getElementById('brand-date-day');
+  const bdFull=document.getElementById('brand-date-full');
+  if(bdDay)bdDay.textContent=now.toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase();
+  if(bdFull)bdFull.textContent=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  // Hero greeting (time-of-day aware + user name)
+  const h=now.getHours();
+  const greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const uName=(state.user&&state.user.name)?state.user.name.split(' ')[0]:'';
+  const gt=document.getElementById('hero-greet-text');
+  if(gt)gt.textContent=uName?`${greet}, ${uName}`:greet;
+  const modLabel=state.module==='consumables'?'Inks & Consumables':'Machinery & Electrical';
+  const sml=document.getElementById('sidebar-module-label');
+  if(sml)sml.textContent=modLabel;
+  const sg=document.getElementById('stats-grid');
+  const totalParts=state.parts.length;
+  const totalQty=state.parts.reduce((a,p)=>a+p.qty,0);
+  const lowStock=state.parts.filter(p=>p.qty>0&&p.qty<=p.minQty).length;
+  const outOfStock=state.parts.filter(p=>p.qty===0).length;
+  if(sg)sg.innerHTML=`
+    <div class="stat-card tone-primary">
+      <div class="stat-main"><div class="stat-label">Total Parts</div><div class="stat-value">${totalParts}</div><div class="stat-sub">unique items on file</div></div>
+      <div class="stat-icon"><i class="ti ti-package"></i></div>
+    </div>
+    <div class="stat-card tone-green">
+      <div class="stat-main"><div class="stat-label">Qty on Hand</div><div class="stat-value">${totalQty}</div><div class="stat-sub">total units in stock</div></div>
+      <div class="stat-icon"><i class="ti ti-stack-2"></i></div>
+    </div>
+    <div class="stat-card tone-amber">
+      <div class="stat-main"><div class="stat-label">Low Stock</div><div class="stat-value">${lowStock}</div><div class="stat-sub">need reorder soon</div></div>
+      <div class="stat-icon"><i class="ti ti-alert-triangle"></i></div>
+    </div>
+    <div class="stat-card tone-red">
+      <div class="stat-main"><div class="stat-label">Out of Stock</div><div class="stat-value">${outOfStock}</div><div class="stat-sub">critical — restock now</div></div>
+      <div class="stat-icon"><i class="ti ti-circle-off"></i></div>
+    </div>`;
+  const lsl=document.getElementById('low-stock-list');
+  const lp=state.parts.filter(p=>p.qty<=p.minQty);
+  if(lsl)lsl.innerHTML=lp.length?`<table><thead><tr><th>Part</th><th>Category</th><th>Current Qty</th><th>Min Qty</th><th>Status</th></tr></thead><tbody>${lp.map(p=>{const s=stockStatus(p);return`<tr><td style="font-weight:600">${p.sku?`<span class="part-sku">[${p.sku}]</span>`:''}${p.name}</td><td>${p.category}</td><td>${p.qty} ${p.unit}</td><td>${p.minQty}</td><td><span class="badge ${s.cls}">${s.label}</span></td></tr>`}).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-circle-check" style="color:#2d6a10;font-size:28px"></i>All stock levels are healthy</div>';
+  const rt=document.getElementById('recent-txns');
+  const recent=[...state.transactions].sort((a,b)=>b.id-a.id).slice(0,6);
+  if(rt)rt.innerHTML=recent.length?`<table><thead><tr><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Details</th></tr></thead><tbody>${recent.map(t=>`<tr><td>${fmtDate(t.date)}</td><td style="font-weight:600">${getPartLabel(t.partId)}</td><td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td><td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${t.qty} ${getPartUnit(t.partId)}</td><td style="color:#888">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-file-off"></i>No transactions yet</div>';
+}
+
+function renderInventory(){
+  const search=(document.getElementById('inv-search')||{value:''}).value.toLowerCase();
+  const catF=(document.getElementById('inv-cat-filter')||{value:''}).value;
+  const machF=(document.getElementById('inv-machine-filter')||{value:''}).value;
+  const catSel=document.getElementById('inv-cat-filter');
+  if(catSel){catSel.innerHTML='<option value="">All Categories</option>'+state.categories.map(c=>`<option value="${c}">${c}</option>`).join('');catSel.value=catF;}
+  const machSel=document.getElementById('inv-machine-filter');
+  if(machSel){machSel.innerHTML='<option value="">All Machines</option><option value="__none__">— No machine —</option>'+state.machines.map(m=>`<option value="${m}">${m}</option>`).join('');machSel.value=machF;}
+  const parts=state.parts.filter(p=>{
+    const machList=parseMachines(p.machine);
+    const txt=!search||p.name.toLowerCase().includes(search)||(p.sku||'').toLowerCase().includes(search)||p.category.toLowerCase().includes(search)||machList.some(m=>m.toLowerCase().includes(search));
+    const cat=!catF||p.category===catF;
+    const mach=!machF||(machF==='__none__'?machList.length===0:machList.includes(machF));
+    return txt&&cat&&mach;
+  });
+  const tb=document.getElementById('inv-table');
+  if(!tb)return;
+  if(!parts.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-search"></i>No parts found</div></td></tr>';return;}
+  tb.innerHTML=parts.map((p,i)=>{
+    const s=stockStatus(p);
+    return`<tr>
+      <td style="color:#bbb;font-size:12px">${i+1}</td>
+      <td style="font-family:monospace;font-weight:600;color:#8C2326">${p.sku||'—'}</td>
+      <td>
+        <div class="inv-name-cell">
+          <div class="inv-thumb" ${p.imageUrl?`onclick="openLightbox('${p.imageUrl}')" title="Click to enlarge"`:''}>
+            ${p.imageUrl?`<img src="${p.imageUrl}" alt="">`:'<i class="ti ti-photo"></i>'}
+          </div>
+          <div style="min-width:0">
+            <div style="font-weight:600">${p.name}</div>
+            ${p.desc?`<div style="font-size:11px;color:#bbb;font-weight:400;margin-top:2px">${p.desc}</div>`:''}
+          </div>
+        </div>
+      </td>
+      <td>${p.category}</td>
+      <td style="color:#555">${(()=>{const list=parseMachines(p.machine);return list.length?list.map(m=>`<span class="machine-chip">${m}</span>`).join(' '):'—'})()}</td>
+      <td style="color:#888">${p.unit}</td>
+      <td style="font-weight:700;font-size:15px">${p.qty}</td>
+      <td style="color:#888">${p.minQty}</td>
+      <td><span class="badge ${s.cls}">${s.label}</span></td>
+      <td class="no-print write-only">
+        <button class="btn btn-icon" title="Edit" onclick="openEditPart(${p.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-icon" title="Delete" style="color:#A32D2D;margin-left:4px" onclick="deletePart(${p.id})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Compute running balance per transaction by part. Returns {txnId: balanceAfter}.
+// Sorted by date asc then id asc so older entries accumulate first.
+function computeBalances(){
+  const byPart={};
+  state.transactions.forEach(t=>{(byPart[t.partId]=byPart[t.partId]||[]).push(t)});
+  const out={};
+  Object.keys(byPart).forEach(pid=>{
+    const list=byPart[pid].slice().sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:a.id-b.id));
+    let bal=0;
+    list.forEach(t=>{bal+=t.type==='in'?t.qty:-t.qty;out[t.id]=bal;});
+  });
+  return out;
+}
+
+function inDateRange(date,from,to){
+  if(!from&&!to)return true;
+  if(from&&date<from)return false;
+  if(to&&date>to)return false;
+  return true;
+}
+
+function clearLogFilters(prefix){
+  const s=document.getElementById(prefix+'-search');if(s)s.value='';
+  const f=document.getElementById(prefix+'-date-from');if(f)f.value='';
+  const t=document.getElementById(prefix+'-date-to');if(t)t.value='';
+  if(prefix==='in')renderStockIn();
+  else if(prefix==='out')renderStockOut();
+  else if(prefix==='iss')renderIssuance();
+}
+
+function renderStockIn(){
+  const search=(document.getElementById('in-search')||{value:''}).value.toLowerCase();
+  const dFrom=(document.getElementById('in-date-from')||{value:''}).value;
+  const dTo=(document.getElementById('in-date-to')||{value:''}).value;
+  const txns=[...state.transactions].filter(t=>t.type==='in').sort((a,b)=>b.id-a.id).filter(t=>{
+    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.ref||'')+' '+(t.notes||'')).toLowerCase().includes(search);
+    return ms&&inDateRange(t.date,dFrom,dTo);
+  });
+  const bal=computeBalances();
+  const tb=document.getElementById('stockin-table');
+  if(!tb)return;
+  if(!txns.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
+  tb.innerHTML=txns.map((t,i)=>`<tr>
+    <td class="no-print"><input type="checkbox" class="txn-chk-in" data-id="${t.id}" onchange="updateBulkInfo('in')"></td>
+    <td style="color:#bbb;font-size:12px">${i+1}</td>
+    <td>${fmtDate(t.date)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td>${getPartCat(t.partId)}</td>
+    <td class="qty-positive">+${t.qty} ${getPartUnit(t.partId)}</td>
+    <td style="font-weight:600">${bal[t.id]??'—'} ${getPartUnit(t.partId)}</td>
+    <td>${t.ref||'—'}</td>
+    <td style="color:#888">${t.notes||'—'}</td>
+    <td class="no-print write-only"><button class="btn btn-icon" style="color:#854F0B" title="Reverse this entry" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i></button></td>
+  </tr>`).join('');
+  updateBulkInfo('in');
+}
+
+function renderStockOut(){
+  const search=(document.getElementById('out-search')||{value:''}).value.toLowerCase();
+  const dFrom=(document.getElementById('out-date-from')||{value:''}).value;
+  const dTo=(document.getElementById('out-date-to')||{value:''}).value;
+  const txns=[...state.transactions].filter(t=>t.type==='out').sort((a,b)=>b.id-a.id).filter(t=>{
+    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.issuedTo||'')+' '+(t.purpose||'')).toLowerCase().includes(search);
+    return ms&&inDateRange(t.date,dFrom,dTo);
+  });
+  const bal=computeBalances();
+  const tb=document.getElementById('stockout-table');
+  if(!tb)return;
+  if(!txns.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
+  tb.innerHTML=txns.map((t,i)=>`<tr>
+    <td class="no-print"><input type="checkbox" class="txn-chk-out" data-id="${t.id}" onchange="updateBulkInfo('out')"></td>
+    <td style="color:#bbb;font-size:12px">${i+1}</td>
+    <td>${fmtDate(t.date)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td>${getPartCat(t.partId)}</td>
+    <td class="qty-negative">−${t.qty} ${getPartUnit(t.partId)}</td>
+    <td style="font-weight:600">${bal[t.id]??'—'} ${getPartUnit(t.partId)}</td>
+    <td>${t.issuedTo||'—'}</td>
+    <td style="color:#888">${t.purpose||'—'}</td>
+    <td class="no-print write-only"><button class="btn btn-icon" style="color:#854F0B" title="Reverse this entry" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i></button></td>
+  </tr>`).join('');
+  updateBulkInfo('out');
+}
+
+function renderIssuance(){
+  const search=(document.getElementById('iss-search')||{value:''}).value.toLowerCase();
+  const dFrom=(document.getElementById('iss-date-from')||{value:''}).value;
+  const dTo=(document.getElementById('iss-date-to')||{value:''}).value;
+  const txns=[...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
+    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||(t.issuedTo+t.ref+t.purpose).toLowerCase().includes(search);
+    return ms&&inDateRange(t.date,dFrom,dTo);
+  });
+  const bal=computeBalances();
+  const tb=document.getElementById('issuance-table');
+  if(!tb)return;
+  if(!txns.length){tb.innerHTML='<tr><td colspan="9"><div class="empty"><i class="ti ti-search"></i>No records found</div></td></tr>';updateBulkInfo('iss');return;}
+  tb.innerHTML=txns.map((t,i)=>`<tr>
+    <td class="no-print"><input type="checkbox" class="txn-chk-iss" data-id="${t.id}" onchange="updateBulkInfo('iss')"></td>
+    <td style="color:#bbb;font-size:12px">${i+1}</td>
+    <td>${fmtDate(t.date)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td>
+    <td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${t.qty} ${getPartUnit(t.partId)}</td>
+    <td style="font-weight:600">${bal[t.id]??'—'} ${getPartUnit(t.partId)}</td>
+    <td>${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td>
+    <td style="color:#888">${t.type==='in'?(t.notes||'—'):(t.purpose||'—')}</td>
+  </tr>`).join('');
+  updateBulkInfo('iss');
+}
+
+function renderCategories(){
+  const tb=document.getElementById('cat-table');
+  if(!tb)return;
+  tb.innerHTML=state.categories.map(c=>{
+    const count=state.parts.filter(p=>p.category===c).length;
+    return`<tr><td style="font-weight:600">${c}</td><td><span class="badge badge-ok">${count} part${count!==1?'s':''}</span></td><td class="write-only"><button class="btn btn-icon" style="color:#A32D2D" title="Delete" onclick="deleteCat('${c}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+}
+
+function renderMachines(){
+  const tb=document.getElementById('machine-table');
+  if(!tb)return;
+  if(!state.machines.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><i class="ti ti-building-factory-2"></i>No machines added yet</div></td></tr>';return;}
+  tb.innerHTML=state.machines.map(m=>{
+    const count=state.parts.filter(p=>parseMachines(p.machine).includes(m)).length;
+    return`<tr><td style="font-weight:600">${m}</td><td><span class="badge badge-ok">${count} part${count!==1?'s':''}</span></td><td class="write-only"><button class="btn btn-icon" style="color:#A32D2D" title="Delete" onclick="deleteMachine('${m.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+}
+
+function renderActivity(){
+  const tb=document.getElementById('activity-table');
+  if(!tb)return;
+  let items=state.activity||[];
+  // Populate user filter (unique users from the loaded log)
+  const filter=document.getElementById('act-user-filter');
+  if(filter){
+    const cur=filter.value;
+    const seen=new Map();
+    items.forEach(a=>{if(a.userId&&!seen.has(a.userId))seen.set(a.userId,a.userName||a.userEmail||('User #'+a.userId));});
+    const opts=['<option value="">All users</option>'].concat(Array.from(seen.entries()).map(([uid,name])=>`<option value="${uid}">${_escHtml(name)}</option>`));
+    filter.innerHTML=opts.join('');
+    if(cur)filter.value=cur;
+    if(cur)items=items.filter(a=>String(a.userId)===cur);
+  }
+  if(!items.length){tb.innerHTML='<tr><td colspan="4"><div class="empty"><i class="ti ti-history"></i>No activity yet</div></td></tr>';return;}
+  const fmtTs=ts=>{if(!ts)return'';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
+  const actionLabel={
+    txn_deleted:'Reversed',txn_purged:'Purged from History',qty_edited:'Qty Edited',
+    user_invited:'User Invited',user_role_changed:'Role Changed',user_removed:'User Removed',
+    password_reset_link_generated:'Password Reset Link',password_reset_requested:'Forgot Password',
+    password_self_changed:'Password Changed'
+  };
+  const actionCls={
+    txn_deleted:'badge-low',txn_purged:'badge-critical',qty_edited:'badge-low',
+    user_invited:'badge-ok',user_role_changed:'badge-low',user_removed:'badge-critical',
+    password_reset_link_generated:'badge-low',password_reset_requested:'badge-low',
+    password_self_changed:'badge-ok'
+  };
+  tb.innerHTML=items.map(a=>{
+    const by=a.userName?`<div style="font-weight:600">${_escHtml(a.userName)}</div><div style="color:#888;font-size:11px">${_escHtml(a.userEmail||'')}</div>`:'<span style="color:#aaa">—</span>';
+    return `<tr>
+      <td style="color:#888;font-size:12px">${fmtTs(a.createdAt)}</td>
+      <td><span class="badge ${actionCls[a.action]||'badge-ok'}">${actionLabel[a.action]||a.action}</span></td>
+      <td>${by}</td>
+      <td>${_escHtml(a.summary)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTrash(){
+  const tb=document.getElementById('trash-table');
+  if(!tb)return;
+  const items=state.trash||[];
+  if(!items.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><i class="ti ti-trash-off"></i>Trash is empty</div></td></tr>';return;}
+  const fmtTs=ts=>{if(!ts)return'';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
+  const daysLeft=ts=>{if(!ts)return'';const ms=new Date(ts)-new Date();const d=Math.ceil(ms/86400000);return d<=0?'soon':d+' day'+(d===1?'':'s')+' left'};
+  tb.innerHTML=items.map(p=>`<tr>
+    <td style="font-family:monospace;font-weight:600;color:#8C2326">${p.sku||'—'}</td>
+    <td style="font-weight:600">${p.name}</td>
+    <td>${p.category}</td>
+    <td>${p.qty} ${p.unit}</td>
+    <td style="color:#888;font-size:12px">${fmtTs(p.deletedAt)}</td>
+    <td style="color:#854F0B;font-size:12px">${fmtTs(p.purgeAt)}<br><span style="color:#aaa">${daysLeft(p.purgeAt)}</span></td>
+    <td>
+      <button class="btn btn-sm write-only" onclick="restoreTrashPart(${p.id})"><i class="ti ti-arrow-back-up"></i> Restore</button>
+      <button class="btn btn-sm btn-danger-soft write-only" onclick="purgeTrashPart(${p.id})" style="margin-left:4px"><i class="ti ti-x"></i> Delete forever</button>
+    </td>
+  </tr>`).join('');
+}
+function renderUsers(){
+  const tb=document.getElementById('users-table');
+  if(!tb)return;
+  const items=state.users||[];
+  if(!items.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><i class="ti ti-users"></i>No users yet</div></td></tr>';return;}
+  const fmtTs=ts=>{if(!ts)return'never';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
+  tb.innerHTML=items.map(u=>{
+    const isMe=state.user && u.id===state.user.id;
+    const roleLabel=r=>({admin:'Admin',machinery:'Machinery Engineer',consumables:'Consumables Staff',ceo:'CEO (view-only)'}[r]||r);
+    const availableRoles=['admin','machinery','consumables','ceo'];
+    const roleOpts=availableRoles.map(r=>`<option value="${r}" ${r===u.role?'selected':''}>${roleLabel(r)}</option>`).join('');
+    const status=u.hasPassword?'<span class="badge badge-ok">Active</span>':'<span class="badge badge-low">Pending invite</span>';
+    const invited=u.invitedByName?`${u.invitedByName}`:'—';
+    return`<tr>
+      <td style="font-weight:600">${u.name}${isMe?' <span class="badge badge-in" style="margin-left:6px">You</span>':''}</td>
+      <td style="color:#555">${u.email}</td>
+      <td>${isMe?`<span class="role-tag role-tag-${u.role}">${roleLabel(u.role)}</span>`:`<select onchange="changeUserRole(${u.id},this.value,'${u.role}')">${roleOpts}</select>`}</td>
+      <td>${status}</td>
+      <td style="color:#555">${invited}</td>
+      <td style="color:#888;font-size:12px">${fmtTs(u.lastLoginAt)}</td>
+      <td>
+        <div class="user-row-actions">
+          ${isMe?'':`<button class="btn btn-sm" title="Generate password-reset link" onclick="resetUserPassword(${u.id},'${u.name.replace(/'/g,"\\'")}')"><i class="ti ti-key"></i> Reset PW</button>`}
+          ${isMe?'':`<button class="btn btn-sm btn-danger-soft" onclick="removeUser(${u.id},'${u.name.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i> Remove</button>`}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openInviteUserModal(){
+  document.getElementById('f-invite-name').value='';
+  document.getElementById('f-invite-email').value='';
+  document.getElementById('f-invite-role').value='user';
+  openModal('inviteUser');
+}
+
+async function submitInviteUser(){
+  const name=document.getElementById('f-invite-name').value.trim();
+  const email=document.getElementById('f-invite-email').value.trim();
+  const role=document.getElementById('f-invite-role').value;
+  if(!name){await warnDialog('Name required','Enter the new user’s name.');return;}
+  if(!email){await warnDialog('Email required','Enter the new user’s email.');return;}
+  try{
+    const data=await apiFetch('/api/store/users','POST',{name,email,role});
+    closeModal('inviteUser');
+    const url=window.location.origin+'/?setup='+encodeURIComponent(data.setupToken);
+    await showSetupLinkDialog(url,data.expiresInHours,name,email,'invite',data.emailed);
+    // refresh users list
+    try{state.users=await apiFetch('/api/store/users');renderUsers();}catch(e){}
+  }catch(e){await errorDialog('Could not invite user',e.message);}
+}
+
+async function changeUserRole(id,newRole,oldRole){
+  if(newRole===oldRole)return;
+  const ok=await confirmDialog({title:'Change role to '+(newRole==='ceo'?'CEO (view-only)':newRole)+'?',message:'The user’s permissions take effect on their next request.',confirmText:'Change role'});
+  if(!ok){
+    // revert dropdown
+    try{state.users=await apiFetch('/api/store/users');renderUsers();}catch(e){}
+    return;
+  }
+  try{
+    await apiFetch('/api/store/users?id='+id,'PUT',{role:newRole});
+    state.users=await apiFetch('/api/store/users');renderUsers();
+  }catch(e){
+    await errorDialog('Could not change role',e.message);
+    try{state.users=await apiFetch('/api/store/users');renderUsers();}catch(_){}
+  }
+}
+
+async function removeUser(id,name){
+  if(!await confirmDialog({title:'Remove '+name+'?',message:'They will no longer be able to sign in. Their past activity records stay in the log.',variant:'danger',confirmText:'Remove user'}))return;
+  try{
+    await apiFetch('/api/store/users?id='+id,'DELETE');
+    state.users=await apiFetch('/api/store/users');renderUsers();
+  }catch(e){await errorDialog('Could not remove user',e.message);}
+}
+
+async function resetUserPassword(id,name){
+  if(!await confirmDialog({title:'Generate password-reset link for '+name+'?',message:'A one-time link will be created. Send it to the user yourself (WhatsApp, email, etc). It expires in 24 hours.',confirmText:'Generate link'}))return;
+  try{
+    const data=await apiFetch('/api/store/users?action=reset&id='+id,'POST');
+    const url=window.location.origin+'/?reset='+encodeURIComponent(data.token);
+    await showSetupLinkDialog(url,data.expiresInHours,name,'','reset',data.emailed);
+  }catch(e){await errorDialog('Could not generate link',e.message);}
+}
+
+async function showSetupLinkDialog(url,hours,name,email,purpose,emailed){
+  const emailNote=emailed?'<div style="background:#eaf3de;color:#2d6a10;border-radius:6px;padding:8px 10px;font-size:12px;margin-bottom:10px"><i class="ti ti-circle-check"></i> An email was also sent.</div>':'';
+  const intro=purpose==='reset'
+    ? emailNote+'Send this one-time link to <b>'+_escHtml(name)+'</b>. They’ll click it to set a new password.'
+    : emailNote+'<b>'+_escHtml(name)+'</b>'+(email?' ('+_escHtml(email)+')':'')+' has been added. Send this one-time setup link so they can choose a password.';
+  return new Promise(resolve=>{
+    const ov=document.createElement('div');
+    ov.className='app-dialog-overlay';
+    ov.innerHTML=`<div class="app-dialog" style="text-align:left;width:520px;max-width:96vw">
+      <div class="app-dialog-icon app-dialog-icon-success" style="margin-left:auto;margin-right:auto"><i class="ti ti-circle-check"></i></div>
+      <div class="app-dialog-title" style="text-align:center">${purpose==='reset'?'Password reset link ready':'Invitation created'}</div>
+      <div class="app-dialog-message">${intro}<br><br>Link expires in <b>${hours} hours</b>.</div>
+      <div class="invite-link-box" id="invite-link-box">${_escHtml(url)}</div>
+      <div class="app-dialog-actions">
+        <button class="btn app-dialog-cancel">Close</button>
+        <button class="btn btn-primary app-dialog-confirm"><i class="ti ti-copy"></i> Copy Link</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(()=>ov.classList.add('open'));
+    const copyBtn=ov.querySelector('.app-dialog-confirm');
+    const closeBtn=ov.querySelector('.app-dialog-cancel');
+    function cleanup(){ov.classList.remove('open');setTimeout(()=>ov.remove(),200);resolve();}
+    copyBtn.onclick=async()=>{
+      try{await navigator.clipboard.writeText(url);copyBtn.innerHTML='<i class="ti ti-check"></i> Copied!';}
+      catch(e){copyBtn.innerHTML='<i class="ti ti-x"></i> Copy failed';}
+      setTimeout(()=>copyBtn.innerHTML='<i class="ti ti-copy"></i> Copy Link',2000);
+    };
+    closeBtn.onclick=cleanup;
+    ov.onclick=e=>{if(e.target===ov)cleanup();};
+  });
+}
+
+function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderActivity();renderTrash();/* renderUsers removed after merge */}
+
+// ---- AUTH ----
+function applyModuleToUI(){
+  const m=state.module;
+  // The two in-iframe module pills were removed after the merge —
+  // module switching lives in the employee-app top nav now.
+  const mm=document.getElementById('mod-machinery'); if(mm) mm.classList.toggle('active',m==='machinery');
+  const mc=document.getElementById('mod-consumables'); if(mc) mc.classList.toggle('active',m==='consumables');
+  const sub=document.querySelector('.logo-sub'); if(sub) sub.textContent=MODULE_LABEL[m];
+}
+
+function renderUserBar(){
+  // The user bar DOM was removed after the merge — the employee-app topbar
+  // shows the current user. We still apply the role class on <body> so the
+  // .admin-only / .write-only CSS gating keeps working.
+  document.body.classList.remove('role-admin','role-user','role-ceo','role-machinery','role-consumables');
+  if(state.user && state.user.role) document.body.classList.add('role-'+state.user.role);
+}
+
+function showAuthScreen(mode){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-setup-form').style.display=mode==='setup'?'block':'none';
+  document.getElementById('auth-login-form').style.display=mode==='login'?'block':'none';
+  document.getElementById('auth-setpw-form').style.display=mode==='setpw'?'block':'none';
+  setTimeout(()=>{
+    const focusId={setup:'setup-name',login:'login-email',setpw:'setpw-pw'}[mode];
+    const focusEl=focusId?document.getElementById(focusId):null;
+    if(focusEl)focusEl.focus();
+  },50);
+}
+
+function hideAuthScreen(){
+  document.getElementById('auth-screen').style.display='none';
+}
+
+function showAuthError(formId,message){
+  const el=document.getElementById(formId==='setup'?'setup-error':'login-error');
+  el.textContent=message;
+  el.classList.add('show');
+}
+
+function clearAuthErrors(){
+  ['setup-error','login-error','setpw-error'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';el.classList.remove('show');}});
+}
+
+let _pendingSetupToken=null; // when user landed via setup link
+
+async function initAuthFromUrl(){
+  // Detect ?setup=TOKEN or ?reset=TOKEN
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('setup')||params.get('reset')||params.get('invite');
+  if(!token)return false;
+  _pendingSetupToken=token;
+  try{
+    const r=await fetch('/api/store/auth?action=set-password&token='+encodeURIComponent(token));
+    const data=await r.json();
+    if(!r.ok||!data.valid){
+      // Show login screen with error
+      showAuthScreen('login');
+      showAuthError('login',data.error||'This link is invalid.');
+      cleanUrl();
+      return true;
+    }
+    document.getElementById('setpw-email').value=data.email;
+    document.getElementById('setpw-title').textContent=data.purpose==='reset'?'Set a new password':'Welcome, '+data.name+'!';
+    document.getElementById('setpw-sub').textContent=data.purpose==='reset'?'Choose a new password to regain access.':'Choose a password to finish setting up your account.';
+    showAuthScreen('setpw');
+    return true;
+  }catch(e){
+    showAuthScreen('login');
+    showAuthError('login','Could not verify the link. Please try again.');
+    return true;
+  }
+}
+
+function cleanUrl(){
+  // Remove sensitive setup/reset/invite tokens from the visible URL
+  const url=new URL(window.location.href);
+  ['setup','reset','invite'].forEach(p=>url.searchParams.delete(p));
+  window.history.replaceState({},'',url.pathname+(url.search||''));
+}
+
+async function initAuth(){
+  // Auth is handled by the parent employee app — the store never shows its
+  // own login screen. We still fetch /api/store/auth?action=me to pick up
+  // the role (used for admin-only UI gating), but fall back to 'admin' if
+  // the request fails so the store always loads.
+  let user = { id: 0, name: '', email: '', role: 'admin' };
+  try {
+    const r = await fetch('/api/store/auth?action=me');
+    const data = await r.json();
+    if (data && data.authenticated && data.user) user = data.user;
+  } catch (_) { /* keep the fallback */ }
+  state.user = user;
+  hideAuthScreen();
+  applyModuleToUI();
+  await loadAll();
+}
+
+async function submitSetPassword(){
+  clearAuthErrors();
+  const pw=document.getElementById('setpw-pw').value;
+  const pw2=document.getElementById('setpw-pw2').value;
+  if(pw!==pw2){showAuthError('setpw','Passwords do not match.');return;}
+  if(pw.length<8){showAuthError('setpw','Password must be at least 8 characters.');return;}
+  if(!_pendingSetupToken){showAuthError('setpw','Missing setup token. Please reopen the link from your invitation.');return;}
+  try{
+    const r=await fetch('/api/store/auth?action=set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:_pendingSetupToken,password:pw})});
+    const data=await r.json();
+    if(!r.ok){showAuthError('setpw',data.error||'Could not set password.');return;}
+    state.user=data.user;
+    _pendingSetupToken=null;
+    cleanUrl();
+    hideAuthScreen();
+    renderUserBar();
+    applyModuleToUI();
+    await loadAll();
+  }catch(e){showAuthError('setpw','Network error. Please try again.');}
+}
+
+async function submitSetup(){
+  clearAuthErrors();
+  const name=document.getElementById('setup-name').value.trim();
+  const email=document.getElementById('setup-email').value.trim();
+  const pw=document.getElementById('setup-pw').value;
+  const pw2=document.getElementById('setup-pw2').value;
+  if(pw!==pw2){showAuthError('setup','Passwords do not match.');return;}
+  if(pw.length<8){showAuthError('setup','Password must be at least 8 characters.');return;}
+  try{
+    const r=await fetch('/api/store/auth?action=setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pw})});
+    const data=await r.json();
+    if(!r.ok){showAuthError('setup',data.error||'Could not create account.');return;}
+    state.user=data.user;
+    hideAuthScreen();
+    renderUserBar();
+    applyModuleToUI();
+    await loadAll();
+  }catch(e){showAuthError('setup','Network error. Please try again.');}
+}
+
+async function submitLogin(){
+  clearAuthErrors();
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  try{
+    const r=await fetch('/api/store/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})});
+    const data=await r.json();
+    if(!r.ok){showAuthError('login',data.error||'Could not sign in.');return;}
+    state.user=data.user;
+    document.getElementById('login-pw').value='';
+    hideAuthScreen();
+    renderUserBar();
+    applyModuleToUI();
+    await loadAll();
+  }catch(e){showAuthError('login','Network error. Please try again.');}
+}
+
+function clearChangePwFields(){
+  ['f-chgpw-cur','f-chgpw-new','f-chgpw-new2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+async function submitChangePassword(){
+  const cur=document.getElementById('f-chgpw-cur').value;
+  const pw=document.getElementById('f-chgpw-new').value;
+  const pw2=document.getElementById('f-chgpw-new2').value;
+  if(!cur){await warnDialog('Current password required','Enter your current password to confirm.');return;}
+  if(pw.length<8){await warnDialog('Password too short','New password must be at least 8 characters.');return;}
+  if(pw!==pw2){await warnDialog('Passwords do not match','Retype your new password.');return;}
+  try{
+    const r=await fetch('/api/store/auth?action=change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:cur,newPassword:pw})});
+    const data=await r.json();
+    if(!r.ok){await errorDialog('Could not change password',data.error||'Please try again.');return;}
+    closeModal('changePw');
+    clearChangePwFields();
+    await successDialog('Password updated','Your password has been changed. Other devices have been signed out.');
+  }catch(e){await errorDialog('Network error','Please try again.');}
+}
+
+async function forgotPasswordFromModal(){
+  // If email isn't configured, point them at admin help directly.
+  if(!state.emailConfigured){
+    closeModal('changePw');
+    await infoDialog('Ask your admin','Self-service password reset needs email to be configured. For now, please ask your admin to generate a reset link from the Users page.');
+    return;
+  }
+  // Email IS configured — fire off a reset email to the signed-in user's address, then sign them out
+  // so they can complete the flow from the link.
+  if(!state.user || !state.user.email){closeModal('changePw');return;}
+  try{
+    await fetch('/api/store/auth?action=forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:state.user.email})});
+  }catch(_){/* ignore */}
+  closeModal('changePw');
+  await infoDialog('Check your inbox','We sent a reset link to '+state.user.email+'. Open the link from your inbox to set a new password.\n\nYou will be signed out now.');
+  try{await fetch('/api/store/auth?action=logout',{method:'POST'});}catch(_){}
+  window.location.href='/';
+}
+
+async function showForgotPassword(){
+  // Skip the email prompt entirely when email isn't configured — there's nothing
+  // we can actually do with it, and pretending otherwise is misleading.
+  if(!state.emailConfigured){
+    await infoDialog(
+      'Ask your admin to reset it',
+      'Self-service password reset needs an email service (Resend) to be configured by the project owner. Until that\'s done:\n\n• Contact your admin directly (WhatsApp, in person, etc.)\n• They open the Users page → click "Reset PW" next to your name\n• They send you the one-time link\n• You click it and set a new password'
+    );
+    return;
+  }
+  const email=await promptDialog({title:'Forgot password?',message:'Enter the email address you sign in with. If it\'s registered, we\'ll send you a reset link.',placeholder:'you@example.com',confirmText:'Send link'});
+  if(email===null)return;
+  const e=(email||'').trim();
+  if(!e)return;
+  try{await fetch('/api/store/auth?action=forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e})});}catch(_){/* ignore */}
+  await infoDialog('Check your inbox','If that email is registered, a reset link is on its way. The link expires in 24 hours.');
+}
+
+async function logout(){
+  if(!await confirmDialog({title:'Sign out?',message:'You will need to sign in again to access the app.',confirmText:'Sign Out',variant:'confirm'}))return;
+  try{await fetch('/api/store/auth?action=logout',{method:'POST'});}catch(e){/* ignore */}
+  // Hard reload guarantees a clean state (no stale active page, no leftover data flashing)
+  window.location.href='/';
+}
+
+initAuth();
+</script>
+</body>
+</html>
