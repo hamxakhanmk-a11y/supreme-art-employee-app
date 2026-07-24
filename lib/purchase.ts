@@ -34,7 +34,65 @@ export const PR_UNITS = [
   "Grams",
   "Litre",
   "Metric Ton",
+  "Sq cm",
+  "Sq meter",
 ] as const;
+
+// A single line item on a requisition. `value` is the cost of that item and is
+// filled in by the requester *after* the material is received.
+export type PrItem = {
+  itemName: string;
+  category: string;
+  quantity: number | null;
+  uom: string;
+  value: number | null;
+};
+
+export const emptyPrItem = (): PrItem => ({
+  itemName: "", category: "", quantity: null, uom: "", value: null,
+});
+
+// Parse the stored items JSON (or an already-parsed array) into clean PrItems.
+// Falls back to synthesising one item from a legacy row's scalar columns so old
+// single-line rows still render in the multi-item UI.
+export function parsePrItems(raw: {
+  items?: unknown; itemName?: string | null; category?: string | null;
+  quantity?: unknown; uom?: string | null; value?: unknown;
+}): PrItem[] {
+  let arr: unknown[] = [];
+  if (Array.isArray(raw.items)) arr = raw.items;
+  else if (typeof raw.items === "string" && raw.items.trim()) {
+    try { const p = JSON.parse(raw.items); if (Array.isArray(p)) arr = p; } catch { /* ignore */ }
+  }
+  const items: PrItem[] = arr
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((x) => ({
+      itemName: String(x.itemName ?? "").trim(),
+      category: String(x.category ?? "").trim(),
+      quantity: x.quantity === null || x.quantity === undefined || x.quantity === "" ? null : Number(x.quantity),
+      uom: String(x.uom ?? "").trim(),
+      value: x.value === null || x.value === undefined || x.value === "" ? null : Number(x.value),
+    }))
+    .filter((it) => it.itemName || it.quantity !== null || it.value !== null);
+
+  if (items.length === 0 && (raw.itemName || raw.quantity != null || raw.value != null)) {
+    items.push({
+      itemName: (raw.itemName ?? "").trim(),
+      category: (raw.category ?? "").trim(),
+      quantity: raw.quantity == null || raw.quantity === "" ? null : Number(raw.quantity),
+      uom: (raw.uom ?? "").trim(),
+      value: raw.value == null || raw.value === "" ? null : Number(raw.value),
+    });
+  }
+  return items;
+}
+
+// Sum of item values, or null when no item has been valued yet.
+export function prItemsTotal(items: PrItem[]): number | null {
+  const valued = items.filter((i) => i.value !== null && !isNaN(i.value as number));
+  if (valued.length === 0) return null;
+  return valued.reduce((s, i) => s + (i.value as number), 0);
+}
 
 // Workflow: PR Raised -> Approved -> Material Received -> Closed
 export const PR_STATUSES = ["PR Raised", "Approved", "Material Received", "Closed"] as const;

@@ -3,47 +3,84 @@ import { useMemo, useState } from "react";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
-import { PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_HOD, PR_HR, PR_STATUS_STYLE } from "@/lib/purchase";
+import {
+  PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_STATUS_STYLE,
+  parsePrItems, prItemsTotal, type PrItem,
+} from "@/lib/purchase";
+
+// Raw row as it comes back from the server (items is a JSON string, plus the
+// legacy scalar columns). We normalise it into PrRow for the UI.
+type RawPr = {
+  id: number; prNo: number | null; date: string | null; department: string | null;
+  concernedPerson: string | null; items?: unknown; category?: string | null;
+  itemName?: string | null; quantity?: number | null; uom?: string | null;
+  receivedByAdmin: boolean; receivedDate?: string | null; value: number | null;
+  requiredDate: string | null; hodApproval: string | null; hrApproval: string | null;
+  status: string; poNo: string | null; remarks: string | null;
+};
 
 export type PrRow = {
   id: number;
-  prNo: number | null;      // legacy rows can lack a number
-  date: string | null;      // …or a date
+  prNo: number | null;
+  date: string | null;
   department: string | null;
   concernedPerson: string | null;
-  category: string | null;
-  itemName: string | null;
-  quantity: number | null;
-  uom: string | null;
+  items: PrItem[];
   receivedByAdmin: boolean;
-  value: number | null;
+  receivedDate: string | null;
+  value: number | null;          // total across items
   requiredDate: string | null;
-  hodApproval: string | null;
-  hrApproval: string | null;
+  hodApproval: string | null;    // Approved | Not Approved | null
+  hrApproval: string | null;     // Approved | Rejected | null
   status: string;
   poNo: string | null;
   remarks: string | null;
 };
 
+function normalize(raw: RawPr): PrRow {
+  const items = parsePrItems(raw);
+  return {
+    id: raw.id,
+    prNo: raw.prNo ?? null,
+    date: raw.date ?? null,
+    department: raw.department ?? null,
+    concernedPerson: raw.concernedPerson ?? null,
+    items,
+    receivedByAdmin: !!raw.receivedByAdmin,
+    receivedDate: raw.receivedDate ?? null,
+    value: prItemsTotal(items),
+    requiredDate: raw.requiredDate ?? null,
+    hodApproval: raw.hodApproval ?? null,
+    hrApproval: raw.hrApproval ?? null,
+    status: raw.status ?? "PR Raised",
+    poNo: raw.poNo ?? null,
+    remarks: raw.remarks ?? null,
+  };
+}
+
+type ItemDraft = { itemName: string; category: string; quantity: string; uom: string; value: string };
 type Draft = {
-  date: string; prNo: string; department: string; concernedPerson: string; category: string;
-  itemName: string; quantity: string; uom: string; receivedByAdmin: boolean;
-  value: string; requiredDate: string; hodApproval: string; hrApproval: string; status: string;
+  date: string; prNo: string; department: string; concernedPerson: string;
+  items: ItemDraft[];
+  receivedByAdmin: boolean; receivedDate: string;
+  requiredDate: string; hodApproval: string; hrApproval: string; status: string;
   poNo: string; remarks: string;
 };
 
+const emptyItemDraft = (): ItemDraft => ({ itemName: "", category: "", quantity: "", uom: "", value: "" });
 const emptyDraft = (): Draft => ({
   date: new Date().toISOString().slice(0, 10),
-  prNo: "", department: "", concernedPerson: "", category: "", itemName: "",
-  quantity: "", uom: "", receivedByAdmin: true, value: "",
+  prNo: "", department: "", concernedPerson: "",
+  items: [emptyItemDraft()],
+  receivedByAdmin: false, receivedDate: "",
   requiredDate: "", hodApproval: "", hrApproval: "", status: "PR Raised", poNo: "", remarks: "",
 });
 
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—";
 
-export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }) {
-  const [rows, setRows] = useState<PrRow[]>(initialRows);
+export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }) {
+  const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");
   const [cat, setCat] = useState("");
@@ -58,9 +95,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
 
   const filtered = useMemo(() => rows.filter(r => {
     if (dept && r.department !== dept) return false;
-    if (cat && r.category !== cat) return false;
+    if (cat && !r.items.some(i => i.category === cat)) return false;
     if (status && r.status !== status) return false;
-    // Date range (inclusive). Rows without a date are excluded once a bound is set.
     if (fromDate || toDate) {
       const d = r.date ? r.date.slice(0, 10) : "";
       if (!d) return false;
@@ -69,7 +105,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     }
     if (q.trim()) {
       const s = q.toLowerCase();
-      const hay = `${r.prNo ?? ""} ${r.itemName ?? ""} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
+      const hay = `${r.prNo ?? ""} ${r.items.map(i => i.itemName).join(" ")} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
@@ -78,9 +114,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   const totalValue = useMemo(() => filtered.reduce((s, r) => s + (r.value ?? 0), 0), [filtered]);
 
   const set = (patch: Partial<Draft>) => setDraft(prev => ({ ...prev, ...patch }));
+  const setItem = (idx: number, patch: Partial<ItemDraft>) =>
+    setDraft(prev => ({ ...prev, items: prev.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) }));
+  const addItem = () => setDraft(prev => ({ ...prev, items: [...prev.items, emptyItemDraft()] }));
+  const removeItem = (idx: number) =>
+    setDraft(prev => ({ ...prev, items: prev.items.length > 1 ? prev.items.filter((_, i) => i !== idx) : prev.items }));
 
   const openNew = () => {
-    // Suggest the next number after the current max — still fully editable.
     const maxPr = rows.reduce((m, r) => Math.max(m, r.prNo ?? 0), 0);
     setDraft({ ...emptyDraft(), prNo: String(maxPr + 1) });
     setEditId(null); setShowForm(true); setError(null);
@@ -89,9 +129,12 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     setDraft({
       date: r.date ?? "", prNo: r.prNo === null ? "" : String(r.prNo),
       department: r.department ?? "", concernedPerson: r.concernedPerson ?? "",
-      category: r.category ?? "", itemName: r.itemName ?? "",
-      quantity: r.quantity === null ? "" : String(r.quantity), uom: r.uom ?? "",
-      receivedByAdmin: r.receivedByAdmin, value: r.value === null ? "" : String(r.value),
+      items: (r.items.length ? r.items : [{ itemName: "", category: "", quantity: null, uom: "", value: null }]).map(i => ({
+        itemName: i.itemName, category: i.category, uom: i.uom,
+        quantity: i.quantity === null ? "" : String(i.quantity),
+        value: i.value === null ? "" : String(i.value),
+      })),
+      receivedByAdmin: r.receivedByAdmin, receivedDate: r.receivedDate ?? "",
       requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "", hrApproval: r.hrApproval ?? "",
       status: r.status, poNo: r.poNo ?? "", remarks: r.remarks ?? "",
     });
@@ -99,28 +142,34 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
   };
 
   const save = async () => {
-    if (!draft.date || !draft.prNo.trim() || !draft.department || !draft.itemName.trim()) {
-      setError("Date, PR No, Department and Item Name are required."); return;
+    const items = draft.items.filter(i => i.itemName.trim());
+    if (!draft.date || !draft.prNo.trim() || !draft.department || items.length === 0) {
+      setError("Date, PR No, Department and at least one item name are required."); return;
     }
+    const body = {
+      ...draft,
+      items,
+      // Default the received date to today when marked received but left blank.
+      receivedDate: draft.receivedByAdmin ? (draft.receivedDate || new Date().toISOString().slice(0, 10)) : "",
+    };
     setBusy(true); setError(null);
     try {
       const res = await fetch(editId === null ? "/api/purchase" : `/api/purchase/${editId}`, {
         method: editId === null ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(body),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Save failed");
-      setRows(prev => editId === null
-        ? [j, ...prev]
-        : prev.map(r => (r.id === editId ? j : r)));
+      const row = normalize(j);
+      setRows(prev => editId === null ? [row, ...prev] : prev.map(r => (r.id === editId ? row : r)));
       setShowForm(false);
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
   };
 
   const remove = async (r: PrRow) => {
-    if (!confirm(`Delete PR #${r.prNo ?? "—"} — ${r.itemName ?? "(no item)"}? This cannot be undone.`)) return;
+    if (!confirm(`Delete PR #${r.prNo ?? "—"} — ${r.items[0]?.itemName ?? "(no item)"}? This cannot be undone.`)) return;
     setBusy(true); setError(null);
     try {
       const res = await fetch(`/api/purchase/${r.id}`, { method: "DELETE" });
@@ -130,17 +179,20 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
     finally { setBusy(false); }
   };
 
-  // Quick workflow actions from the row buttons. Optimistic: the row flips
-  // instantly and the server request reconciles in the background (reverting
-  // only if it fails), so the button feels immediate despite network latency.
-  const act = async (r: PrRow, action: "approve" | "reject" | "received") => {
+  // Quick workflow toggles from the row buttons. Optimistic: the row flips
+  // instantly, then reconciles against the server (reverting only on failure).
+  type Action = "hod-approve" | "hod-reject" | "approve" | "reject" | "received";
+  const act = async (r: PrRow, action: Action) => {
     const opt: PrRow = { ...r };
-    if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
+    if (action === "hod-approve") opt.hodApproval = r.hodApproval === "Approved" ? null : "Approved";
+    else if (action === "hod-reject") opt.hodApproval = r.hodApproval === "Not Approved" ? null : "Not Approved";
+    else if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
     else if (action === "reject") opt.hrApproval = r.hrApproval === "Rejected" ? null : "Rejected";
     else if (action === "received") {
       const on = r.status !== "Material Received";
       opt.status = on ? "Material Received" : "PR Raised";
       opt.receivedByAdmin = on;
+      opt.receivedDate = on ? new Date().toISOString().slice(0, 10) : null;
     }
     setError(null);
     setRows(prev => prev.map(x => (x.id === r.id ? opt : x)));
@@ -151,20 +203,26 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Action failed");
-      setRows(prev => prev.map(x => (x.id === r.id ? j : x))); // authoritative
+      setRows(prev => prev.map(x => (x.id === r.id ? normalize(j) : x)));
     } catch (e: any) {
       setError(e.message);
-      setRows(prev => prev.map(x => (x.id === r.id ? r : x))); // revert on failure
+      setRows(prev => prev.map(x => (x.id === r.id ? r : x)));
     }
   };
 
   const exportXlsx = async () => {
-    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Received by HR & Admin", "Value", "Required Date", "HR Approval", "HOD Approval", "Status", "PO No", "Remarks"];
-    const data = filtered.map(r => [
-      fmtDate(r.date), r.prNo ?? "", r.department ?? "", r.concernedPerson ?? "", r.category ?? "", r.itemName ?? "",
-      r.quantity ?? "", r.uom ?? "", r.receivedByAdmin ? "Yes" : "No", r.value ?? "",
-      fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate), r.hrApproval ?? "", r.hodApproval ?? "", r.status, r.poNo ?? "", r.remarks ?? "",
-    ]);
+    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "PO No", "Remarks"];
+    // One spreadsheet line per item so multi-item PRs expand out fully.
+    const data = filtered.flatMap(r => {
+      const its = r.items.length ? r.items : [{ itemName: "", category: "", quantity: null, uom: "", value: null }];
+      return its.map(i => [
+        fmtDate(r.date), r.prNo ?? "", r.department ?? "", r.concernedPerson ?? "",
+        i.category ?? "", i.itemName ?? "", i.quantity ?? "", i.uom ?? "", i.value ?? "",
+        fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate),
+        r.hodApproval ?? "", r.hrApproval ?? "", r.receivedByAdmin ? "Yes" : "No",
+        r.receivedDate ? fmtDate(r.receivedDate) : "", r.status, r.poNo ?? "", r.remarks ?? "",
+      ]);
+    });
     await downloadRegisterXlsx({
       filename: "purchase-requisition-register",
       sheetName: "PR Register",
@@ -172,6 +230,9 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
       headers, rows: data,
     });
   };
+
+  const approvalStyle = (v: string | null, good: string, bad: string) =>
+    v === good ? "#15803D" : v === bad ? "#DC2626" : "var(--text3)";
 
   return (
     <div className="fade-up">
@@ -234,6 +295,9 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
             </div>
             <button onClick={() => setShowForm(false)} className="btn btn-sm">Cancel</button>
           </div>
+
+          {/* ① Requisition details */}
+          <div className="pr-section">① Requisition details</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
             <div><label className="form-label">Date *</label>
               <input type="date" value={draft.date} onChange={e => set({ date: e.target.value })} /></div>
@@ -244,51 +308,94 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                 <option value="">— Select —</option>
                 {PR_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
               </select></div>
-            <div><label className="form-label">Concerned Person</label>
-              <input value={draft.concernedPerson} onChange={e => set({ concernedPerson: e.target.value })} placeholder="Who needs it" /></div>
-            <div><label className="form-label">Category</label>
-              <select value={draft.category} onChange={e => set({ category: e.target.value })}>
-                <option value="">— Select —</option>
-                {PR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select></div>
-            <div style={{ gridColumn: "span 2" }}><label className="form-label">Item Name *</label>
-              <input value={draft.itemName} onChange={e => set({ itemName: e.target.value })} placeholder="What is being requested" /></div>
-            <div><label className="form-label">Quantity</label>
-              <input type="number" value={draft.quantity} onChange={e => set({ quantity: e.target.value })} /></div>
-            <div><label className="form-label">UoM</label>
-              <select value={draft.uom} onChange={e => set({ uom: e.target.value })}>
-                <option value="">— Unit —</option>
-                {PR_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-              </select></div>
-            <div><label className="form-label">Value (PKR)</label>
-              <input type="number" value={draft.value} onChange={e => set({ value: e.target.value })} /></div>
+            <div><label className="form-label">Requested by</label>
+              <input value={draft.concernedPerson} onChange={e => set({ concernedPerson: e.target.value })} placeholder="Person raising it" /></div>
             <div><label className="form-label">Required Date</label>
               <input type="date" value={draft.requiredDate} onChange={e => set({ requiredDate: e.target.value })} /></div>
+          </div>
+
+          {/* ② Items */}
+          <div className="pr-section" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>② Items</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text3)" }}>Value is entered after the material is received.</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="pr-item-form">
+              <thead>
+                <tr>
+                  <th style={{ width: 34 }}>#</th>
+                  <th style={{ minWidth: 200 }}>Item Name *</th>
+                  <th style={{ minWidth: 150 }}>Category</th>
+                  <th style={{ width: 90 }}>Quantity</th>
+                  <th style={{ width: 120 }}>UoM</th>
+                  <th style={{ width: 120 }}>Value (PKR)</th>
+                  <th style={{ width: 34 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {draft.items.map((it, idx) => (
+                  <tr key={idx}>
+                    <td style={{ textAlign: "center", color: "var(--text3)", fontWeight: 700 }}>{idx + 1}</td>
+                    <td><input value={it.itemName} onChange={e => setItem(idx, { itemName: e.target.value })} placeholder="What is being requested" /></td>
+                    <td>
+                      <select value={it.category} onChange={e => setItem(idx, { category: e.target.value })}>
+                        <option value="">—</option>
+                        {PR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </td>
+                    <td><input type="number" value={it.quantity} onChange={e => setItem(idx, { quantity: e.target.value })} /></td>
+                    <td>
+                      <select value={it.uom} onChange={e => setItem(idx, { uom: e.target.value })}>
+                        <option value="">— Unit —</option>
+                        {PR_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td><input type="number" value={it.value} onChange={e => setItem(idx, { value: e.target.value })} placeholder="after receipt" /></td>
+                    <td style={{ textAlign: "center" }}>
+                      <button type="button" onClick={() => removeItem(idx)} disabled={draft.items.length === 1}
+                        title="Remove item" className="pr-item-x">✕</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" onClick={addItem} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add item</button>
+
+          {/* ③ Approvals & receipt */}
+          <div className="pr-section" style={{ marginTop: 16 }}>③ Approvals &amp; receipt</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+            <div><label className="form-label">HOD Approval <span style={{ color: "var(--text3)", fontWeight: 400 }}>(by requester)</span></label>
+              <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
+                <option value="">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Not Approved">Not Approved</option>
+              </select></div>
             <div><label className="form-label">HR Approval</label>
               <select value={draft.hrApproval} onChange={e => set({ hrApproval: e.target.value })}>
                 <option value="">Pending</option>
-                {PR_HR.map(h => <option key={h} value={h}>{h}</option>)}
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
               </select></div>
-            <div><label className="form-label">HOD Approval</label>
-              <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
-                <option value="">Pending</option>
-                {PR_HOD.map(h => <option key={h} value={h}>{h}</option>)}
-              </select></div>
+            <div><label className="form-label">Received Date <span style={{ color: "var(--text3)", fontWeight: 400 }}>(Admin)</span></label>
+              <input type="date" value={draft.receivedDate}
+                onChange={e => set({ receivedDate: e.target.value, receivedByAdmin: !!e.target.value })} /></div>
+            <div style={{ display: "flex", alignItems: "flex-end" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", paddingBottom: 8 }}>
+                <input type="checkbox" checked={draft.receivedByAdmin} onChange={e => set({ receivedByAdmin: e.target.checked })} style={{ width: "auto" }} />
+                Material received (Admin)
+              </label>
+            </div>
             <div><label className="form-label">Status</label>
               <select value={draft.status} onChange={e => set({ status: e.target.value })}>
                 {PR_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select></div>
             <div><label className="form-label">PO No</label>
               <input value={draft.poNo} onChange={e => set({ poNo: e.target.value })} /></div>
-            <div style={{ gridColumn: "span 2" }}><label className="form-label">Remarks</label>
+            <div style={{ gridColumn: "1 / -1" }}><label className="form-label">Remarks</label>
               <input value={draft.remarks} onChange={e => set({ remarks: e.target.value })} /></div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)" }}>
-                <input type="checkbox" checked={draft.receivedByAdmin} onChange={e => set({ receivedByAdmin: e.target.checked })} style={{ width: "auto" }} />
-                Received by HR &amp; Admin
-              </label>
-            </div>
           </div>
+
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
             <button onClick={save} disabled={busy} className="btn btn-primary">
               {busy ? "Saving…" : editId === null ? "✓ Raise Requisition" : "✓ Save Changes"}
@@ -302,15 +409,15 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
         <table className="pr-table">
           <thead>
             <tr>
-              <th>Date</th><th>PR#</th><th>Department</th><th>Person</th><th>Category</th>
-              <th style={{ minWidth: 180 }}>Item</th><th>Qty</th><th>UoM</th><th title="Requisition received by HR & Admin">Rcvd</th>
-              <th className="num">Value</th><th>Required</th><th>HR</th><th>HOD</th><th>Status</th><th>PO#</th><th>Remarks</th>
+              <th>Date</th><th>PR#</th><th>Department</th><th>Requested by</th>
+              <th style={{ minWidth: 220 }}>Items</th>
+              <th className="num">Value</th><th>Required</th><th>HOD</th><th>HR</th><th title="Material received by Admin">Received</th><th>Status</th><th>PO#</th><th>Remarks</th>
               <th className="no-print"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={17} className="empty">
+              <tr><td colSpan={14} className="empty">
                 {rows.length === 0 ? "No requisitions yet — raise the first one." : "Nothing matches the filters."}
               </td></tr>
             )}
@@ -322,18 +429,34 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                   <td style={{ fontWeight: 700, color: "var(--brand)" }}>{r.prNo ?? "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.department || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.concernedPerson || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{r.category || "—"}</td>
-                  <td>{r.itemName || "—"}</td>
-                  <td className="num">{r.quantity ?? ""}</td>
-                  <td style={{ fontSize: 12 }}>{r.uom || ""}</td>
-                  <td style={{ textAlign: "center" }}>{r.receivedByAdmin ? "✓" : ""}</td>
+                  <td style={{ fontSize: 12 }}>
+                    {r.items.length === 0 ? "—" : (
+                      <ul className="pr-items">
+                        {r.items.map((i, k) => (
+                          <li key={k}>
+                            <span style={{ fontWeight: 600 }}>{i.itemName || "—"}</span>
+                            {(i.quantity != null || i.uom) && (
+                              <span style={{ color: "var(--text2)" }}> · {i.quantity ?? ""}{i.uom ? ` ${i.uom}` : ""}</span>
+                            )}
+                            {i.category && <span className="pr-cat">{i.category}</span>}
+                            {i.value != null && <span style={{ color: "var(--text3)" }}> · ₨{i.value.toLocaleString()}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </td>
                   <td className="num-strong">{r.value === null ? "" : r.value.toLocaleString()}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{fmtDate(r.requiredDate)}</td>
-                  <td style={{ fontSize: 11.5, fontWeight: 700, color: r.hrApproval === "Approved" ? "#15803D" : r.hrApproval === "Rejected" ? "#DC2626" : "var(--text3)" }}>
+                  <td style={{ fontSize: 11.5, fontWeight: 700, color: approvalStyle(r.hodApproval, "Approved", "Not Approved") }}>
+                    {r.hodApproval || "Pending"}
+                  </td>
+                  <td style={{ fontSize: 11.5, fontWeight: 700, color: approvalStyle(r.hrApproval, "Approved", "Rejected") }}>
                     {r.hrApproval || "Pending"}
                   </td>
-                  <td style={{ fontSize: 11.5, fontWeight: 700, color: r.hodApproval === "Approved" ? "#15803D" : r.hodApproval === "Not Approved" ? "#DC2626" : "var(--text3)" }}>
-                    {r.hodApproval || "Pending"}
+                  <td style={{ fontSize: 11.5, textAlign: "center", whiteSpace: "nowrap" }}>
+                    {r.receivedByAdmin
+                      ? <span style={{ color: "#15803D", fontWeight: 700 }}>✓ {r.receivedDate ? fmtDate(r.receivedDate) : ""}</span>
+                      : <span style={{ color: "var(--text3)" }}>—</span>}
                   </td>
                   <td>
                     <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: 999, fontSize: 10.5, fontWeight: 800, color: st.color, background: st.bg, whiteSpace: "nowrap" }}>
@@ -343,22 +466,17 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
                   <td style={{ fontSize: 12 }}>{r.poNo || ""}</td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
-                    <div style={{ display: "inline-flex", gap: 4 }}>
-                      <button onClick={() => act(r, "approve")} title="HR Approve"
-                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          border: "1px solid #15803D", background: r.hrApproval === "Approved" ? "#15803D" : "#fff", color: r.hrApproval === "Approved" ? "#fff" : "#15803D" }}>
-                        ✓ Approve
-                      </button>
-                      <button onClick={() => act(r, "reject")} title="HR Reject"
-                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          border: "1px solid #DC2626", background: r.hrApproval === "Rejected" ? "#DC2626" : "#fff", color: r.hrApproval === "Rejected" ? "#fff" : "#DC2626" }}>
-                        ✗ Reject
-                      </button>
-                      <button onClick={() => act(r, "received")} title="Mark material received"
-                        style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                          border: "1px solid #0C447C", background: r.status === "Material Received" ? "#0C447C" : "#fff", color: r.status === "Material Received" ? "#fff" : "#0C447C" }}>
-                        📦 Received
-                      </button>
+                    <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 250 }}>
+                      <button onClick={() => act(r, "hod-approve")} title="HOD approved"
+                        style={pillBtn("#15803D", r.hodApproval === "Approved")}>H✓</button>
+                      <button onClick={() => act(r, "hod-reject")} title="HOD not approved"
+                        style={pillBtn("#DC2626", r.hodApproval === "Not Approved")}>H✗</button>
+                      <button onClick={() => act(r, "approve")} title="HR approve"
+                        style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR✓</button>
+                      <button onClick={() => act(r, "reject")} title="HR reject"
+                        style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR✗</button>
+                      <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
+                        style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
                       <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
                       <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
                     </div>
@@ -372,13 +490,36 @@ export default function PurchaseClient({ initialRows }: { initialRows: PrRow[] }
 
       <style jsx global>{`
         .pr-table { font-size: 12.5px; }
-        .pr-table th, .pr-table td { padding: 7px 10px; }
+        .pr-table th, .pr-table td { padding: 7px 10px; vertical-align: top; }
+        .pr-items { list-style: none; margin: 0; padding: 0; }
+        .pr-items li { padding: 1px 0; line-height: 1.35; }
+        .pr-cat { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px;
+          font-size: 10px; font-weight: 700; color: var(--text2); background: var(--bg2); }
+        .pr-section { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+          color: var(--brand); padding-bottom: 6px; margin-bottom: 10px;
+          border-bottom: 1px solid var(--border); }
+        .pr-item-form { width: 100%; border-collapse: collapse; }
+        .pr-item-form th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text2);
+          text-align: left; padding: 4px 6px; }
+        .pr-item-form td { padding: 3px 6px; }
+        .pr-item-form input, .pr-item-form select { width: 100%; }
+        .pr-item-x { border: 1px solid var(--border); background: var(--bg); color: var(--danger);
+          border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-weight: 700; }
+        .pr-item-x:disabled { opacity: 0.3; cursor: not-allowed; }
         @media print {
           @page { size: A4 landscape; margin: 6mm; }
           .pr-table { font-size: 8.5px; }
           .pr-table th, .pr-table td { padding: 2px 4px; }
+          .pr-cat { display: none; }
         }
       `}</style>
     </div>
   );
+}
+
+function pillBtn(color: string, active: boolean): React.CSSProperties {
+  return {
+    padding: "3px 7px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
+    border: `1px solid ${color}`, background: active ? color : "#fff", color: active ? "#fff" : color,
+  };
 }

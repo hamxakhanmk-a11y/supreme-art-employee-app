@@ -198,11 +198,17 @@ export const purchaseRequisitions = pgTable("purchase_requisitions", {
   department: varchar("department", { length: 60 }),
   concernedPerson: varchar("concerned_person", { length: 120 }),
   category: varchar("category", { length: 60 }),
+  // Line items. Authoritative for new (multi-item) requisitions; stored as a
+  // JSON string like inspections.results. The scalar itemName/quantity/uom/
+  // value columns below are kept as a denormalised mirror (first item / total)
+  // so legacy rows, filters and the old Excel export keep working.
+  items: text("items").notNull().default("[]"),    // [{itemName,category,quantity,uom,value}]
   itemName: text("item_name"),
   quantity: doublePrecision("quantity"),
   uom: varchar("uom", { length: 20 }),             // unit of measure
-  receivedByAdmin: boolean("received_by_admin").notNull().default(false), // requisition received by HR & Admin
-  value: integer("value"),                         // PKR
+  receivedByAdmin: boolean("received_by_admin").notNull().default(false), // material received (Admin marks)
+  receivedDate: date("received_date"),             // when Admin marked it received
+  value: integer("value"),                         // PKR — total across items
   requiredDate: date("required_date"),
   hodApproval: varchar("hod_approval", { length: 20 }), // Approved | Not Approved | null (pending)
   hrApproval: varchar("hr_approval", { length: 20 }),   // HR's own decision: Approved | Rejected | null (pending)

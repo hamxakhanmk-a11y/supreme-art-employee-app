@@ -4,10 +4,12 @@ import { purchaseRequisitions } from "@/lib/schema";
 import { sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { ensurePurchaseColumns, buildPrFields } from "@/lib/purchaseServer";
 
 // GET /api/purchase  -> full register, newest first (filtering happens client-side)
 export async function GET() {
   try {
+    await ensurePurchaseColumns();
     const rows = await db.select().from(purchaseRequisitions)
       .orderBy(sql`date DESC NULLS LAST, pr_no DESC NULLS LAST`);
     return NextResponse.json(rows);
@@ -21,9 +23,11 @@ export async function POST(req: NextRequest) {
   const guard = await guardWrite("purchase");
   if (guard instanceof NextResponse) return guard;
   try {
+    await ensurePurchaseColumns();
     const b = await req.json();
-    if (!b.date || !b.department || !b.itemName?.trim()) {
-      return NextResponse.json({ error: "date, department and itemName are required" }, { status: 400 });
+    const fields = buildPrFields(b);
+    if (!b.date || !b.department || !fields.itemName?.trim()) {
+      return NextResponse.json({ error: "date, department and at least one item are required" }, { status: 400 });
     }
     // PR No is entered manually; fall back to max+1 only if omitted.
     let prNo = b.prNo === null || b.prNo === "" || b.prNo === undefined ? NaN : parseInt(b.prNo);
@@ -37,12 +41,9 @@ export async function POST(req: NextRequest) {
       date: b.date,
       department: b.department,
       concernedPerson: b.concernedPerson?.trim() || null,
-      category: b.category || null,
-      itemName: b.itemName.trim(),
-      quantity: b.quantity === null || b.quantity === "" || b.quantity === undefined ? null : Number(b.quantity),
-      uom: b.uom || null,
+      ...fields,
       receivedByAdmin: !!b.receivedByAdmin,
-      value: b.value === null || b.value === "" || b.value === undefined ? null : Math.round(Number(b.value)),
+      receivedDate: b.receivedByAdmin ? (b.receivedDate || null) : null,
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
       hrApproval: b.hrApproval || null,
