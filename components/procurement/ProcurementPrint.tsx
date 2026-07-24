@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { COMPANY } from "@/lib/procurement";
 
 // Shared A4 print shell for the three procurement forms. Client component so
@@ -19,32 +20,68 @@ export default function ProcurementPrint({
   // single unnamed page if a form has no copy set.
   const sheets = copies?.length ? copies : [""];
 
+  // Which copies to include on the next Print / Save-as-PDF. "" = all.
+  const [selectedCopy, setSelectedCopy] = useState<string>("");
+  // Stable per-instance id so the print-copy CSS scoping only affects this sheet.
+  const [rootId] = useState(() => `pf-${Math.random().toString(36).slice(2, 9)}`);
+
+  // Hide non-selected sheets during print by tagging them with `pf-hide`
+  // (see the CSS block below). Restored on `afterprint` so the on-screen view
+  // is untouched. Using JS avoids having to enumerate every copy name in CSS.
+  function beforePrint(): () => void {
+    if (!selectedCopy) return () => {};
+    const root = document.getElementById(rootId);
+    if (!root) return () => {};
+    const hidden: Element[] = [];
+    root.querySelectorAll<HTMLElement>(".pf-sheet").forEach((el) => {
+      if (el.dataset.copy !== selectedCopy) { el.classList.add("pf-hide"); hidden.push(el); }
+    });
+    return () => hidden.forEach((el) => el.classList.remove("pf-hide"));
+  }
+
+  function doPrint() {
+    const restore = beforePrint();
+    const cleanup = () => { restore(); window.removeEventListener("afterprint", cleanup); };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  }
+
   // Chrome/Edge use document.title as the default filename in the Save-as-PDF
   // dialog. Swap it in around window.print() so users get a sensible file name.
   function savePdf() {
-    if (!pdfFilename) { window.print(); return; }
+    const restoreDom = beforePrint();
     const prev = document.title;
-    document.title = pdfFilename.replace(/\.pdf$/i, "");
-    const restore = () => { document.title = prev; window.removeEventListener("afterprint", restore); };
-    window.addEventListener("afterprint", restore);
+    if (pdfFilename) {
+      const base = pdfFilename.replace(/\.pdf$/i, "");
+      document.title = selectedCopy ? `${base} - ${selectedCopy}` : base;
+    }
+    const cleanup = () => {
+      document.title = prev; restoreDom();
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
     window.print();
   }
 
   return (
-    <div>
+    <div id={rootId}>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <Link href={backHref} className="btn">← Back</Link>
-        <button onClick={() => window.print()} className="btn btn-primary">🖨 Print</button>
+        <button onClick={doPrint} className="btn btn-primary">🖨 Print</button>
         <button onClick={savePdf} className="btn" title="Opens the print dialog — choose &quot;Save as PDF&quot; as the destination">💾 Save as PDF</button>
         {sheets.length > 1 && (
-          <span style={{ fontSize: 12.5, color: "var(--text2)" }}>
-            Prints {sheets.length} pages — {sheets.join(", ")}
-          </span>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--text2)" }}>
+            Copy:
+            <select value={selectedCopy} onChange={(e) => setSelectedCopy(e.target.value)} style={{ padding: "4px 6px" }}>
+              <option value="">All copies ({sheets.length})</option>
+              {sheets.map((c) => <option key={c} value={c}>{c || "(unnamed)"}</option>)}
+            </select>
+          </label>
         )}
       </div>
 
       {sheets.map((copy, i) => (
-        <div className={`pf-sheet${compact ? " pf-sheet--compact" : ""}`} key={i}>
+        <div className={`pf-sheet${compact ? " pf-sheet--compact" : ""}`} data-copy={copy} key={i}>
           <table className="pf-head">
             <tbody>
               <tr className="pf-ctrl">
@@ -131,6 +168,12 @@ export default function ProcurementPrint({
         .pf-termshead { font-weight: 700; text-decoration: underline; margin-bottom: 6px; }
         .pf-terms ol { margin: 0; padding-left: 22px; }
         .pf-terms li { font-size: 12.5px; line-height: 1.6; margin-bottom: 2px; }
+        /* Explicit-number variant — doesn't rely on browser list-style so the
+           numbers survive globals.css and compact-print typography. */
+        .pf-terms .pf-termslist { list-style: none; padding: 0; margin: 0; }
+        .pf-terms .pf-termslist li { display: flex; align-items: flex-start; gap: 6px; }
+        .pf-terms .pf-termnum { font-weight: 700; flex-shrink: 0; min-width: 18px; }
+        .pf-terms .pf-termtext { flex: 1; }
 
         /* Compact variant — used by PO, which carries 11 standard T&C items.
            Tightens typography/spacing enough to keep the whole form on one
@@ -145,6 +188,7 @@ export default function ProcurementPrint({
         .pf-sheet--compact .pf-closing { margin-top: 6px; font-size: 11.5px; }
         .pf-sheet--compact .pf-terms { margin-top: 8px; }
         .pf-sheet--compact .pf-terms li { font-size: 9.5px; line-height: 1.32; margin-bottom: 0; }
+        .pf-sheet--compact .pf-terms .pf-termnum { min-width: 15px; }
         .pf-sheet--compact .pf-sign { padding-top: 18px; }
         .pf-sheet--compact .pf-sign .lbl { min-height: 32px; font-size: 12px; }
         .pf-termsbox { min-height: 90px; border: 1px solid #000; }
@@ -171,6 +215,10 @@ export default function ProcurementPrint({
           height: 18px; line-height: 18px;
         }
         .pf-remark { margin-top: 12px; font-size: 12.5px; }
+
+        /* Sheets tagged with pf-hide by the copy picker are removed both on
+           screen (so the user sees exactly what will print) and in print. */
+        .pf-sheet.pf-hide { display: none !important; }
 
         @media print {
           /* Zero page margin leaves the browser no room to draw its own

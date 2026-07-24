@@ -71,7 +71,16 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
         <div className="pf-terms">
           <div className="pf-termshead">Terms &amp; Conditions</div>
           {termLines.length > 0
-            ? <ol>{termLines.map((t, i) => <li key={i}>{t}</li>)}</ol>
+            ? (
+              <ol className="pf-termslist">
+                {termLines.map((t, i) => (
+                  <li key={i}>
+                    <span className="pf-termnum">{i + 1}.</span>
+                    <span className="pf-termtext">{t}</span>
+                  </li>
+                ))}
+              </ol>
+            )
             : <div className="pf-termsbox" />}
         </div>
 
