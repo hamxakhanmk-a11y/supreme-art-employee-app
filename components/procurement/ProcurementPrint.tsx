@@ -7,19 +7,35 @@ import { COMPANY } from "@/lib/procurement";
 // The header reproduces the block used across the Word templates: a control
 // strip (Doc No / Issue Status / Issue date) above the company details.
 export default function ProcurementPrint({
-  code, title, issue, issueDate, backHref, copies, children,
+  code, title, issue, issueDate, backHref, copies, pdfFilename, compact, children,
 }: {
   code: string; title: string; issue: string; issueDate: string;
-  backHref: string; copies?: string[]; children: React.ReactNode;
+  backHref: string; copies?: string[];
+  pdfFilename?: string;   // pre-fills the filename in the browser's Save-as-PDF dialog
+  compact?: boolean;      // tighter typography so a long form (PO) fits one A4 page
+  children: React.ReactNode;
 }) {
   // One identical page per copy, each named at the foot. Falls back to a
   // single unnamed page if a form has no copy set.
   const sheets = copies?.length ? copies : [""];
+
+  // Chrome/Edge use document.title as the default filename in the Save-as-PDF
+  // dialog. Swap it in around window.print() so users get a sensible file name.
+  function savePdf() {
+    if (!pdfFilename) { window.print(); return; }
+    const prev = document.title;
+    document.title = pdfFilename.replace(/\.pdf$/i, "");
+    const restore = () => { document.title = prev; window.removeEventListener("afterprint", restore); };
+    window.addEventListener("afterprint", restore);
+    window.print();
+  }
+
   return (
     <div>
-      <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+      <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <Link href={backHref} className="btn">← Back</Link>
         <button onClick={() => window.print()} className="btn btn-primary">🖨 Print</button>
+        <button onClick={savePdf} className="btn" title="Opens the print dialog — choose &quot;Save as PDF&quot; as the destination">💾 Save as PDF</button>
         {sheets.length > 1 && (
           <span style={{ fontSize: 12.5, color: "var(--text2)" }}>
             Prints {sheets.length} pages — {sheets.join(", ")}
@@ -28,7 +44,7 @@ export default function ProcurementPrint({
       </div>
 
       {sheets.map((copy, i) => (
-        <div className="pf-sheet" key={i}>
+        <div className={`pf-sheet${compact ? " pf-sheet--compact" : ""}`} key={i}>
           <table className="pf-head">
             <tbody>
               <tr className="pf-ctrl">
@@ -115,6 +131,22 @@ export default function ProcurementPrint({
         .pf-termshead { font-weight: 700; text-decoration: underline; margin-bottom: 6px; }
         .pf-terms ol { margin: 0; padding-left: 22px; }
         .pf-terms li { font-size: 12.5px; line-height: 1.6; margin-bottom: 2px; }
+
+        /* Compact variant — used by PO, which carries 11 standard T&C items.
+           Tightens typography/spacing enough to keep the whole form on one
+           A4 page. Screen picks up the same tightening so what-you-see matches
+           what-you-print. */
+        .pf-sheet--compact { font-size: 12px; }
+        .pf-sheet--compact .pf-title { font-size: 15.5px; margin: 10px 0 8px; }
+        .pf-sheet--compact .pf-dear { margin: 6px 0 2px; }
+        .pf-sheet--compact .pf-intro { margin-bottom: 6px; font-size: 11.5px; }
+        .pf-sheet--compact .pf-table th,
+        .pf-sheet--compact .pf-table td { padding: 3px 6px; font-size: 11px; }
+        .pf-sheet--compact .pf-closing { margin-top: 6px; font-size: 11.5px; }
+        .pf-sheet--compact .pf-terms { margin-top: 8px; }
+        .pf-sheet--compact .pf-terms li { font-size: 9.5px; line-height: 1.32; margin-bottom: 0; }
+        .pf-sheet--compact .pf-sign { padding-top: 18px; }
+        .pf-sheet--compact .pf-sign .lbl { min-height: 32px; font-size: 12px; }
         .pf-termsbox { min-height: 90px; border: 1px solid #000; }
         /* margin-top:auto drops the sign-off to the foot of the sheet */
         .pf-sign { display: flex; justify-content: space-between; gap: 40px; margin-top: auto; padding-top: 42px; flex-wrap: wrap; }
@@ -178,6 +210,27 @@ export default function ProcurementPrint({
           .pf-sheet .pf-table td { padding: 6px 8px !important; font-size: 13px !important; }
           .pf-sheet .pf-band { font-size: 17px !important; }
           .pf-sheet .pf-formtitle { font-size: 19px !important; }
+
+          /* Compact-variant print overrides — must repeat inside @media print
+             because globals.css also sets !important font-size in print. */
+          .pf-sheet--compact { font-size: 11px !important; padding: 8mm 10mm !important; }
+          .pf-sheet--compact .pf-title { font-size: 14px !important; margin: 6px 0 6px !important; }
+          .pf-sheet--compact .pf-head td { padding: 3px 6px !important; font-size: 10.5px !important; }
+          .pf-sheet--compact .pf-orgname { font-size: 12px !important; }
+          .pf-sheet--compact .pf-org { font-size: 10.5px !important; line-height: 1.3 !important; }
+          .pf-sheet--compact .pf-orginner img { width: 90px !important; }
+          .pf-sheet--compact .pf-table th,
+          .pf-sheet--compact .pf-table td { padding: 3px 5px !important; font-size: 10px !important; }
+          .pf-sheet--compact .pf-fieldtable td { padding: 2px 6px !important; font-size: 11px !important; }
+          .pf-sheet--compact .pf-terms { margin-top: 6px !important; }
+          .pf-sheet--compact .pf-termshead { font-size: 11px !important; margin-bottom: 3px !important; }
+          .pf-sheet--compact .pf-terms li { font-size: 8.5px !important; line-height: 1.28 !important; margin-bottom: 0 !important; }
+          .pf-sheet--compact .pf-sign { padding-top: 10px !important; }
+          .pf-sheet--compact .pf-sign .lbl { min-height: 26px !important; font-size: 11px !important; }
+          .pf-sheet--compact .pf-sign .line { height: 18px !important; font-size: 10.5px !important; }
+          .pf-sheet--compact .pf-copy { font-size: 10px !important; margin-top: 6px !important; }
+          /* Force the whole sheet onto a single page. */
+          .pf-sheet--compact { page-break-inside: avoid; break-inside: avoid; }
         }
       `}</style>
     </div>

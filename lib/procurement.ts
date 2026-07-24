@@ -81,6 +81,22 @@ export const FORM_META = {
 export const PO_DEFAULT_REMARKS =
   "Send us this order as soon as possible. Your quick response will be highly appreciated.";
 
+// Standard PO terms — seeded into every new PO's terms textarea (still editable
+// per PO). Sourced from "purchase order terms and condition.docx".
+export const PO_DEFAULT_TERMS: string[] = [
+  "All goods and services supplied must conform to the Buyer's specifications, approved samples, dimensions, tolerances, quality standards, and applicable regulatory requirements. Any variation in size, dimensions, thickness, GSM, shade, finish, or other specifications must be approved in writing by the Buyer. (Where applicable)",
+  "Quantity variance shall not exceed ±10% of the ordered quantity unless otherwise stated in the PO or approved in writing by the Buyer.",
+  "Delivery shall be made as specified in the PO. Time is of the essence. The Buyer reserves the right to reject, cancel, or claim losses arising from delayed deliveries.",
+  "Goods must be supplied in properly sealed, secure, and suitable packaging to prevent damage, contamination, moisture absorption, humidity effects, water ingress, leakage, deterioration, or loss during transportation.",
+  "Prices stated in the PO are firm unless otherwise agreed in writing; no additional charges shall be accepted without prior written approval from the Buyer.",
+  "Payment shall be subject to receipt of acceptable goods, services, and complete supporting documentation.",
+  "The Supplier shall provide a valid Real time sales tax invoice and all required supporting documents. For imported goods, where applicable, the Supplier shall provide Commercial Invoice, Packing List, Certificate of Origin, Bill of Lading/Air Waybill, compliance certificates, GD (Goods Declaration), COA & TDS and any other documents required for customs clearance.",
+  "If the Supplier is exempt from any applicable tax, a valid exemption certificate or supporting legal documentation must be provided with the invoice; otherwise, applicable taxes may be deducted or withheld as required by law.",
+  "Risk of loss shall remain with the Supplier until delivery, inspection, and acceptance by the Buyer.",
+  "The Supplier shall comply with all applicable laws, tax regulations, import/export requirements and environmental standards.",
+  "The Buyer reserves the right to reject goods, recover losses, cancel the PO, or terminate the agreement for non-compliance with these terms, quality failures, delivery delays, or breach of contractual obligations.",
+];
+
 export function parseItems<T>(raw: string | null | undefined): T[] {
   if (!raw) return [];
   try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }

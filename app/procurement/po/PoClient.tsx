@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, PO_DEFAULT_TERMS, type PoItem, type DemandItem } from "@/lib/procurement";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
@@ -29,14 +29,14 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
-  const [terms, setTerms] = useState("");
+  const [terms, setTerms] = useState(PO_DEFAULT_TERMS.join("\n"));
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
     setDemandId(""); setDate(new Date().toISOString().slice(0, 10));
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
-    setExpectedDate(""); setTerms(""); setOrderPlacedBy("");
+    setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
   function pickDemand(id: string) {

@@ -19,7 +19,9 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={FORM_COPIES.grn} backHref="/procurement/grn">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
+        copies={FORM_COPIES.grn} backHref="/procurement/grn"
+        pdfFilename={`GRR-${g.gatePassNo || g.id}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>

@@ -19,7 +19,9 @@ export default async function InspectionView({ params }: { params: Promise<{ id:
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={FORM_COPIES.inspection} backHref="/procurement/inspection">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
+        copies={FORM_COPIES.inspection} backHref="/procurement/inspection"
+        pdfFilename={`Inspection-${r.inspNo}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>

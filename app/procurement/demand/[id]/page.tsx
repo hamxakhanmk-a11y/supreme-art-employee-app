@@ -25,7 +25,9 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
 
   return (
     <div className="fade-up">
-      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate} copies={copies} backHref="/procurement/demand">
+      <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
+        copies={copies} backHref="/procurement/demand"
+        pdfFilename={`Demand-${d.demandNo}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>
