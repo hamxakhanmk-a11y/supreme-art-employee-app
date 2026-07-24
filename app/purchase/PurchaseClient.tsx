@@ -181,12 +181,10 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
 
   // Quick workflow toggles from the row buttons. Optimistic: the row flips
   // instantly, then reconciles against the server (reverting only on failure).
-  type Action = "hod-approve" | "hod-reject" | "approve" | "reject" | "received";
+  type Action = "approve" | "reject" | "received";
   const act = async (r: PrRow, action: Action) => {
     const opt: PrRow = { ...r };
-    if (action === "hod-approve") opt.hodApproval = r.hodApproval === "Approved" ? null : "Approved";
-    else if (action === "hod-reject") opt.hodApproval = r.hodApproval === "Not Approved" ? null : "Not Approved";
-    else if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
+    if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
     else if (action === "reject") opt.hrApproval = r.hrApproval === "Rejected" ? null : "Rejected";
     else if (action === "received") {
       const on = r.status !== "Material Received";
@@ -401,8 +399,14 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
           <button type="button" onClick={addItem} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add item</button>
 
           {/* ③ Receipt & PO tracking */}
-          <div className="pr-section" style={{ marginTop: 16 }}>③ Receipt &amp; PO</div>
+          <div className="pr-section" style={{ marginTop: 16 }}>③ Approval, receipt &amp; PO</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+            <div><label className="form-label">HOD Approval <span style={{ color: "var(--text3)", fontWeight: 400 }}>(by requester)</span></label>
+              <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
+                <option value="">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Not Approved">Not Approved</option>
+              </select></div>
             <div><label className="form-label">Received Date <span style={{ color: "var(--text3)", fontWeight: 400 }}>(Admin)</span></label>
               <input type="date" value={draft.receivedDate}
                 onChange={e => set({ receivedDate: e.target.value, receivedByAdmin: !!e.target.value })} /></div>
@@ -498,11 +502,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   <td style={{ fontSize: 12 }}>{r.poNo || ""}</td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
-                    <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 280 }}>
-                      <button onClick={() => act(r, "hod-approve")} title="HOD approved"
-                        style={pillBtn("#15803D", r.hodApproval === "Approved")}>HOD ✓</button>
-                      <button onClick={() => act(r, "hod-reject")} title="HOD not approved"
-                        style={pillBtn("#DC2626", r.hodApproval === "Not Approved")}>HOD ✗</button>
+                    <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 240 }}>
                       <button onClick={() => act(r, "approve")} title="HR approve"
                         style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR ✓</button>
                       <button onClick={() => act(r, "reject")} title="HR reject"
