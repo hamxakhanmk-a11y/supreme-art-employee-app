@@ -115,115 +115,69 @@ export default function ProcurementPrint({
       ))}
 
       <style jsx global>{`
-        /* Design tokens local to the printed forms. --pf-brand is Supreme Art's
-           red (#A32D2D); the softs / darks are derived shades used only for
-           accents so the sheet still prints legibly on a monochrome printer. */
+        /* Column layout so the signature block can be pushed to the page foot. */
         .pf-sheet {
-          --pf-brand: #A32D2D;
-          --pf-brand-dark: #7C1F1F;
-          --pf-brand-soft: #FDECEC;
-          --pf-rule: #C9C3BC;   /* warm neutral for table lines */
-          --pf-ink: #1a1a1a;    /* body copy — near-black, softer than pure */
-          --pf-zebra: #FAFAF7;  /* subtle alt-row tint */
-          background: #fff; color: var(--pf-ink); max-width: 850px; margin: 0 auto;
-          padding: 26px 30px 22px; font-size: 13px;
+          background: #fff; color: #000; max-width: 850px; margin: 0 auto;
+          padding: 24px 28px; font-size: 13px;
           font-family: "Times New Roman", Times, serif;
           display: flex; flex-direction: column; min-height: 1040px;
-          /* Thin brand strip along the top of every sheet. */
-          border-top: 3px solid var(--pf-brand);
-          -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
         /* On screen, separate the stacked copies so they read as pages. */
-        .pf-sheet + .pf-sheet { margin-top: 26px; }
-
-        /* Copy label at the foot — a small pill instead of plain uppercase text. */
+        .pf-sheet + .pf-sheet { margin-top: 26px; border-top: 2px dashed #d8d0c2; }
+        /* Copy name, centred at the very foot of each page. */
         .pf-copy {
-          margin: 16px auto 0; text-align: center;
-          font-weight: 700; font-size: 11px; letter-spacing: 1.4px;
-          text-transform: uppercase; color: var(--pf-brand-dark);
-          padding: 3px 14px; border: 1px solid var(--pf-brand);
-          border-radius: 999px; display: inline-block; align-self: center;
-          background: var(--pf-brand-soft);
+          margin-top: 14px; text-align: center;
+          font-weight: 700; font-size: 12.5px; letter-spacing: 0.6px;
+          text-transform: uppercase;
         }
-
         /* --- shared document header --- */
         .pf-head { width: 100%; border-collapse: collapse; }
-        .pf-head td { border: 1px solid var(--pf-rule); padding: 5px 10px; }
-        .pf-ctrl td {
-          font-size: 11.5px; background: var(--pf-brand-soft);
-          color: var(--pf-brand-dark); font-weight: 600; letter-spacing: 0.2px;
-        }
+        .pf-head td { border: 1px solid #000; padding: 5px 8px; }
+        /* Doc No / Issue / Date strip — light-grey tint for a hint of hierarchy. */
+        .pf-ctrl td { font-size: 12px; background: #F1F1F1; }
         /* the flex lives on an inner div — flex on a <td> breaks colSpan */
-        .pf-orgcell { padding: 12px 14px !important; }
-        .pf-orginner { display: flex; align-items: center; gap: 20px; }
-        .pf-orginner img { width: 118px; height: auto; object-fit: contain; flex-shrink: 0; }
-        .pf-org { font-size: 11.5px; line-height: 1.6; color: #2a2a2a; }
-        .pf-orgname {
-          font-weight: 700; font-size: 16px; margin-bottom: 3px;
-          color: var(--pf-brand-dark); text-transform: uppercase;
-          letter-spacing: 1.2px; font-family: Georgia, "Times New Roman", serif;
-        }
-
-        /* Document title — no underline, brand-red hairline instead, refined
-           typography. Reads as the document's headline rather than a form field. */
+        .pf-orgcell { padding: 10px 12px !important; }
+        .pf-orginner { display: flex; align-items: center; gap: 18px; }
+        .pf-orginner img { width: 130px; height: auto; object-fit: contain; flex-shrink: 0; }
+        .pf-org { font-size: 11.5px; line-height: 1.55; }
+        /* Company name bumped a notch for prominence — still plain black. */
+        .pf-orgname { font-weight: 700; font-size: 14.5px; margin-bottom: 2px; letter-spacing: 0.3px; }
+        /* Document title — slightly larger + letter-spaced so it reads as the
+           document's headline while staying plain black underlined. */
         .pf-title {
-          text-align: center; font-weight: 700; font-size: 16px;
-          margin: 18px auto 14px; text-decoration: none;
-          text-transform: uppercase; letter-spacing: 3px;
-          color: var(--pf-brand-dark);
-          padding: 0 12px 8px; border-bottom: 1.5px solid var(--pf-brand);
-          display: table; /* shrink-wrap so the rule matches the text width */
+          text-align: center; font-weight: 700; font-size: 18px;
+          letter-spacing: 1.5px;
+          margin: 16px 0 14px; text-decoration: underline;
         }
 
         /* --- body helpers --- */
-        .pf-metarow { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+        .pf-metarow { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
         .pf-fieldtable { border-collapse: collapse; width: auto; font-size: 13px; }
-        .pf-fieldtable td { padding: 4px 8px; white-space: nowrap; }
-        .pf-fieldtable td:first-child { font-weight: 700; color: #333; }
-        /* Value cells get a brand-red underline instead of black — friendlier
-           than a hard black rule while still clearly delineating the value. */
-        .pf-fieldtable td.u {
-          border-bottom: 1.5px solid var(--pf-brand); min-width: 130px;
-          color: var(--pf-ink); font-weight: 600;
-        }
-        .pf-to { font-size: 13px; line-height: 1.95; }
-        .pf-tohead {
-          font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-          font-size: 11px; color: var(--pf-brand-dark); margin-bottom: 2px;
-        }
-        .pf-toline b { font-weight: 700; color: #333; }
-        .pf-dear { margin: 12px 0 4px; font-style: italic; color: #333; }
-        .pf-intro { margin-bottom: 12px; }
-
-        /* Content tables — softer borders + brand-tinted header + subtle zebra. */
-        .pf-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        .pf-table th, .pf-table td {
-          border: 1px solid var(--pf-rule); padding: 7px 9px;
-          font-size: 12.5px; vertical-align: top;
-        }
+        .pf-fieldtable td { padding: 3px 8px; white-space: nowrap; }
+        .pf-fieldtable td:first-child { font-weight: 700; }
+        .pf-fieldtable td.u { border-bottom: 1px solid #000; min-width: 130px; }
+        .pf-to { font-size: 13px; line-height: 1.9; }
+        .pf-tohead { font-weight: 700; }
+        .pf-toline b { font-weight: 700; }
+        .pf-dear { margin: 10px 0 4px; }
+        .pf-intro { margin-bottom: 10px; }
+        .pf-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        .pf-table th, .pf-table td { border: 1px solid #000; padding: 6px 8px; font-size: 12.5px; vertical-align: top; }
         .pf-table th {
-          background: var(--pf-brand-soft); font-weight: 700; text-align: left;
-          text-transform: uppercase; letter-spacing: 0.6px; color: var(--pf-brand-dark);
-          font-size: 11.5px; border-bottom: 1.5px solid var(--pf-brand);
+          background: #F1F1F1; font-weight: 700; text-align: left;
+          text-transform: none; letter-spacing: normal; color: #000;
         }
-        .pf-table tbody tr:nth-child(even) td { background: var(--pf-zebra); }
         .pf-table td.c { text-align: center; }
-
-        .pf-closing { margin-top: 14px; font-style: italic; color: #444; }
+        .pf-closing { margin-top: 12px; }
         .pf-terms { margin-top: 16px; }
-        /* Section header — brand accent bar on the left, no underline. */
-        .pf-termshead {
-          font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-          color: var(--pf-brand-dark); margin-bottom: 8px; font-size: 12px;
-          border-left: 3px solid var(--pf-brand); padding-left: 8px;
-        }
+        .pf-termshead { font-weight: 700; text-decoration: underline; margin-bottom: 6px; }
         .pf-terms ol { margin: 0; padding-left: 22px; }
         .pf-terms li { font-size: 12.5px; line-height: 1.6; margin-bottom: 2px; }
         /* Explicit-number variant — doesn't rely on browser list-style so the
            numbers survive globals.css and compact-print typography. */
         .pf-terms .pf-termslist { list-style: none; padding: 0; margin: 0; }
         .pf-terms .pf-termslist li { display: flex; align-items: flex-start; gap: 6px; }
-        .pf-terms .pf-termnum { font-weight: 700; flex-shrink: 0; min-width: 18px; color: var(--pf-brand-dark); }
+        .pf-terms .pf-termnum { font-weight: 700; flex-shrink: 0; min-width: 18px; }
         .pf-terms .pf-termtext { flex: 1; }
 
         /* Compact variant — used by PO, which carries 11 standard T&C items.
@@ -242,28 +196,28 @@ export default function ProcurementPrint({
         .pf-sheet--compact .pf-terms .pf-termnum { min-width: 15px; }
         .pf-sheet--compact .pf-sign { padding-top: 18px; }
         .pf-sheet--compact .pf-sign .lbl { min-height: 32px; font-size: 12px; }
-        .pf-termsbox { min-height: 90px; border: 1px solid var(--pf-rule); border-radius: 2px; }
+        .pf-termsbox { min-height: 90px; border: 1px solid #000; }
         /* margin-top:auto drops the sign-off to the foot of the sheet */
         .pf-sign { display: flex; justify-content: space-between; gap: 40px; margin-top: auto; padding-top: 42px; flex-wrap: wrap; }
+        /* Equal-width blocks so the signature rules match in length and line up.
+           The cap stops a lone signature (e.g. the PO) stretching page-wide. */
         .pf-sign > div { flex: 1 1 0; min-width: 200px; max-width: 300px; display: flex; flex-direction: column; }
-        .pf-sign .lbl {
-          font-weight: 700; font-size: 11.5px; flex: 1; min-height: 46px;
-          text-transform: uppercase; letter-spacing: 1px;
-          color: var(--pf-brand-dark);
-        }
-        /* Signature rule — a touch bolder so it reads as a line to sign on. */
+        .pf-sign .lbl { font-weight: 700; font-size: 13px; flex: 1; min-height: 46px; }
+        /* min-height keeps an empty signature the same height as a filled one,
+           so both rules sit at the same level. */
         .pf-sign .line {
-          border-top: 1.5px solid var(--pf-ink); padding-top: 4px; font-size: 12px;
+          border-top: 1px solid #000; padding-top: 3px; font-size: 12px;
           text-align: center; box-sizing: border-box; height: 22px;
-          font-family: Georgia, "Times New Roman", serif; font-style: italic;
         }
+        /* Role caption under a signature rule, e.g. DIRECTOR/CEO. Render this
+           slot in every block of a row (empty is fine) — the fixed height keeps
+           the rules level whether or not a block is captioned. */
         .pf-sign .cap {
-          text-align: center; font-size: 10px; font-weight: 700;
-          letter-spacing: 1.4px; margin-top: 3px;
+          text-align: center; font-size: 11.5px; font-weight: 700;
+          letter-spacing: 0.4px; margin-top: 2px;
           height: 18px; line-height: 18px;
-          text-transform: uppercase; color: #555;
         }
-        .pf-remark { margin-top: 12px; font-size: 12.5px; color: #333; }
+        .pf-remark { margin-top: 12px; font-size: 12.5px; }
 
         /* Sheets tagged with pf-hide by the copy picker are removed both on
            screen (so the user sees exactly what will print) and in print. */
@@ -285,19 +239,15 @@ export default function ProcurementPrint({
             box-sizing: border-box; margin: 0 !important;
             padding: 12mm 11mm; min-height: calc(297mm - 24mm);
           }
-          /* Every copy starts its own sheet of paper — but keep the top brand
-             strip on every one of them (border-top on .pf-sheet is intentional). */
+          /* Every copy starts its own sheet of paper. */
           .pf-sheet + .pf-sheet {
             break-before: page; page-break-before: always;
-            margin-top: 0 !important;
+            border-top: none !important; margin-top: 0 !important;
           }
-          /* Force every tinted element to print in colour — Chrome strips
-             backgrounds by default, which would knock the accents off. */
-          .pf-sheet,
+          /* Force the two light-grey tints (header control strip + table
+             headers) to actually print — Chrome strips backgrounds by default. */
           .pf-sheet .pf-ctrl td,
-          .pf-sheet .pf-table th,
-          .pf-sheet .pf-table tbody tr:nth-child(even) td,
-          .pf-sheet .pf-copy {
+          .pf-sheet .pf-table th {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -311,10 +261,10 @@ export default function ProcurementPrint({
           .pf-sheet .pf-head,
           .pf-sheet .pf-table,
           .pf-sheet .pf-termsbox { width: 100% !important; }
-          .pf-sheet .pf-head td { padding: 5px 10px !important; }
-          .pf-sheet .pf-fieldtable td { padding: 4px 8px !important; }
+          .pf-sheet .pf-head td { padding: 5px 8px !important; }
+          .pf-sheet .pf-fieldtable td { padding: 3px 8px !important; }
           .pf-sheet .pf-table th,
-          .pf-sheet .pf-table td { padding: 7px 9px !important; font-size: 13px !important; }
+          .pf-sheet .pf-table td { padding: 6px 8px !important; font-size: 13px !important; }
           .pf-sheet .pf-band { font-size: 17px !important; }
           .pf-sheet .pf-formtitle { font-size: 19px !important; }
 
