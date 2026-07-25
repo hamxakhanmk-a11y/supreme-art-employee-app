@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
+import { useMe } from "@/components/MeProvider";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import {
   PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_STATUS_STYLE,
@@ -80,6 +81,11 @@ const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—";
 
 export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }) {
+  const me = useMe();
+  const isSuper = me.user?.role === "superadmin";
+  const canRaise      = isSuper || me.modules.includes("purchase.raise");
+  const canEditPr     = isSuper || me.modules.includes("purchase.edit");
+  const canHrApprove  = isSuper || me.modules.includes("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");
@@ -288,7 +294,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
           <button onClick={exportXlsx} className="btn">⬇ Excel</button>
-          <button onClick={openNew} className="btn btn-primary">＋ New Requisition</button>
+          {canRaise && <button onClick={openNew} className="btn btn-primary">＋ New Requisition</button>}
         </div>
       </div>
 
@@ -467,14 +473,20 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                               <span style={{ color: "var(--text2)" }}> · {i.quantity ?? ""}{i.uom ? ` ${i.uom}` : ""}</span>
                             )}
                             {i.category && <span className="pr-cat">{i.category}</span>}
-                            <button
-                              type="button"
-                              onClick={() => editItemValue(r, k)}
-                              className={`pr-val no-print ${i.value == null ? "pr-val-empty" : ""}`}
-                              title={i.value == null ? "Add value (after receipt)" : "Edit value"}
-                            >
-                              {i.value == null ? "＋ ₨" : `₨${i.value.toLocaleString()} ✎`}
-                            </button>
+                            {canEditPr ? (
+                              <button
+                                type="button"
+                                onClick={() => editItemValue(r, k)}
+                                className={`pr-val no-print ${i.value == null ? "pr-val-empty" : ""}`}
+                                title={i.value == null ? "Add value (after receipt)" : "Edit value"}
+                              >
+                                {i.value == null ? "＋ ₨" : `₨${i.value.toLocaleString()} ✎`}
+                              </button>
+                            ) : i.value != null && (
+                              <span className="pr-val no-print" style={{ cursor: "default" }}>
+                                ₨{i.value.toLocaleString()}
+                              </span>
+                            )}
                             {i.value != null && <span className="only-print" style={{ color: "var(--text3)" }}> · ₨{i.value.toLocaleString()}</span>}
                           </li>
                         ))}
@@ -503,15 +515,23 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   <td className="no-print" style={{ whiteSpace: "nowrap" }}>
                     <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 240 }}>
-                      <button onClick={() => act(r, "approve")} title="HR approve"
-                        style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR ✓</button>
-                      <button onClick={() => act(r, "reject")} title="HR reject"
-                        style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR ✗</button>
-                      <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
-                        style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
-                      <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
-                      <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
-                      <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
+                      {canHrApprove && (
+                        <>
+                          <button onClick={() => act(r, "approve")} title="HR approve"
+                            style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR ✓</button>
+                          <button onClick={() => act(r, "reject")} title="HR reject"
+                            style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR ✗</button>
+                        </>
+                      )}
+                      {canEditPr && (
+                        <>
+                          <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
+                            style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
+                          <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
+                          <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
+                          <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -1,6 +1,6 @@
-import { requireModule } from "@/lib/pageGuard";
+import { requireAnyModule } from "@/lib/pageGuard";
 
 export default async function ModuleLayout({ children }: { children: React.ReactNode }) {
-  await requireModule("purchase");
+  await requireAnyModule(["purchase.raise", "purchase.edit", "purchase.hr-approve"]);
   return <>{children}</>;
 }

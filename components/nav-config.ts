@@ -13,14 +13,23 @@ export interface ModuleDef {
 
 // `module` gates the tab on the role's permission set (see lib/permissions.ts).
 // `superadminOnly` is reserved for the owner. Profile has neither — always shown.
+// Sub-key sets for the top-nav modules that were split into finer permissions.
+// Anything else that needs to know "does the user have any Reports access?"
+// or "does the user have any Purchase access?" should import these lists.
+export const REPORT_SUBKEYS = [
+  "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
+  "reports.procurement", "reports.station", "reports.activity",
+];
+export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.hr-approve"];
+
 export const MODULES_BASE: ModuleDef[] = [
   { key: "profile",    label: "Profile" },
   { key: "attendance", label: "Attendance", module: "attendance" },
   { key: "forms",      label: "Forms",      module: "forms" },
-  { key: "reports",    label: "Reports",    module: "reports" },
+  { key: "reports",    label: "Reports",    anyModule: REPORT_SUBKEYS },
   { key: "salary",     label: "Salary",     module: "salary" },
   { key: "kpi",        label: "KPI",        module: "kpi" },
-  { key: "purchase",   label: "Purchase",   module: "purchase" },
+  { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
   { key: "station",    label: "Station",    module: "station" },
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
   { key: "store",      label: "Store",      module: "store" },

@@ -7,10 +7,16 @@ export const dynamic = "force-dynamic";
 export default async function ReportsLanding() {
   const user = await getSession();
   const perm = user ? await getPerm(user.role) : null;
-  const canSalary = user?.role === "superadmin" || !!perm?.modules.includes("salary");
-  const canStation = user?.role === "superadmin" || !!perm?.modules.includes("station");
-  const canProcurement = user?.role === "superadmin"
-    || ["demand", "po", "grn", "inspection"].some(m => !!perm?.modules.includes(m as never));
+  // Hide any card the signed-in role can't open. Superadmin always sees all.
+  const can = (k: string) =>
+    user?.role === "superadmin" || !!perm?.modules.includes(k as never);
+  const canAttendance  = can("reports.attendance");
+  const canLeaves      = can("reports.leaves");
+  const canHalfDay     = can("reports.halfday");
+  const canSalary      = can("reports.salary");
+  const canProcurement = can("reports.procurement");
+  const canStation     = can("reports.station");
+  const canActivity    = can("reports.activity");
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 20 }}>
@@ -19,27 +25,33 @@ export default async function ReportsLanding() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18 }}>
-        <ReportCard
-          href="/reports/attendance"
-          icon="📅"
-          title="Attendance Register"
-          urdu="حاضری کا رجسٹر"
-          desc="Monthly grid: one row per employee, one column per day, totals on the right."
-        />
-        <ReportCard
-          href="/reports/leaves"
-          icon="📋"
-          title="Leave History"
-          urdu="رخصت کی تاریخ"
-          desc="All approved / rejected / pending leave requests with filters and Excel export."
-        />
-        <ReportCard
-          href="/reports/half-day"
-          icon="½"
-          title="Half-Day History"
-          urdu="آدھے دن کی تاریخ"
-          desc="All half-day requests by employee, status, date range."
-        />
+        {canAttendance && (
+          <ReportCard
+            href="/reports/attendance"
+            icon="📅"
+            title="Attendance Register"
+            urdu="حاضری کا رجسٹر"
+            desc="Monthly grid: one row per employee, one column per day, totals on the right."
+          />
+        )}
+        {canLeaves && (
+          <ReportCard
+            href="/reports/leaves"
+            icon="📋"
+            title="Leave History"
+            urdu="رخصت کی تاریخ"
+            desc="All approved / rejected / pending leave requests with filters and Excel export."
+          />
+        )}
+        {canHalfDay && (
+          <ReportCard
+            href="/reports/half-day"
+            icon="½"
+            title="Half-Day History"
+            urdu="آدھے دن کی تاریخ"
+            desc="All half-day requests by employee, status, date range."
+          />
+        )}
         {canSalary && (
           <ReportCard
             href="/reports/salary"
@@ -67,13 +79,15 @@ export default async function ReportsLanding() {
             desc="Every trip outside the factory — check-out / check-in times, duration, type and reason. Exports to Excel."
           />
         )}
-        <ReportCard
-          href="/reports/activity"
-          icon="🕘"
-          title="Activity Log"
-          urdu="سرگرمی کا ریکارڈ"
-          desc="Audit trail — who marked, edited, approved or generated what, and when."
-        />
+        {canActivity && (
+          <ReportCard
+            href="/reports/activity"
+            icon="🕘"
+            title="Activity Log"
+            urdu="سرگرمی کا ریکارڈ"
+            desc="Audit trail — who marked, edited, approved or generated what, and when."
+          />
+        )}
       </div>
     </div>
   );

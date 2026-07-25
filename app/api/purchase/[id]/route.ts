@@ -14,13 +14,17 @@ import { parsePrItems, prItemsTotal } from "@/lib/purchase";
 // hod-* is the requester's record of the HOD's decision; approve/reject is HR's;
 // received is the Admin's. Toggle actions clear when the state already matches.
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("purchase");
+  // HR approve/reject uses its own permission; every other action is a plain
+  // edit of an existing PR. Peek at the body to pick the right key so a role
+  // with only purchase.hr-approve can't sneak in a value/remarks edit.
+  const body = await req.json();
+  const action = body?.action;
+  const needsHrApproval = action === "approve" || action === "reject";
+  const guard = await guardWrite(needsHrApproval ? "purchase.hr-approve" : "purchase.edit");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();
     const { id } = await ctx.params;
-    const body = await req.json();
-    const action = body?.action;
     const col = purchaseRequisitions;
     const rowId = parseInt(id);
 
@@ -105,7 +109,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
 // PUT /api/purchase/[id]  -> update any editable fields
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("purchase");
+  const guard = await guardWrite("purchase.edit");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();
@@ -145,7 +149,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // DELETE /api/purchase/[id]
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("purchase");
+  const guard = await guardWrite("purchase.edit");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();
