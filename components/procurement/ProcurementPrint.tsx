@@ -143,11 +143,14 @@ export default function ProcurementPrint({
         /* Company name bumped a notch for prominence — still plain black. */
         .pf-orgname { font-weight: 700; font-size: 14.5px; margin-bottom: 2px; letter-spacing: 0.3px; }
         /* Document title — slightly larger + letter-spaced so it reads as the
-           document's headline while staying plain black underlined. */
+           document's headline. Sits above a full-width black rule instead of
+           a short text-underline. */
         .pf-title {
           text-align: center; font-weight: 700; font-size: 18px;
           letter-spacing: 1.5px;
-          margin: 16px 0 14px; text-decoration: underline;
+          margin: 16px 0 14px; padding-bottom: 10px;
+          border-bottom: 1.5px solid #000;
+          text-decoration: none;
         }
 
         /* --- body helpers --- */
