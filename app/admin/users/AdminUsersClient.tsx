@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
-type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "other";
+type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "other";
 interface User {
   id: number;
   email: string;
@@ -19,6 +19,7 @@ const ROLE_COLOR: Record<Role, string> = {
   ceo: "#0F766E",
   procurement: "#B45309",
   engineer: "#0891B2",
+  finance: "#047857",
   other: "#64748B",
 };
 
@@ -88,7 +89,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
 
   // Counts for summary tiles (only active users counted in role buckets)
   const counts = useMemo(() => {
-    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, procurement: 0, engineer: 0, other: 0 };
+    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, procurement: 0, engineer: 0, finance: 0, other: 0 };
     for (const u of users) {
       c.total++;
       if (u.active) c[u.role]++;
@@ -121,6 +122,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         <Tile label="CEO" value={counts.ceo} accent={ROLE_COLOR.ceo} />
         <Tile label="PROCUREMENT" value={counts.procurement} accent={ROLE_COLOR.procurement} />
         <Tile label="ENGINEER" value={counts.engineer} accent={ROLE_COLOR.engineer} />
+        <Tile label="FINANCE" value={counts.finance} accent={ROLE_COLOR.finance} />
         <Tile label="OTHER" value={counts.other} accent={ROLE_COLOR.other} />
       </div>
 
@@ -155,6 +157,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                 <option value="ceo">CEO (view & print only)</option>
                 <option value="procurement">Procurement (purchase only)</option>
                 <option value="engineer">Engineer (purchase only)</option>
+                <option value="finance">Finance (salary &amp; reports)</option>
                 <option value="other">Other (no access until set)</option>
               </select>
             </Field>
@@ -222,6 +225,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   <option value="ceo">CEO (view-only)</option>
                   <option value="procurement">Procurement</option>
                   <option value="engineer">Engineer</option>
+                  <option value="finance">Finance</option>
                   <option value="other">Other</option>
                 </select>
                 {!isSelf && (

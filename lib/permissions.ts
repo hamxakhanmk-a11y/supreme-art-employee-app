@@ -95,7 +95,7 @@ export interface RolePerm {
 }
 
 // Editable roles shown in the permissions UI (superadmin is fixed/full).
-export const EDITABLE_ROLES = ["admin", "hr", "ceo", "procurement", "engineer", "other"] as const;
+export const EDITABLE_ROLES = ["admin", "hr", "ceo", "procurement", "engineer", "finance", "other"] as const;
 
 // Out-of-the-box defaults preserve the app's previous behaviour exactly:
 // admin & hr can do everything; ceo sees everything but can't edit.
@@ -107,6 +107,9 @@ export const DEFAULT_PERMS: Record<string, RolePerm> = {
   ceo:         { modules: [...ALL_MODULE_KEYS], canEdit: false },
   procurement: { modules: ["purchase", "po"], canEdit: true },
   engineer:    { modules: ["purchase"], canEdit: true },
+  // Finance starts on salary + its report plus the purchase register — tune it
+  // in Role Permissions.
+  finance:     { modules: ["salary", "reports.salary", "purchase"], canEdit: true },
   // A blank-slate role — no access until the owner grants modules in the UI.
   other:       { modules: [], canEdit: true },
 };
