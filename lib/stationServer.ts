@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { stationLeaves, employees } from "@/lib/schema";
-import { and, gte, lte, isNotNull, eq, desc, sql } from "drizzle-orm";
+import { and, gte, lte, isNotNull, isNull, eq, desc, sql } from "drizzle-orm";
 
 // Idempotently add the punch-out reason column. Called before any read/write
 // that touches it, so production self-migrates on deploy without a manual step.
@@ -65,6 +65,51 @@ export async function stationTrips(fromISO: string, toISO: string): Promise<Stat
     type: r.type,
     reason: r.reason,
     minutes: r.minutes,
+  }));
+}
+
+// Everyone currently outside the factory — one row per open trip (inAt IS NULL),
+// oldest punch-out first. Powers the "Who's Out" board on the Station terminal.
+export interface OutNow {
+  id: number;
+  employeeId: number;
+  empCode: string;
+  name: string;
+  designation: string | null;
+  department: string | null;
+  outAt: string;            // ISO — punch-out time
+  type: string;             // personal | official
+  reason: string | null;
+}
+
+export async function currentlyOut(): Promise<OutNow[]> {
+  await ensureStationReasonColumn();
+  const rows = await db.select({
+    id: stationLeaves.id,
+    employeeId: stationLeaves.employeeId,
+    empCode: employees.employeeId,
+    firstName: employees.firstName,
+    lastName: employees.lastName,
+    designation: employees.designation,
+    department: employees.department,
+    outAt: stationLeaves.outAt,
+    type: stationLeaves.type,
+    reason: stationLeaves.reason,
+  }).from(stationLeaves)
+    .innerJoin(employees, eq(employees.id, stationLeaves.employeeId))
+    .where(isNull(stationLeaves.inAt))
+    .orderBy(stationLeaves.outAt);
+
+  return rows.map(r => ({
+    id: r.id,
+    employeeId: r.employeeId,
+    empCode: r.empCode,
+    name: `${r.firstName} ${r.lastName}`,
+    designation: r.designation,
+    department: r.department,
+    outAt: new Date(r.outAt).toISOString(),
+    type: r.type,
+    reason: r.reason,
   }));
 }
 

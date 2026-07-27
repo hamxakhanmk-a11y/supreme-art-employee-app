@@ -106,7 +106,11 @@ export function getSubNav(path: string, module: string): { href: string; label: 
     case "purchase":
       return [{ href: "/purchase", label: "PR Register" }];
     case "station":
-      return [{ href: "/station", label: "Terminal" }, { href: "/station/report", label: "Report" }];
+      return [
+        { href: "/station", label: "Terminal" },
+        { href: "/station/out", label: "Who's Out" },
+        { href: "/station/report", label: "Report" },
+      ];
     case "procurement":
       return [
         { href: "/procurement/demand", label: "Demand" },

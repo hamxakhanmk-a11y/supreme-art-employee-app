@@ -190,7 +190,8 @@ export default function StationClient() {
         </div>
       )}
 
-      <div style={{ marginTop: 24, fontSize: 12 }}>
+      <div style={{ marginTop: 24, fontSize: 12, display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap" }}>
+        <Link href="/station/out" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>🚶 Who&apos;s out now →</Link>
         <Link href="/station/report" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>📊 Time-outside report →</Link>
       </div>
     </div>
