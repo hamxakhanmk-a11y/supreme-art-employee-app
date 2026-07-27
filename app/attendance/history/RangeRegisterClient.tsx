@@ -169,7 +169,7 @@ export default function RangeRegisterClient({
         <span style={{ marginLeft: 8 }}>{months.length} month{months.length === 1 ? "" : "s"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
-          <span>= live yield: worked hours ÷ expected hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 to offset lateness/leave, capped at required)</span>
+          <span>= live yield: total worked hours ÷ total required hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 — can exceed 100%)</span>
         </span>
       </div>
 
