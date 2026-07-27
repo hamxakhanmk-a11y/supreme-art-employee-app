@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtDate } from "@/lib/procurement";
-import { downloadRegisterXlsx } from "@/lib/xlsx";
+import { downloadWorkbookXlsx, type SheetSpec } from "@/lib/xlsx";
 
 export interface DocRow {
   kind: "demand" | "po" | "grn" | "inspection";
@@ -15,6 +15,40 @@ export interface DocRow {
   status: string;          // Demand created | PO created | Delivered | Inspected
   by: string;
 }
+
+// One fully-detailed spreadsheet line, tagged with the "kind-id" of its parent
+// document so the client can export exactly the rows the filters are showing.
+export interface ExportRow { key: string; cells: (string | number | null)[] }
+export interface ExportData {
+  demand: ExportRow[];
+  po: ExportRow[];
+  grn: ExportRow[];
+  inspection: ExportRow[];
+}
+
+// Column layout for each detailed export sheet (order matches page.tsx cells).
+const SHEETS = {
+  demand: {
+    sheetName: "Demands",
+    headers: ["Demand No", "Date", "Required By", "Demanded By", "Department", "Prepared By", "Approved By", "Status", "Sr", "Material", "Required For", "Qty", "Item Remarks", "Created By"],
+    colWidths: [11, 12, 12, 18, 18, 14, 14, 14, 5, 26, 20, 8, 22, 16],
+  },
+  po: {
+    sheetName: "Purchase Orders",
+    headers: ["PO No", "Date", "Demand Ref", "Supplier", "Supplier Address", "Supplier Contact", "Delivery Date", "Order Placed By", "Status", "Sr", "Item", "Specifications", "Qty", "Created By"],
+    colWidths: [10, 12, 11, 22, 28, 18, 13, 16, 13, 5, 24, 26, 8, 16],
+  },
+  grn: {
+    sheetName: "Deliveries (GRR)",
+    headers: ["GRR No", "Gate Pass No", "Date", "PO Ref", "Received By", "Verified By", "Sr", "Item", "Qty", "Created By"],
+    colWidths: [10, 16, 12, 10, 16, 16, 5, 26, 8, 16],
+  },
+  inspection: {
+    sheetName: "Inspections",
+    headers: ["Insp No", "Date", "PO Ref", "Material Type", "Supplier", "Inspected By", "Parameter", "Standard", "Sample 1", "Sample 2", "Sample 3", "Sample 4"],
+    colWidths: [10, 12, 10, 20, 22, 16, 22, 16, 12, 12, 12, 12],
+  },
+} as const;
 
 type Filter = "all" | "demand" | "po" | "delivered" | "inspection";
 
@@ -41,7 +75,7 @@ function matches(r: DocRow, f: Filter) {
   return r.status === "Delivered";   // delivered = goods received
 }
 
-export default function ProcurementReportClient({ rows, from, to }: { rows: DocRow[]; from: string; to: string }) {
+export default function ProcurementReportClient({ rows, from, to, exportData }: { rows: DocRow[]; from: string; to: string; exportData: ExportData }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
 
@@ -61,16 +95,38 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: DocR
   }), [rows]);
 
   function exportXlsx() {
-    downloadRegisterXlsx({
-      filename: `procurement-report_${from}_to_${to}`,
-      sheetName: "Procurement",
-      title: `Supreme Art — Procurement Report   ${fmtDate(from)} → ${fmtDate(to)}`,
-      headers: ["Type", "No", "Date", "Ref No", "Party", "Items", "Status", "Created by"],
-      rows: shown.map(r => [
-        KIND[r.kind].label, r.no, fmtDate(r.date), r.ref ?? "", r.party, r.items ?? "", r.status, r.by,
-      ]),
-      freezeCols: 2,
-      colWidths: [12, 10, 13, 12, 26, 8, 16, 18],
+    // Only export the document types the active filter is showing, and within
+    // those only the documents currently visible (respects the text search too).
+    const shownKeys = new Set(shown.map(r => `${r.kind}-${r.id}`));
+    const range = `${fmtDate(from)} → ${fmtDate(to)}`;
+
+    // Which detailed sheets this filter should produce.
+    const wantedKinds: (keyof ExportData)[] =
+      filter === "demand"     ? ["demand"] :
+      filter === "po"         ? ["po"] :
+      filter === "delivered"  ? ["grn"] :
+      filter === "inspection" ? ["inspection"] :
+      ["demand", "po", "grn", "inspection"];
+
+    const sheets: SheetSpec[] = [];
+    for (const kind of wantedKinds) {
+      const meta = SHEETS[kind];
+      const rowsForSheet = exportData[kind].filter(r => shownKeys.has(r.key)).map(r => r.cells);
+      if (rowsForSheet.length === 0) continue;
+      sheets.push({
+        sheetName: meta.sheetName,
+        title: `Supreme Art — ${meta.sheetName}   ${range}`,
+        headers: [...meta.headers],
+        rows: rowsForSheet,
+        colWidths: [...meta.colWidths],
+        freezeCols: 2,
+      });
+    }
+
+    const suffix = filter === "all" ? "all" : SHEETS[wantedKinds[0]].sheetName.toLowerCase().replace(/[^a-z]+/g, "-");
+    downloadWorkbookXlsx({
+      filename: `procurement-${suffix}_${from}_to_${to}`,
+      sheets,
     });
   }
 

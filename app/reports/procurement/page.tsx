@@ -1,8 +1,11 @@
 import { db } from "@/lib/db";
 import { demands, purchaseOrders, grns, inspections } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
-import { ensureProcurementTables, parseItems } from "@/lib/procurement";
-import ProcurementReportClient, { type DocRow } from "./ProcurementReportClient";
+import {
+  ensureProcurementTables, parseItems, fmtDate,
+  type DemandItem, type PoItem, type GrnItem, type InspectionRow,
+} from "@/lib/procurement";
+import ProcurementReportClient, { type DocRow, type ExportData, type ExportRow } from "./ProcurementReportClient";
 
 export const dynamic = "force-dynamic";
 
@@ -72,5 +75,66 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
     })),
   ].sort((a, b) => (a.date === b.date ? b.no - a.no : b.date.localeCompare(a.date)));
 
-  return <ProcurementReportClient rows={rows} from={from} to={to} />;
+  // Full, item-level export data — one spreadsheet line per line item, with all
+  // the document + product + supplier fields. Tagged with the same "kind-id"
+  // key used on screen, so the client can export exactly what the filters show.
+  const dash = (v: unknown) => (v == null || v === "" ? "" : String(v));
+
+  const exportData: ExportData = {
+    demand: ds.flatMap((d): ExportRow[] => {
+      const its = parseItems<DemandItem>(d.items);
+      const base = [
+        d.demandNo, fmtDate(d.date), fmtDate(d.requiredBy), dash(d.demandBy), dash(d.department),
+        dash(d.preparedBy), dash(d.approvedBy), d.status === "open" ? "Demand created" : "PO created",
+      ];
+      const key = `demand-${d.id}`;
+      if (its.length === 0) return [{ key, cells: [...base, "", "", "", "", "", dash(d.createdByName)] }];
+      return its.map((it) => ({
+        key,
+        cells: [...base, it.srNo, dash(it.material), dash(it.requiredFor), dash(it.quantity), dash(it.remarks), dash(d.createdByName)],
+      }));
+    }),
+    po: ps.flatMap((p): ExportRow[] => {
+      const its = parseItems<PoItem>(p.items);
+      const base = [
+        p.poNo, fmtDate(p.date), p.demandNo != null ? String(p.demandNo) : "", dash(p.supplierName),
+        dash(p.supplierAddress), dash(p.supplierContact || p.supplierPhone), fmtDate(p.expectedDate),
+        dash(p.orderPlacedBy), p.status === "received" ? "Delivered" : "PO created",
+      ];
+      const key = `po-${p.id}`;
+      if (its.length === 0) return [{ key, cells: [...base, "", "", "", "", dash(p.createdByName)] }];
+      return its.map((it) => ({
+        key,
+        cells: [...base, it.srNo, dash(it.item), dash(it.specifications), dash(it.quantity), dash(p.createdByName)],
+      }));
+    }),
+    grn: gs.flatMap((g): ExportRow[] => {
+      const its = parseItems<GrnItem>(g.items);
+      const base = [
+        g.grnNo, dash(g.gatePassNo), fmtDate(g.date), g.poNo != null ? String(g.poNo) : "",
+        dash(g.receivedBy), dash(g.verifiedBy),
+      ];
+      const key = `grn-${g.id}`;
+      if (its.length === 0) return [{ key, cells: [...base, "", "", "", dash(g.createdByName)] }];
+      return its.map((it) => ({
+        key,
+        cells: [...base, it.srNo, dash(it.item), dash(it.quantity), dash(g.createdByName)],
+      }));
+    }),
+    inspection: is.flatMap((i): ExportRow[] => {
+      const rowsIn = parseItems<InspectionRow>(i.results);
+      const base = [
+        i.inspNo, fmtDate(i.date), i.poNo != null ? String(i.poNo) : "", dash(i.materialType),
+        dash(i.supplierName), dash(i.inspectedBy || i.createdByName),
+      ];
+      const key = `inspection-${i.id}`;
+      if (rowsIn.length === 0) return [{ key, cells: [...base, "", "", "", "", "", ""] }];
+      return rowsIn.map((r) => ({
+        key,
+        cells: [...base, dash(r.parameter), dash(r.standard), ...[0, 1, 2, 3].map((n) => dash(r.samples?.[n]))],
+      }));
+    }),
+  };
+
+  return <ProcurementReportClient rows={rows} from={from} to={to} exportData={exportData} />;
 }
