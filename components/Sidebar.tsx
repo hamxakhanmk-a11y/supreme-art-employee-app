@@ -33,6 +33,9 @@ export default function Sidebar() {
     };
     links = links.filter(l => !stageOf[l.href] || canModule(stageOf[l.href]));
   }
+  // Items that declare a `needs` module are hidden unless the role has it
+  // (e.g. the Procurement → Report link needs reports.procurement).
+  if (me) links = links.filter(l => !l.needs || canModule(l.needs));
 
   if (links.length === 0) return null;
 
@@ -65,7 +68,7 @@ export default function Sidebar() {
           <Link
             key={link.href}
             href={link.href}
-            className={`sb-item ${active ? "active" : ""}`}
+            className={`sb-item ${link.variant === "report" ? "sb-item--report" : ""} ${active ? "active" : ""}`}
           >
             {link.label}
           </Link>

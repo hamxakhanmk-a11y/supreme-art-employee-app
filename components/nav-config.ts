@@ -59,7 +59,14 @@ const OVERVIEW_REPORTS = { href: "/reports", label: "← Overview" };
 // overview page no items are shown (the page itself lists every section as a
 // card). Once the user enters a section, only that section's items appear,
 // with a back-to-overview link on top.
-export function getSubNav(path: string, module: string): { href: string; label: string }[] {
+export interface SubNavItem {
+  href: string;
+  label: string;
+  variant?: "report";   // rendered as a distinct pill (see Sidebar / globals.css)
+  needs?: string;        // module key the item requires (else it's filtered out)
+}
+
+export function getSubNav(path: string, module: string): SubNavItem[] {
   switch (module) {
     case "profile":
       return [
@@ -117,6 +124,7 @@ export function getSubNav(path: string, module: string): { href: string; label: 
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRR" },
         { href: "/procurement/inspection", label: "Inspection" },
+        { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
       ];
     case "store":
       // Store has its own overview landing + iframe-owned sidebar for the

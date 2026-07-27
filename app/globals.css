@@ -210,6 +210,31 @@ input[type=date] { font-family: inherit; }
   font-weight: 700;
   box-shadow: 0 3px 10px rgba(140,35,38,0.25);
 }
+/* Report link inside a module's sub-nav — set apart from the stage buttons:
+   separated by a gap + divider, shown as an outlined (dashed) brand pill so it
+   reads as "jump to the report", not another stage. */
+.sb-item--report {
+  margin-top: 12px;
+  padding-top: 10px;
+  border: 1px dashed var(--brand);
+  background: var(--bg2);
+  color: var(--brand);
+  font-weight: 700;
+  position: relative;
+}
+.sb-item--report::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: -7px;
+  border-top: 1px solid var(--border);
+}
+.sb-item--report:hover:not(.active) {
+  background: rgba(140,35,38,0.10);
+  border-color: var(--brand-dark);
+  color: var(--brand-dark);
+}
 @media print { .app-sidebar { display: none !important; } }
 
 /* ---------- Tabs (segmented pill switcher, matches the Store module toggle) ---------- */
