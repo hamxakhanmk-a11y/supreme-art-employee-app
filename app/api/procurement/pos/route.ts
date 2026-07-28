@@ -25,12 +25,18 @@ export async function POST(req: Request) {
   const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders);
   const poNo = nextNumber(n, NUMBER_START.po);
 
-  // Optional link to a demand.
+  // Optional link to a demand (picker) — stamps its number and marks it ordered.
   let demandId: number | null = null;
   let demandNo: number | null = null;
   if (b.demandId) {
     const [d] = await db.select().from(demands).where(eq(demands.id, Number(b.demandId)));
     if (d) { demandId = d.id; demandNo = d.demandNo; }
+  }
+  // Manual "Demand Form Ref No" — overrides / fills the number when typed by
+  // hand (e.g. the demand's PO was deleted, or referencing an off-system demand).
+  if (b.demandNo != null && String(b.demandNo).trim() !== "") {
+    const n = parseInt(String(b.demandNo), 10);
+    if (!isNaN(n)) demandNo = n;
   }
 
   const items = Array.isArray(b.items) ? b.items : [];

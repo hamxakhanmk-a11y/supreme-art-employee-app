@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { grns } from "@/lib/schema";
+import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureProcurementTables } from "@/lib/procurement";
@@ -41,7 +41,21 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const { id } = await ctx.params;
-  await db.delete(grns).where(eq(grns.id, parseInt(id)));
+  const grnId = parseInt(id);
+
+  // Note the linked PO (if any) before deleting so we can re-open it.
+  const [g] = await db.select({ poId: grns.poId }).from(grns).where(eq(grns.id, grnId));
+  await db.delete(grns).where(eq(grns.id, grnId));
+
+  // Deleting a PO's only GRN re-opens that PO (back to "open" from "received")
+  // so it reappears in the GRN picker. Only revert if no other GRN references it.
+  if (g?.poId) {
+    const [other] = await db.select({ id: grns.id }).from(grns)
+      .where(and(eq(grns.poId, g.poId), ne(grns.id, grnId)))
+      .limit(1);
+    if (!other) await db.update(purchaseOrders).set({ status: "open" }).where(eq(purchaseOrders.id, g.poId));
+  }
+
   await logActivity({ user: guard, action: "grn.delete", summary: `deleted GRN (id ${id})` });
   return NextResponse.json({ ok: true });
 }

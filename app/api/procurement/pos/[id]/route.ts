@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { purchaseOrders } from "@/lib/schema";
+import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureProcurementTables, PO_DEFAULT_REMARKS } from "@/lib/procurement";
@@ -50,7 +50,21 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const { id } = await ctx.params;
-  await db.delete(purchaseOrders).where(eq(purchaseOrders.id, parseInt(id)));
+  const poId = parseInt(id);
+
+  // Note the linked demand (if any) before deleting so we can re-open it.
+  const [po] = await db.select({ demandId: purchaseOrders.demandId }).from(purchaseOrders).where(eq(purchaseOrders.id, poId));
+  await db.delete(purchaseOrders).where(eq(purchaseOrders.id, poId));
+
+  // Deleting a demand's only PO should re-open that demand so a new PO can be
+  // raised for it. Only revert when no *other* PO still references the demand.
+  if (po?.demandId) {
+    const [other] = await db.select({ id: purchaseOrders.id }).from(purchaseOrders)
+      .where(and(eq(purchaseOrders.demandId, po.demandId), ne(purchaseOrders.id, poId)))
+      .limit(1);
+    if (!other) await db.update(demands).set({ status: "open" }).where(eq(demands.id, po.demandId));
+  }
+
   await logActivity({ user: guard, action: "po.delete", summary: `deleted PO (id ${id})` });
   return NextResponse.json({ ok: true });
 }

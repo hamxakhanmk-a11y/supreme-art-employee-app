@@ -24,6 +24,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   const [err, setErr] = useState("");
 
   const [demandId, setDemandId] = useState("");
+  const [demandNoManual, setDemandNoManual] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [supplierName, setSupplierName] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
@@ -34,7 +35,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
-    setDemandId(""); setDate(new Date().toISOString().slice(0, 10));
+    setDemandId(""); setDemandNoManual(""); setDate(new Date().toISOString().slice(0, 10));
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
@@ -43,6 +44,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
     setDemandId(id);
     const d = openDemands.find(x => String(x.id) === id);
     if (!d) return;
+    setDemandNoManual(String(d.demandNo));   // auto-fill the ref, still editable
     const dItems = parseItems<DemandItem>(d.items);
     if (dItems.length) {
       setItems(dItems.map((it, i) => ({ srNo: i + 1, description: it.material, quantity: it.quantity, uom: "", rate: "", tax: String(PO_DEFAULT_TAX) })));
@@ -59,7 +61,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
       const res = await fetch("/api/procurement/pos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          demandId: demandId || null, date, supplierName, supplierAddress, supplierPhone,
+          demandId: demandId || null, demandNo: demandNoManual, date, supplierName, supplierAddress, supplierPhone,
           expectedDate, terms, orderPlacedBy, items: clean,
         }),
       });
@@ -95,6 +97,10 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
                 <option value="">— None (standalone PO) —</option>
                 {openDemands.map(d => <option key={d.id} value={d.id}>Demand #{d.demandNo}{d.demandBy ? ` · ${d.demandBy}` : ""}</option>)}
               </select>
+            </Field>
+            <Field label="Demand Form Ref No (or type manually)">
+              <input value={demandNoManual} onChange={e => setDemandNoManual(e.target.value)} className="auth-input"
+                inputMode="numeric" placeholder="e.g. 5012" />
             </Field>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
             <Field label="Delivery date"><input type="date" value={expectedDate} onChange={e => setExpectedDate(e.target.value)} className="auth-input" /></Field>

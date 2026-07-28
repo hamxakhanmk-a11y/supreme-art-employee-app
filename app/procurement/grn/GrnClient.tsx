@@ -22,6 +22,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [err, setErr] = useState("");
 
   const [poId, setPoId] = useState("");
+  const [poNoManual, setPoNoManual] = useState("");
   const [gatePassNo, setGatePassNo] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [verifiedBy, setVerifiedBy] = useState("");
@@ -29,7 +30,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [items, setItems] = useState<GrnItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
-    setPoId(""); setGatePassNo(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setPoNoManual(""); setGatePassNo(""); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
@@ -37,6 +38,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     setPoId(id);
     const p = openPos.find(x => String(x.id) === id);
     if (!p) return;
+    setPoNoManual(String(p.poNo));   // auto-fill the ref, still editable
     const pItems = parseItems<PoItem>(p.items);
     if (pItems.length) {
       setItems(pItems.map((it, i) => ({ srNo: i + 1, item: it.description || it.item || "", quantity: it.quantity })));
@@ -53,7 +55,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       const clean = items.filter(it => it.item.trim());
       const res = await fetch("/api/procurement/grns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, gatePassNo, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, gatePassNo, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -85,6 +87,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <option value="">— None (standalone GRR) —</option>
                 {openPos.map(p => <option key={p.id} value={p.id}>PO #{p.poNo}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
               </select>
+            </Field>
+            <Field label="PO Ref No (or type manually)">
+              <input value={poNoManual} onChange={e => setPoNoManual(e.target.value)} className="auth-input"
+                inputMode="numeric" placeholder="e.g. 10012" />
             </Field>
             <Field label="Inward gate pass No *">
               <input value={gatePassNo} onChange={e => setGatePassNo(e.target.value)} className="auth-input"

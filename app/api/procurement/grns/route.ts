@@ -25,12 +25,17 @@ export async function POST(req: Request) {
   const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns);
   const grnNo = nextNumber(n, NUMBER_START.grn);
 
-  // Optional link to a PO.
+  // Optional link to a PO (picker) — stamps its number and marks it received.
   let poId: number | null = null;
   let poNo: number | null = null;
   if (b.poId) {
     const [p] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, Number(b.poId)));
     if (p) { poId = p.id; poNo = p.poNo; }
+  }
+  // Manual "PO Ref No" — overrides / fills the number when typed by hand.
+  if (b.poNo != null && String(b.poNo).trim() !== "") {
+    const n = parseInt(String(b.poNo), 10);
+    if (!isNaN(n)) poNo = n;
   }
 
   const items = Array.isArray(b.items) ? b.items : [];

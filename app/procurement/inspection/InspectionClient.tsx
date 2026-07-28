@@ -22,6 +22,7 @@ export default function InspectionClient({ rows, pos }: { rows: Inspection[]; po
   const [err, setErr] = useState("");
 
   const [poId, setPoId] = useState("");
+  const [poNoManual, setPoNoManual] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [materialType, setMaterialType] = useState("");
   const [supplierName, setSupplierName] = useState("");
@@ -29,7 +30,7 @@ export default function InspectionClient({ rows, pos }: { rows: Inspection[]; po
   const [results, setResults] = useState<InspectionRow[]>(blankInspectionRows());
 
   function resetForm() {
-    setPoId(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setPoNoManual(""); setDate(new Date().toISOString().slice(0, 10));
     setMaterialType(""); setSupplierName(""); setInspectedBy("");
     setResults(blankInspectionRows()); setErr("");
   }
@@ -37,7 +38,7 @@ export default function InspectionClient({ rows, pos }: { rows: Inspection[]; po
   function pickPo(id: string) {
     setPoId(id);
     const p = pos.find(x => String(x.id) === id);
-    if (p) setSupplierName(p.supplierName || "");
+    if (p) { setPoNoManual(String(p.poNo)); setSupplierName(p.supplierName || ""); }
   }
   function setStandard(i: number, v: string) {
     setResults(l => l.map((r, idx) => idx === i ? { ...r, standard: v } : r));
@@ -51,7 +52,7 @@ export default function InspectionClient({ rows, pos }: { rows: Inspection[]; po
     try {
       const res = await fetch("/api/procurement/inspections", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, date, materialType, supplierName, inspectedBy, results }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, date, materialType, supplierName, inspectedBy, results }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -84,6 +85,10 @@ export default function InspectionClient({ rows, pos }: { rows: Inspection[]; po
                 <option value="">— None (standalone) —</option>
                 {pos.map(p => <option key={p.id} value={p.id}>PO #{p.poNo}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
               </select>
+            </Field>
+            <Field label="PO Ref No (or type manually)">
+              <input value={poNoManual} onChange={e => setPoNoManual(e.target.value)} className="auth-input"
+                inputMode="numeric" placeholder="e.g. 10012" />
             </Field>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
             <Field label="Type of material(s)"><input value={materialType} onChange={e => setMaterialType(e.target.value)} className="auth-input" /></Field>
