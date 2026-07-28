@@ -39,7 +39,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     if (!p) return;
     const pItems = parseItems<PoItem>(p.items);
     if (pItems.length) {
-      setItems(pItems.map((it, i) => ({ srNo: i + 1, item: it.item, quantity: it.quantity })));
+      setItems(pItems.map((it, i) => ({ srNo: i + 1, item: it.description || it.item || "", quantity: it.quantity })));
     }
   }
   function setItem(i: number, k: keyof GrnItem, v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }

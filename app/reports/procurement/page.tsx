@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { demands, purchaseOrders, grns, inspections } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
 import {
-  ensureProcurementTables, parseItems, fmtDate,
+  ensureProcurementTables, parseItems, fmtDate, poLineMoney,
   type DemandItem, type PoItem, type GrnItem, type InspectionRow,
 } from "@/lib/procurement";
 import ProcurementReportClient, { type DocRow, type ExportData, type ExportRow } from "./ProcurementReportClient";
@@ -102,11 +102,17 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
         dash(p.orderPlacedBy), p.status === "received" ? "Delivered" : "PO created",
       ];
       const key = `po-${p.id}`;
-      if (its.length === 0) return [{ key, cells: [...base, "", "", "", "", dash(p.createdByName)] }];
-      return its.map((it) => ({
-        key,
-        cells: [...base, it.srNo, dash(it.item), dash(it.specifications), dash(it.quantity), dash(p.createdByName)],
-      }));
+      if (its.length === 0) return [{ key, cells: [...base, "", "", "", "", "", "", "", "", "", dash(p.createdByName)] }];
+      return its.map((it) => {
+        const { rate, gross, taxPct, taxValue, net } = poLineMoney(it);
+        return {
+          key,
+          cells: [
+            ...base, it.srNo, dash(it.description || it.item), dash(it.quantity), dash(it.uom),
+            rate || "", gross || "", it.tax ? taxPct : "", taxValue || "", net || "", dash(p.createdByName),
+          ],
+        };
+      });
     }),
     grn: gs.flatMap((g): ExportRow[] => {
       const its = parseItems<GrnItem>(g.items);

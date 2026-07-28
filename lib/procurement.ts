@@ -23,8 +23,42 @@ export function blankInspectionRows(): InspectionRow[] {
 }
 
 export interface DemandItem { srNo: number; material: string; requiredFor: string; quantity: string; remarks: string }
-export interface PoItem { srNo: number; item: string; specifications: string; quantity: string }
+// PO line item. Gross / tax value / net are derived (never stored) from
+// quantity × rate and the tax %. `item`/`specifications` are legacy fields kept
+// optional so purchase orders saved before this change still render.
+export interface PoItem {
+  srNo: number;
+  description: string;
+  quantity: string;
+  uom: string;
+  rate: string;
+  tax: string;              // percent, e.g. "18"
+  item?: string;            // legacy — old POs stored the name here
+  specifications?: string;  // legacy
+}
 export interface GrnItem { srNo: number; item: string; quantity: string }
+
+// Default sales-tax percentage seeded on every new PO line.
+export const PO_DEFAULT_TAX = 18;
+
+// Derived money for one PO line: gross = qty × rate, tax value = gross × tax%,
+// net = gross + tax value. Tolerant of blanks (treated as 0).
+export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string }) {
+  const qty = parseFloat(it.quantity ?? "") || 0;
+  const rate = parseFloat(it.rate ?? "") || 0;
+  const taxPct = parseFloat(it.tax ?? "") || 0;
+  const gross = qty * rate;
+  const taxValue = gross * taxPct / 100;
+  const net = gross + taxValue;
+  return { qty, rate, taxPct, gross, taxValue, net };
+}
+
+// Money formatter for the printed PO — thousands separators, 2 decimals, blank
+// for zero so empty lines don't read "0.00".
+export function fmtMoney(n: number, blankZero = true): string {
+  if (blankZero && !n) return "";
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 // Our organisation's details, printed in the header of every form.
 export const COMPANY = {

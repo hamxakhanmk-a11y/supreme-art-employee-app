@@ -82,7 +82,7 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
           <div>
             <div className="lbl">Approved By:</div>
             <div className="line">{d.approvedBy || ""}</div>
-            <div className="cap">DIRECTOR/CEO</div>
+            <div className="cap">HOD</div>
           </div>
         </div>
       </ProcurementPrint>

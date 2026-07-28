@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, PO_DEFAULT_TERMS, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
@@ -14,7 +14,7 @@ interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
 }
 
-const blankItem = (n: number): PoItem => ({ srNo: n, item: "", specifications: "", quantity: "" });
+const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
 
 export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemands: OpenDemand[] }) {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
     if (!d) return;
     const dItems = parseItems<DemandItem>(d.items);
     if (dItems.length) {
-      setItems(dItems.map((it, i) => ({ srNo: i + 1, item: it.material, specifications: "", quantity: it.quantity })));
+      setItems(dItems.map((it, i) => ({ srNo: i + 1, description: it.material, quantity: it.quantity, uom: "", rate: "", tax: String(PO_DEFAULT_TAX) })));
     }
   }
   function setItem(i: number, k: keyof PoItem, v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
@@ -55,7 +55,7 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   async function save() {
     setBusy(true); setErr("");
     try {
-      const clean = items.filter(it => it.item.trim());
+      const clean = items.filter(it => it.description.trim());
       const res = await fetch("/api/procurement/pos", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -107,25 +107,36 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
           </div>
 
-          <SectionLabel>ITEMS</SectionLabel>
+          <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%)</span></SectionLabel>
           <div style={{ overflow: "auto" }}>
-            <table style={{ width: "100%" }}>
+            <table style={{ width: "100%", minWidth: 760 }}>
               <thead>
                 <tr>
-                  <th style={{ width: 44 }}>S.No</th><th>Item Name</th>
-                  <th>Specifications</th><th style={{ width: 110 }}>Quantity</th><th style={{ width: 36 }}></th>
+                  <th style={{ width: 40 }}>S.No</th><th style={{ minWidth: 180 }}>Description</th>
+                  <th style={{ width: 70 }}>Qty</th><th style={{ width: 70 }}>UOM</th>
+                  <th style={{ width: 90 }}>Rate</th><th style={{ width: 100 }}>Gross</th>
+                  <th style={{ width: 64 }}>Tax %</th><th style={{ width: 100 }}>Tax Value</th>
+                  <th style={{ width: 110 }}>Net Value</th><th style={{ width: 34 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((it, i) => (
-                  <tr key={i}>
-                    <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
-                    <td><input value={it.item} onChange={e => setItem(i, "item", e.target.value)} className="auth-input" style={cellInput} /></td>
-                    <td><input value={it.specifications} onChange={e => setItem(i, "specifications", e.target.value)} className="auth-input" style={cellInput} /></td>
-                    <td><input value={it.quantity} onChange={e => setItem(i, "quantity", e.target.value)} className="auth-input" style={cellInput} /></td>
-                    <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
-                  </tr>
-                ))}
+                {items.map((it, i) => {
+                  const { gross, taxValue, net } = poLineMoney(it);
+                  return (
+                    <tr key={i}>
+                      <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
+                      <td><input value={it.description} onChange={e => setItem(i, "description", e.target.value)} className="auth-input" style={cellInput} /></td>
+                      <td><input value={it.quantity} onChange={e => setItem(i, "quantity", e.target.value)} className="auth-input" style={numInput} inputMode="decimal" /></td>
+                      <td><input value={it.uom} onChange={e => setItem(i, "uom", e.target.value)} className="auth-input" style={numInput} placeholder="pcs" /></td>
+                      <td><input value={it.rate} onChange={e => setItem(i, "rate", e.target.value)} className="auth-input" style={numInput} inputMode="decimal" /></td>
+                      <td style={calcCell}>{fmtMoney(gross) || "—"}</td>
+                      <td><input value={it.tax} onChange={e => setItem(i, "tax", e.target.value)} className="auth-input" style={numInput} inputMode="decimal" /></td>
+                      <td style={calcCell}>{fmtMoney(taxValue) || "—"}</td>
+                      <td style={{ ...calcCell, fontWeight: 700 }}>{fmtMoney(net) || "—"}</td>
+                      <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -193,3 +204,5 @@ function StatusBadge({ status }: { status: string }) {
 }
 const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 };
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
+const numInput: React.CSSProperties = { width: "100%", minWidth: 50, textAlign: "right" };
+const calcCell: React.CSSProperties = { textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text2)", whiteSpace: "nowrap", paddingRight: 6 };

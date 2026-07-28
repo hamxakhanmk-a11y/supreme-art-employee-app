@@ -35,8 +35,8 @@ const SHEETS = {
   },
   po: {
     sheetName: "Purchase Orders",
-    headers: ["PO No", "Date", "Demand Ref", "Supplier", "Supplier Address", "Supplier Contact", "Delivery Date", "Order Placed By", "Status", "Sr", "Item", "Specifications", "Qty", "Created By"],
-    colWidths: [10, 12, 11, 22, 28, 18, 13, 16, 13, 5, 24, 26, 8, 16],
+    headers: ["PO No", "Date", "Demand Ref", "Supplier", "Supplier Address", "Supplier Contact", "Delivery Date", "Order Placed By", "Status", "Sr", "Description", "Qty", "UOM", "Rate", "Gross", "Tax %", "Tax Value", "Net Value", "Created By"],
+    colWidths: [10, 12, 11, 22, 28, 18, 13, 16, 13, 5, 26, 8, 8, 12, 13, 8, 13, 14, 16],
   },
   grn: {
     sheetName: "Deliveries (GRR)",
