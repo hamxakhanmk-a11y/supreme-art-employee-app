@@ -149,7 +149,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
 // DELETE /api/purchase/[id]
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("purchase.edit");
+  const guard = await guardWrite("purchase.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();

@@ -20,7 +20,7 @@ export const REPORT_SUBKEYS = [
   "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
   "reports.procurement", "reports.station", "reports.activity",
 ];
-export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.hr-approve"];
+export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.delete", "purchase.hr-approve"];
 
 export const MODULES_BASE: ModuleDef[] = [
   { key: "profile",    label: "Profile" },

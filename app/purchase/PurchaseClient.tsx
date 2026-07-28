@@ -85,6 +85,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const isSuper = me.user?.role === "superadmin";
   const canRaise      = isSuper || me.modules.includes("purchase.raise");
   const canEditPr     = isSuper || me.modules.includes("purchase.edit");
+  const canDeletePr   = isSuper || me.modules.includes("purchase.delete");
   const canHrApprove  = isSuper || me.modules.includes("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
   const [q, setQ] = useState("");
@@ -529,8 +530,10 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                             style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
                           <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
                           <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
-                          <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
                         </>
+                      )}
+                      {canDeletePr && (
+                        <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
                       )}
                     </div>
                   </td>
