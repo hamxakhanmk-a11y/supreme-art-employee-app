@@ -8,11 +8,11 @@ export const LEAVE_STYLE: Record<LeaveType, { label: string; color: string; bg: 
   official: { label: "Official", color: "#0E7490", bg: "#cffafe" }, // excused, not deducted
 };
 
-// "14:37" from a Date/ISO string.
+// "2:37 PM" from a Date/ISO string (12-hour clock).
 export function hhmm(d: Date | string | null | undefined): string {
   if (!d) return "";
   const dt = new Date(d);
-  return dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 export function formatMins(min: number | null | undefined): string {

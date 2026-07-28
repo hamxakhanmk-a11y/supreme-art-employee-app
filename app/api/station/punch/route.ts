@@ -21,6 +21,16 @@ export async function POST(req: NextRequest) {
     const reason = String(body.reason || "").trim().slice(0, 200) || null;
     if (!p) return NextResponse.json({ error: "Enter your PIN" }, { status: 400 });
 
+    // Optional manual time "HH:MM" (24h). When given, the punch is stamped at
+    // today's Karachi date + that wall-clock time; otherwise it's `now()`.
+    const atRaw = typeof body.at === "string" ? body.at.trim() : "";
+    if (atRaw && !/^\d{1,2}:\d{2}$/.test(atRaw)) {
+      return NextResponse.json({ error: "Time must be in HH:MM format" }, { status: 400 });
+    }
+    const stamp = atRaw
+      ? sql`(((now() AT TIME ZONE 'Asia/Karachi')::date + ${atRaw}::time) AT TIME ZONE 'Asia/Karachi')`
+      : sql`now()`;
+
     const [emp] = await db.select().from(employees)
       .where(and(eq(employees.stationPin, p), eq(employees.status, "active")));
     if (!emp) return NextResponse.json({ error: "No employee found for that PIN" }, { status: 404 });
@@ -34,8 +44,8 @@ export async function POST(req: NextRequest) {
       // Compute duration in-DB so it's exact regardless of server/JS timezone.
       const [row] = await db.update(stationLeaves)
         .set({
-          inAt: sql`now()`,
-          minutes: sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (now() - ${stationLeaves.outAt})) / 60))::int`,
+          inAt: stamp,
+          minutes: sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (${stamp} - ${stationLeaves.outAt})) / 60))::int`,
         })
         .where(eq(stationLeaves.id, open.id)).returning();
       await logActivity({
@@ -46,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     const [row] = await db.insert(stationLeaves)
-      .values({ employeeId: emp.id, date: sql`(now() AT TIME ZONE 'Asia/Karachi')::date`, outAt: sql`now()`, type, reason })
+      .values({ employeeId: emp.id, date: sql`(now() AT TIME ZONE 'Asia/Karachi')::date`, outAt: stamp, type, reason })
       .returning();
     await logActivity({
       user: guard, action: "station.out", employeeId: emp.id, employeeName: name,

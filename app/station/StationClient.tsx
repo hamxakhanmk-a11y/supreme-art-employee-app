@@ -16,9 +16,10 @@ export default function StationClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [time, setTime] = useState("");   // optional manual "HH:MM"; blank = now
   const [flash, setFlash] = useState<{ msg: string; color: string } | null>(null);
 
-  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); setReason(""); }, []);
+  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); setReason(""); setTime(""); }, []);
 
   const lookup = useCallback(async (p: string) => {
     setBusy(true); setError(null);
@@ -61,7 +62,7 @@ export default function StationClient() {
     try {
       const res = await fetch("/api/station/punch", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin, type, reason }),
+        body: JSON.stringify({ pin, type, reason, at: time || undefined }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Punch failed");
@@ -133,6 +134,21 @@ export default function StationClient() {
               <div style={{ fontSize: 17, fontWeight: 700 }}>{emp.firstName} {emp.lastName}</div>
               <div style={{ fontSize: 12, color: "var(--text2)" }}>{emp.employeeId} · {emp.designation || "—"}</div>
             </div>
+          </div>
+
+          {/* Optional manual time — blank uses the current time. */}
+          <div style={{ margin: "14px 0 2px", textAlign: "left", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, color: "var(--text2)", fontWeight: 600 }}>Time</span>
+            <input
+              type="time"
+              value={time}
+              onChange={e => setTime(e.target.value)}
+              disabled={busy}
+              style={{ padding: "8px 10px", fontSize: 15, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)" }}
+            />
+            {time
+              ? <button onClick={() => setTime("")} disabled={busy} className="btn btn-sm">Use now</button>
+              : <span style={{ fontSize: 11.5, color: "var(--text3)" }}>blank = right now</span>}
           </div>
 
           {open ? (
