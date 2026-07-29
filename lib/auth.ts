@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { eq, sql, and, gt } from "drizzle-orm";
@@ -62,7 +63,9 @@ export async function clearSessionCookie() {
   });
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+// Wrapped in React cache() so multiple calls within one server request (e.g. a
+// layout's requireModule + the page's isViewOnly) share a single DB round-trip.
+export const getSession = cache(async function getSession(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -82,7 +85,7 @@ export async function getSession(): Promise<SessionUser | null> {
   const r = rows[0];
   if (!r.active) return null;
   return { id: r.id, email: r.email, name: r.name, role: r.role as Role };
-}
+});
 
 export async function requireAuth(allowedRoles?: Role[]): Promise<SessionUser> {
   const user = await getSession();
