@@ -508,6 +508,16 @@ export const inspections = pgTable("inspections", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Reusable supplier directory for the PO form — pick one to auto-fill name /
+// address / contact, or type freely without saving.
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  address: text("address"),
+  contact: varchar("contact", { length: 160 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const grns = pgTable("grns", {
   id: serial("id").primaryKey(),
   grnNo: integer("grn_no").notNull(),                // auto running serial (internal doc no)

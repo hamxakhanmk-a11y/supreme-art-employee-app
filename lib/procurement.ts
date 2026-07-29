@@ -213,6 +213,13 @@ DO $$ BEGIN
     created_by_name varchar(120),
     created_at timestamp NOT NULL DEFAULT now()
   );
+  CREATE TABLE IF NOT EXISTS suppliers (
+    id serial PRIMARY KEY,
+    name varchar(200) NOT NULL,
+    address text,
+    contact varchar(160),
+    created_at timestamp NOT NULL DEFAULT now()
+  );
   -- Columns added after their tables already existed.
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160);

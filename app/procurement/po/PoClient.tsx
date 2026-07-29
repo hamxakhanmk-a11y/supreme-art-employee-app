@@ -13,10 +13,11 @@ interface Po {
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
 }
+interface Supplier { id: number; name: string; address: string | null; contact: string | null }
 
 const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
 
-export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemands: OpenDemand[] }) {
+export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[]; openDemands: OpenDemand[]; suppliers: Supplier[] }) {
   const router = useRouter();
   const canEdit = useCanEdit();
   const [open, setOpen] = useState(false);
@@ -26,6 +27,10 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
   const [demandId, setDemandId] = useState("");
   const [demandNoManual, setDemandNoManual] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [supplierList, setSupplierList] = useState<Supplier[]>(suppliers);
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [savingSupplier, setSavingSupplier] = useState(false);
+  const [supplierMsg, setSupplierMsg] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
@@ -36,9 +41,39 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
 
   function resetForm() {
     setDemandId(""); setDemandNoManual(""); setDate(new Date().toISOString().slice(0, 10));
+    setSelectedSupplierId(""); setSupplierMsg("");
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
+  }
+  // Pick a saved supplier → auto-fill the three fields (all still editable).
+  function pickSupplier(id: string) {
+    setSelectedSupplierId(id);
+    const s = supplierList.find(x => String(x.id) === id);
+    if (!s) return;
+    setSupplierName(s.name);
+    setSupplierAddress(s.address || "");
+    setSupplierPhone(s.contact || "");
+  }
+  // Save whatever's typed to the supplier directory (dedupes by name server-side).
+  async function saveSupplier() {
+    const name = supplierName.trim();
+    if (!name) return;
+    setSavingSupplier(true); setSupplierMsg("");
+    try {
+      const res = await fetch("/api/procurement/suppliers", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Save failed");
+      const s: Supplier = j.supplier;
+      setSupplierList(list => [...list.filter(x => x.id !== s.id), s].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedSupplierId(String(s.id));
+      setSupplierMsg(j.existed ? "Updated in list ✓" : "Saved to list ✓");
+      setTimeout(() => setSupplierMsg(""), 2500);
+    } catch (e) { setSupplierMsg(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSavingSupplier(false); }
   }
   function pickDemand(id: string) {
     setDemandId(id);
@@ -108,9 +143,24 @@ export default function PoClient({ rows, openDemands }: { rows: Po[]; openDemand
 
           <SectionLabel>SUPPLIER (To:)</SectionLabel>
           <div style={grid}>
-            <Field label="Supplier name"><input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="auth-input" /></Field>
+            <Field label="Pick a saved supplier (optional)">
+              <select value={selectedSupplierId} onChange={e => pickSupplier(e.target.value)} className="auth-input">
+                <option value="">— Choose saved / type below —</option>
+                {supplierList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Supplier name">
+              <input value={supplierName} onChange={e => { setSupplierName(e.target.value); setSelectedSupplierId(""); }} className="auth-input" />
+            </Field>
             <Field label="Address"><input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="auth-input" /></Field>
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
+          </div>
+          <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={saveSupplier} disabled={savingSupplier || !supplierName.trim()} className="btn btn-sm">
+              {savingSupplier ? "Saving…" : "＋ Save this supplier to the list"}
+            </button>
+            {supplierMsg && <span style={{ fontSize: 12, color: supplierMsg.includes("✓") ? "#166534" : "#7C1F1F", fontWeight: 600 }}>{supplierMsg}</span>}
+            <span style={{ fontSize: 11.5, color: "var(--text3)" }}>Pick from the list to auto-fill, or just type — saving is optional.</span>
           </div>
 
           <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%)</span></SectionLabel>
