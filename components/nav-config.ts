@@ -26,13 +26,13 @@ export const MODULES_BASE: ModuleDef[] = [
   { key: "profile",    label: "Profile" },
   { key: "attendance", label: "Attendance", module: "attendance" },
   { key: "forms",      label: "Forms",      module: "forms" },
-  { key: "reports",    label: "Reports",    anyModule: REPORT_SUBKEYS },
   { key: "salary",     label: "Salary",     module: "salary" },
   { key: "kpi",        label: "KPI",        module: "kpi" },
   { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
   { key: "station",    label: "Station",    module: "station" },
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
   { key: "store",      label: "Store",      module: "store" },
+  { key: "activity",   label: "Activity Log", module: "reports.activity" },
   { key: "users",      label: "Users",      superadminOnly: true },
 ];
 
@@ -42,18 +42,17 @@ export const MODULE_HOME: Record<string, string> = {
   profile: "/",
   attendance: "/attendance",
   forms: "/forms",
-  reports: "/reports",
   salary: "/salary",
   kpi: "/kpi",
   purchase: "/purchase",
   station: "/station",
   procurement: "/procurement",
   store: "/store",
+  activity: "/reports/activity",
   users: "/admin/users",
 };
 
 const OVERVIEW_FORMS = { href: "/forms", label: "← Overview" };
-const OVERVIEW_REPORTS = { href: "/reports", label: "← Overview" };
 
 // The sub-nav (rendered as a left sidebar) is context-aware: on a module's
 // overview page no items are shown (the page itself lists every section as a
@@ -74,7 +73,12 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/employees", label: "Employees" },
       ];
     case "attendance":
-      return [{ href: "/attendance", label: "Mark Today" }];
+      return [
+        { href: "/attendance", label: "Mark Today" },
+        { href: "/reports/attendance", label: "📊 Attendance Register", variant: "report", needs: "reports.attendance" },
+        { href: "/reports/leaves", label: "📊 Leave History", variant: "report", needs: "reports.leaves" },
+        { href: "/reports/half-day", label: "📊 Half-Day History", variant: "report", needs: "reports.halfday" },
+      ];
     case "forms": {
       if (path === "/forms") return [];
       if (path === "/forms/leave" || path === "/forms/leave-settings") {
@@ -90,19 +94,11 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       if (path.startsWith("/leave"))  return [OVERVIEW_FORMS, { href: "/forms/leave", label: "Leave Form" }];
       return [];
     }
-    case "reports": {
-      if (path === "/reports") return [];
-      if (path.startsWith("/reports/attendance"))   return [OVERVIEW_REPORTS, { href: "/reports/attendance", label: "Attendance Register" }];
-      if (path.startsWith("/reports/leaves"))       return [OVERVIEW_REPORTS, { href: "/reports/leaves", label: "Leave History" }];
-      if (path.startsWith("/reports/half-day"))     return [OVERVIEW_REPORTS, { href: "/reports/half-day", label: "Half-Day History" }];
-      if (path.startsWith("/reports/salary"))       return [OVERVIEW_REPORTS, { href: "/reports/salary", label: "Salary Records" }];
-      if (path.startsWith("/reports/procurement")) return [OVERVIEW_REPORTS, { href: "/reports/procurement", label: "Procurement" }];
-      if (path.startsWith("/reports/station"))     return [OVERVIEW_REPORTS, { href: "/reports/station", label: "Hourly Leaves" }];
-      if (path.startsWith("/reports/activity"))    return [OVERVIEW_REPORTS, { href: "/reports/activity", label: "Activity Log" }];
-      return [];
-    }
     case "salary":
-      return [{ href: "/salary", label: "Generate Slips" }];
+      return [
+        { href: "/salary", label: "Generate Slips" },
+        { href: "/reports/salary", label: "📊 Salary Records", variant: "report", needs: "reports.salary" },
+      ];
     case "kpi":
       return [
         { href: "/kpi", label: "Overview" },
@@ -142,7 +138,12 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
 
 export function pathToModule(path: string): string {
   if (path.startsWith("/forms")) return "forms";
-  if (path.startsWith("/reports")) return "reports";
+  // Reports live under their owning module tab now (the Reports tab is gone).
+  if (path.startsWith("/reports/salary")) return "salary";
+  if (path.startsWith("/reports/procurement")) return "procurement";
+  if (path.startsWith("/reports/station")) return "station";
+  if (path.startsWith("/reports/activity")) return "activity";
+  if (path.startsWith("/reports")) return "attendance"; // register / leaves / half-day (+ bare)
   if (path.startsWith("/salary")) return "salary";
   if (path.startsWith("/kpi")) return "kpi";
   if (path.startsWith("/purchase")) return "purchase";

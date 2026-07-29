@@ -235,6 +235,13 @@ input[type=date] { font-family: inherit; }
   border-color: var(--brand-dark);
   color: var(--brand-dark);
 }
+/* Consecutive report pills group together — only the first keeps the divider
+   and the gap that sets the group apart from the normal buttons above. */
+.sb-item--report + .sb-item--report {
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.sb-item--report + .sb-item--report::before { display: none; }
 @media print { .app-sidebar { display: none !important; } }
 
 /* ---------- Tabs (segmented pill switcher, matches the Store module toggle) ---------- */
