@@ -228,6 +228,7 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
 END $$;`);
   ensured = true;
 }

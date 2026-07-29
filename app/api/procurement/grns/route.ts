@@ -44,6 +44,7 @@ export async function POST(req: Request) {
     poId,
     poNo,
     gatePassNo: b.gatePassNo || null,
+    invNo: b.invNo || null,
     date: b.date || new Date().toISOString().slice(0, 10),
     receivedBy: b.receivedBy || null,
     verifiedBy: b.verifiedBy || null,

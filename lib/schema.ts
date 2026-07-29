@@ -522,6 +522,7 @@ export const grns = pgTable("grns", {
   id: serial("id").primaryKey(),
   grnNo: integer("grn_no").notNull(),                // auto running serial (internal doc no)
   gatePassNo: varchar("gate_pass_no", { length: 60 }), // inward gate pass — entered by hand
+  invNo: varchar("inv_no", { length: 60 }),          // supplier invoice number — entered by hand
   poId: integer("po_id"),                            // nullable — GRN can be standalone
   poNo: integer("po_no"),                            // denormalised for display
   date: date("date").notNull(),

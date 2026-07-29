@@ -6,7 +6,7 @@ import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, type GrnItem, type PoItem } from "@/lib/procurement";
 
 interface Grn {
-  id: number; grnNo: number; gatePassNo: string | null; poNo: number | null; date: string; items: string;
+  id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; poNo: number | null; date: string; items: string;
 }
 interface OpenPo {
   id: number; poNo: number; supplierName: string | null; items: string;
@@ -24,13 +24,14 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [poId, setPoId] = useState("");
   const [poNoManual, setPoNoManual] = useState("");
   const [gatePassNo, setGatePassNo] = useState("");
+  const [invNo, setInvNo] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [verifiedBy, setVerifiedBy] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
   const [items, setItems] = useState<GrnItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
-    setPoId(""); setPoNoManual(""); setGatePassNo(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setPoNoManual(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
@@ -55,7 +56,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       const clean = items.filter(it => it.item.trim());
       const res = await fetch("/api/procurement/grns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, gatePassNo, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -96,6 +97,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
               <input value={gatePassNo} onChange={e => setGatePassNo(e.target.value)} className="auth-input"
                 required placeholder="e.g. 12001" />
             </Field>
+            <Field label="Inv No">
+              <input value={invNo} onChange={e => setInvNo(e.target.value)} className="auth-input"
+                placeholder="Supplier invoice #" />
+            </Field>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
           </div>
 
@@ -132,14 +137,15 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
-          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs yet.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs yet.</td></tr>
             ) : rows.map(g => (
               <tr key={g.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
                 <td>#{g.grnNo}</td>
+                <td>{g.invNo || "—"}</td>
                 <td>{g.poNo ? `#${g.poNo}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
