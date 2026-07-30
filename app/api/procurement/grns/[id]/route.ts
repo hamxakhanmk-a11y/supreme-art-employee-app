@@ -25,8 +25,16 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   const b = await req.json().catch(() => ({}));
   const items = Array.isArray(b.items) ? b.items : [];
+  // Manual PO ref, same rule as create.
+  let poNo: number | null = null;
+  if (b.poNo != null && String(b.poNo).trim() !== "") {
+    const n = parseInt(String(b.poNo), 10);
+    if (!isNaN(n)) poNo = n;
+  }
   await db.update(grns).set({
     gatePassNo: b.gatePassNo || null,
+    invNo: b.invNo || null,
+    poNo,
     date: b.date || new Date().toISOString().slice(0, 10),
     receivedBy: b.receivedBy || null,
     verifiedBy: b.verifiedBy || null,

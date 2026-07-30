@@ -7,7 +7,8 @@ import { parseItems, fmtDate, poLineMoney, fmtMoney, PO_DEFAULT_TERMS, PO_DEFAUL
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
-  supplierName: string | null; expectedDate: string | null;
+  supplierName: string | null; supplierAddress: string | null; supplierPhone: string | null;
+  expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string;
 }
 interface OpenDemand {
@@ -21,6 +22,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const router = useRouter();
   const canEdit = useCanEdit();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -40,11 +43,27 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
+    setEditId(null); setEditNo(null);
     setDemandId(""); setDemandNoManual(""); setDate(new Date().toISOString().slice(0, 10));
     setSelectedSupplierId(""); setSupplierMsg("");
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
+  }
+  function openEdit(p: Po) {
+    setEditId(p.id); setEditNo(p.poNo);
+    setDemandId(""); setSelectedSupplierId(""); setSupplierMsg("");
+    setDemandNoManual(p.demandNo != null ? String(p.demandNo) : "");
+    setDate((p.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
+    setSupplierName(p.supplierName || ""); setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
+    setExpectedDate((p.expectedDate || "").slice(0, 10));
+    setTerms(p.terms || ""); setOrderPlacedBy(p.orderPlacedBy || "");
+    const its = parseItems<PoItem>(p.items);
+    setItems(its.length
+      ? its.map((it, i) => ({ srNo: i + 1, description: it.description || it.item || "", quantity: it.quantity || "", uom: it.uom || "", rate: it.rate || "", tax: it.tax ?? String(PO_DEFAULT_TAX) }))
+      : [blankItem(1)]);
+    setErr(""); setOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
   // Pick a saved supplier → auto-fill the three fields (all still editable).
   function pickSupplier(id: string) {
@@ -93,8 +112,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.description.trim());
-      const res = await fetch("/api/procurement/pos", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch(editId ? `/api/procurement/pos/${editId}` : "/api/procurement/pos", {
+        method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           demandId: demandId || null, demandNo: demandNoManual, date, supplierName, supplierAddress, supplierPhone,
           expectedDate, terms, orderPlacedBy, items: clean,
@@ -123,6 +142,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
       {open && canEdit && (
         <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{editId ? `✏️ Edit PO #${editNo}` : "＋ New PO"}</div>
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
 
           <SectionLabel>ORDER</SectionLabel>
@@ -234,6 +254,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td><StatusBadge status={p.status} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
+                  {canEdit && <button onClick={() => openEdit(p)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(p)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>

@@ -25,8 +25,15 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   const b = await req.json().catch(() => ({}));
   const items = Array.isArray(b.items) ? b.items : [];
+  // Manual demand ref (printed on the PO), same rule as create.
+  let demandNo: number | null = null;
+  if (b.demandNo != null && String(b.demandNo).trim() !== "") {
+    const n = parseInt(String(b.demandNo), 10);
+    if (!isNaN(n)) demandNo = n;
+  }
   await db.update(purchaseOrders).set({
     date: b.date || new Date().toISOString().slice(0, 10),
+    demandNo,
     demandByName: b.demandByName || null,
     supplierName: b.supplierName || null,
     supplierAddress: b.supplierAddress || null,

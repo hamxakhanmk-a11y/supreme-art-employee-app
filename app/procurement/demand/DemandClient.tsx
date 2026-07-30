@@ -18,6 +18,8 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const router = useRouter();
   const canEdit = useCanEdit();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -30,10 +32,22 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const [items, setItems] = useState<DemandItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
+    setEditId(null); setEditNo(null);
     setDate(new Date().toISOString().slice(0, 10));
     setRequiredBy(""); setDemandBy(""); setDepartment(""); setPreparedBy("");
     setApprovedBy(""); setItems([blankItem(1), blankItem(2), blankItem(3)]);
     setErr("");
+  }
+  function openEdit(d: Demand) {
+    setEditId(d.id); setEditNo(d.demandNo);
+    setDate((d.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
+    setRequiredBy((d.requiredBy || "").slice(0, 10));
+    setDemandBy(d.demandBy || ""); setDepartment(d.department || "");
+    setPreparedBy(d.preparedBy || ""); setApprovedBy(d.approvedBy || "");
+    const its = parseItems<DemandItem>(d.items);
+    setItems(its.length ? its.map((it, i) => ({ ...blankItem(i + 1), ...it, srNo: i + 1 })) : [blankItem(1)]);
+    setErr(""); setOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function setItem(i: number, k: keyof DemandItem, v: string) {
     setItems(list => list.map((it, idx) => idx === i ? { ...it, [k]: v } : it));
@@ -48,8 +62,8 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.material.trim());
-      const res = await fetch("/api/procurement/demands", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch(editId ? `/api/procurement/demands/${editId}` : "/api/procurement/demands", {
+        method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date, requiredBy, demandBy, department, preparedBy, approvedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -80,6 +94,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
 
       {open && canEdit && (
         <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{editId ? `✏️ Edit Demand #${editNo}` : "＋ New Demand"}</div>
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
@@ -132,6 +147,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
                 <td><StatusBadge status={d.status} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Link href={`/procurement/demand/${d.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
+                  {canEdit && <button onClick={() => openEdit(d)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(d)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
