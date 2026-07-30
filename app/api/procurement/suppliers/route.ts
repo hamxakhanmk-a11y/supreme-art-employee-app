@@ -39,3 +39,16 @@ export async function POST(req: Request) {
   const [row] = await db.insert(suppliers).values({ name, address, contact }).returning();
   return NextResponse.json({ supplier: row });
 }
+
+// DELETE { id } — remove a saved supplier from the directory. Existing POs keep
+// their own copy of the supplier's details, so this only affects the picker.
+export async function DELETE(req: Request) {
+  const guard = await guardWrite("po");
+  if (guard instanceof NextResponse) return guard;
+  await ensureProcurementTables();
+  const b = await req.json().catch(() => ({}));
+  const id = parseInt(String(b.id), 10);
+  if (isNaN(id)) return NextResponse.json({ error: "Supplier id is required" }, { status: 400 });
+  await db.delete(suppliers).where(eq(suppliers.id, id));
+  return NextResponse.json({ ok: true });
+}

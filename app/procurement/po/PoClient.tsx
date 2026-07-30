@@ -65,6 +65,24 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setErr(""); setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  // Remove the selected saved supplier from the directory (POs keep their copy).
+  async function deleteSupplier() {
+    const s = supplierList.find(x => String(x.id) === selectedSupplierId);
+    if (!s) return;
+    if (!confirm(`Remove "${s.name}" from the saved supplier list?`)) return;
+    setSupplierMsg("");
+    try {
+      const res = await fetch("/api/procurement/suppliers", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: s.id }),
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Delete failed"); }
+      setSupplierList(list => list.filter(x => x.id !== s.id));
+      setSelectedSupplierId("");
+      setSupplierMsg("Removed from list ✓");
+      setTimeout(() => setSupplierMsg(""), 2500);
+    } catch (e) { setSupplierMsg(e instanceof Error ? e.message : "Delete failed"); }
+  }
   // Pick a saved supplier → auto-fill the three fields (all still editable).
   function pickSupplier(id: string) {
     setSelectedSupplierId(id);
@@ -179,6 +197,11 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <button type="button" onClick={saveSupplier} disabled={savingSupplier || !supplierName.trim()} className="btn btn-sm">
               {savingSupplier ? "Saving…" : "＋ Save this supplier to the list"}
             </button>
+            {selectedSupplierId && (
+              <button type="button" onClick={deleteSupplier} className="btn btn-sm" style={{ color: "#A32D2D" }}>
+                🗑 Remove from list
+              </button>
+            )}
             {supplierMsg && <span style={{ fontSize: 12, color: supplierMsg.includes("✓") ? "#166534" : "#7C1F1F", fontWeight: 600 }}>{supplierMsg}</span>}
             <span style={{ fontSize: 11.5, color: "var(--text3)" }}>Pick from the list to auto-fill, or just type — saving is optional.</span>
           </div>
