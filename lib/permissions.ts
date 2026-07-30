@@ -33,6 +33,7 @@ export type ModuleKey =
   | "purchase.edit"
   | "purchase.delete"
   | "purchase.hr-approve"
+  | "purchase.receive"
   | "station"
   | "demand"
   | "po"
@@ -56,7 +57,8 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "kpi",        label: "KPI",         hint: "Assign templates & enter monthly KPI values" },
   // Purchase — tick the individual actions below rather than the umbrella.
   { key: "purchase.raise",      label: "Purchase · Raise PR",    hint: "Create a new purchase requisition" },
-  { key: "purchase.edit",       label: "Purchase · Edit",        hint: "Edit an existing PR — value, remarks, received, HOD approval" },
+  { key: "purchase.edit",       label: "Purchase · Edit",        hint: "Edit an existing PR — value, remarks, HOD approval" },
+  { key: "purchase.receive",    label: "Purchase · Receive",     hint: "Mark material received (Admin)" },
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
   { key: "purchase.hr-approve", label: "Purchase · HR Approval", hint: "HR-approve or HR-reject a raised PR" },
   { key: "station",    label: "Station",     hint: "Station terminal & hourly-leave report" },
@@ -77,7 +79,7 @@ const MASTER_EXPANSION: Record<string, ModuleKey[]> = {
     "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
     "reports.procurement", "reports.station", "reports.activity",
   ],
-  purchase: ["purchase.raise", "purchase.edit", "purchase.delete", "purchase.hr-approve"],
+  purchase: ["purchase.raise", "purchase.edit", "purchase.receive", "purchase.delete", "purchase.hr-approve"],
 };
 
 function expandMasters(modules: ModuleKey[]): ModuleKey[] {

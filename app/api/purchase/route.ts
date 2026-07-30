@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
 import { sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { roleCanAccess } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { ensurePurchaseColumns, buildPrFields } from "@/lib/purchaseServer";
 
@@ -36,14 +37,17 @@ export async function POST(req: NextRequest) {
         .from(purchaseRequisitions);
       prNo = next;
     }
+    // Marking received at raise time needs the receive permission; a raiser
+    // without it always starts the PR un-received.
+    const canReceive = await roleCanAccess(guard.role, "purchase.receive");
     const [created] = await db.insert(purchaseRequisitions).values({
       prNo,
       date: b.date,
       department: b.department,
       concernedPerson: b.concernedPerson?.trim() || null,
       ...fields,
-      receivedByAdmin: !!b.receivedByAdmin,
-      receivedDate: b.receivedByAdmin ? (b.receivedDate || null) : null,
+      receivedByAdmin: canReceive ? !!b.receivedByAdmin : false,
+      receivedDate: canReceive && b.receivedByAdmin ? (b.receivedDate || null) : null,
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
       hrApproval: b.hrApproval || null,

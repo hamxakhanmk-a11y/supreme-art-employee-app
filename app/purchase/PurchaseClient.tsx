@@ -85,6 +85,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const isSuper = me.user?.role === "superadmin";
   const canRaise      = isSuper || me.modules.includes("purchase.raise");
   const canEditPr     = isSuper || me.modules.includes("purchase.edit");
+  const canReceive    = isSuper || me.modules.includes("purchase.receive");
   const canDeletePr   = isSuper || me.modules.includes("purchase.delete");
   const canHrApprove  = isSuper || me.modules.includes("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
@@ -414,15 +415,19 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                 <option value="Approved">Approved</option>
                 <option value="Not Approved">Not Approved</option>
               </select></div>
-            <div><label className="form-label">Received Date <span style={{ color: "var(--text3)", fontWeight: 400 }}>(Admin)</span></label>
-              <input type="date" value={draft.receivedDate}
-                onChange={e => set({ receivedDate: e.target.value, receivedByAdmin: !!e.target.value })} /></div>
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", paddingBottom: 8 }}>
-                <input type="checkbox" checked={draft.receivedByAdmin} onChange={e => set({ receivedByAdmin: e.target.checked })} style={{ width: "auto" }} />
-                Material received (Admin)
-              </label>
-            </div>
+            {canReceive && (
+              <>
+                <div><label className="form-label">Received Date <span style={{ color: "var(--text3)", fontWeight: 400 }}>(Admin)</span></label>
+                  <input type="date" value={draft.receivedDate}
+                    onChange={e => set({ receivedDate: e.target.value, receivedByAdmin: !!e.target.value })} /></div>
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", paddingBottom: 8 }}>
+                    <input type="checkbox" checked={draft.receivedByAdmin} onChange={e => set({ receivedByAdmin: e.target.checked })} style={{ width: "auto" }} />
+                    Material received (Admin)
+                  </label>
+                </div>
+              </>
+            )}
             <div><label className="form-label">Status</label>
               <select value={draft.status} onChange={e => set({ status: e.target.value })}>
                 {PR_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -524,10 +529,12 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                             style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR ✗</button>
                         </>
                       )}
+                      {canReceive && (
+                        <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
+                          style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
+                      )}
                       {canEditPr && (
                         <>
-                          <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
-                            style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
                           <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
                           <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
                         </>

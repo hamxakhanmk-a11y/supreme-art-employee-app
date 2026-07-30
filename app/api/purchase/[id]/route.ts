@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
 import { eq, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
+import { roleCanAccess } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { ensurePurchaseColumns, buildPrFields } from "@/lib/purchaseServer";
 import { parsePrItems, prItemsTotal } from "@/lib/purchase";
@@ -19,8 +20,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   // with only purchase.hr-approve can't sneak in a value/remarks edit.
   const body = await req.json();
   const action = body?.action;
-  const needsHrApproval = action === "approve" || action === "reject";
-  const guard = await guardWrite(needsHrApproval ? "purchase.hr-approve" : "purchase.edit");
+  // Each action carries its own permission: HR approval, receiving material, and
+  // everything else (value / remarks / HOD) which is a plain edit.
+  const guard = await guardWrite(
+    action === "approve" || action === "reject" ? "purchase.hr-approve"
+      : action === "received" ? "purchase.receive"
+      : "purchase.edit"
+  );
   if (guard instanceof NextResponse) return guard;
   try {
     await ensurePurchaseColumns();
@@ -120,14 +126,15 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       return NextResponse.json({ error: "date, department and at least one item are required" }, { status: 400 });
     }
     const prNoParsed = b.prNo === null || b.prNo === "" || b.prNo === undefined ? NaN : parseInt(b.prNo);
-    const [updated] = await db.update(purchaseRequisitions).set({
+    // Marking material received is its own permission — an edit-only role leaves
+    // the received state untouched.
+    const canReceive = await roleCanAccess(guard.role, "purchase.receive");
+    const setFields: Record<string, unknown> = {
       prNo: isNaN(prNoParsed) ? null : prNoParsed,
       date: b.date,
       department: b.department,
       concernedPerson: b.concernedPerson?.trim() || null,
       ...fields,
-      receivedByAdmin: !!b.receivedByAdmin,
-      receivedDate: b.receivedByAdmin ? (b.receivedDate || null) : null,
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
       hrApproval: b.hrApproval || null,
@@ -135,7 +142,13 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       poNo: b.poNo?.trim() || null,
       remarks: b.remarks?.trim() || null,
       updatedAt: new Date(),
-    }).where(eq(purchaseRequisitions.id, parseInt(id))).returning();
+    };
+    if (canReceive) {
+      setFields.receivedByAdmin = !!b.receivedByAdmin;
+      setFields.receivedDate = b.receivedByAdmin ? (b.receivedDate || null) : null;
+    }
+    const [updated] = await db.update(purchaseRequisitions).set(setFields)
+      .where(eq(purchaseRequisitions.id, parseInt(id))).returning();
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     await logActivity({
       user: guard, action: "purchase.update",
