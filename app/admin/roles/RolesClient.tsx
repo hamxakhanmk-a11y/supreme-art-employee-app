@@ -11,6 +11,7 @@ const ROLE_COLOR: Record<string, string> = {
   procurement: "#B45309",
   engineer: "#0891B2",
   finance: "#047857",
+  design: "#7C3AED",
   other: "#64748B",
 };
 
