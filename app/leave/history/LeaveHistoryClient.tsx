@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
@@ -174,6 +175,7 @@ export default function LeaveHistoryClient({
                 <th>Type</th>
                 <th>Status</th>
                 <th>Reason</th>
+                <th className="no-print" style={{ textAlign: "right" }}>Form</th>
               </tr>
             </thead>
             <tbody>
@@ -195,6 +197,9 @@ export default function LeaveHistoryClient({
                     </td>
                     <td>{s && <span className="badge" style={{ background: s.bg, color: s.color }}>{s.label}</span>}</td>
                     <td style={{ color: "#666", maxWidth: 250 }}>{r.reason || "—"}</td>
+                    <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <Link href={`/leave/${r.id}`} className="btn btn-sm">View / Print</Link>
+                    </td>
                   </tr>
                 );
               })}
