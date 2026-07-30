@@ -1,7 +1,8 @@
 // Shared helpers for the Procurement module (Demand → PO → GRN).
 // Line items live as JSON in each form's `items` column.
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
+import { grns, purchaseOrders } from "./schema";
 
 export type Stage = "demand" | "po" | "grn" | "inspection";
 
@@ -36,7 +37,11 @@ export interface PoItem {
   item?: string;            // legacy — old POs stored the name here
   specifications?: string;  // legacy
 }
-export interface GrnItem { srNo: number; item: string; quantity: string }
+// A received-goods line. `remarks` is a per-line note (condition, shortfall
+// reason…). `poSrNo` links the line back to the PO line it fulfils so partial
+// receipts add up correctly across multiple GRNs — both optional so GRNs saved
+// before this change (and standalone GRNs) still parse.
+export interface GrnItem { srNo: number; item: string; quantity: string; remarks?: string; poSrNo?: number }
 
 // Default sales-tax percentage seeded on every new PO line.
 export const PO_DEFAULT_TAX = 18;
@@ -58,6 +63,91 @@ export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string
 export function fmtMoney(n: number, blankZero = true): string {
   if (blankZero && !n) return "";
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ============ Partial-receipt tracking (PO ↔ GRN) ============
+// A PO's goods can arrive across several GRNs — one product now, another later,
+// or half a quantity at a time. We reconcile every GRN line against its PO line
+// to know what's still outstanding and whether the PO is fully received.
+
+// Pull the leading number out of a quantity string ("5", "10.5", "20 kg",
+// "1,200"). Returns null when there's no number to parse.
+export function qtyToNum(s: string | number | null | undefined): number | null {
+  if (s == null) return null;
+  const m = String(s).replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = parseFloat(m[0]);
+  return isNaN(n) ? null : n;
+}
+
+const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+export interface PoLineReceipt {
+  srNo: number;
+  description: string;
+  uom: string;
+  orderedRaw: string;        // original ordered qty text
+  ordered: number | null;    // parsed ordered qty (null when not a number)
+  received: number;          // total received across all GRNs
+  hasReceipt: boolean;       // any GRN line matched this PO line
+  remaining: number | null;  // ordered − received (null when ordered isn't a number)
+  fulfilled: boolean;        // line considered fully received
+}
+
+// Reconcile PO lines against every GRN line raised for that PO.
+export function computePoReceipts(poItems: PoItem[], grnItems: GrnItem[]): PoLineReceipt[] {
+  const recBySr = new Map<number, number>();
+  const hitBySr = new Map<number, boolean>();
+  // Fallback matcher for legacy GRN lines that predate poSrNo: match by name.
+  const srByDesc = new Map<string, number>();
+  for (const p of poItems) {
+    const d = normDesc(p.description || p.item || "");
+    if (d && !srByDesc.has(d)) srByDesc.set(d, p.srNo);
+  }
+  for (const g of grnItems) {
+    let sr = g.poSrNo;
+    if (sr == null) sr = srByDesc.get(normDesc(g.item || ""));
+    if (sr == null) continue; // standalone / unmatched receipt line
+    hitBySr.set(sr, true);
+    const n = qtyToNum(g.quantity);
+    if (n != null) recBySr.set(sr, (recBySr.get(sr) || 0) + n);
+  }
+  return poItems.map(p => {
+    const ordered = qtyToNum(p.quantity);
+    const received = round3(recBySr.get(p.srNo) || 0);
+    const hasReceipt = hitBySr.get(p.srNo) || false;
+    const remaining = ordered == null ? null : Math.max(0, round3(ordered - received));
+    const fulfilled = ordered == null ? hasReceipt : received >= ordered - 1e-9;
+    return {
+      srNo: p.srNo, description: p.description || p.item || "", uom: p.uom || "",
+      orderedRaw: p.quantity || "", ordered, received, hasReceipt, remaining, fulfilled,
+    };
+  });
+}
+
+// Roll the per-line receipts up into a PO status.
+export function poStatusFrom(receipts: PoLineReceipt[]): "open" | "partial" | "received" {
+  if (!receipts.length) return "open";
+  const anyReceipt = receipts.some(r => r.hasReceipt || r.received > 0);
+  if (!anyReceipt) return "open";
+  return receipts.every(r => r.fulfilled) ? "received" : "partial";
+}
+
+// Recompute and persist a PO's status from all GRNs currently pointing at it.
+// Called after any GRN create / edit / delete. Leaves a manually "closed" PO
+// alone.
+export async function recomputePoStatus(poId: number | null | undefined) {
+  if (!poId) return;
+  const [po] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, poId));
+  if (!po || po.status === "closed") return;
+  const gs = await db.select({ items: grns.items }).from(grns).where(eq(grns.poId, poId));
+  const poItems = parseItems<PoItem>(po.items);
+  const grnItems = gs.flatMap(g => parseItems<GrnItem>(g.items));
+  const status = poStatusFrom(computePoReceipts(poItems, grnItems));
+  if (status !== po.status) {
+    await db.update(purchaseOrders).set({ status }).where(eq(purchaseOrders.id, poId));
+  }
 }
 
 // Our organisation's details, printed in the header of every form.

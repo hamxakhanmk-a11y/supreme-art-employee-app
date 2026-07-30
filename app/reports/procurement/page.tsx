@@ -47,7 +47,7 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       ref: p.demandNo,
       party: p.supplierName || "",
       items: parseItems<unknown>(p.items).length,
-      status: p.status === "received" ? "Delivered" : "PO created",
+      status: p.status === "received" ? "Delivered" : p.status === "partial" ? "Partially delivered" : "PO created",
       by: p.createdByName || "",
     })),
     ...gs.map(g => ({
@@ -99,7 +99,7 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       const base = [
         p.poNo, fmtDate(p.date), p.demandNo != null ? String(p.demandNo) : "", dash(p.supplierName),
         dash(p.supplierAddress), dash(p.supplierContact || p.supplierPhone), fmtDate(p.expectedDate),
-        dash(p.orderPlacedBy), p.status === "received" ? "Delivered" : "PO created",
+        dash(p.orderPlacedBy), p.status === "received" ? "Delivered" : p.status === "partial" ? "Partially delivered" : "PO created",
       ];
       const key = `po-${p.id}`;
       if (its.length === 0) return [{ key, cells: [...base, "", "", "", "", "", "", "", "", "", dash(p.createdByName)] }];

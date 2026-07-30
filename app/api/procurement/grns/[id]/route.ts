@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { grns, purchaseOrders } from "@/lib/schema";
+import { grns } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables } from "@/lib/procurement";
+import { ensureProcurementTables, recomputePoStatus } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     verifiedBy: b.verifiedBy || null,
     items: JSON.stringify(items),
   }).where(eq(grns.id, parseInt(id)));
+  // Editing received quantities can change the PO's partial/received status.
+  const [gRow] = await db.select({ poId: grns.poId }).from(grns).where(eq(grns.id, parseInt(id)));
+  await recomputePoStatus(gRow?.poId);
   await logActivity({ user: guard, action: "grn.update", summary: `edited GRN (id ${id})` });
   return NextResponse.json({ ok: true });
 }
@@ -51,18 +54,13 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const grnId = parseInt(id);
 
-  // Note the linked PO (if any) before deleting so we can re-open it.
+  // Note the linked PO (if any) before deleting so we can reconcile it after.
   const [g] = await db.select({ poId: grns.poId }).from(grns).where(eq(grns.id, grnId));
   await db.delete(grns).where(eq(grns.id, grnId));
 
-  // Deleting a PO's only GRN re-opens that PO (back to "open" from "received")
-  // so it reappears in the GRN picker. Only revert if no other GRN references it.
-  if (g?.poId) {
-    const [other] = await db.select({ id: grns.id }).from(grns)
-      .where(and(eq(grns.poId, g.poId), ne(grns.id, grnId)))
-      .limit(1);
-    if (!other) await db.update(purchaseOrders).set({ status: "open" }).where(eq(purchaseOrders.id, g.poId));
-  }
+  // Deleting a GRN gives back its received quantities — the PO may drop from
+  // received → partial, or partial → open, so recompute from what's left.
+  await recomputePoStatus(g?.poId);
 
   await logActivity({ user: guard, action: "grn.delete", summary: `deleted GRN (id ${id})` });
   return NextResponse.json({ ok: true });

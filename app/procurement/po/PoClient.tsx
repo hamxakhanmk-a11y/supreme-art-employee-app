@@ -273,11 +273,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label><span className="auth-field-label">{label}</span>{children}</label>;
 }
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { fg: string; bg: string }> = {
-    open: { fg: "#185FA5", bg: "#e0f2fe" }, received: { fg: "#15803D", bg: "#dcf5dc" }, closed: { fg: "#475569", bg: "#e2e8f0" },
+  const map: Record<string, { fg: string; bg: string; label: string }> = {
+    open: { fg: "#185FA5", bg: "#e0f2fe", label: "Open" },
+    partial: { fg: "#B45309", bg: "#fef3c7", label: "Partially Received" },
+    received: { fg: "#15803D", bg: "#dcf5dc", label: "Received" },
+    closed: { fg: "#475569", bg: "#e2e8f0", label: "Closed" },
   };
   const c = map[status] || map.open;
-  return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{status}</span>;
+  return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700 }}>{c.label}</span>;
 }
 const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 };
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };

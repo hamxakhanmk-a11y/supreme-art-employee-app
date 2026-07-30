@@ -208,6 +208,7 @@ export default function ProcurementReportClient({ rows, from, to, exportData }: 
                       fontSize: 11.5, fontWeight: 700,
                       color: r.status === "Delivered" ? "#15803D"
                         : r.status === "Inspected" ? "#7C3AED"
+                        : r.status === "Partially delivered" ? "#B45309"
                         : r.status === "PO created" ? "#B45309" : "#185FA5",
                     }}>{r.status}</span>
                   </td>

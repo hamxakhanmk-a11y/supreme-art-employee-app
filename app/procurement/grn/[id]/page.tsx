@@ -42,16 +42,18 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
           <thead>
             <tr>
               <th>Item(s)</th>
-              <th style={{ width: 140 }}>Quantity</th>
+              <th style={{ width: 120 }}>Quantity</th>
+              <th style={{ width: 200 }}>Remarks</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td></td><td></td></tr>
+              <tr><td></td><td></td><td></td></tr>
             ) : items.map(it => (
               <tr key={it.srNo}>
                 <td>{it.item}</td>
                 <td className="c">{it.quantity}</td>
+                <td>{it.remarks || ""}</td>
               </tr>
             ))}
           </tbody>

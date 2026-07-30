@@ -3,17 +3,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, type GrnItem, type PoItem } from "@/lib/procurement";
+import { parseItems, fmtDate, type GrnItem } from "@/lib/procurement";
 
 interface Grn {
   id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; poNo: number | null;
   date: string; verifiedBy: string | null; receivedBy: string | null; items: string;
 }
+interface OutLine { poSrNo: number; item: string; uom: string; remaining: string; ordered: string }
 interface OpenPo {
-  id: number; poNo: number; supplierName: string | null; items: string;
+  id: number; poNo: number; supplierName: string | null; outstanding: OutLine[];
 }
 
-const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "" });
+const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "" });
 
 export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
   const router = useRouter();
@@ -46,7 +47,9 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     setDate((g.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setVerifiedBy(g.verifiedBy || ""); setReceivedBy(g.receivedBy || "");
     const its = parseItems<GrnItem>(g.items);
-    setItems(its.length ? its.map((it, i) => ({ srNo: i + 1, item: it.item || "", quantity: it.quantity || "" })) : [blankItem(1)]);
+    setItems(its.length
+      ? its.map((it, i) => ({ srNo: i + 1, item: it.item || "", quantity: it.quantity || "", remarks: it.remarks || "", poSrNo: it.poSrNo }))
+      : [blankItem(1)]);
     setErr(""); setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -55,12 +58,14 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     const p = openPos.find(x => String(x.id) === id);
     if (!p) return;
     setPoNoManual(String(p.poNo));   // auto-fill the ref, still editable
-    const pItems = parseItems<PoItem>(p.items);
-    if (pItems.length) {
-      setItems(pItems.map((it, i) => ({ srNo: i + 1, item: it.description || it.item || "", quantity: it.quantity })));
+    // Only the lines still awaiting delivery, pre-filled with what's outstanding.
+    if (p.outstanding.length) {
+      setItems(p.outstanding.map((o, i) => ({
+        srNo: i + 1, item: o.item, quantity: o.remaining, remarks: "", poSrNo: o.poSrNo,
+      })));
     }
   }
-  function setItem(i: number, k: keyof GrnItem, v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
+  function setItem(i: number, k: "item" | "quantity" | "remarks", v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
   function addRow() { setItems(l => [...l, blankItem(l.length + 1)]); }
   function removeRow(i: number) { setItems(l => l.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
 
@@ -121,15 +126,21 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 6 }}>ITEMS RECEIVED</div>
+          {poId && (
+            <div style={{ fontSize: 11.5, color: "#185FA5", background: "#e0f2fe", border: "1px solid #bae6fd", borderRadius: 6, padding: "6px 10px", marginBottom: 8 }}>
+              Only items still awaiting delivery on this PO are shown, pre-filled with the outstanding quantity. Adjust the quantity to what actually arrived — the rest stays open for a later GRR.
+            </div>
+          )}
           <div style={{ overflow: "auto" }}>
             <table style={{ width: "100%" }}>
-              <thead><tr><th style={{ width: 44 }}>S.No</th><th>Item(s)</th><th style={{ width: 140 }}>Quantity</th><th style={{ width: 36 }}></th></tr></thead>
+              <thead><tr><th style={{ width: 44 }}>S.No</th><th>Item(s)</th><th style={{ width: 130 }}>Quantity</th><th>Remarks</th><th style={{ width: 36 }}></th></tr></thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i}>
                     <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
                     <td><input value={it.item} onChange={e => setItem(i, "item", e.target.value)} className="auth-input" style={cellInput} /></td>
                     <td><input value={it.quantity} onChange={e => setItem(i, "quantity", e.target.value)} className="auth-input" style={cellInput} /></td>
+                    <td><input value={it.remarks || ""} onChange={e => setItem(i, "remarks", e.target.value)} className="auth-input" style={cellInput} placeholder="e.g. 2 short, damaged…" /></td>
                     <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
                   </tr>
                 ))}

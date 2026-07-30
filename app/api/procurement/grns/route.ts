@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, nextNumber, NUMBER_START } from "@/lib/procurement";
+import { ensureProcurementTables, nextNumber, NUMBER_START, recomputePoStatus } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +53,8 @@ export async function POST(req: Request) {
     createdByName: guard.name,
   }).returning();
 
-  // Mark the source PO as received.
-  if (poId) await db.update(purchaseOrders).set({ status: "received" }).where(eq(purchaseOrders.id, poId));
+  // Reconcile the source PO — partial vs fully received, based on all its GRNs.
+  await recomputePoStatus(poId);
 
   await logActivity({
     user: guard, action: "grn.create",
