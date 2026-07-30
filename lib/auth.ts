@@ -10,8 +10,8 @@ import { getPerm, type ModuleKey } from "./permissions";
 export const COOKIE_NAME = "sae_session";
 export const SESSION_DAYS = 30;
 
-export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "other";
-export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo", "procurement", "engineer", "finance", "design", "other"];
+export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "accounts" | "other";
+export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo", "procurement", "engineer", "finance", "design", "accounts", "other"];
 // What each role may open/edit now lives in the role_permissions table —
 // see lib/permissions.ts and guardWrite().
 // Roles that can manage users.
