@@ -447,6 +447,16 @@ export const rolePermissions = pgTable("role_permissions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Roles the owner creates from inside the app (beyond the built-in ones).
+// `roleKey` is the slug stored on users.role and role_permissions.role.
+export const customRoles = pgTable("custom_roles", {
+  id: serial("id").primaryKey(),
+  roleKey: varchar("role_key", { length: 20 }).notNull().unique(),
+  label: varchar("label", { length: 80 }).notNull(),
+  color: varchar("color", { length: 20 }).notNull().default("#64748B"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // =====================
 // PROCUREMENT: Demand → PO → GRN
 // Line items are stored as a JSON string in `items` (one row per form).

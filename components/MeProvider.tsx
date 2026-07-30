@@ -1,7 +1,8 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "accounts" | "other";
+// Roles are data (built-ins + owner-created custom roles), so this is just a string.
+export type Role = string;
 export interface MeUser { id: number; email: string; name: string; role: Role }
 
 export interface MeState {

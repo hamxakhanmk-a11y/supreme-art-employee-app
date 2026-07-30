@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
-import { ADMIN_ROLES, ROLES, requireAuth } from "@/lib/auth";
+import { ADMIN_ROLES, requireAuth } from "@/lib/auth";
+import { isAssignableRole } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const updates: any = {};
   if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim();
   if (typeof body.role === "string") {
-    if (!ROLES.includes(body.role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    if (!(await isAssignableRole(body.role))) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     updates.role = body.role;
   }
   if (typeof body.active === "boolean") updates.active = body.active;

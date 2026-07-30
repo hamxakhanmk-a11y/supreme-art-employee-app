@@ -6,9 +6,9 @@
 //
 // This file imports only db + schema (never lib/auth) to avoid an import cycle,
 // since lib/auth's guardWrite() calls into here.
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
-import { rolePermissions } from "./schema";
+import { rolePermissions, customRoles } from "./schema";
 
 export type ModuleKey =
   | "employees"
@@ -98,8 +98,28 @@ export interface RolePerm {
   canEdit: boolean;
 }
 
-// Editable roles shown in the permissions UI (superadmin is fixed/full).
-export const EDITABLE_ROLES = ["admin", "hr", "ceo", "procurement", "engineer", "finance", "design", "accounts", "other"] as const;
+// ============ Roles ============
+// Roles are data: a fixed set of built-ins plus any the owner creates in the
+// app (custom_roles table). `builtin` roles can't be deleted; `editable` roles
+// show in the Role Permissions UI (superadmin is fixed/full and never editable).
+export interface RoleMeta { key: string; label: string; color: string; builtin: boolean; editable: boolean }
+
+export const BUILTIN_ROLES: RoleMeta[] = [
+  { key: "superadmin",  label: "Super Admin", color: "#5B21B6", builtin: true, editable: false },
+  { key: "admin",       label: "Admin",       color: "#A32D2D", builtin: true, editable: true },
+  { key: "hr",          label: "HR",          color: "#185FA5", builtin: true, editable: true },
+  { key: "ceo",         label: "CEO",         color: "#0F766E", builtin: true, editable: true },
+  { key: "procurement", label: "Procurement", color: "#B45309", builtin: true, editable: true },
+  { key: "engineer",    label: "Engineer",    color: "#0891B2", builtin: true, editable: true },
+  { key: "finance",     label: "Finance",     color: "#047857", builtin: true, editable: true },
+  { key: "design",      label: "Design",      color: "#7C3AED", builtin: true, editable: true },
+  { key: "accounts",    label: "Accounts",    color: "#BE185D", builtin: true, editable: true },
+  { key: "other",       label: "Other",       color: "#64748B", builtin: true, editable: true },
+];
+
+// Built-in editable role keys — used to seed DEFAULT_PERMS. The full editable
+// set (including custom roles) comes from loadRoles() at runtime.
+export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.key);
 
 // Out-of-the-box defaults preserve the app's previous behaviour exactly:
 // admin & hr can do everything; ceo sees everything but can't edit.
@@ -149,14 +169,80 @@ export function invalidatePermsCache() {
   cache = null;
 }
 
+// ---- Role list (built-in + custom) ----
+let rolesCache: { at: number; data: RoleMeta[] } | null = null;
+export function invalidateRolesCache() { rolesCache = null; }
+
+// Every role that exists — built-ins plus custom roles from the DB. Cached.
+export async function loadRoles(): Promise<RoleMeta[]> {
+  if (rolesCache && Date.now() - rolesCache.at < TTL_MS) return rolesCache.data;
+  let custom: RoleMeta[] = [];
+  try {
+    const rows = await db.select().from(customRoles);
+    custom = rows.map(r => ({ key: r.roleKey, label: r.label, color: r.color, builtin: false, editable: true }));
+  } catch {
+    // Table missing (not migrated yet) → just the built-ins.
+  }
+  const data = [...BUILTIN_ROLES, ...custom];
+  rolesCache = { at: Date.now(), data };
+  return data;
+}
+
+export async function isAssignableRole(key: string): Promise<boolean> {
+  return (await loadRoles()).some(r => r.key === key);
+}
+
+// Turn a label into a short, url-safe role key (fits users.role varchar(20)).
+export function slugifyRole(label: string): string {
+  return label.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 20) || "role";
+}
+
+// Idempotently create the custom_roles table (same self-migrate pattern).
+let customRolesEnsured = false;
+export async function ensureCustomRolesTable() {
+  if (customRolesEnsured) return;
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS custom_roles (
+      id serial PRIMARY KEY,
+      role_key varchar(20) NOT NULL UNIQUE,
+      label varchar(80) NOT NULL,
+      color varchar(20) NOT NULL DEFAULT '#64748B',
+      created_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
+  customRolesEnsured = true;
+}
+
+export async function createCustomRole(label: string, color: string): Promise<RoleMeta> {
+  await ensureCustomRolesTable();
+  const base = slugifyRole(label);
+  const taken = new Set((await loadRoles()).map(r => r.key));
+  let key = base, i = 2;
+  while (taken.has(key)) key = `${base}-${i++}`.slice(0, 20);
+  const cleanLabel = label.trim().slice(0, 80);
+  await db.insert(customRoles).values({ roleKey: key, label: cleanLabel, color });
+  invalidateRolesCache(); invalidatePermsCache();
+  return { key, label: cleanLabel, color, builtin: false, editable: true };
+}
+
+export async function deleteCustomRole(key: string) {
+  await ensureCustomRolesTable();
+  await db.delete(customRoles).where(eq(customRoles.roleKey, key));
+  await db.delete(rolePermissions).where(eq(rolePermissions.role, key));
+  invalidateRolesCache(); invalidatePermsCache();
+}
+
 export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
 
-  // Seed every editable role from its default, then let stored rows override.
+  // Seed every editable role from its default (custom roles start blank), then
+  // let stored rows override.
   const data: Record<string, RolePerm> = {};
-  for (const role of EDITABLE_ROLES) {
-    const d = DEFAULT_PERMS[role];
-    data[role] = { modules: [...d.modules], canEdit: d.canEdit };
+  for (const rm of await loadRoles()) {
+    if (rm.key === "superadmin") continue; // always full — set below
+    const d = DEFAULT_PERMS[rm.key];
+    data[rm.key] = d ? { modules: [...d.modules], canEdit: d.canEdit } : { modules: [], canEdit: true };
   }
 
   try {

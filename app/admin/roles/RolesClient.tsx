@@ -2,19 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 interface ModuleDef { key: string; label: string; hint: string }
-interface RolePerm { role: string; label: string; modules: string[]; canEdit: boolean }
-
-const ROLE_COLOR: Record<string, string> = {
-  admin: "#A32D2D",
-  hr: "#185FA5",
-  ceo: "#0F766E",
-  procurement: "#B45309",
-  engineer: "#0891B2",
-  finance: "#047857",
-  design: "#7C3AED",
-  accounts: "#BE185D",
-  other: "#64748B",
-};
+interface RolePerm { role: string; label: string; color: string; builtin: boolean; modules: string[]; canEdit: boolean }
 
 // Which sub-tab a permission belongs under. Prefix rules first, then exact keys,
 // so new module keys slot in automatically (e.g. any future purchase.* or
@@ -48,20 +36,52 @@ export default function RolesClient() {
   const [savedRole, setSavedRole] = useState<string | null>(null);
   const [tab, setTab] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch("/api/roles");
-        if (!r.ok) { setError("Failed to load role permissions"); setLoading(false); return; }
-        const d = await r.json();
-        setModules(d.modules);
-        setRoles(d.roles);
-      } catch {
-        setError("Failed to load role permissions");
-      }
-      setLoading(false);
-    })();
-  }, []);
+  // New-role form
+  const [showNew, setShowNew] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newColor, setNewColor] = useState("#0F766E");
+  const [creating, setCreating] = useState(false);
+
+  async function load() {
+    try {
+      const r = await fetch("/api/roles");
+      if (!r.ok) { setError("Failed to load role permissions"); setLoading(false); return; }
+      const d = await r.json();
+      setModules(d.modules);
+      setRoles(d.roles);
+    } catch {
+      setError("Failed to load role permissions");
+    }
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function createRole(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newLabel.trim()) return;
+    setCreating(true); setError("");
+    try {
+      const res = await fetch("/api/roles", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: newLabel.trim(), color: newColor }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(d.error || "Could not create role"); }
+      else { setNewLabel(""); setShowNew(false); await load(); }
+    } catch { setError("Could not create role"); }
+    setCreating(false);
+  }
+
+  async function deleteRole(role: string, label: string) {
+    if (!confirm(`Delete the "${label}" role? This can't be undone.`)) return;
+    setError("");
+    const res = await fetch("/api/roles", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error || "Could not delete role"); return; }
+    await load();
+  }
 
   // The sub-tabs actually present, in nav order (plus any stragglers).
   const tabs = useMemo(() => {
@@ -129,13 +149,43 @@ export default function RolesClient() {
 
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Role Permissions</h1>
-        <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
-          Pick a section tab, then choose which roles can open it. <b>Read-only</b> lets a role
-          view its sections but not make changes. The Owner (Super Admin) always has full access.
-        </p>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Role Permissions</h1>
+          <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
+            Pick a section tab, then choose which roles can open it. <b>Read-only</b> lets a role
+            view its sections but not make changes. The Owner (Super Admin) always has full access.
+          </p>
+        </div>
+        <button onClick={() => setShowNew(v => !v)} className="btn btn-primary" style={{ whiteSpace: "nowrap" }}>
+          {showNew ? "✕ Close" : "＋ New role"}
+        </button>
       </div>
+
+      {showNew && (
+        <form onSubmit={createRole} style={{
+          display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap",
+          background: "var(--bg)", border: "1px dashed var(--border-strong, var(--border))",
+          borderRadius: 12, padding: 14, marginBottom: 16,
+        }}>
+          <div>
+            <label className="form-label" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>Role name</label>
+            <input value={newLabel} onChange={e => setNewLabel(e.target.value)} maxLength={80}
+              placeholder="e.g. Warehouse" style={{ padding: "8px 11px", minWidth: 220 }} />
+          </div>
+          <div>
+            <label className="form-label" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>Colour</label>
+            <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
+              style={{ width: 48, height: 38, padding: 2, cursor: "pointer" }} />
+          </div>
+          <button type="submit" disabled={creating || !newLabel.trim()} className="btn btn-primary">
+            {creating ? "Creating…" : "Create role"}
+          </button>
+          <span style={{ fontSize: 11.5, color: "var(--text3)" }}>
+            New roles start with <b>no access</b> — grant sections below, then set it on the Users page.
+          </span>
+        </form>
+      )}
 
       {error && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
@@ -168,7 +218,7 @@ export default function RolesClient() {
 
           <div style={{ display: "grid", gap: 14 }}>
             {roles.map(r => {
-              const accent = ROLE_COLOR[r.role] || "var(--brand)";
+              const accent = r.color || "var(--brand)";
               const onCount = tabModules.filter(m => r.modules.includes(m.key)).length;
               return (
                 <div key={r.role} style={{
@@ -177,6 +227,9 @@ export default function RolesClient() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: accent }}>{r.label}</span>
+                    {!r.builtin && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: accent, background: `${accent}18`, padding: "1px 7px", borderRadius: 999 }}>CUSTOM</span>
+                    )}
                     <span style={{ fontSize: 11, color: "var(--text3)" }}>{onCount}/{tabModules.length} in {activeTab}</span>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", cursor: "pointer" }}>
                       <input type="checkbox" checked={!r.canEdit} onChange={e => setCanEdit(r.role, !e.target.checked)} />
@@ -185,6 +238,9 @@ export default function RolesClient() {
                     <div style={{ flex: 1 }} />
                     <button onClick={() => setTabAll(r.role, true)} style={linkBtn}>All in tab</button>
                     <button onClick={() => setTabAll(r.role, false)} style={linkBtn}>None</button>
+                    {!r.builtin && (
+                      <button onClick={() => deleteRole(r.role, r.label)} style={{ ...linkBtn, color: "#A32D2D" }}>Delete role</button>
+                    )}
                   </div>
 
                   <div style={{

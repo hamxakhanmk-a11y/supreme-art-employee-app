@@ -10,7 +10,9 @@ import { getPerm, type ModuleKey } from "./permissions";
 export const COOKIE_NAME = "sae_session";
 export const SESSION_DAYS = 30;
 
-export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "accounts" | "other";
+// Roles are data now (built-ins + owner-created custom roles), so a role is just
+// a string. The canonical list lives in lib/permissions (loadRoles / BUILTIN_ROLES).
+export type Role = string;
 export const ROLES: Role[] = ["superadmin", "admin", "hr", "ceo", "procurement", "engineer", "finance", "design", "accounts", "other"];
 // What each role may open/edit now lives in the role_permissions table —
 // see lib/permissions.ts and guardWrite().

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 
-type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "accounts" | "other";
+type Role = string;
 interface User {
   id: number;
   email: string;
@@ -11,19 +11,9 @@ interface User {
   lastLoginAt: string | null;
   createdAt: string;
 }
+interface RoleMeta { key: string; label: string; color: string; builtin: boolean }
 
-const ROLE_COLOR: Record<Role, string> = {
-  superadmin: "#5B21B6",
-  admin: "#A32D2D",
-  hr: "#185FA5",
-  ceo: "#0F766E",
-  procurement: "#B45309",
-  engineer: "#0891B2",
-  finance: "#047857",
-  design: "#7C3AED",
-  accounts: "#BE185D",
-  other: "#64748B",
-};
+const FALLBACK_COLOR = "#64748B";
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join("") || "?";
@@ -38,6 +28,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [roleList, setRoleList] = useState<RoleMeta[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [iName, setIName] = useState("");
   const [iEmail, setIEmail] = useState("");
@@ -52,7 +43,18 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     setUsers(d.users);
     setLoading(false);
   }
-  useEffect(() => { refresh(); }, []);
+  async function loadRoles() {
+    try {
+      const r = await fetch("/api/roles");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (Array.isArray(d.allRoles)) setRoleList(d.allRoles);
+    } catch { /* keep whatever we have */ }
+  }
+  useEffect(() => { refresh(); loadRoles(); }, []);
+
+  const colorFor = (role: string) => roleList.find(r => r.key === role)?.color || FALLBACK_COLOR;
+  const labelFor = (role: string) => roleList.find(r => r.key === role)?.label || role;
 
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
@@ -89,14 +91,11 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     refresh();
   }
 
-  // Counts for summary tiles (only active users counted in role buckets)
+  // Active-user counts per role (for the summary tiles).
   const counts = useMemo(() => {
-    const c = { total: 0, superadmin: 0, admin: 0, hr: 0, ceo: 0, procurement: 0, engineer: 0, finance: 0, design: 0, accounts: 0, other: 0 };
-    for (const u of users) {
-      c.total++;
-      if (u.active) c[u.role]++;
-    }
-    return c;
+    const byRole: Record<string, number> = {};
+    for (const u of users) if (u.active) byRole[u.role] = (byRole[u.role] || 0) + 1;
+    return { total: users.length, byRole };
   }, [users]);
 
   return (
@@ -118,16 +117,9 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
         gap: 12, marginBottom: 18,
       }}>
         <Tile label="TOTAL USERS" value={counts.total} />
-        <Tile label="SUPER ADMINS" value={counts.superadmin} accent={ROLE_COLOR.superadmin} />
-        <Tile label="ADMINS" value={counts.admin} accent={ROLE_COLOR.admin} />
-        <Tile label="HR" value={counts.hr} accent={ROLE_COLOR.hr} />
-        <Tile label="CEO" value={counts.ceo} accent={ROLE_COLOR.ceo} />
-        <Tile label="PROCUREMENT" value={counts.procurement} accent={ROLE_COLOR.procurement} />
-        <Tile label="ENGINEER" value={counts.engineer} accent={ROLE_COLOR.engineer} />
-        <Tile label="FINANCE" value={counts.finance} accent={ROLE_COLOR.finance} />
-        <Tile label="DESIGN" value={counts.design} accent={ROLE_COLOR.design} />
-        <Tile label="ACCOUNTS" value={counts.accounts} accent={ROLE_COLOR.accounts} />
-        <Tile label="OTHER" value={counts.other} accent={ROLE_COLOR.other} />
+        {roleList.map(r => (
+          <Tile key={r.key} label={r.label.toUpperCase()} value={counts.byRole[r.key] || 0} accent={r.color} />
+        ))}
       </div>
 
       <div style={{ padding: "10px 14px", background: "#EFF6FF", border: "1px solid #BFDBFE",
@@ -154,17 +146,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
             <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
             <Field label="Google email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} placeholder="person@gmail.com" /></Field>
             <Field label="Role">
-              <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value as Role)}>
-                <option value="superadmin">Super Admin</option>
-                <option value="admin">Admin (full access)</option>
-                <option value="hr">HR (full access)</option>
-                <option value="ceo">CEO (view & print only)</option>
-                <option value="procurement">Procurement (purchase only)</option>
-                <option value="engineer">Engineer (purchase only)</option>
-                <option value="finance">Finance (salary &amp; reports)</option>
-                <option value="design">Design (no access until set)</option>
-                <option value="accounts">Accounts (no access until set)</option>
-                <option value="other">Other (no access until set)</option>
+              <select className="auth-input" value={iRole} onChange={e => setIRole(e.target.value)}>
+                {roleList.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
               </select>
             </Field>
             <div style={{ display: "flex", gap: 8 }}>
@@ -193,7 +176,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
               }}>
                 <div style={{
                   width: 32, height: 32, borderRadius: "50%",
-                  background: ROLE_COLOR[u.role], color: "#fff",
+                  background: colorFor(u.role), color: "#fff",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontWeight: 700, fontSize: 12, flexShrink: 0,
                 }}>{initials(u.name)}</div>
@@ -221,20 +204,13 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   onChange={e => patch(u.id, { role: e.target.value })}
                   style={{
                     padding: "4px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600,
-                    border: "1px solid var(--border)", color: ROLE_COLOR[u.role],
+                    border: "1px solid var(--border)", color: colorFor(u.role),
                     background: "var(--bg)", cursor: "pointer",
                     width: 150, flexShrink: 0,
                   }}>
-                  <option value="superadmin">Super Admin</option>
-                  <option value="admin">Admin</option>
-                  <option value="hr">HR</option>
-                  <option value="ceo">CEO (view-only)</option>
-                  <option value="procurement">Procurement</option>
-                  <option value="engineer">Engineer</option>
-                  <option value="finance">Finance</option>
-                  <option value="design">Design</option>
-                  <option value="accounts">Accounts</option>
-                  <option value="other">Other</option>
+                  {/* Keep the current role selectable even if the list hasn't loaded yet */}
+                  {!roleList.some(r => r.key === u.role) && <option value={u.role}>{labelFor(u.role)}</option>}
+                  {roleList.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                 </select>
                 {!isSelf && (
                   u.active ? (

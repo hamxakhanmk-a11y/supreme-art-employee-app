@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { desc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
-import { ADMIN_ROLES, ROLES, requireAuth } from "@/lib/auth";
+import { ADMIN_ROLES, requireAuth } from "@/lib/auth";
+import { isAssignableRole } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
   if (!emailT || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailT)) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
-  if (!ROLES.includes(role)) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+  if (!role || !(await isAssignableRole(role))) return NextResponse.json({ error: "Invalid role" }, { status: 400 });
 
   const existing = await db.select({ id: users.id }).from(users).where(sql`LOWER(${users.email}) = ${emailT}`).limit(1);
   if (existing.length) return NextResponse.json({ error: "That email is already on the list" }, { status: 409 });

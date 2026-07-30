@@ -1,7 +1,8 @@
 // Shared navigation config used by both the top bar (TopNav) and the
 // left sub-nav column (Sidebar). Pure functions/data — no React, no state.
 
-export type Role = "superadmin" | "admin" | "hr" | "ceo" | "procurement" | "engineer" | "finance" | "design" | "accounts" | "other";
+// Roles are data (built-ins + owner-created custom roles), so this is just a string.
+export type Role = string;
 
 export interface ModuleDef {
   key: string;
