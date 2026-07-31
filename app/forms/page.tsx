@@ -49,6 +49,13 @@ export default async function FormsLanding() {
           desc={`${pending} request${pending === 1 ? "" : "s"} waiting for HR decision.`}
           badge={pending > 0 ? String(pending) : undefined}
         />
+        <FormCard
+          href="/forms/capa"
+          icon="⚠"
+          title="CAPA Report"
+          urdu="اصلاحی و احتیاطی کارروائی"
+          desc="Corrective & Preventive Action report for customer complaints and non-conformances."
+        />
       </div>
     </div>
   );

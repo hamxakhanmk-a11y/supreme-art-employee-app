@@ -92,6 +92,9 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       if (path === "/forms/half-day") return [OVERVIEW_FORMS, { href: "/forms/half-day", label: "Half-Day Form" }];
       if (path === "/forms/file")     return [OVERVIEW_FORMS, { href: "/forms/file", label: "File Signed Form" }];
       if (path === "/forms/approvals") return [OVERVIEW_FORMS, { href: "/forms/approvals", label: "Pending Approvals" }];
+      if (path.startsWith("/forms/capa")) {
+        return [OVERVIEW_FORMS, { href: "/forms/capa", label: "CAPA Reports", needs: "capa" }];
+      }
       if (path.startsWith("/leave"))  return [OVERVIEW_FORMS, { href: "/forms/leave", label: "Leave Form" }];
       return [];
     }

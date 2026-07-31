@@ -593,3 +593,25 @@ export const storeTransactions = pgTable("transactions", {
   issuedTo: text("issued_to").default(""),
   purpose: text("purpose").default(""),
 });
+
+// =====================
+// CAPA — Corrective & Preventive Action Reports
+// =====================
+// Ported from the Job Tracker app. Standalone (not tied to a job card):
+// Section 1 is filled by hand. Free-form fields live in `data` as JSON so the
+// form can evolve without a migration; `status` and `issueDate` are hoisted
+// into real columns so the list can filter/sort on them.
+export const capaReports = pgTable("capa_reports", {
+  id: serial("id").primaryKey(),
+  capaRef: varchar("capa_ref", { length: 40 }).notNull(),   // e.g. CAPA-2026-01
+  seq: integer("seq").notNull(),                             // running number within the year
+  year: integer("year").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("open"), // open | in_progress | closed
+  issueDate: date("issue_date"),                             // complaint date
+  data: text("data").notNull().default("{}"),                // JSON blob of all form fields
+  createdByUserId: integer("created_by_user_id"),
+  createdByName: varchar("created_by_name", { length: 120 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  closedAt: timestamp("closed_at"),
+});

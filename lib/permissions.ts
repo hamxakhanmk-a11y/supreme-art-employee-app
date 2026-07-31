@@ -39,7 +39,8 @@ export type ModuleKey =
   | "po"
   | "grn"
   | "inspection"
-  | "store";
+  | "store"
+  | "capa";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "employees",  label: "Employees",   hint: "Add / edit employee records & documents" },
@@ -67,6 +68,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
   { key: "inspection", label: "Inspection",   hint: "Procurement — incoming material inspection (QC)" },
   { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
+  { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];
 
 // Legacy umbrella keys expand into their fine-grained members at load time so
