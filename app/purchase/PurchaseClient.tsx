@@ -452,7 +452,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
               <th>Date</th><th>PR#</th><th>Department</th><th>Requested by</th>
               <th style={{ minWidth: 220 }}>Items</th>
               <th className="num">Value</th><th>Required</th><th>HOD</th><th>HR</th><th title="Material received by Admin">Received</th><th>Status</th><th>PO#</th><th>Remarks</th>
-              <th className="no-print"></th>
+              <th className="no-print pr-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -522,7 +522,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   {/* Actions stack in three rows: the HR decision pair, then
                       Mark Received, then the edit/delete group — so related
                       buttons sit side by side instead of one per line. */}
-                  <td className="no-print" style={{ whiteSpace: "nowrap" }}>
+                  <td className="no-print pr-actions">
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                       {canHrApprove && (
                         <div style={{ display: "flex", gap: 4 }}>
@@ -563,6 +563,21 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
       <style jsx global>{`
         .pr-table { font-size: 12.5px; }
         .pr-table th, .pr-table td { padding: 7px 10px; vertical-align: top; }
+        /* The register is wider than the screen, so pin the actions column to
+           the right edge — the rest of the row scrolls underneath it and the
+           buttons are always reachable without dragging sideways. */
+        .pr-actions {
+          position: sticky; right: 0; z-index: 2;
+          background: var(--bg);
+          border-left: 1px solid var(--border);
+          box-shadow: -6px 0 8px -6px rgba(0,0,0,0.18);
+          width: 1%; white-space: nowrap;
+        }
+        .pr-table thead .pr-actions { background: var(--bg2); z-index: 3; }
+        /* Zebra/hover shading has to be repainted on the pinned cell too,
+           otherwise it looks detached from its row. */
+        .pr-table tbody tr:nth-child(even) .pr-actions { background: #fbf8f3; }
+        .pr-table tbody tr:hover .pr-actions { background: var(--bg2); }
         .pr-items { list-style: none; margin: 0; padding: 0; }
         .pr-items li { padding: 1px 0; line-height: 1.35; }
         .pr-cat { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px;
