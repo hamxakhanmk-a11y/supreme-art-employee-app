@@ -523,24 +523,24 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                     <div style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", maxWidth: 240 }}>
                       {canHrApprove && (
                         <>
-                          <button onClick={() => act(r, "approve")} title="HR approve"
-                            style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR ✓</button>
-                          <button onClick={() => act(r, "reject")} title="HR reject"
-                            style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR ✗</button>
+                          <button onClick={() => act(r, "approve")} title="HR approve this requisition"
+                            style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR Approve</button>
+                          <button onClick={() => act(r, "reject")} title="HR reject this requisition"
+                            style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR Reject</button>
                         </>
                       )}
                       {canReceive && (
                         <button onClick={() => act(r, "received")} title="Mark material received (Admin)"
-                          style={pillBtn("#0C447C", r.status === "Material Received")}>📦</button>
+                          style={pillBtn("#0C447C", r.status === "Material Received")}>Mark Received</button>
                       )}
                       {canEditPr && (
                         <>
-                          <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">✎ Remarks</button>
-                          <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit">✏️</button>
+                          <button onClick={() => editRemarks(r)} title="Edit remarks" className="btn btn-sm">Remarks</button>
+                          <button onClick={() => openEdit(r)} className="btn btn-sm" title="Edit this requisition">Edit</button>
                         </>
                       )}
                       {canDeletePr && (
-                        <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete">🗑</button>
+                        <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete this requisition">Delete</button>
                       )}
                     </div>
                   </td>
