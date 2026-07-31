@@ -336,7 +336,7 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="nav-item" onclick="showPage('activity',this)"><i class="ti ti-history"></i> Activity Log</div>
     <div class="divider"></div>
     <div class="nav-item" onclick="showPage('categories',this)"><i class="ti ti-tag"></i> Categories</div>
-    <div class="nav-item" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
+    <div class="nav-item machinery-only" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
     <div class="nav-item" onclick="showPage('trash',this)"><i class="ti ti-trash"></i> Trash</div>
   </div>
 
@@ -384,6 +384,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
         <select id="inv-cat-filter" onchange="renderInventory()" style="width:170px"></select>
         <select id="inv-machine-filter" onchange="renderInventory()" style="width:170px"></select>
+        <select id="inv-rack-filter" class="consumables-only" onchange="renderInventory()" style="width:170px"></select>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -1118,15 +1119,21 @@ function stockStatus(p){
 // ---- Section data helpers ----
 function getSectionData(sec){
   if(sec==='inventory'){
+    // Mirrors renderInventory() so a print/export matches what's on screen.
+    const inks=isInks();
     const s=(document.getElementById('inv-search')||{value:''}).value.toLowerCase();
     const c=(document.getElementById('inv-cat-filter')||{value:''}).value;
-    const m=(document.getElementById('inv-machine-filter')||{value:''}).value;
+    const m=inks?'':(document.getElementById('inv-machine-filter')||{value:''}).value;
+    const rk=inks?(document.getElementById('inv-rack-filter')||{value:''}).value:'';
     return state.parts.filter(p=>{
       const machList=parseMachines(p.machine);
-      const txt=!s||p.name.toLowerCase().includes(s)||(p.sku||'').toLowerCase().includes(s)||p.category.toLowerCase().includes(s)||machList.some(x=>x.toLowerCase().includes(s));
+      const hay=[p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'']
+        .map(v=>(v||'').toLowerCase());
+      const txt=!s||hay.some(v=>v.includes(s))||(!inks&&machList.some(x=>x.toLowerCase().includes(s)));
       const cat=!c||p.category===c;
       const mach=!m||(m==='__none__'?machList.length===0:machList.includes(m));
-      return txt&&cat&&mach;
+      const rack=!rk||(rk==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rk);
+      return txt&&cat&&mach&&rack;
     });
   }
   if(sec==='stockin'){
@@ -1957,6 +1964,7 @@ function renderInventory(){
   const search=(document.getElementById('inv-search')||{value:''}).value.toLowerCase();
   const catF=(document.getElementById('inv-cat-filter')||{value:''}).value;
   const machF=inks?'':(document.getElementById('inv-machine-filter')||{value:''}).value;
+  const rackF=inks?(document.getElementById('inv-rack-filter')||{value:''}).value:'';
   const catSel=document.getElementById('inv-cat-filter');
   if(catSel){catSel.innerHTML='<option value="">All Categories</option>'+state.categories.map(c=>`<option value="${c}">${c}</option>`).join('');catSel.value=catF;}
   const machSel=document.getElementById('inv-machine-filter');
@@ -1965,6 +1973,15 @@ function renderInventory(){
     machSel.innerHTML='<option value="">All Machines</option><option value="__none__">— No machine —</option>'+state.machines.map(m=>`<option value="${m}">${m}</option>`).join('');
     machSel.value=machF;
   }
+  // Rack list is derived from the parts themselves — racks aren't a managed
+  // entity like machines, they're just a label typed on the part.
+  const rackSel=document.getElementById('inv-rack-filter');
+  if(rackSel){
+    const racks=[...new Set(state.parts.map(p=>(p.rackNo||'').trim()).filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    rackSel.innerHTML='<option value="">All Racks</option><option value="__none__">— No rack —</option>'+racks.map(r=>`<option value="${r}">${r}</option>`).join('');
+    rackSel.value=rackF;
+  }
   const parts=state.parts.filter(p=>{
     const machList=parseMachines(p.machine);
     const hay=[p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'']
@@ -1972,7 +1989,8 @@ function renderInventory(){
     const txt=!search||hay.some(v=>v.includes(search))||(!inks&&machList.some(m=>m.toLowerCase().includes(search)));
     const cat=!catF||p.category===catF;
     const mach=!machF||(machF==='__none__'?machList.length===0:machList.includes(machF));
-    return txt&&cat&&mach;
+    const rack=!rackF||(rackF==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rackF);
+    return txt&&cat&&mach&&rack;
   });
 
   // Header follows the module.
@@ -2338,6 +2356,17 @@ function applyModuleToUI(){
   // Drives the .machinery-only / .consumables-only CSS switches.
   document.body.classList.toggle('mod-machinery',m==='machinery');
   document.body.classList.toggle('mod-consumables',m==='consumables');
+  // Machines don't apply to consumables — if that page is open when the module
+  // switches, its nav item disappears, so send the user back to the dashboard
+  // rather than leaving a page up that can't be navigated away from.
+  const machPage=document.getElementById('page-machines');
+  if(m==='consumables'&&machPage&&machPage.classList.contains('active')){
+    const dashNav=document.querySelector(".nav-item[onclick*=\"'dashboard'\"]");
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('page-dashboard').classList.add('active');
+    if(dashNav)dashNav.classList.add('active');
+  }
   // The two in-iframe module pills were removed after the merge —
   // module switching lives in the employee-app top nav now.
   const mm=document.getElementById('mod-machinery'); if(mm) mm.classList.toggle('active',m==='machinery');
