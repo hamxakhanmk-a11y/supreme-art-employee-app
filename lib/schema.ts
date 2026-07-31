@@ -573,7 +573,12 @@ export const storeParts = pgTable("parts", {
   name: text("name").notNull(),
   category: text("category").notNull(),
   module: text("module").notNull().default("machinery"),
-  machine: text("machine").default(""),         // comma-separated machine names
+  machine: text("machine").default(""),         // comma-separated machine names (machinery module)
+  // Consumables-only attributes — inks are tracked by brand/supplier and
+  // stored on a numbered rack rather than tied to a machine.
+  brand: text("brand").default(""),
+  supplier: text("supplier").default(""),
+  rackNo: text("rack_no").default(""),
   unit: text("unit").notNull().default("pcs"),
   qty: integer("qty").notNull().default(0),
   minQty: integer("min_qty").notNull().default(0),

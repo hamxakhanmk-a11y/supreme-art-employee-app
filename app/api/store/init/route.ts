@@ -41,6 +41,10 @@ export async function POST() {
     await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`);
     await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS machine TEXT DEFAULT ''`);
     await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS image_url TEXT`);
+    // Consumables-only attributes (brand / supplier / rack location).
+    await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT ''`);
+    await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS supplier TEXT DEFAULT ''`);
+    await db.execute(sql`ALTER TABLE parts ADD COLUMN IF NOT EXISTS rack_no TEXT DEFAULT ''`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS parts_sku_active_unique_ci ON parts(LOWER(sku)) WHERE sku IS NOT NULL AND deleted_at IS NULL`);
 
     // Machines (per module)
