@@ -10,6 +10,7 @@ export interface MeState {
   authenticated: boolean;
   user: MeUser | null;
   modules: string[];
+  editModules: string[];
   canEdit: boolean;
 }
 
@@ -18,6 +19,7 @@ const DEFAULT: MeState = {
   authenticated: false,
   user: null,
   modules: [],
+  editModules: [],
   // Default true so edit controls don't flash-hide for the common case; a
   // view-only role flips this to false as soon as /api/auth/me resolves.
   canEdit: true,
@@ -40,6 +42,7 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
             authenticated: true,
             user: d.user,
             modules: d.modules ?? [],
+            editModules: d.editModules ?? [],
             canEdit: d.canEdit ?? true,
           });
         } else {
@@ -57,10 +60,16 @@ export function useMe(): MeState {
   return useContext(MeContext);
 }
 
-// True unless the signed-in role is explicitly view-only. Defaults to true
-// while loading so normal users never see edit controls flicker.
-export function useCanEdit(): boolean {
-  return useContext(MeContext).canEdit;
+// Whether the signed-in role can edit a given section. Pass the module key
+// (e.g. "attendance", "po"). Superadmin always can; while loading we default to
+// true so edit controls don't flicker for the common case. With no key it means
+// "can edit anything".
+export function useCanEdit(moduleKey?: string): boolean {
+  const me = useContext(MeContext);
+  if (me.user?.role === "superadmin") return true;
+  if (me.loading) return true;
+  if (!moduleKey) return me.editModules.length > 0;
+  return me.editModules.includes(moduleKey);
 }
 
 // Drop-in notice for pages that are entirely about editing, shown to view-only

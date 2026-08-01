@@ -5,6 +5,6 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function StationPage() {
-  if (await isViewOnly()) return <ViewOnlyNotice />;
+  if (await isViewOnly("station")) return <ViewOnlyNotice />;
   return <StationClient />;
 }

@@ -31,6 +31,7 @@ export async function GET() {
     color: m.color,
     builtin: m.builtin,
     modules: all[m.key]?.modules ?? [],
+    editModules: all[m.key]?.editModules ?? [],
     canEdit: all[m.key]?.canEdit ?? true,
   }));
   // Every assignable role (incl. superadmin) for user-role pickers.
@@ -93,16 +94,22 @@ export async function PUT(req: Request) {
   const modules = (body.modules as unknown[])
     .map((m) => String(m))
     .filter((m): m is ModuleKey => (ALL_MODULE_KEYS as string[]).includes(m));
-  const canEdit = body.canEdit !== false; // default to editable unless explicitly false
+  const accessSet = new Set<string>(modules);
+  // Edit set: valid module keys that are also in the access set.
+  const editModules = (Array.isArray(body.editModules) ? body.editModules as unknown[] : [])
+    .map((m) => String(m))
+    .filter((m): m is ModuleKey => (ALL_MODULE_KEYS as string[]).includes(m) && accessSet.has(m));
+  const canEdit = editModules.length > 0;
 
   const modulesStr = modules.join(",");
+  const editModulesStr = editModules.join(",");
   await ensureRolePermissionsTable();
   await db
     .insert(rolePermissions)
-    .values({ role, modules: modulesStr, canEdit, updatedAt: new Date() })
+    .values({ role, modules: modulesStr, editModules: editModulesStr, canEdit, updatedAt: new Date() })
     .onConflictDoUpdate({
       target: rolePermissions.role,
-      set: { modules: modulesStr, canEdit, updatedAt: new Date() },
+      set: { modules: modulesStr, editModules: editModulesStr, canEdit, updatedAt: new Date() },
     });
 
   invalidatePermsCache();
@@ -110,9 +117,7 @@ export async function PUT(req: Request) {
   await logActivity({
     user: guard,
     action: "roles.update",
-    summary: `Updated ${target.label} permissions — ${
-      canEdit ? "can edit" : "view-only"
-    }, modules: ${modules.length ? modules.join(", ") : "none"}`,
+    summary: `Updated ${target.label} permissions — view: ${modules.length}, edit: ${editModules.length}`,
   });
 
   return NextResponse.json({ ok: true });

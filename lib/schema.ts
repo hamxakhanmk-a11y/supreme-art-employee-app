@@ -443,6 +443,9 @@ export const setupTokens = pgTable("setup_tokens", {
 export const rolePermissions = pgTable("role_permissions", {
   role: varchar("role", { length: 20 }).primaryKey(),
   modules: text("modules").notNull().default(""),
+  // Which of the granted modules the role may also EDIT (subset of `modules`).
+  // NULL = legacy row → derive from `canEdit` (edit-all or view-all).
+  editModules: text("edit_modules"),
   canEdit: boolean("can_edit").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

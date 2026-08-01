@@ -22,7 +22,7 @@ type StatusFilter = "active" | "exited" | "all";
 
 export default function EmployeesList({ rows }: { rows: Row[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("employees");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [busyId, setBusyId] = useState<number | null>(null);

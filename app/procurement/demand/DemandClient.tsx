@@ -16,7 +16,7 @@ const blankItem = (n: number): DemandItem => ({ srNo: n, material: "", requiredF
 
 export default function DemandClient({ rows }: { rows: Demand[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("demand");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);

@@ -20,7 +20,7 @@ const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: 
 
 export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[]; openDemands: OpenDemand[]; suppliers: Supplier[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("po");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);

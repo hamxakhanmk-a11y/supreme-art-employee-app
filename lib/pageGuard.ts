@@ -24,12 +24,12 @@ export async function requireAnyModule(keys: ModuleKey[]) {
   return user;
 }
 
-// True when the signed-in role is view-only (can't edit). Used by pure-edit
+// True when the signed-in role can't edit the given section. Used by pure-edit
 // pages to render a read-only notice instead of the form.
-export async function isViewOnly(): Promise<boolean> {
+export async function isViewOnly(moduleKey: ModuleKey): Promise<boolean> {
   const user = await getSession();
   if (!user) return false;              // unauthenticated → other guards handle it
   if (user.role === "superadmin") return false;
   const perm = await getPerm(user.role);
-  return !perm.canEdit;
+  return !(perm.editModules ?? []).includes(moduleKey);
 }

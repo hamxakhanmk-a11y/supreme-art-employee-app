@@ -8,7 +8,7 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function FileFormPage() {
-  if (await isViewOnly()) return <ViewOnlyNotice />;
+  if (await isViewOnly("forms")) return <ViewOnlyNotice />;
   const emps = await db.select({
     id: employees.id, employeeId: employees.employeeId,
     firstName: employees.firstName, lastName: employees.lastName,

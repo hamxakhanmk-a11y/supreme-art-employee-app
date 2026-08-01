@@ -16,7 +16,7 @@ interface Po {
 
 export default function InspectionClient({ rows, pos }: { rows: Inspection[]; pos: Po[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("inspection");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");

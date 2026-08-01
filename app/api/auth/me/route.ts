@@ -12,6 +12,7 @@ export async function GET() {
     authenticated: true,
     user,
     modules: perm.modules,
+    editModules: perm.editModules ?? [],
     canEdit: perm.canEdit,
   });
 }

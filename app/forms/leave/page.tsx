@@ -9,7 +9,7 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function LeaveFormPage() {
-  if (await isViewOnly()) return <ViewOnlyNotice />;
+  if (await isViewOnly("forms")) return <ViewOnlyNotice />;
   const [emps, types] = await Promise.all([
     db.select({
       id: employees.id, employeeId: employees.employeeId,

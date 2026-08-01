@@ -18,7 +18,7 @@ const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", re
 
 export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("grn");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
