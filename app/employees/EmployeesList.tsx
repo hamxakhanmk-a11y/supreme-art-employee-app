@@ -15,6 +15,7 @@ type Row = {
   cnic: string | null; phone: string | null; email: string | null;
   joiningDate: string | null;
   status: string;
+  resignationDate: string | null;
   photoUrl: string | null;
 };
 
@@ -23,9 +24,13 @@ type StatusFilter = "active" | "exited" | "all";
 export default function EmployeesList({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const canEdit = useCanEdit("employees");
+  const today = new Date().toISOString().slice(0, 10);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Exit dialog — lets the owner pick the exit date (today or a past date).
+  const [exitFor, setExitFor] = useState<Row | null>(null);
+  const [exitDate, setExitDate] = useState(today);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -42,26 +47,33 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
     });
   }, [rows, query, statusFilter]);
 
-  async function setStatus(e: Row, status: "resigned" | "active") {
+  function openExit(e: Row) {
+    setExitDate(today);
+    setExitFor(e);
+  }
+
+  // Re-activate (no date) or confirm an exit (with the chosen date).
+  async function patchStatus(e: Row, status: "resigned" | "active", resignationDate?: string) {
     const verb = status === "resigned" ? "exit" : "re-activate";
-    if (!confirm(
-      status === "resigned"
-        ? `Exit ${e.firstName} ${e.lastName}? They'll be removed from attendance, salary and other lists. Their past records are kept and stay visible in reports.`
-        : `Re-activate ${e.firstName} ${e.lastName}? They'll appear in the active lists again.`
-    )) return;
     setBusyId(e.id);
     try {
       const res = await fetch(`/api/employees/${e.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(status === "resigned" ? { status, resignationDate } : { status }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
+      setExitFor(null);
       router.refresh();
     } catch (err: any) {
       alert(err.message || `Could not ${verb} employee`);
     } finally {
       setBusyId(null);
     }
+  }
+
+  function reactivate(e: Row) {
+    if (!confirm(`Re-activate ${e.firstName} ${e.lastName}? They'll appear in the active lists again.`)) return;
+    patchStatus(e, "active");
   }
 
   return (
@@ -167,18 +179,23 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                   <td>{e.phone || "—"}</td>
                   <td>
                     <span style={statusBadgeStyle(e.status)}>{e.status}</span>
+                    {e.status !== "active" && e.resignationDate && (
+                      <span style={{ display: "block", fontSize: 10.5, color: "var(--text3)", marginTop: 2 }}>
+                        {new Date(e.resignationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                    )}
                   </td>
                   <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     {canEdit && (e.status === "active" ? (
                       <button
-                        onClick={() => setStatus(e, "resigned")}
+                        onClick={() => openExit(e)}
                         disabled={busyId === e.id}
                         title="Mark as exited — keeps all past records"
                         style={rowBtn("#A32D2D", true)}
                       >{busyId === e.id ? "…" : "Exit"}</button>
                     ) : (
                       <button
-                        onClick={() => setStatus(e, "active")}
+                        onClick={() => reactivate(e)}
                         disabled={busyId === e.id}
                         title="Bring back to active lists"
                         style={rowBtn("#15803D", true)}
@@ -201,6 +218,34 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
           </table>
         )}
       </div>
+
+      {exitFor && (
+        <div onClick={() => busyId == null && setExitFor(null)} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+        }}>
+          <div onClick={ev => ev.stopPropagation()} className="card" style={{ maxWidth: 420, width: "100%", padding: 22 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>Exit {exitFor.firstName} {exitFor.lastName}</div>
+            <p style={{ fontSize: 13, color: "var(--text2)", marginTop: 0, lineHeight: 1.55 }}>
+              They&apos;ll be removed from attendance, salary and other active lists. All past records are kept
+              and stay visible in reports.
+            </p>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 6 }}>Exit date</label>
+            <input type="date" value={exitDate} max={today} onChange={e => setExitDate(e.target.value)}
+              className="auth-input" style={{ width: "100%" }} />
+            <span style={{ display: "block", fontSize: 11, color: "var(--text3)", marginTop: 6 }}>
+              Pick today or any past date. It can&apos;t be in the future.
+            </span>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
+              <button onClick={() => setExitFor(null)} disabled={busyId != null} className="btn">Cancel</button>
+              <button onClick={() => patchStatus(exitFor, "resigned", exitDate)} disabled={busyId != null || !exitDate}
+                className="btn" style={{ background: "#A32D2D", color: "#fff" }}>
+                {busyId != null ? "Exiting…" : "Confirm exit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @media print {

@@ -17,6 +17,7 @@ export default async function EmployeesPage() {
       designation: r.designation, department: r.department,
       cnic: r.cnic, phone: r.phone, email: r.email,
       joiningDate: r.joiningDate, status: r.status,
+      resignationDate: r.resignationDate,
       photoUrl: r.photoUrl,
     }));
   } catch (e: any) {
