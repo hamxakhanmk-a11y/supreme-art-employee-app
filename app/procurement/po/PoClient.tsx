@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
+import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
@@ -409,8 +410,43 @@ function SupplierLists({ suppliers, usedFor, fyLabel, onRetag }: {
   const reg = suppliers.filter(s => s.registered === true);
   const unreg = suppliers.filter(s => s.registered === false);
   const unmarked = suppliers.filter(s => s.registered == null);
+
+  function exportXlsx() {
+    const nl = (v: string | null) => v || "";
+    downloadWorkbookXlsx({
+      filename: `suppliers_${new Date().toISOString().slice(0, 10)}`,
+      sheets: [
+        {
+          sheetName: "Registered", title: "Registered Suppliers (sales-tax invoice)",
+          headers: ["#", "Supplier", "Address", "Contact"], freezeCols: 1, colWidths: [5, 34, 44, 22],
+          rows: reg.map((s, i) => [i + 1, s.name, nl(s.address), nl(s.contact)]),
+        },
+        {
+          sheetName: "Unregistered", title: `Unregistered Suppliers — limit ${UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}/yr · FY ${fyLabel}`,
+          headers: ["#", "Supplier", "Address", "Contact", "Used (FY)", "Remaining", "Status"], freezeCols: 1,
+          colWidths: [5, 30, 40, 20, 14, 14, 16],
+          rows: unreg.map((s, i) => {
+            const used = usedFor(s.name);
+            const left = UNREGISTERED_YEAR_LIMIT - used;
+            return [i + 1, s.name, nl(s.address), nl(s.contact), used, Math.max(0, left), left > 0 ? "Within limit" : "Limit reached"];
+          }),
+        },
+        ...(unmarked.length ? [{
+          sheetName: "Unmarked", title: "Unmarked Suppliers",
+          headers: ["#", "Supplier", "Address", "Contact"], freezeCols: 1, colWidths: [5, 34, 44, 22],
+          rows: unmarked.map((s, i) => [i + 1, s.name, nl(s.address), nl(s.contact)]),
+        }] : []),
+      ],
+    });
+  }
+
   return (
-    <div className="card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+    <div className="card" style={{ padding: 14, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 13, fontWeight: 800 }}>Supplier directory <span style={{ fontWeight: 500, color: "var(--text3)" }}>· {suppliers.length} saved</span></div>
+        <button onClick={exportXlsx} disabled={!suppliers.length} className="btn btn-sm">⬇ Download Excel (both lists)</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
       <div>
         <div style={{ fontSize: 12, fontWeight: 800, color: "#166534", marginBottom: 6 }}>REGISTERED ({reg.length})</div>
         {reg.length === 0 ? <Empty /> : reg.map(s => (
@@ -441,6 +477,7 @@ function SupplierLists({ suppliers, usedFor, fyLabel, onRetag }: {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
