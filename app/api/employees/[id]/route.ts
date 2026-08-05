@@ -4,6 +4,7 @@ import { employees, educationRecords, experienceRecords, otherDocuments } from "
 import { eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { setExitReason } from "@/lib/employeesServer";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -175,10 +176,14 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       updatedAt: new Date(),
     }).where(eq(employees.id, empId));
 
+    // Exit reason (why they left) — recorded on exit, cleared on re-activate.
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    await setExitReason(empId, status === "resigned" ? (reason || null) : null);
+
     await logActivity({
       user: guard, action: "employee.status", employeeId: empId,
       employeeName: `${emp.firstName} ${emp.lastName}`,
-      summary: status === "active" ? "re-activated" : `marked ${status} (exited)`,
+      summary: status === "active" ? "re-activated" : `exited${reason ? ` — ${reason}` : ""}`,
     });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

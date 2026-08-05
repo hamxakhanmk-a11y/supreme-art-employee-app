@@ -61,10 +61,12 @@ export default function MonthlyRegisterClient({
 
   const [sort, setSort] = useState<SortKey>("id");
 
-  // Active employees only (inactive can be toggled later if needed)
+  // Show active employees, plus anyone who has attendance this month even if
+  // they've since exited — so a mid-month leaver's record still appears.
+  const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active"), sort),
-    [employees, sort]
+    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithRecords.has(e.id)), sort),
+    [employees, sort, empIdsWithRecords]
   );
 
   // Live "time required": only counts calendar days that have actually been
@@ -279,7 +281,10 @@ export default function MonthlyRegisterClient({
               return (
                 <tr key={emp.id}>
                   <td className="emp-id fz fz1">{emp.employeeId}</td>
-                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}</td>
+                  <td className="emp-name fz fz2">
+                    {emp.firstName} {emp.lastName}
+                    {emp.status !== "active" && <span className="exited-tag">exited</span>}
+                  </td>
                   <td className="emp-dept">{emp.department || "—"}</td>
                   <td className="emp-desig">{emp.designation || "—"}</td>
                   {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -370,6 +375,7 @@ export default function MonthlyRegisterClient({
         .register-table .tot-c { font-weight: 700; font-size: 12px; background: #fdf8ee; }
         .register-table .emp-id  { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .register-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
+        .register-table .exited-tag { margin-left: 6px; font-size: 8.5px; font-weight: 700; color: #9A3412; background: #ffedd5; border-radius: 999px; padding: 1px 5px; vertical-align: middle; }
         .register-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
         .register-table .emp-dept { text-align: left; padding-left: 10px; color: var(--text2); width: 82px; white-space: normal; line-height: 1.15; }
         /* Frozen Emp ID + Name columns — stay pinned while day columns scroll (Excel-style). */

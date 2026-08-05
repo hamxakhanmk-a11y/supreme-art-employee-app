@@ -16,8 +16,13 @@ type Row = {
   joiningDate: string | null;
   status: string;
   resignationDate: string | null;
+  exitReason: string | null;
   photoUrl: string | null;
 };
+
+// Exited employees are shown as "Exited" — not "resigned" — since they may have
+// left for any reason (captured separately as the exit reason).
+const statusLabel = (s: string) => (s === "resigned" ? "Exited" : s);
 
 type StatusFilter = "active" | "exited" | "all";
 
@@ -28,9 +33,10 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [busyId, setBusyId] = useState<number | null>(null);
-  // Exit dialog — lets the owner pick the exit date (today or a past date).
+  // Exit dialog — pick the exit date (today or a past date) and a reason.
   const [exitFor, setExitFor] = useState<Row | null>(null);
   const [exitDate, setExitDate] = useState(today);
+  const [exitReason, setExitReason] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -49,17 +55,18 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
 
   function openExit(e: Row) {
     setExitDate(today);
+    setExitReason("");
     setExitFor(e);
   }
 
-  // Re-activate (no date) or confirm an exit (with the chosen date).
-  async function patchStatus(e: Row, status: "resigned" | "active", resignationDate?: string) {
+  // Re-activate (no date) or confirm an exit (with the chosen date + reason).
+  async function patchStatus(e: Row, status: "resigned" | "active", resignationDate?: string, reason?: string) {
     const verb = status === "resigned" ? "exit" : "re-activate";
     setBusyId(e.id);
     try {
       const res = await fetch(`/api/employees/${e.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(status === "resigned" ? { status, resignationDate } : { status }),
+        body: JSON.stringify(status === "resigned" ? { status, resignationDate, reason } : { status }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
       setExitFor(null);
@@ -136,7 +143,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
         <strong>{filtered.length}</strong> rows ·{" "}
         <strong>{rows.filter(r => r.status === "active").length}</strong> active ·{" "}
         <strong>{rows.filter(r => r.status === "inactive").length}</strong> inactive ·{" "}
-        <strong>{rows.filter(r => r.status === "resigned").length}</strong> resigned
+        <strong>{rows.filter(r => r.status === "resigned").length}</strong> exited
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -178,10 +185,15 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
                   <td style={{ fontFamily: "monospace", fontSize: 12 }}>{e.cnic || "—"}</td>
                   <td>{e.phone || "—"}</td>
                   <td>
-                    <span style={statusBadgeStyle(e.status)}>{e.status}</span>
+                    <span style={statusBadgeStyle(e.status)}>{statusLabel(e.status)}</span>
                     {e.status !== "active" && e.resignationDate && (
                       <span style={{ display: "block", fontSize: 10.5, color: "var(--text3)", marginTop: 2 }}>
                         {new Date(e.resignationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                    {e.status !== "active" && e.exitReason && (
+                      <span style={{ display: "block", fontSize: 10.5, color: "var(--text2)", marginTop: 1, maxWidth: 160, whiteSpace: "normal" }} title={e.exitReason}>
+                        {e.exitReason}
                       </span>
                     )}
                   </td>
@@ -236,9 +248,12 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
             <span style={{ display: "block", fontSize: 11, color: "var(--text3)", marginTop: 6 }}>
               Pick today or any past date. It can&apos;t be in the future.
             </span>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px" }}>Reason for leaving <span style={{ fontWeight: 400, color: "var(--text3)" }}>(optional)</span></label>
+            <textarea value={exitReason} onChange={e => setExitReason(e.target.value)}
+              className="auth-input" rows={3} style={{ width: "100%" }} placeholder="e.g. Resigned, contract ended, terminated…" />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
               <button onClick={() => setExitFor(null)} disabled={busyId != null} className="btn">Cancel</button>
-              <button onClick={() => patchStatus(exitFor, "resigned", exitDate)} disabled={busyId != null || !exitDate}
+              <button onClick={() => patchStatus(exitFor, "resigned", exitDate, exitReason)} disabled={busyId != null || !exitDate}
                 className="btn" style={{ background: "#A32D2D", color: "#fff" }}>
                 {busyId != null ? "Exiting…" : "Confirm exit"}
               </button>

@@ -85,9 +85,11 @@ export default function RangeRegisterClient({
   };
 
   const [sort, setSort] = useState<SortKey>("id");
+  // Active employees, plus anyone with attendance in this range even if exited.
+  const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active"), sort),
-    [employees, sort]
+    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithRecords.has(e.id)), sort),
+    [employees, sort, empIdsWithRecords]
   );
 
   const rangeLabel = `${MONTHS[from.m - 1]} ${from.y} – ${MONTHS[to.m - 1]} ${to.y}`;
@@ -228,7 +230,7 @@ export default function RangeRegisterClient({
               return (
                 <tr key={emp.id}>
                   <td className="emp-id fz fz1">{emp.employeeId}</td>
-                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}</td>
+                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}{emp.status !== "active" && <span className="exited-tag">exited</span>}</td>
                   <td className="emp-dept">{emp.department || "—"}</td>
                   <td className="emp-desig">{emp.designation || "—"}</td>
                   {months.flatMap(ym => {
@@ -271,6 +273,7 @@ export default function RangeRegisterClient({
         .range-table .sub-h { font-size: 10.5px; font-weight: 700; padding: 3px 6px; }
         .range-table .emp-id { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .range-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
+        .range-table .exited-tag { margin-left: 6px; font-size: 9px; font-weight: 700; color: #9A3412; background: #ffedd5; border-radius: 999px; padding: 1px 5px; vertical-align: middle; }
         .range-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
         .range-table .emp-dept { text-align: left; padding-left: 10px; color: var(--text2); width: 82px; white-space: normal; line-height: 1.15; }
         /* Frozen Emp ID + Name columns — stay pinned while month columns scroll (Excel-style). */
