@@ -139,6 +139,10 @@ type SortableEmp = {
   createdAt?: string | Date | null;
 };
 
+// Apprentices (employee IDs containing "APP", e.g. SAPL-APP-068) always sort
+// to the bottom of the register, whatever the chosen sort.
+const isApprentice = (e: SortableEmp) => /app/i.test(e.employeeId);
+
 export function sortEmployees<T extends SortableEmp>(emps: T[], sort: SortKey): T[] {
   const arr = [...emps];
   const byCreated = (a: T, b: T) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
@@ -162,5 +166,8 @@ export function sortEmployees<T extends SortableEmp>(emps: T[], sort: SortKey): 
       arr.sort(byCreated);
       break;
   }
+  // Stable second pass: keep the chosen order within each group but move all
+  // apprentices (APP ids) to the end. (Array.sort is stable in modern engines.)
+  arr.sort((a, b) => Number(isApprentice(a)) - Number(isApprentice(b)));
   return arr;
 }
