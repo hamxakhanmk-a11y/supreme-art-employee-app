@@ -43,7 +43,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
-  const [showSuppliers, setShowSuppliers] = useState(false);
+  const [taxFilter, setTaxFilter] = useState<"all" | "reg" | "unreg" | "unmarked">("all");
 
   function resetForm() {
     setEditId(null); setEditNo(null);
@@ -161,16 +161,6 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     });
     if (res.ok) router.refresh(); else alert("Update failed");
   }
-  // Retag a saved supplier's list from the supplier-lists panel.
-  async function retagSupplier(s: Supplier, value: boolean) {
-    const res = await fetch("/api/procurement/suppliers", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: s.id, registered: value }),
-    });
-    if (!res.ok) { alert("Update failed"); return; }
-    setSupplierList(list => list.map(x => x.id === s.id ? { ...x, registered: value } : x));
-  }
-
   // ---- Unregistered-supplier yearly limit (per supplier, current FY) ----
   const fy = financialYear();
   // Amount already committed to an unregistered supplier this FY (excluding the
@@ -189,6 +179,41 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const remainingForForm = UNREGISTERED_YEAR_LIMIT - usedForForm;
   const projected = usedForForm + thisPoTotal;
   const overLimit = registered === false && projected > UNREGISTERED_YEAR_LIMIT;
+
+  // ---- Tax-status filter for the PO register (Registered / Unregistered lists) ----
+  const counts = {
+    all: rows.length,
+    reg: rows.filter(p => p.registered === true).length,
+    unreg: rows.filter(p => p.registered === false).length,
+    unmarked: rows.filter(p => p.registered == null).length,
+  };
+  const shownRows = rows.filter(p =>
+    taxFilter === "all" ? true
+    : taxFilter === "reg" ? p.registered === true
+    : taxFilter === "unreg" ? p.registered === false
+    : p.registered == null);
+
+  // Export the registered & unregistered PO lists as an Excel workbook.
+  function exportPos() {
+    const statusText = (s: string) => ({ open: "Open", partial: "Partially Received", received: "Received", closed: "Closed" }[s] || s);
+    const sheet = (name: string, list: Po[]) => ({
+      sheetName: name, title: `${name} Purchase Orders`,
+      headers: ["PO #", "Demand #", "Date", "Supplier", "Delivery", "Items", "Total (Rs)", "Status", "Order placed by"],
+      freezeCols: 1, colWidths: [8, 10, 13, 30, 13, 7, 14, 16, 20],
+      rows: list.map(p => [
+        p.poNo, p.demandNo ?? "", fmtDate(p.date), p.supplierName || "", fmtDate(p.expectedDate),
+        parseItems<PoItem>(p.items).length, poGrandTotal(parseItems<PoItem>(p.items), p.discount),
+        statusText(p.status), p.orderPlacedBy || "",
+      ]),
+    });
+    downloadWorkbookXlsx({
+      filename: `purchase-orders_${new Date().toISOString().slice(0, 10)}`,
+      sheets: [
+        sheet("Registered", rows.filter(p => p.registered === true)),
+        sheet("Unregistered", rows.filter(p => p.registered === false)),
+      ],
+    });
+  }
 
   return (
     <div className="fade-up">
@@ -338,15 +363,20 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         </div>
       )}
 
-      {canEdit && (
-        <div style={{ marginBottom: 12 }}>
-          <button onClick={() => setShowSuppliers(v => !v)} className="btn btn-sm">
-            {showSuppliers ? "✕ Hide supplier lists" : "📋 Supplier lists (registered / unregistered)"}
-          </button>
+      {/* Registered / Unregistered lists = the PO register, filtered by tax status */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
+        <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
+        <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
+        {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
+        <div style={{ flex: 1 }} />
+        <button onClick={exportPos} className="btn btn-sm">⬇ Excel (both lists)</button>
+      </div>
+
+      {taxFilter === "unreg" && counts.unreg > 0 && (
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
+          Unregistered supplier cap: <b>{UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}</b> per supplier · financial year {fy.label}.
         </div>
-      )}
-      {showSuppliers && canEdit && (
-        <SupplierLists suppliers={supplierList} usedFor={unregUsed} fyLabel={fy.label} onRetag={retagSupplier} />
       )}
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
@@ -355,9 +385,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders yet.</td></tr>
-            ) : rows.map(p => (
+            {shownRows.length === 0 ? (
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders{taxFilter !== "all" ? " in this list" : ""} yet.</td></tr>
+            ) : shownRows.map(p => (
               <tr key={p.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{p.poNo}</td>
                 <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
@@ -403,97 +433,19 @@ function TaxCell({ p, canEdit, onMark }: { p: Po; canEdit: boolean; onMark: (p: 
   );
 }
 
-// Two side-by-side supplier lists; unregistered shows FY usage vs the limit.
-function SupplierLists({ suppliers, usedFor, fyLabel, onRetag }: {
-  suppliers: Supplier[]; usedFor: (name: string) => number; fyLabel: string; onRetag: (s: Supplier, v: boolean) => void;
+// Tax-status filter pill above the PO register.
+function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
+  label: string; n: number; active: boolean; onClick: () => void; color?: string;
 }) {
-  const reg = suppliers.filter(s => s.registered === true);
-  const unreg = suppliers.filter(s => s.registered === false);
-  const unmarked = suppliers.filter(s => s.registered == null);
-
-  function exportXlsx() {
-    const nl = (v: string | null) => v || "";
-    downloadWorkbookXlsx({
-      filename: `suppliers_${new Date().toISOString().slice(0, 10)}`,
-      sheets: [
-        {
-          sheetName: "Registered", title: "Registered Suppliers (sales-tax invoice)",
-          headers: ["#", "Supplier", "Address", "Contact"], freezeCols: 1, colWidths: [5, 34, 44, 22],
-          rows: reg.map((s, i) => [i + 1, s.name, nl(s.address), nl(s.contact)]),
-        },
-        {
-          sheetName: "Unregistered", title: `Unregistered Suppliers — limit ${UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}/yr · FY ${fyLabel}`,
-          headers: ["#", "Supplier", "Address", "Contact", "Used (FY)", "Remaining", "Status"], freezeCols: 1,
-          colWidths: [5, 30, 40, 20, 14, 14, 16],
-          rows: unreg.map((s, i) => {
-            const used = usedFor(s.name);
-            const left = UNREGISTERED_YEAR_LIMIT - used;
-            return [i + 1, s.name, nl(s.address), nl(s.contact), used, Math.max(0, left), left > 0 ? "Within limit" : "Limit reached"];
-          }),
-        },
-        ...(unmarked.length ? [{
-          sheetName: "Unmarked", title: "Unmarked Suppliers",
-          headers: ["#", "Supplier", "Address", "Contact"], freezeCols: 1, colWidths: [5, 34, 44, 22],
-          rows: unmarked.map((s, i) => [i + 1, s.name, nl(s.address), nl(s.contact)]),
-        }] : []),
-      ],
-    });
-  }
-
   return (
-    <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 13, fontWeight: 800 }}>Supplier directory <span style={{ fontWeight: 500, color: "var(--text3)" }}>· {suppliers.length} saved</span></div>
-        <button onClick={exportXlsx} disabled={!suppliers.length} className="btn btn-sm">⬇ Download Excel (both lists)</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#166534", marginBottom: 6 }}>REGISTERED ({reg.length})</div>
-        {reg.length === 0 ? <Empty /> : reg.map(s => (
-          <SupplierRow key={s.id} name={s.name} right={<button onClick={() => onRetag(s, false)} style={retagBtn}>→ Unreg</button>} />
-        ))}
-      </div>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: "#9A3412", marginBottom: 6 }}>UNREGISTERED ({unreg.length}) <span style={{ fontWeight: 500, color: "var(--text3)" }}>· limit {UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}/yr · FY {fyLabel}</span></div>
-        {unreg.length === 0 ? <Empty /> : unreg.map(s => {
-          const used = usedFor(s.name);
-          const left = UNREGISTERED_YEAR_LIMIT - used;
-          return (
-            <SupplierRow key={s.id} name={s.name}
-              sub={<span style={{ color: left <= 0 ? "#B91C1C" : "var(--text3)" }}>used {used.toLocaleString("en-US")} · {left > 0 ? `${left.toLocaleString("en-US")} left` : "limit reached"}</span>}
-              right={<button onClick={() => onRetag(s, true)} style={retagBtn}>→ Reg</button>} />
-          );
-        })}
-      </div>
-      {unmarked.length > 0 && (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748B", marginBottom: 6 }}>UNMARKED ({unmarked.length})</div>
-          {unmarked.map(s => (
-            <SupplierRow key={s.id} name={s.name} right={
-              <span style={{ display: "inline-flex", gap: 4 }}>
-                <button onClick={() => onRetag(s, true)} style={retagBtn}>Reg</button>
-                <button onClick={() => onRetag(s, false)} style={retagBtn}>Unreg</button>
-              </span>} />
-          ))}
-        </div>
-      )}
-      </div>
-    </div>
+    <button onClick={onClick} style={{
+      padding: "6px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+      border: `1px solid ${active ? color : "var(--border)"}`,
+      background: active ? color : "transparent",
+      color: active ? "#fff" : "var(--text2)",
+    }}>{label} <span style={{ opacity: 0.85 }}>({n})</span></button>
   );
 }
-function SupplierRow({ name, sub, right }: { name: string; sub?: React.ReactNode; right?: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
-        {sub && <span style={{ display: "block", fontSize: 11 }}>{sub}</span>}
-      </span>
-      {right}
-    </div>
-  );
-}
-function Empty() { return <div style={{ fontSize: 12, color: "var(--text3)", padding: "4px 0" }}>None yet.</div>; }
-const retagBtn: React.CSSProperties = { background: "none", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "2px 7px", cursor: "pointer", color: "var(--text2)", whiteSpace: "nowrap" };
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px", letterSpacing: 0.4 }}>{children}</div>;
