@@ -3,18 +3,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
   supplierName: string | null; supplierAddress: string | null; supplierPhone: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
-  items: string; status: string;
+  items: string; status: string; registered: boolean | null; discount: number | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
 }
-interface Supplier { id: number; name: string; address: string | null; contact: string | null }
+interface Supplier { id: number; name: string; address: string | null; contact: string | null; registered: boolean | null }
 
 const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
 
@@ -40,7 +40,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [expectedDate, setExpectedDate] = useState("");
   const [terms, setTerms] = useState(PO_DEFAULT_TERMS.join("\n"));
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
+  const [registered, setRegistered] = useState<boolean | null>(null);
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
+  const [showSuppliers, setShowSuppliers] = useState(false);
 
   function resetForm() {
     setEditId(null); setEditNo(null);
@@ -48,6 +50,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setSelectedSupplierId(""); setSupplierMsg("");
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
+    setRegistered(null);
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
   function openEdit(p: Po) {
@@ -58,6 +61,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setSupplierName(p.supplierName || ""); setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
     setExpectedDate((p.expectedDate || "").slice(0, 10));
     setTerms(p.terms || ""); setOrderPlacedBy(p.orderPlacedBy || "");
+    setRegistered(p.registered);
     const its = parseItems<PoItem>(p.items);
     setItems(its.length
       ? its.map((it, i) => ({ srNo: i + 1, description: it.description || it.item || "", quantity: it.quantity || "", uom: it.uom || "", rate: it.rate || "", tax: it.tax ?? String(PO_DEFAULT_TAX) }))
@@ -91,6 +95,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setSupplierName(s.name);
     setSupplierAddress(s.address || "");
     setSupplierPhone(s.contact || "");
+    if (s.registered != null) setRegistered(s.registered);
   }
   // Save whatever's typed to the supplier directory (dedupes by name server-side).
   async function saveSupplier() {
@@ -100,7 +105,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     try {
       const res = await fetch("/api/procurement/suppliers", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone }),
+        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone, registered }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Save failed");
@@ -134,7 +139,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           demandId: demandId || null, demandNo: demandNoManual, date, supplierName, supplierAddress, supplierPhone,
-          expectedDate, terms, orderPlacedBy, items: clean,
+          expectedDate, terms, orderPlacedBy, registered, items: clean,
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -147,6 +152,42 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     const res = await fetch(`/api/procurement/pos/${p.id}`, { method: "DELETE" });
     if (res.ok) router.refresh(); else alert("Delete failed");
   }
+  // Quick registered/unregistered toggle from the register.
+  async function markRegistered(p: Po, value: boolean) {
+    const res = await fetch(`/api/procurement/pos/${p.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registered: value }),
+    });
+    if (res.ok) router.refresh(); else alert("Update failed");
+  }
+  // Retag a saved supplier's list from the supplier-lists panel.
+  async function retagSupplier(s: Supplier, value: boolean) {
+    const res = await fetch("/api/procurement/suppliers", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: s.id, registered: value }),
+    });
+    if (!res.ok) { alert("Update failed"); return; }
+    setSupplierList(list => list.map(x => x.id === s.id ? { ...x, registered: value } : x));
+  }
+
+  // ---- Unregistered-supplier yearly limit (per supplier, current FY) ----
+  const fy = financialYear();
+  // Amount already committed to an unregistered supplier this FY (excluding the
+  // PO currently being edited so it doesn't count against itself).
+  function unregUsed(name: string): number {
+    const key = normSupplier(name);
+    if (!key) return 0;
+    return rows
+      .filter(p => p.registered === false && p.id !== editId
+        && normSupplier(p.supplierName) === key
+        && (p.date || "").slice(0, 10) >= fy.start && (p.date || "").slice(0, 10) <= fy.end)
+      .reduce((s, p) => s + poGrandTotal(parseItems<PoItem>(p.items), p.discount), 0);
+  }
+  const thisPoTotal = poGrandTotal(items, null);
+  const usedForForm = registered === false ? unregUsed(supplierName) : 0;
+  const remainingForForm = UNREGISTERED_YEAR_LIMIT - usedForForm;
+  const projected = usedForForm + thisPoTotal;
+  const overLimit = registered === false && projected > UNREGISTERED_YEAR_LIMIT;
 
   return (
     <div className="fade-up">
@@ -184,7 +225,15 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <Field label="Pick a saved supplier (optional)">
               <select value={selectedSupplierId} onChange={e => pickSupplier(e.target.value)} className="auth-input">
                 <option value="">— Choose saved / type below —</option>
-                {supplierList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                <optgroup label="Registered">
+                  {supplierList.filter(s => s.registered === true).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </optgroup>
+                <optgroup label="Unregistered">
+                  {supplierList.filter(s => s.registered === false).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </optgroup>
+                <optgroup label="Unmarked">
+                  {supplierList.filter(s => s.registered == null).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </optgroup>
               </select>
             </Field>
             <Field label="Supplier name">
@@ -193,6 +242,36 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <Field label="Address"><input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="auth-input" /></Field>
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
           </div>
+
+          {/* Tax status — registered (sales-tax invoice) vs unregistered */}
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)" }}>Supplier tax status:</span>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+              <input type="radio" name="reg" checked={registered === true} onChange={() => setRegistered(true)} />
+              Registered <span style={{ fontSize: 11, color: "var(--text3)" }}>(sales-tax invoice)</span>
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+              <input type="radio" name="reg" checked={registered === false} onChange={() => setRegistered(false)} />
+              Unregistered
+            </label>
+            {registered != null && (
+              <button type="button" onClick={() => setRegistered(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 11.5, cursor: "pointer" }}>clear</button>
+            )}
+          </div>
+
+          {registered === false && supplierName.trim() && (
+            <div style={{
+              marginTop: 8, padding: "9px 12px", borderRadius: 8, fontSize: 12.5,
+              background: overLimit ? "#fef2f2" : "#f0fdf4",
+              border: `1px solid ${overLimit ? "#fecaca" : "#bbf7d0"}`,
+              color: overLimit ? "#991B1B" : "#166534",
+            }}>
+              <b>Unregistered limit · FY {fy.label}</b> — used Rs {usedForForm.toLocaleString("en-US")} of {UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")} with <b>{supplierName.trim()}</b>.
+              {" "}This PO Rs {thisPoTotal.toLocaleString("en-US")} → {remainingForForm > 0
+                ? <>Rs {Math.max(0, remainingForForm).toLocaleString("en-US")} left {overLimit && <b>· this order exceeds the limit by Rs {(projected - UNREGISTERED_YEAR_LIMIT).toLocaleString("en-US")}</b>}</>
+                : <b>limit already reached</b>}
+            </div>
+          )}
           <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <button type="button" onClick={saveSupplier} disabled={savingSupplier || !supplierName.trim()} className="btn btn-sm">
               {savingSupplier ? "Saving…" : "＋ Save this supplier to the list"}
@@ -258,14 +337,25 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         </div>
       )}
 
+      {canEdit && (
+        <div style={{ marginBottom: 12 }}>
+          <button onClick={() => setShowSuppliers(v => !v)} className="btn btn-sm">
+            {showSuppliers ? "✕ Hide supplier lists" : "📋 Supplier lists (registered / unregistered)"}
+          </button>
+        </div>
+      )}
+      {showSuppliers && canEdit && (
+        <SupplierLists suppliers={supplierList} usedFor={unregUsed} fyLabel={fy.label} onRetag={retagSupplier} />
+      )}
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
-            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders yet.</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders yet.</td></tr>
             ) : rows.map(p => (
               <tr key={p.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{p.poNo}</td>
@@ -274,6 +364,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td>{p.supplierName || "—"}</td>
                 <td>{fmtDate(p.expectedDate)}</td>
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
+                <td><TaxCell p={p} canEdit={canEdit} onMark={markRegistered} /></td>
                 <td><StatusBadge status={p.status} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
@@ -288,6 +379,84 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     </div>
   );
 }
+
+// Tax-status cell: badge + quick registered / unregistered toggle.
+function TaxCell({ p, canEdit, onMark }: { p: Po; canEdit: boolean; onMark: (p: Po, v: boolean) => void }) {
+  const badge = p.registered === true
+    ? { t: "Registered", fg: "#166534", bg: "#dcfce7" }
+    : p.registered === false
+      ? { t: "Unregistered", fg: "#9A3412", bg: "#ffedd5" }
+      : { t: "—", fg: "#64748B", bg: "#f1f5f9" };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+      <span style={{ padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.fg, fontSize: 11, fontWeight: 700 }}>{badge.t}</span>
+      {canEdit && (
+        <span style={{ display: "inline-flex", gap: 3 }}>
+          <button onClick={() => onMark(p, true)} title="Mark registered"
+            style={{ border: "none", cursor: "pointer", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "2px 5px", background: p.registered === true ? "#166534" : "transparent", color: p.registered === true ? "#fff" : "#64748B" }}>R</button>
+          <button onClick={() => onMark(p, false)} title="Mark unregistered"
+            style={{ border: "none", cursor: "pointer", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "2px 5px", background: p.registered === false ? "#9A3412" : "transparent", color: p.registered === false ? "#fff" : "#64748B" }}>U</button>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Two side-by-side supplier lists; unregistered shows FY usage vs the limit.
+function SupplierLists({ suppliers, usedFor, fyLabel, onRetag }: {
+  suppliers: Supplier[]; usedFor: (name: string) => number; fyLabel: string; onRetag: (s: Supplier, v: boolean) => void;
+}) {
+  const reg = suppliers.filter(s => s.registered === true);
+  const unreg = suppliers.filter(s => s.registered === false);
+  const unmarked = suppliers.filter(s => s.registered == null);
+  return (
+    <div className="card" style={{ padding: 14, marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: "#166534", marginBottom: 6 }}>REGISTERED ({reg.length})</div>
+        {reg.length === 0 ? <Empty /> : reg.map(s => (
+          <SupplierRow key={s.id} name={s.name} right={<button onClick={() => onRetag(s, false)} style={retagBtn}>→ Unreg</button>} />
+        ))}
+      </div>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: "#9A3412", marginBottom: 6 }}>UNREGISTERED ({unreg.length}) <span style={{ fontWeight: 500, color: "var(--text3)" }}>· limit {UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}/yr · FY {fyLabel}</span></div>
+        {unreg.length === 0 ? <Empty /> : unreg.map(s => {
+          const used = usedFor(s.name);
+          const left = UNREGISTERED_YEAR_LIMIT - used;
+          return (
+            <SupplierRow key={s.id} name={s.name}
+              sub={<span style={{ color: left <= 0 ? "#B91C1C" : "var(--text3)" }}>used {used.toLocaleString("en-US")} · {left > 0 ? `${left.toLocaleString("en-US")} left` : "limit reached"}</span>}
+              right={<button onClick={() => onRetag(s, true)} style={retagBtn}>→ Reg</button>} />
+          );
+        })}
+      </div>
+      {unmarked.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#64748B", marginBottom: 6 }}>UNMARKED ({unmarked.length})</div>
+          {unmarked.map(s => (
+            <SupplierRow key={s.id} name={s.name} right={
+              <span style={{ display: "inline-flex", gap: 4 }}>
+                <button onClick={() => onRetag(s, true)} style={retagBtn}>Reg</button>
+                <button onClick={() => onRetag(s, false)} style={retagBtn}>Unreg</button>
+              </span>} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+function SupplierRow({ name, sub, right }: { name: string; sub?: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "5px 0", borderBottom: "1px solid var(--border)" }}>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{name}</span>
+        {sub && <span style={{ display: "block", fontSize: 11 }}>{sub}</span>}
+      </span>
+      {right}
+    </div>
+  );
+}
+function Empty() { return <div style={{ fontSize: 12, color: "var(--text3)", padding: "4px 0" }}>None yet.</div>; }
+const retagBtn: React.CSSProperties = { background: "none", border: "1px solid var(--border)", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "2px 7px", cursor: "pointer", color: "var(--text2)", whiteSpace: "nowrap" };
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px", letterSpacing: 0.4 }}>{children}</div>;

@@ -1,8 +1,8 @@
 // Shared helpers for the Procurement module (Demand → PO → GRN).
 // Line items live as JSON in each form's `items` column.
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, ilike } from "drizzle-orm";
 import { db } from "./db";
-import { grns, purchaseOrders } from "./schema";
+import { grns, purchaseOrders, suppliers } from "./schema";
 
 export type Stage = "demand" | "po" | "grn" | "inspection";
 
@@ -63,6 +63,38 @@ export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string
 export function fmtMoney(n: number, blankZero = true): string {
   if (blankZero && !n) return "";
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ============ Unregistered-supplier yearly limit ============
+// Purchases from an UNREGISTERED supplier (no sales-tax invoice) are capped at
+// this amount per supplier, per financial year.
+export const UNREGISTERED_YEAR_LIMIT = 75000;
+
+// A PO's grand total = sum of line net values, less any discount.
+export function poGrandTotal(items: PoItem[], discount: number | null | undefined = 0): number {
+  const net = items.reduce((s, it) => s + poLineMoney(it).net, 0);
+  return Math.max(0, net - (Number(discount) || 0));
+}
+
+// The financial year (1 Jul – 30 Jun) that contains date `d`. Dates are the
+// "YYYY-MM-DD" strings the DB stores, so string comparison is safe.
+export function financialYear(d: Date = new Date()): { start: string; end: string; label: string } {
+  const y = d.getFullYear();
+  const startY = d.getMonth() >= 6 ? y : y - 1; // Jul(=6)…Dec → this year; Jan…Jun → last year
+  return { start: `${startY}-07-01`, end: `${startY + 1}-06-30`, label: `${startY}–${startY + 1}` };
+}
+
+// Normalise a supplier name for matching (POs store the name, not an id).
+export function normSupplier(s: string | null | undefined): string {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Mirror a PO's registered/unregistered mark onto the saved supplier directory
+// so the supplier lands in the right list. No-op for blank names / unmarked.
+export async function tagSupplierRegistered(name: string | null | undefined, registered: boolean | null | undefined) {
+  const n = (name || "").trim();
+  if (!n || registered == null) return;
+  await db.update(suppliers).set({ registered }).where(ilike(suppliers.name, n));
 }
 
 // ============ Partial-receipt tracking (PO ↔ GRN) ============
@@ -319,6 +351,8 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS registered boolean;
 END $$;`);
   ensured = true;
 }

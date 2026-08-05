@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, tagSupplierRegistered } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const n = parseInt(String(b.demandNo), 10);
     if (!isNaN(n)) demandNo = n;
   }
+  const registered = typeof b.registered === "boolean" ? b.registered : null;
   await db.update(purchaseOrders).set({
     date: b.date || new Date().toISOString().slice(0, 10),
     demandNo,
@@ -43,12 +44,34 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     specification: b.specification || null,
     terms: b.terms || null,
     discount: Number(b.discount) || 0,
+    registered,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
     items: JSON.stringify(items),
   }).where(eq(purchaseOrders.id, parseInt(id)));
+  await tagSupplierRegistered(b.supplierName, registered);
   await logActivity({ user: guard, action: "po.update", summary: `edited PO (id ${id})` });
+  return NextResponse.json({ ok: true });
+}
+
+// PATCH — quick registered / unregistered toggle from the register.
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardWrite("po");
+  if (guard instanceof NextResponse) return guard;
+  await ensureProcurementTables();
+  const { id } = await ctx.params;
+  const b = await req.json().catch(() => ({}));
+  const registered = typeof b.registered === "boolean" ? b.registered : null;
+  const [row] = await db.update(purchaseOrders).set({ registered })
+    .where(eq(purchaseOrders.id, parseInt(id)))
+    .returning({ supplierName: purchaseOrders.supplierName, poNo: purchaseOrders.poNo });
+  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await tagSupplierRegistered(row.supplierName, registered);
+  await logActivity({
+    user: guard, action: "po.update",
+    summary: `marked PO #${row.poNo} ${registered === true ? "registered" : registered === false ? "unregistered" : "unmarked"}`,
+  });
   return NextResponse.json({ ok: true });
 }
 

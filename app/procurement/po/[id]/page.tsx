@@ -35,6 +35,9 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
             <div className="pf-toline"><b>Supplier Name:</b> {p.supplierName || "_______________________________"}</div>
             <div className="pf-toline"><b>Address:</b> {p.supplierAddress || "_______________________________"}</div>
             <div className="pf-toline"><b>Contact #:</b> {p.supplierPhone || "_______________________________"}</div>
+            {p.registered != null && (
+              <div className="pf-toline"><b>Tax status:</b> {p.registered ? "Registered (sales-tax invoice)" : "Unregistered"}</div>
+            )}
           </div>
           <table className="pf-fieldtable">
             <tbody>

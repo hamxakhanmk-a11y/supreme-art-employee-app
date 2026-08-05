@@ -499,6 +499,9 @@ export const purchaseOrders = pgTable("purchase_orders", {
   specification: text("specification"),
   terms: text("terms"),
   discount: doublePrecision("discount").default(0),
+  // Supplier tax status for THIS order. true = registered (has sales-tax
+  // invoice), false = unregistered, null = not yet marked.
+  registered: boolean("registered"),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
   createdByUserId: integer("created_by_user_id"),
@@ -528,6 +531,8 @@ export const suppliers = pgTable("suppliers", {
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
   contact: varchar("contact", { length: 160 }),
+  // true = registered (sales-tax invoice), false = unregistered, null = unmarked.
+  registered: boolean("registered"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

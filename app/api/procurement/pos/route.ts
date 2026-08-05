@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextNumber, NUMBER_START } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextNumber, NUMBER_START, tagSupplierRegistered } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
   }
 
   const items = Array.isArray(b.items) ? b.items : [];
+  const registered = typeof b.registered === "boolean" ? b.registered : null;
   const [row] = await db.insert(purchaseOrders).values({
     poNo,
     demandId,
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
     specification: b.specification || null,
     terms: b.terms || null,
     discount: Number(b.discount) || 0,
+    registered,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
@@ -65,6 +67,8 @@ export async function POST(req: Request) {
 
   // Mark the source demand as ordered.
   if (demandId) await db.update(demands).set({ status: "ordered" }).where(eq(demands.id, demandId));
+  // Sort the supplier into the registered / unregistered list.
+  await tagSupplierRegistered(b.supplierName, registered);
 
   await logActivity({
     user: guard, action: "po.create",
