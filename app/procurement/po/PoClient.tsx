@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
@@ -389,10 +389,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         <button onClick={exportPos} className="btn btn-sm">⬇ Excel (both lists)</button>
       </div>
 
-      {taxFilter === "unreg" && counts.unreg > 0 && (
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 8 }}>
-          Unregistered supplier cap: <b>{UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}</b> per supplier · financial year {fy.label}.
-        </div>
+      {taxFilter === "unreg" && (
+        <UnregLimitChecker rows={rows} suppliers={supplierList} />
       )}
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
@@ -437,6 +435,72 @@ function TaxCell({ p }: { p: Po }) {
       : { t: "—", fg: "#64748B", bg: "#f1f5f9" };
   return (
     <span style={{ padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.fg, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{badge.t}</span>
+  );
+}
+
+// Search a supplier and see how much of its Rs 75,000 unregistered allowance is
+// still free this financial year — so you can decide, before raising the order,
+// whether it should go in the Unregistered list or the Registered one.
+function UnregLimitChecker({ rows, suppliers }: { rows: Po[]; suppliers: Supplier[] }) {
+  const [q, setQ] = useState("");
+  const fy = financialYear();
+
+  // Names to suggest: every supplier that has an unregistered PO this year, plus
+  // the saved directory (so a brand-new supplier can be checked too).
+  const names = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of rows) if (p.registered === false && p.supplierName) set.add(p.supplierName.trim());
+    for (const s of suppliers) if (s.name) set.add(s.name.trim());
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [rows, suppliers]);
+
+  const key = normSupplier(q);
+  const matches = key
+    ? rows.filter(p => p.registered === false
+        && normSupplier(p.supplierName) === key
+        && (p.date || "").slice(0, 10) >= fy.start && (p.date || "").slice(0, 10) <= fy.end)
+    : [];
+  const used = matches.reduce((s, p) => s + poGrandTotal(parseItems<PoItem>(p.items), p.discount), 0);
+  const remaining = Math.max(0, UNREGISTERED_YEAR_LIMIT - used);
+  const pct = Math.min(100, (used / UNREGISTERED_YEAR_LIMIT) * 100);
+  const over = used >= UNREGISTERED_YEAR_LIMIT;
+  const near = !over && pct >= 70;
+  const barColor = over ? "#DC2626" : near ? "#D97706" : "#16A34A";
+  const show = key.length > 0;
+
+  return (
+    <div className="card" style={{ padding: 14, marginBottom: 12, background: "#fffdf8" }}>
+      <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 2 }}>Check unregistered limit</div>
+      <div style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 10 }}>
+        Cap <b>Rs {UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")}</b> per supplier · financial year {fy.label}. Search a supplier to see what&apos;s left before choosing the list.
+      </div>
+      <input
+        value={q} onChange={e => setQ(e.target.value)} list="unreg-supplier-names"
+        placeholder="Type or pick a supplier…" className="auth-input" style={{ maxWidth: 380 }}
+      />
+      <datalist id="unreg-supplier-names">
+        {names.map(n => <option key={n} value={n} />)}
+      </datalist>
+
+      {show && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5, flexWrap: "wrap", gap: 6 }}>
+            <span>Used <b>Rs {used.toLocaleString("en-US")}</b> of {UNREGISTERED_YEAR_LIMIT.toLocaleString("en-US")} · {matches.length} order{matches.length === 1 ? "" : "s"}</span>
+            <span style={{ fontWeight: 800, color: barColor }}>Rs {remaining.toLocaleString("en-US")} left</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 999, background: "#eee", overflow: "hidden" }}>
+            <div style={{ width: `${pct}%`, height: "100%", background: barColor, transition: "width .2s" }} />
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12.5, color: over ? "#991B1B" : near ? "#92400E" : "#166534", fontWeight: 600 }}>
+            {over
+              ? "Limit reached — raise any new order for this supplier in the Registered list."
+              : used === 0
+                ? "No unregistered purchases yet this year — the full allowance is available."
+                : `Rs ${remaining.toLocaleString("en-US")} still available. If your order exceeds that, use the Registered list.`}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
