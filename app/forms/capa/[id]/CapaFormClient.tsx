@@ -256,7 +256,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         }
 
         @media print {
-          @page { size: A4 portrait; margin: 12mm 10mm; }
+          @page { size: A4 portrait; margin: 10mm 10mm; }
           .no-print, .app-sidebar, header { display: none !important; }
           html, body { background: #fff !important; }
           main { padding: 0 !important; }
@@ -265,28 +265,45 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
             padding: 0; max-width: none;
           }
           .capa-watermark { opacity: 0.05; }
-          .capa-title { font-size: 16pt; color: #7C1F1F; }
+
+          /* Header — logo, title and company line stay on the printout. */
+          .capa-head { gap: 12px; padding-bottom: 5px; }
+          .capa-logo { height: 40px; }
+          .capa-logo-spacer { width: 40px; }
+          .capa-title { font-size: 14pt; color: #7C1F1F; }
+          .capa-sub { font-size: 9pt; margin-top: 1px; }
+
+          .capa-refbar {
+            background: transparent !important; border: none;
+            border-bottom: 1px solid #7C1F1F; padding: 3px 0;
+            margin-bottom: 8px; font-size: 10.5pt;
+          }
           /* Print the section bars as light rules with red text — matches the
              approved paper form rather than the dark on-screen bars. */
           .capa-section-head {
             background: transparent !important; color: #7C1F1F !important;
-            border-bottom: 1.5px solid #7C1F1F; border-radius: 0;
-            padding: 2px 0; margin: 12px 0 8px;
-            font-size: 10.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            border-bottom: 1.25px solid #7C1F1F; border-radius: 0;
+            padding: 1px 0; margin: 8px 0 5px;
+            font-size: 9.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
-          .capa-grid { gap: 10px 22px; }
-          .capa-lbl { font-size: 7.5pt; color: #1a3a5c; }
+          .capa-grid { gap: 6px 20px; }
+          .capa-lbl { font-size: 7pt; color: #1a3a5c; margin-bottom: 2px; }
           .capa-cell input[type="text"], .capa-cell input[type="date"] {
-            font-size: 10pt; padding: 2px 0; border-bottom: 1px solid #333;
+            font-size: 9pt; padding: 1px 0; border-bottom: 1px solid #333;
           }
           .capa-cell textarea {
-            font-size: 10pt; border: none; border-bottom: 1px solid #333;
-            border-radius: 0; padding: 2px 0; min-height: 0;
+            font-size: 9pt; line-height: 1.3; border: none; border-bottom: 1px solid #333;
+            border-radius: 0; padding: 1px 0; min-height: 0;
           }
-          .capa-refbar { background: transparent !important; border: none; border-bottom: 1px solid #7C1F1F; padding: 4px 0; }
-          /* Keep a section and its fields together across a page break. */
+          .capa-foot { margin-top: 10px; padding-top: 6px; font-size: 8pt; }
+
+          /* Every field has a fixed height (single-line inputs, and textareas
+             sized by their rows), so the printout is a constant length no matter
+             how much is typed — it lands within two pages every time. Keep each
+             section heading with the fields under it, but let the field grids
+             flow across the page break so both pages fill densely instead of
+             spilling onto a third. */
           .capa-section-head { break-after: avoid; page-break-after: avoid; }
-          .capa-grid { break-inside: avoid-page; }
         }
       `}</style>
     </div>
