@@ -44,11 +44,12 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
-  // Creating is list-bound: a GRR is raised in the Registered or Unregistered
-  // list, receiving against POs from that same list. The choice is made here.
-  function startCreate(reg: boolean) {
+  // One "New GRR" flow — the PO you pick decides the list: a registered PO
+  // sends the GRR to the registered list (15000 series), an unregistered PO to
+  // the unregistered list (15000u series). A standalone GRR (no PO) picks its
+  // list with the small toggle in the form.
+  function startCreate() {
     resetForm();
-    setRegistered(reg);
     setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -65,14 +66,12 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     setErr(""); setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  // Only POs from the same list are eligible — an unregistered GRR receives
-  // unregistered POs, and vice-versa.
-  const pickPos = openPos.filter(p => registered == null ? true : p.registered === registered);
   function pickPo(id: string) {
     setPoId(id);
     const p = openPos.find(x => String(x.id) === id);
-    if (!p) return;
-    setPoNoManual(String(p.poNo));   // auto-fill the ref, still editable
+    if (!p) { setRegistered(null); return; }   // "None" → standalone, list chosen below
+    setPoNoManual(String(p.poNo));             // auto-fill the ref, still editable
+    setRegistered(p.registered);               // the PO decides which list this GRR lands in
     // Only the lines still awaiting delivery, pre-filled with what's outstanding.
     if (p.outstanding.length) {
       setItems(p.outstanding.map((o, i) => ({
@@ -86,6 +85,9 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   async function save() {
     if (!gatePassNo.trim()) { setErr("Please enter the inward gate pass number."); return; }
+    if (!editId && !poId && registered == null) {
+      setErr("Pick a PO, or choose Registered / Unregistered for this standalone GRR."); return;
+    }
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.item.trim());
@@ -124,40 +126,54 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </div>
         {canEdit && (open
           ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button>
-          : (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {listFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered GRR</button>}
-              {listFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered GRR</button>}
-            </div>
-          ))}
+          : <button onClick={startCreate} className="btn btn-primary">＋ New GRR</button>
+        )}
       </div>
 
       {open && canEdit && (
         <div className="card" style={{ marginBottom: 18, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
-            {editId ? `✏️ Edit GRR #${docNoLabel(editNo, registered)}` : `＋ New ${registered === false ? "Unregistered" : "Registered"} GRR`}
+            {editId ? `✏️ Edit GRR #${docNoLabel(editNo, registered)}` : "＋ New GRR"}
           </div>
 
-          {/* The GRR's list is fixed here — it drives the GRR number and which POs are receivable. */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12,
-            padding: "6px 12px", borderRadius: 8, fontSize: 12.5,
-            background: registered === false ? "#fff7ed" : "#f0fdf4",
-            border: `1px solid ${registered === false ? "#fed7aa" : "#bbf7d0"}`,
-            color: registered === false ? "#9A3412" : "#166534",
-          }}>
-            <b>{registered === false ? "Unregistered list" : "Registered list"}</b>
-            <span style={{ color: "var(--text3)" }}>
-              {registered === false ? "— numbered 15000u series" : "— numbered 15000 series"}
-            </span>
-          </div>
+          {(!editId && !poId) ? (
+            // Standalone GRR (no PO) — pick a list, or choose a PO below to follow its list.
+            <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)" }}>Standalone GRR — list:</span>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="radio" name="grnreg" checked={registered === true} onChange={() => setRegistered(true)} /> Registered
+              </label>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="radio" name="grnreg" checked={registered === false} onChange={() => setRegistered(false)} /> Unregistered
+              </label>
+              <span style={{ fontSize: 11.5, color: "var(--text3)" }}>…or pick a PO below and the GRR follows that PO&apos;s list.</span>
+            </div>
+          ) : (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12,
+              padding: "6px 12px", borderRadius: 8, fontSize: 12.5,
+              background: registered === false ? "#fff7ed" : "#f0fdf4",
+              border: `1px solid ${registered === false ? "#fed7aa" : "#bbf7d0"}`,
+              color: registered === false ? "#9A3412" : "#166534",
+            }}>
+              <b>{registered === false ? "Unregistered list" : "Registered list"}</b>
+              <span style={{ color: "var(--text3)" }}>
+                {registered === false ? "— 15000u series" : "— 15000 series"}{poId ? " · from the selected PO" : ""}
+              </span>
+            </div>
+          )}
 
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 14 }}>
-            <Field label={`For ${registered === false ? "unregistered" : "registered"} PO (optional)`}>
+            <Field label="For PO (optional) — decides the list">
               <select value={poId} onChange={e => pickPo(e.target.value)} className="auth-input">
                 <option value="">— None (standalone GRR) —</option>
-                {pickPos.map(p => <option key={p.id} value={p.id}>PO #{docNoLabel(p.poNo, p.registered)}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                <optgroup label="Registered POs">
+                  {openPos.filter(p => p.registered === true).map(p => <option key={p.id} value={p.id}>PO #{docNoLabel(p.poNo, p.registered)}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                </optgroup>
+                <optgroup label="Unregistered POs">
+                  {openPos.filter(p => p.registered === false).map(p => <option key={p.id} value={p.id}>PO #{docNoLabel(p.poNo, p.registered)}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                </optgroup>
               </select>
             </Field>
             <Field label="PO Ref No (or type manually)">
