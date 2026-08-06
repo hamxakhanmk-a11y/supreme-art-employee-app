@@ -120,7 +120,9 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
       <div className="capa-sheet">
         <div className="capa-watermark" aria-hidden />
 
-        <header className="capa-head">
+        {/* A <div>, not a <header> — the global print stylesheet hides every
+            <header> element, which would drop this report's own header. */}
+        <div className="capa-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" className="capa-logo" />
           <div className="capa-head-text">
@@ -128,7 +130,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
             <div className="capa-sub">Supreme Art (Private) Limited</div>
           </div>
           <div className="capa-logo-spacer" />
-        </header>
+        </div>
 
         <div className="capa-refbar">
           <span className="capa-lbl">CAPA No.:</span>
@@ -257,8 +259,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
 
         @media print {
           @page { size: A4 portrait; margin: 10mm 10mm; }
-          /* Hide the app chrome — but not the report's own <header className="capa-head">. */
-          .no-print, .app-sidebar, header:not(.capa-head) { display: none !important; }
+          .no-print, .app-sidebar, header { display: none !important; }
           html, body { background: #fff !important; }
           main { padding: 0 !important; }
           .capa-sheet {
