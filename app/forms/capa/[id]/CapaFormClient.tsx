@@ -257,7 +257,8 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
 
         @media print {
           @page { size: A4 portrait; margin: 10mm 10mm; }
-          .no-print, .app-sidebar, header { display: none !important; }
+          /* Hide the app chrome — but not the report's own <header className="capa-head">. */
+          .no-print, .app-sidebar, header:not(.capa-head) { display: none !important; }
           html, body { background: #fff !important; }
           main { padding: 0 !important; }
           .capa-sheet {
