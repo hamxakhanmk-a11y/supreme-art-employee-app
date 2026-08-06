@@ -1,6 +1,6 @@
 // Shared helpers for the Procurement module (Demand → PO → GRN).
 // Line items live as JSON in each form's `items` column.
-import { sql, eq, ilike } from "drizzle-orm";
+import { sql, eq, ilike, max } from "drizzle-orm";
 import { db } from "./db";
 import { grns, purchaseOrders, suppliers } from "./schema";
 
@@ -218,6 +218,30 @@ export function nextNumber(currentMax: number | null | undefined, start: number)
   return Math.max(Number(currentMax ?? 0), start - 1) + 1;
 }
 
+// Registered and unregistered documents run as two independent sequences. Both
+// start at the same block (PO 10000, GRR 15000); the unregistered sequence is
+// distinguished on paper by a "u" suffix (10000u, 15000u…) via docNoLabel().
+// The next number is scoped to the matching tax status, so the two lists never
+// share numbers and each stays gapless within itself.
+export async function nextPoNo(registered: boolean): Promise<number> {
+  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders)
+    .where(eq(purchaseOrders.registered, registered));
+  return nextNumber(n, NUMBER_START.po);
+}
+export async function nextGrnNo(registered: boolean): Promise<number> {
+  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns)
+    .where(eq(grns.registered, registered));
+  return nextNumber(n, NUMBER_START.grn);
+}
+
+// Display number for a PO / GRR: unregistered documents (registered === false)
+// carry a "u" suffix so 10000 (registered) and 10000u (unregistered) are told
+// apart at a glance. Registered and unmarked print the bare number.
+export function docNoLabel(no: number | null | undefined, registered: boolean | null | undefined): string {
+  if (no == null) return "";
+  return `${no}${registered === false ? "u" : ""}`;
+}
+
 // Each form prints one page per copy, named at the foot of the page.
 export const FORM_COPIES: Record<Stage, string[]> = {
   demand: ["Store Copy", "Procurement Copy"],
@@ -353,6 +377,43 @@ DO $$ BEGIN
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS registered boolean;
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS registered boolean;
+
+  -- One-time data migrations, keyed so each runs exactly once.
+  CREATE TABLE IF NOT EXISTS procurement_migrations (
+    key text PRIMARY KEY,
+    applied_at timestamp NOT NULL DEFAULT now()
+  );
+
+  -- Each GRR inherits its PO's tax status (standalone GRRs stay unmarked).
+  UPDATE grns g SET registered = p.registered
+    FROM purchase_orders p
+    WHERE g.po_id = p.id AND g.registered IS NULL AND p.registered IS NOT NULL;
+
+  -- Split registered / unregistered into their own sequences. Registered POs
+  -- keep the existing 10000 series; unregistered POs (and their GRRs) are
+  -- renumbered into a fresh 10000 / 15000 series of their own, ordered by date.
+  -- Registered and unregistered may now share an integer — the "u" suffix on
+  -- unregistered documents keeps them distinct on paper.
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'split_unreg_sequence_v1') THEN
+    WITH ordered AS (
+      SELECT id, 10000 + (row_number() OVER (ORDER BY date ASC, id ASC) - 1)::int AS newno
+      FROM purchase_orders WHERE registered = false
+    )
+    UPDATE purchase_orders p SET po_no = o.newno FROM ordered o WHERE p.id = o.id;
+
+    -- Keep each GRR's denormalised po_no pointing at its PO's new number.
+    UPDATE grns g SET po_no = p.po_no
+      FROM purchase_orders p WHERE g.po_id = p.id AND p.registered = false;
+
+    WITH gordered AS (
+      SELECT id, 15000 + (row_number() OVER (ORDER BY date ASC, id ASC) - 1)::int AS newno
+      FROM grns WHERE registered = false
+    )
+    UPDATE grns g SET grn_no = o.newno FROM gordered o WHERE g.id = o.id;
+
+    INSERT INTO procurement_migrations(key) VALUES ('split_unreg_sequence_v1');
+  END IF;
 END $$;`);
   ensured = true;
 }

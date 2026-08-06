@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
@@ -53,6 +53,15 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setRegistered(null);
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
+  }
+  // Creating is list-bound: you start a PO in the Registered or Unregistered
+  // list, and that decides its sequence (10000 vs 10000u). It can't be changed
+  // afterwards, so the choice is made here, not with a toggle inside the form.
+  function startCreate(reg: boolean) {
+    resetForm();
+    setRegistered(reg);
+    setOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function openEdit(p: Po) {
     setEditId(p.id); setEditNo(p.poNo);
@@ -149,17 +158,15 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     finally { setBusy(false); }
   }
   async function del(p: Po) {
-    if (!confirm(`Delete PO #${p.poNo}?`)) return;
+    const label = docNoLabel(p.poNo, p.registered);
+    const msg = p.registered === false
+      ? `Delete PO #${label}? Its GRR(s) will be deleted along with it.`
+      : `Delete PO #${label}?`;
+    if (!confirm(msg)) return;
     const res = await fetch(`/api/procurement/pos/${p.id}`, { method: "DELETE" });
-    if (res.ok) router.refresh(); else alert("Delete failed");
-  }
-  // Quick registered/unregistered toggle from the register.
-  async function markRegistered(p: Po, value: boolean) {
-    const res = await fetch(`/api/procurement/pos/${p.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ registered: value }),
-    });
-    if (res.ok) router.refresh(); else alert("Update failed");
+    if (res.ok) { router.refresh(); return; }
+    const j = await res.json().catch(() => ({}));
+    alert(j.error || "Delete failed");
   }
   // ---- Unregistered-supplier yearly limit (per supplier, current FY) ----
   const fy = financialYear();
@@ -201,7 +208,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       headers: ["PO #", "Demand #", "Date", "Supplier", "Delivery", "Items", "Total (Rs)", "Status", "Order placed by"],
       freezeCols: 1, colWidths: [8, 10, 13, 30, 13, 7, 14, 16, 20],
       rows: list.map(p => [
-        p.poNo, p.demandNo ?? "", fmtDate(p.date), p.supplierName || "", fmtDate(p.expectedDate),
+        docNoLabel(p.poNo, p.registered), p.demandNo ?? "", fmtDate(p.date), p.supplierName || "", fmtDate(p.expectedDate),
         parseItems<PoItem>(p.items).length, poGrandTotal(parseItems<PoItem>(p.items), p.discount),
         statusText(p.status), p.orderPlacedBy || "",
       ]),
@@ -222,12 +229,21 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Create a PO from a demand, or standalone. <span style={{ color: "var(--text3)" }}>PUR/QR/006</span></p>
         </div>
-        {canEdit && <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New PO"}</button>}
+        {canEdit && (open
+          ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button>
+          : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}
+              {taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}
+            </div>
+          ))}
       </div>
 
       {open && canEdit && (
         <div className="card" style={{ marginBottom: 18, padding: 18 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{editId ? `✏️ Edit PO #${editNo}` : "＋ New PO"}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
+            {editId ? `✏️ Edit PO #${docNoLabel(editNo, registered)}` : `＋ New ${registered === false ? "Unregistered" : "Registered"} PO`}
+          </div>
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
 
           <SectionLabel>ORDER</SectionLabel>
@@ -269,20 +285,20 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
           </div>
 
-          {/* Tax status — registered (sales-tax invoice) vs unregistered */}
-          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)" }}>Supplier tax status:</span>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-              <input type="radio" name="reg" checked={registered === true} onChange={() => setRegistered(true)} />
-              Registered <span style={{ fontSize: 11, color: "var(--text3)" }}>(sales-tax invoice)</span>
-            </label>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-              <input type="radio" name="reg" checked={registered === false} onChange={() => setRegistered(false)} />
-              Unregistered
-            </label>
-            {registered != null && (
-              <button type="button" onClick={() => setRegistered(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 11.5, cursor: "pointer" }}>clear</button>
-            )}
+          {/* Tax status is fixed by the list this PO is being created in. */}
+          <div style={{
+            marginTop: 10, display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+            padding: "6px 12px", borderRadius: 8, fontSize: 12.5,
+            background: registered === false ? "#fff7ed" : "#f0fdf4",
+            border: `1px solid ${registered === false ? "#fed7aa" : "#bbf7d0"}`,
+            color: registered === false ? "#9A3412" : "#166534",
+          }}>
+            <b>{registered === false ? "Unregistered list" : "Registered list"}</b>
+            <span style={{ color: "var(--text3)" }}>
+              {registered === false
+                ? "— no sales-tax invoice · numbered 10000u series"
+                : "— sales-tax invoice · numbered 10000 series"}
+            </span>
           </div>
 
           {registered === false && supplierName.trim() && (
@@ -389,13 +405,13 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
               <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders{taxFilter !== "all" ? " in this list" : ""} yet.</td></tr>
             ) : shownRows.map(p => (
               <tr key={p.id}>
-                <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{p.poNo}</td>
+                <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{docNoLabel(p.poNo, p.registered)}</td>
                 <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
                 <td>{fmtDate(p.date)}</td>
                 <td>{p.supplierName || "—"}</td>
                 <td>{fmtDate(p.expectedDate)}</td>
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
-                <td><TaxCell p={p} canEdit={canEdit} onMark={markRegistered} /></td>
+                <td><TaxCell p={p} /></td>
                 <td><StatusBadge status={p.status} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
@@ -411,25 +427,16 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   );
 }
 
-// Tax-status cell: badge + quick registered / unregistered toggle.
-function TaxCell({ p, canEdit, onMark }: { p: Po; canEdit: boolean; onMark: (p: Po, v: boolean) => void }) {
+// Tax-status badge. A PO's list is fixed at creation (it drives the number),
+// so this is a read-only label — there's no in-place toggle anymore.
+function TaxCell({ p }: { p: Po }) {
   const badge = p.registered === true
     ? { t: "Registered", fg: "#166534", bg: "#dcfce7" }
     : p.registered === false
       ? { t: "Unregistered", fg: "#9A3412", bg: "#ffedd5" }
       : { t: "—", fg: "#64748B", bg: "#f1f5f9" };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-      <span style={{ padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.fg, fontSize: 11, fontWeight: 700 }}>{badge.t}</span>
-      {canEdit && (
-        <span style={{ display: "inline-flex", gap: 3 }}>
-          <button onClick={() => onMark(p, true)} title="Mark registered"
-            style={{ border: "none", cursor: "pointer", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "2px 5px", background: p.registered === true ? "#166534" : "transparent", color: p.registered === true ? "#fff" : "#64748B" }}>R</button>
-          <button onClick={() => onMark(p, false)} title="Mark unregistered"
-            style={{ border: "none", cursor: "pointer", borderRadius: 4, fontSize: 10, fontWeight: 700, padding: "2px 5px", background: p.registered === false ? "#9A3412" : "transparent", color: p.registered === false ? "#fff" : "#64748B" }}>U</button>
-        </span>
-      )}
-    </div>
+    <span style={{ padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.fg, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{badge.t}</span>
   );
 }
 

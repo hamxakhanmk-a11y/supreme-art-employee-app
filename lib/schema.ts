@@ -543,6 +543,9 @@ export const grns = pgTable("grns", {
   invNo: varchar("inv_no", { length: 60 }),          // supplier invoice number — entered by hand
   poId: integer("po_id"),                            // nullable — GRN can be standalone
   poNo: integer("po_no"),                            // denormalised for display
+  // Tax status, inherited from the PO. true = registered (15000 series),
+  // false = unregistered (15000u series), null = unmarked/standalone.
+  registered: boolean("registered"),
   date: date("date").notNull(),
   receivedBy: varchar("received_by", { length: 120 }),
   verifiedBy: varchar("verified_by", { length: 120 }),

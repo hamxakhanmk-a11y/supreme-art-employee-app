@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { desc, eq, max } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextNumber, NUMBER_START, tagSupplierRegistered } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextPoNo, tagSupplierRegistered } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,13 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
-  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders);
-  const poNo = nextNumber(n, NUMBER_START.po);
+  // Every PO belongs to a list. Registered and unregistered are numbered as two
+  // separate sequences, so we must know which one before assigning a number.
+  const registered = b.registered === true ? true : b.registered === false ? false : null;
+  if (registered === null) {
+    return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
+  }
+  const poNo = await nextPoNo(registered);
 
   // Optional link to a demand (picker) — stamps its number and marks it ordered.
   let demandId: number | null = null;
@@ -40,7 +45,6 @@ export async function POST(req: Request) {
   }
 
   const items = Array.isArray(b.items) ? b.items : [];
-  const registered = typeof b.registered === "boolean" ? b.registered : null;
   const [row] = await db.insert(purchaseOrders).values({
     poNo,
     demandId,
