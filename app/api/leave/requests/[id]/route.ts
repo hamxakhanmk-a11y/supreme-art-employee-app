@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveRequests, attendance, leaveTypes } from "@/lib/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 
@@ -27,6 +27,45 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const [u] = await db.update(leaveRequests).set(update)
       .where(eq(leaveRequests.id, reqId)).returning();
+
+    // Auto-stamp attendance across the whole leave range for an approved full
+    // leave (not a half-day) — including future dates. These are ordinary
+    // attendance rows, so HR can still edit any day afterwards. Sundays (the
+    // weekly off) are left untouched.
+    if (u && body.status === "approved" && !u.halfSegment) {
+      const [lt] = await db.select().from(leaveTypes).where(eq(leaveTypes.id, u.leaveTypeId));
+      const typeName = lt?.name || "Leave";
+      const note = `Approved leave — ${typeName}${update.decidedBy ? ` by ${update.decidedBy}` : ""}`;
+
+      // Enumerate calendar dates start..end inclusive (UTC-safe), skipping Sundays.
+      const [ys, ms, ds] = u.startDate.split("-").map(Number);
+      const [ye, me2, de] = u.endDate.split("-").map(Number);
+      const endUtc = Date.UTC(ye, me2 - 1, de);
+      const dates: string[] = [];
+      for (let cur = Date.UTC(ys, ms - 1, ds); cur <= endUtc; cur += 86400000) {
+        const dd = new Date(cur);
+        if (dd.getUTCDay() === 0) continue; // Sunday off
+        dates.push(dd.toISOString().slice(0, 10));
+      }
+
+      if (dates.length) {
+        const existing = await db.select().from(attendance)
+          .where(and(eq(attendance.employeeId, u.employeeId), inArray(attendance.date, dates)));
+        const byDate = new Map(existing.map(r => [r.date, r]));
+        const toInsert: { employeeId: number; date: string; status: string; notes: string }[] = [];
+        for (const dt of dates) {
+          const ex = byDate.get(dt);
+          if (ex) {
+            await db.update(attendance)
+              .set({ status: "leave", notes: note, updatedAt: new Date() })
+              .where(eq(attendance.id, ex.id));
+          } else {
+            toInsert.push({ employeeId: u.employeeId, date: dt, status: "leave", notes: note });
+          }
+        }
+        if (toInsert.length) await db.insert(attendance).values(toInsert);
+      }
+    }
 
     // Auto-stamp attendance for approved half-day requests
     if (u && body.status === "approved" && u.halfSegment) {
