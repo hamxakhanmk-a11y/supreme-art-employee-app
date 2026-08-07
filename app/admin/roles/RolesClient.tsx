@@ -11,6 +11,7 @@ type Kind = "view" | "action" | "section";
 function kindOf(key: string): Kind {
   if (key.startsWith("reports.")) return "view";
   if (key.startsWith("purchase")) return "action";
+  if (key === "station.delete") return "action";
   return "section";
 }
 
@@ -33,6 +34,7 @@ function groupOf(key: string): string {
     case "salary":     return "Salary";
     case "kpi":        return "KPI";
     case "station":    return "Station";
+    case "station.delete": return "Station";
     case "store":      return "Store";
     default:           return "Other";
   }

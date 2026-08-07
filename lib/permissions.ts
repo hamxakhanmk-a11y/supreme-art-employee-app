@@ -35,6 +35,7 @@ export type ModuleKey =
   | "purchase.hr-approve"
   | "purchase.receive"
   | "station"
+  | "station.delete"
   | "demand"
   | "po"
   | "grn"
@@ -62,7 +63,8 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "purchase.receive",    label: "Purchase · Receive",     hint: "Mark material received (Admin)" },
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
   { key: "purchase.hr-approve", label: "Purchase · HR Approval", hint: "HR-approve or HR-reject a raised PR" },
-  { key: "station",    label: "Station",     hint: "Station terminal & hourly-leave report" },
+  { key: "station",        label: "Station",          hint: "Station terminal & hourly-leave report — punch, edit times" },
+  { key: "station.delete", label: "Station · Delete", hint: "Delete an hourly-leave trip from the Station report" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
@@ -109,6 +111,7 @@ export type EditKind = "view" | "action" | "section";
 export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("reports.")) return "view";
   if (key.startsWith("purchase")) return "action";
+  if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
   return "section";
 }
 
