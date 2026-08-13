@@ -26,6 +26,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [listFilter, setListFilter] = useState<"all" | "reg" | "unreg">("all");
+  const [q, setQ] = useState("");
 
   // Which list the GRR belongs to — fixes its sequence (15000 vs 15000u).
   const [registered, setRegistered] = useState<boolean | null>(null);
@@ -116,6 +117,19 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     listFilter === "all" ? true
     : listFilter === "reg" ? g.registered === true
     : g.registered === false);
+
+  // Search GRR#, PO#, gate-pass, invoice, sign-off names and every item line.
+  const qs = q.trim().toLowerCase();
+  const shown = !qs ? shownRows : shownRows.filter(g => {
+    const its = parseItems<GrnItem>(g.items);
+    const hay = [
+      `#${docNoLabel(g.grnNo, g.registered)}`, String(g.grnNo),
+      g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "", String(g.poNo ?? ""),
+      g.gatePassNo, g.invNo, g.receivedBy, g.verifiedBy,
+      ...its.flatMap(it => [it.item, it.remarks]),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(qs);
+  });
 
   return (
     <div className="fade-up">
@@ -235,13 +249,19 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
       </div>
 
+      <div style={{ marginBottom: 10 }}>
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, or item…"
+          style={searchInput} />
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
-            {shownRows.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs{listFilter !== "all" ? " in this list" : ""} yet.</td></tr>
-            ) : shownRows.map(g => (
+            {shown.length === 0 ? (
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+            ) : shown.map(g => (
               <tr key={g.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
                 <td>#{docNoLabel(g.grnNo, g.registered)}</td>
@@ -280,3 +300,4 @@ function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
   );
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
+const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };

@@ -44,6 +44,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
   const [taxFilter, setTaxFilter] = useState<"all" | "reg" | "unreg" | "unmarked">("all");
+  const [q, setQ] = useState("");
 
   function resetForm() {
     setEditId(null); setEditNo(null);
@@ -199,6 +200,18 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     : taxFilter === "reg" ? p.registered === true
     : taxFilter === "unreg" ? p.registered === false
     : p.registered == null);
+
+  // Search PO#, supplier, demand ref, order-placed-by and every line description.
+  const qs = q.trim().toLowerCase();
+  const shown = !qs ? shownRows : shownRows.filter(p => {
+    const its = parseItems<PoItem>(p.items);
+    const hay = [
+      `#${docNoLabel(p.poNo, p.registered)}`, String(p.poNo),
+      p.demandNo != null ? `#${p.demandNo}` : "", p.supplierName, p.orderPlacedBy,
+      ...its.map(it => it.description || it.item || ""),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(qs);
+  });
 
   // Export the registered & unregistered PO lists as an Excel workbook.
   function exportPos() {
@@ -393,15 +406,21 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         <UnregLimitChecker rows={rows} suppliers={supplierList} />
       )}
 
+      <div style={{ marginBottom: 10 }}>
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Search POs — number, supplier, or item description…"
+          style={searchInput} />
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
             <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
           </thead>
           <tbody>
-            {shownRows.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No purchase orders{taxFilter !== "all" ? " in this list" : ""} yet.</td></tr>
-            ) : shownRows.map(p => (
+            {shown.length === 0 ? (
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+            ) : shown.map(p => (
               <tr key={p.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{docNoLabel(p.poNo, p.registered)}</td>
                 <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
@@ -538,3 +557,4 @@ const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repea
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
 const numInput: React.CSSProperties = { width: "100%", minWidth: 50, textAlign: "right" };
 const calcCell: React.CSSProperties = { textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text2)", whiteSpace: "nowrap", paddingRight: 6 };
+const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };
