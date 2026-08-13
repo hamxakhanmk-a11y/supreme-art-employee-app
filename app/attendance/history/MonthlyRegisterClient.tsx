@@ -397,24 +397,22 @@ export default function MonthlyRegisterClient({
           @page { size: A4 landscape; margin: 6mm; }
           .register-banner { display: table-row !important; }
           .register-wrap { overflow: visible !important; max-height: none !important; border: none !important; box-shadow: none !important; }
-          /* The table can't get wider than the page, so we make it BIGGER
-             downward instead: larger text and much taller rows, letting it flow
-             over several pages. Department + Designation are dropped on paper,
-             and header/day/total labels may wrap so wide columns don't blow out
-             the width. */
-          .register-table { font-size: 11px; width: 100%; }
-          .register-table th, .register-table td { padding: 7px 2px; }
-          .register-table thead th { font-size: 11px; white-space: normal; }
-          .register-table .tot-c, .register-table .tot-h { font-size: 11px; }
-          .register-table .day-h { min-width: 0; padding: 7px 1px; }
-          .register-table .day-c { width: auto; min-width: 0; padding: 7px 1px; font-size: 11px; }
+          /* The table can't get wider than the page, so we make it a little
+             bigger downward instead: slightly larger text and taller rows.
+             Names stay on one line (there's spare width); Department +
+             Designation are dropped on paper. */
+          .register-table { font-size: 9.5px; width: 100%; }
+          .register-table th, .register-table td { padding: 4px 2px; }
+          .register-table thead th { font-size: 9.5px; }
+          .register-table .tot-c, .register-table .tot-h { font-size: 9.5px; }
+          .register-table .day-h { min-width: 0; padding: 4px 1px; }
+          .register-table .day-c { width: auto; min-width: 0; padding: 4px 1px; font-size: 9.5px; }
           .register-table .tot-h { min-width: 0; }
           .register-table .col-dept, .register-table .emp-dept,
           .register-table .col-desig, .register-table .emp-desig { display: none; }
-          .register-table .emp-id { padding-left: 4px; font-size: 10px; white-space: nowrap; }
-          /* Let the name wrap to a second line rather than force the column wide. */
-          .register-table .emp-name { padding-left: 4px; white-space: normal; }
-          .register-table .status-pill { padding: 1px 4px !important; font-size: 10px !important; }
+          .register-table .emp-id { padding-left: 4px; font-size: 9px; }
+          .register-table .emp-name { padding-left: 4px; }
+          .register-table .status-pill { padding: 1px 3px !important; font-size: 9px !important; }
           /* Un-freeze for print so columns lay out normally on paper. */
           .register-table .fz { position: static; box-shadow: none; }
           .register-table thead tr.register-head th { position: static; }
