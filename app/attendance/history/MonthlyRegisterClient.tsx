@@ -248,7 +248,7 @@ export default function MonthlyRegisterClient({
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
-            <tr>
+            <tr className="register-head">
               <th className="fz fz1">Emp ID</th>
               <th className="fz fz2">Full Name</th>
               <th className="col-dept">Department</th>
@@ -324,7 +324,9 @@ export default function MonthlyRegisterClient({
       </div>
 
       <style jsx global>{`
-        .register-wrap { max-width: 100%; }
+        /* Cap the height so the table scrolls inside its own box — that lets the
+           column-header row stay frozen at the top while the rows scroll. */
+        .register-wrap { max-width: 100%; max-height: 78vh; }
         .register-table {
           border-collapse: collapse;
           font-size: 11px;
@@ -383,13 +385,18 @@ export default function MonthlyRegisterClient({
         .register-table thead th.fz { z-index: 4; }
         .register-table .fz1 { left: 0; width: 120px; min-width: 120px; max-width: 120px; }
         .register-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
+        /* Freeze the column-header row at the top of the scroll box; the red
+           banner above it scrolls away. Frozen corner cells (Emp ID / Name) get
+           the highest z so they win in both directions. */
+        .register-table thead tr.register-head th { position: sticky; top: 0; z-index: 4; }
+        .register-table thead tr.register-head th.fz { z-index: 6; }
         .register-table tbody tr:hover td { background: var(--bg2); }
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
         @media print {
           @page { size: A4 landscape; margin: 5mm; }
           .register-banner { display: table-row !important; }
-          .register-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
+          .register-wrap { overflow: visible !important; max-height: none !important; border: none !important; box-shadow: none !important; }
           /* Fits A4 landscape at 100%: Department + Designation are dropped on
              paper, and the day/total header min-widths are released so those
              columns shrink to content. */
@@ -407,6 +414,7 @@ export default function MonthlyRegisterClient({
           .register-table .status-pill { padding: 1px 3px !important; font-size: 8.5px !important; }
           /* Un-freeze for print so columns lay out normally on paper. */
           .register-table .fz { position: static; box-shadow: none; }
+          .register-table thead tr.register-head th { position: static; }
           .register-table .fz1, .register-table .fz2 { width: auto; min-width: 0; max-width: none; }
         }
       `}</style>
