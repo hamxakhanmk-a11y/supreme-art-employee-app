@@ -189,7 +189,7 @@ export default function RangeRegisterClient({
                 📋 Attendance Register — {rangeLabel}
               </th>
             </tr>
-            <tr>
+            <tr className="range-head-top">
               <th rowSpan={2} className="fz fz1">Emp ID</th>
               <th rowSpan={2} className="fz fz2">Full Name</th>
               <th rowSpan={2} className="col-dept">Department</th>
@@ -201,7 +201,7 @@ export default function RangeRegisterClient({
               ))}
               <th colSpan={11} className="tot-group-h">Totals</th>
             </tr>
-            <tr>
+            <tr className="range-head-sub">
               {months.flatMap(ym => [
                 <th key={`${ym.y}-${ym.m}-P`} className="sub-h" style={{ color: STATUS_COLORS.P.color }}>P</th>,
                 <th key={`${ym.y}-${ym.m}-A`} className="sub-h" style={{ color: STATUS_COLORS.A.color }}>A</th>,
@@ -261,7 +261,9 @@ export default function RangeRegisterClient({
       </div>
 
       <style jsx global>{`
-        .range-wrap { max-width: 100%; }
+        /* Cap the height so the table scrolls inside its own box — that lets the
+           header rows stay frozen at the top while the rows scroll. */
+        .range-wrap { max-width: 100%; max-height: 78vh; }
         .range-table { border-collapse: collapse; font-size: 11px; background: var(--bg); width: max-content; min-width: 100%; }
         .range-table th, .range-table td {
           border: 1px solid var(--border);
@@ -281,12 +283,19 @@ export default function RangeRegisterClient({
         .range-table thead th.fz { z-index: 4; }
         .range-table .fz1 { left: 0; width: 120px; min-width: 120px; max-width: 120px; }
         .range-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
+        /* Freeze both header rows at the top of the scroll box (the red banner
+           above scrolls away). The top labels row is a fixed height so the
+           sub-header row can stick exactly beneath it. Frozen corner cells
+           (Emp ID / Name) span both rows and get the highest z. */
+        .range-table thead tr.range-head-top th { position: sticky; top: 0; z-index: 4; box-sizing: border-box; height: 28px; }
+        .range-table thead tr.range-head-sub th { position: sticky; top: 28px; z-index: 4; }
+        .range-table thead tr.range-head-top th.fz { z-index: 6; }
         .range-table tbody tr:hover td { background: var(--bg2); }
 
         @media print {
           @page { size: A4 landscape; margin: 5mm; }
           .range-banner { display: table-row !important; }
-          .range-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
+          .range-wrap { overflow: visible !important; max-height: none !important; border: none !important; box-shadow: none !important; }
           /* Fits A4 landscape at 100%: Department + Designation dropped on paper. */
           .range-table { font-size: 8.5px; width: 100%; }
           .range-table th, .range-table td { padding: 2px 2px; }
@@ -296,6 +305,7 @@ export default function RangeRegisterClient({
           .range-table .status-pill { padding: 1px 3px !important; font-size: 8.5px !important; }
           .range-table .fz { position: static; box-shadow: none; }
           .range-table .fz1, .range-table .fz2 { width: auto; min-width: 0; max-width: none; }
+          .range-table thead tr.range-head-top th, .range-table thead tr.range-head-sub th { position: static; height: auto; }
         }
       `}</style>
     </>
