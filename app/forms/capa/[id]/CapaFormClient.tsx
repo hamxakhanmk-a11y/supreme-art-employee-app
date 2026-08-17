@@ -205,9 +205,11 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           background: url('/logo.png') center 55% / 46% no-repeat;
           opacity: 0.05; pointer-events: none;
         }
-        /* Document-control number — fixed top-right on every CAPA report. */
+        /* Document-control number — a right-aligned line at the top of every
+           CAPA report. In normal flow (not absolute) so it renders the same on
+           screen and in print. */
         .capa-docno {
-          position: absolute; top: 14px; right: 16px;
+          text-align: right;
           font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
           color: var(--text2); white-space: nowrap;
         }
@@ -275,8 +277,8 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           }
           .capa-watermark { opacity: 0.05; }
 
-          /* Doc-control number — pin to the sheet's top-right corner on paper. */
-          .capa-docno { top: 0; right: 0; font-size: 8.5pt; color: #7C1F1F; }
+          /* Doc-control number — right-aligned at the top on paper too. */
+          .capa-docno { font-size: 8.5pt; color: #7C1F1F; margin-bottom: 2px; }
           /* Header — logo, title and company line stay on the printout. */
           .capa-head { gap: 12px; padding-bottom: 5px; }
           .capa-logo { height: 40px; }
