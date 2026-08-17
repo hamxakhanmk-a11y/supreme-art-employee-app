@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMe, useCanEdit } from "@/components/MeProvider";
 import {
-  CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE,
+  CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE, CAPA_DOC_NO,
   parseCapaData, type CapaData, type CapaStatus,
 } from "@/lib/capa";
 
@@ -119,6 +119,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
       {/* ── The report ── */}
       <div className="capa-sheet">
         <div className="capa-watermark" aria-hidden />
+        <div className="capa-docno">Doc No: {CAPA_DOC_NO}</div>
 
         {/* A <div>, not a <header> — the global print stylesheet hides every
             <header> element, which would drop this report's own header. */}
@@ -204,6 +205,12 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           background: url('/logo.png') center 55% / 46% no-repeat;
           opacity: 0.05; pointer-events: none;
         }
+        /* Document-control number — fixed top-right on every CAPA report. */
+        .capa-docno {
+          position: absolute; top: 14px; right: 16px;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+          color: var(--text2); white-space: nowrap;
+        }
         .capa-head {
           display: flex; align-items: center; gap: 16px;
           padding-bottom: 10px; position: relative;
@@ -268,6 +275,8 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           }
           .capa-watermark { opacity: 0.05; }
 
+          /* Doc-control number — pin to the sheet's top-right corner on paper. */
+          .capa-docno { top: 0; right: 0; font-size: 8.5pt; color: #7C1F1F; }
           /* Header — logo, title and company line stay on the printout. */
           .capa-head { gap: 12px; padding-bottom: 5px; }
           .capa-logo { height: 40px; }
