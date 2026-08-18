@@ -304,19 +304,19 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           .capa-cell input[type="text"], .capa-cell input[type="date"] {
             font-size: 9pt; padding: 1px 0; border-bottom: 1px solid #333;
           }
-          .capa-cell textarea {
+          .capa-cell textarea, .capa-cell .print-ta-mirror {
             font-size: 9pt; line-height: 1.3; border: none; border-bottom: 1px solid #333;
             border-radius: 0; padding: 1px 0; min-height: 0;
           }
           .capa-foot { margin-top: 10px; padding-top: 6px; font-size: 8pt; }
 
-          /* Every field has a fixed height (single-line inputs, and textareas
-             sized by their rows), so the printout is a constant length no matter
-             how much is typed — it lands within two pages every time. Keep each
-             section heading with the fields under it, but let the field grids
-             flow across the page break so both pages fill densely instead of
-             spilling onto a third. */
+          /* The report is as long as its contents: every answer prints in full
+             (see components/PrintTextareas.tsx), so a heavily written-up CAPA
+             runs past two pages rather than losing text off the bottom of a
+             box. Keep each section heading with the fields under it, and let
+             the field grids flow across page breaks so the pages fill densely. */
           .capa-section-head { break-after: avoid; page-break-after: avoid; }
+          .capa-cell:not(.full) { break-inside: avoid; }
         }
       `}</style>
     </div>

@@ -3,6 +3,7 @@ import "./globals.css";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
 import PrintWatermark from "@/components/PrintWatermark";
+import PrintTextareas from "@/components/PrintTextareas";
 import { MeProvider } from "@/components/MeProvider";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body>
         <MeProvider>
           <PrintWatermark />
+          <PrintTextareas />
           <TopNav />
           <div style={{ display: "flex", alignItems: "flex-start" }}>
             <Sidebar />
