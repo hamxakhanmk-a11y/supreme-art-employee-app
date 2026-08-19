@@ -136,16 +136,16 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
                   <td>
                     {r.demandNo
                       ? (r.demandId != null
-                        ? <Link href={`/procurement/demand/${r.demandId}`} className="doc-link">#{r.demandNo}</Link>
+                        ? <Link href={`/procurement/demand/${r.demandId}?ref=report`} className="doc-link">#{r.demandNo}</Link>
                         : `#${r.demandNo}`)
                       : "—"}
                   </td>
-                  <td><Link href={`/procurement/po/${r.poId}`} className="doc-link" style={{ fontWeight: 700 }}>#{r.poNo}</Link></td>
+                  <td><Link href={`/procurement/po/${r.poId}?ref=report`} className="doc-link" style={{ fontWeight: 700 }}>#{r.poNo}</Link></td>
                   <td>
                     {r.grns.length === 0 ? "—" : r.grns.map((g, j) => (
                       <span key={g.id}>
                         {j > 0 && ", "}
-                        <Link href={`/procurement/grn/${g.id}`} className="doc-link">#{g.label}</Link>
+                        <Link href={`/procurement/grn/${g.id}?ref=report`} className="doc-link">#{g.label}</Link>
                       </span>
                     ))}
                   </td>

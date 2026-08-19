@@ -8,7 +8,8 @@ import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
 
-export default async function GrnView({ params }: { params: Promise<{ id: string }> }) {
+export default async function GrnView({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string }> }) {
+  const fromReport = (await searchParams).ref === "report";
   await requireModule("grn");
   await ensureProcurementTables();
   const { id } = await params;
@@ -20,7 +21,9 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
   return (
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
-        copies={FORM_COPIES.grn} backHref="/procurement/grn"
+        copies={FORM_COPIES.grn}
+        backHref={fromReport ? "/reports/procurement" : "/procurement/grn"}
+        backLabel={fromReport ? "← Back to Report" : "← Back"}
         pdfFilename={`GRR-${g.gatePassNo || g.id}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">

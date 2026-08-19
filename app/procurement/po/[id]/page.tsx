@@ -8,7 +8,8 @@ import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
 
-export default async function PoView({ params }: { params: Promise<{ id: string }> }) {
+export default async function PoView({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string }> }) {
+  const fromReport = (await searchParams).ref === "report";
   await requireModule("po");
   await ensureProcurementTables();
   const { id } = await params;
@@ -27,7 +28,9 @@ export default async function PoView({ params }: { params: Promise<{ id: string 
   return (
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
-        copies={FORM_COPIES.po} backHref="/procurement/po" compact
+        copies={FORM_COPIES.po}
+        backHref={fromReport ? "/reports/procurement" : "/procurement/po"}
+        backLabel={fromReport ? "← Back to Report" : "← Back"} compact
         pdfFilename={`PO-${docNoLabel(p.poNo, p.registered)}.pdf`}>
         <div className="pf-metarow">
           <div className="pf-to">
