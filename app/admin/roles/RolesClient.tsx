@@ -25,7 +25,7 @@ const GROUP_ORDER = [
 function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
-  if (["demand", "po", "grn", "inspection"].includes(key)) return "Procurement";
+  if (["demand", "po", "grn"].includes(key)) return "Procurement";
   switch (key) {
     case "employees":  return "Employees";
     case "attendance": return "Attendance";

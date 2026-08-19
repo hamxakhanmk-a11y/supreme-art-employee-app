@@ -39,7 +39,6 @@ export type ModuleKey =
   | "demand"
   | "po"
   | "grn"
-  | "inspection"
   | "store"
   | "capa";
 
@@ -52,7 +51,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "reports.leaves",      label: "Report · Leaves",      hint: "Leave history — filters & export" },
   { key: "reports.halfday",     label: "Report · Half-Day",    hint: "Half-day history — filters & export" },
   { key: "reports.salary",      label: "Report · Salary",      hint: "Salary records — view & reprint slips" },
-  { key: "reports.procurement", label: "Report · Procurement", hint: "Demand / PO / GRR / Inspection register" },
+  { key: "reports.procurement", label: "Report · Procurement", hint: "Procurement master report — Demand → PO → GRR" },
   { key: "reports.station",     label: "Report · Station",     hint: "Hourly-leave register from Station" },
   { key: "reports.activity",    label: "Report · Activity Log", hint: "Audit trail of who did what" },
   { key: "salary",     label: "Salary",      hint: "Generate & view salary slips" },
@@ -68,7 +67,6 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
-  { key: "inspection", label: "Inspection",   hint: "Procurement — incoming material inspection (QC)" },
   { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];

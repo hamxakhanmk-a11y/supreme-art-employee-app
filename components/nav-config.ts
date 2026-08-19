@@ -31,7 +31,7 @@ export const MODULES_BASE: ModuleDef[] = [
   { key: "kpi",        label: "KPI",        module: "kpi" },
   { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
   { key: "station",    label: "Station",    module: "station" },
-  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn", "inspection"] },
+  { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
   { key: "store",      label: "Store",      module: "store" },
   { key: "activity",   label: "Activity Log", module: "reports.activity" },
   { key: "users",      label: "Users",      superadminOnly: true },
@@ -123,7 +123,6 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/procurement/demand", label: "Demand" },
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRR" },
-        { href: "/procurement/inspection", label: "Inspection" },
         { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
       ];
     case "store":

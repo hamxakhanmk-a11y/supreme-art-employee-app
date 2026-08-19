@@ -67,7 +67,7 @@ export default async function ReportsLanding() {
             icon="📦"
             title="Procurement"
             urdu="خریداری کا ریکارڈ"
-            desc="Demands, purchase orders, goods received and inspections. Filter by stage — demand created, PO created, delivered, inspected — and by date."
+            desc="Master report — every ordered item traced Demand → PO → GRR, with its received status. Filter by status, search, and pick a date range."
           />
         )}
         {canStation && (
