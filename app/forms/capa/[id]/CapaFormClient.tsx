@@ -155,20 +155,20 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           <DateCell label="Detection Date" value={d.detection_date} onChange={v => set("detection_date", v)} ro={ro} />
         </div>
 
-        <SectionHead n={3} title="ROOT CAUSE ANALYSIS" />
-        <div className="capa-grid">
-          <Area label="Root Cause (5-Why / Fishbone Analysis)" value={d.root_cause} onChange={v => set("root_cause", v)} ph="Why → Why → Why…" rows={4} ro={ro} />
-          <ListCell label="Category" value={d.category} onChange={v => set("category", v)} options={CAPA_CATEGORIES} id="cat" ro={ro} />
-          <Cell label="Analysis Done By" value={d.analysis_done_by} onChange={v => set("analysis_done_by", v)} ph="Name" ro={ro} />
-          <DateCell label="Analysis Date" value={d.analysis_date} onChange={v => set("analysis_date", v)} ro={ro} />
-        </div>
-
-        <SectionHead n={4} title="ACTIONS" />
+        <SectionHead n={3} title="ACTIONS" />
         <div className="capa-grid">
           <Area label="Corrective Action (immediate steps to contain / correct)" value={d.corrective_action} onChange={v => set("corrective_action", v)} rows={3} ro={ro} />
           <Area label="Preventive Action (systematic changes to prevent recurrence)" value={d.preventive_action} onChange={v => set("preventive_action", v)} rows={3} ro={ro} />
           <DateCell label="Action Date" value={d.action_date} onChange={v => set("action_date", v)} ro={ro} />
           <Cell label="Action By" value={d.action_by} onChange={v => set("action_by", v)} ph="Name" ro={ro} />
+        </div>
+
+        <SectionHead n={4} title="ROOT CAUSE ANALYSIS" />
+        <div className="capa-grid">
+          <Area label="Root Cause (5-Why / Fishbone Analysis)" value={d.root_cause} onChange={v => set("root_cause", v)} ph="Why → Why → Why…" rows={4} ro={ro} />
+          <ListCell label="Category" value={d.category} onChange={v => set("category", v)} options={CAPA_CATEGORIES} id="cat" ro={ro} />
+          <Cell label="Analysis Done By" value={d.analysis_done_by} onChange={v => set("analysis_done_by", v)} ph="Name" ro={ro} />
+          <DateCell label="Analysis Date" value={d.analysis_date} onChange={v => set("analysis_date", v)} ro={ro} />
         </div>
 
         <SectionHead n={5} title="VERIFICATION & CLOSURE" />
@@ -304,19 +304,19 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           .capa-cell input[type="text"], .capa-cell input[type="date"] {
             font-size: 9pt; padding: 1px 0; border-bottom: 1px solid #333;
           }
-          .capa-cell textarea {
+          .capa-cell textarea, .capa-cell .print-ta-mirror {
             font-size: 9pt; line-height: 1.3; border: none; border-bottom: 1px solid #333;
             border-radius: 0; padding: 1px 0; min-height: 0;
           }
           .capa-foot { margin-top: 10px; padding-top: 6px; font-size: 8pt; }
 
-          /* Every field has a fixed height (single-line inputs, and textareas
-             sized by their rows), so the printout is a constant length no matter
-             how much is typed — it lands within two pages every time. Keep each
-             section heading with the fields under it, but let the field grids
-             flow across the page break so both pages fill densely instead of
-             spilling onto a third. */
+          /* The report is as long as its contents: every answer prints in full
+             (see components/PrintTextareas.tsx), so a heavily written-up CAPA
+             runs past two pages rather than losing text off the bottom of a
+             box. Keep each section heading with the fields under it, and let
+             the field grids flow across page breaks so the pages fill densely. */
           .capa-section-head { break-after: avoid; page-break-after: avoid; }
+          .capa-cell:not(.full) { break-inside: avoid; }
         }
       `}</style>
     </div>

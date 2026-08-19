@@ -146,6 +146,10 @@ input, select, textarea {
   box-sizing: border-box;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
+/* Stand-in that carries a textarea's full text onto paper — see
+   components/PrintTextareas.tsx. It only ever exists while printing. */
+.print-ta-mirror { display: none; }
+
 input:hover, select:hover, textarea:hover { border-color: var(--text2); }
 input:focus, select:focus, textarea:focus {
   outline: none;
@@ -550,14 +554,16 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   body.print-scaled .leave-form .form-label { font-size: 13px !important; }
   body.print-scaled input,
   body.print-scaled select,
-  body.print-scaled textarea { font-size: 14px !important; padding: 9px 12px !important; }
+  body.print-scaled textarea,
+  body.print-scaled .print-ta-mirror { font-size: 14px !important; padding: 9px 12px !important; }
   body.print-scaled .lf-office-banner { margin-top: 16px !important; padding: 9px 14px !important; font-size: 14px !important; }
   body.print-scaled .lf-final-banner { margin-top: 14px !important; padding: 10px 14px !important; font-size: 14px !important; }
   body.print-scaled .lf-blank-line { height: 30px !important; }
   body.print-scaled .lf-policy-box { padding: 11px 14px !important; }
   body.print-scaled .lf-field-label { margin-bottom: 4px !important; }
-  body.print-scaled textarea { min-height: 80px !important; }
-  body.print-scaled textarea.lf-reason { min-height: 150px !important; }
+  body.print-scaled textarea, body.print-scaled .print-ta-mirror { min-height: 80px !important; }
+  body.print-scaled textarea.lf-reason,
+  body.print-scaled .print-ta-mirror.lf-reason { min-height: 150px !important; }
   /* Form wrap — full printable width but DON'T force the whole block onto
      a single page break: that rule was pushing the entire form to page 2
      whenever the browser estimated even a 1-pixel overflow. */
@@ -578,7 +584,21 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
      empty and filling by hand. Drops UI chrome (dropdown arrows,
      calendar icons, focus rings) and keeps just a ruled box that
      shows whatever the user already typed/selected (or stays blank). */
-  input, select, textarea {
+  /* The mirror takes the textarea's place on paper: it holds the whole
+     value, wraps it, and can break across pages. */
+  textarea[data-print-mirrored] { display: none !important; }
+  .print-ta-mirror {
+    display: block !important;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    width: 100%;
+    box-sizing: border-box;
+    /* Don't strand a lone line of a wrapped answer on its own page. */
+    orphans: 2;
+    widows: 2;
+  }
+
+  input, select, textarea, .print-ta-mirror {
     border: 1px solid #555 !important;
     background: #fff !important;
     color: #000 !important;
@@ -603,7 +623,7 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   /* Hide placeholder text in print so empty fields stay truly blank */
   input::placeholder, textarea::placeholder { color: transparent !important; }
   /* Give textareas room for handwriting */
-  textarea { min-height: 70px !important; resize: none !important; }
+  textarea, .print-ta-mirror { min-height: 70px !important; resize: none !important; }
   /* When a required select has no value, it's :invalid — hide the
      "— Select Employee —" placeholder text so the box prints empty. */
   select:invalid { color: transparent !important; }
