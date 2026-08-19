@@ -5,7 +5,7 @@ import {
   ensureProcurementTables, parseItems, computePoReceipts, docNoLabel,
   type PoItem, type GrnItem,
 } from "@/lib/procurement";
-import ProcurementReportClient, { type MasterRow } from "./ProcurementReportClient";
+import ProcurementReportClient, { type MasterRow, type GrrRef } from "./ProcurementReportClient";
 
 export const dynamic = "force-dynamic";
 
@@ -43,26 +43,31 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       const d = normDesc(it.description || it.item || "");
       if (d && !srByDesc.has(d)) srByDesc.set(d, it.srNo);
     }
-    const grrBySr = new Map<number, Set<string>>();
+    const grnRef = (g: typeof poGrns[number]): GrrRef => ({
+      id: g.id, label: docNoLabel(g.grnNo, g.registered), gatePass: g.gatePassNo || "",
+    });
+    const grnsBySr = new Map<number, Map<number, GrrRef>>();
     for (const g of poGrns) {
-      const label = docNoLabel(g.grnNo, g.registered);
+      const ref = grnRef(g);
       for (const it of parseItems<GrnItem>(g.items)) {
         let sr = it.poSrNo;
         if (sr == null) sr = srByDesc.get(normDesc(it.item || ""));
         if (sr == null) continue;
-        if (!grrBySr.has(sr)) grrBySr.set(sr, new Set());
-        grrBySr.get(sr)!.add(label);
+        if (!grnsBySr.has(sr)) grnsBySr.set(sr, new Map());
+        grnsBySr.get(sr)!.set(g.id, ref);
       }
     }
 
     const poNo = docNoLabel(p.poNo, p.registered);
     const demandNo = p.demandNo != null ? String(p.demandNo) : "";
     const supplier = p.supplierName || "";
-    const allGrr = [...new Set(poGrns.map(g => docNoLabel(g.grnNo, g.registered)))].join(", ");
 
     if (poItems.length === 0) {
+      // No line items — still show the PO with all its GRRs (if any).
+      const allGrns = [...new Map(poGrns.map(g => [g.id, grnRef(g)])).values()];
       rows.push({
-        description: "", supplier, demandNo, poNo, grr: allGrr,
+        description: "", supplier, demandNo, demandId: p.demandId ?? null,
+        poNo, poId: p.id, grns: allGrns,
         status: poGrns.length ? "partial" : "none", date: p.date,
       });
       continue;
@@ -74,8 +79,9 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
         : (r.hasReceipt || r.received > 0) ? "partial" : "none";
       rows.push({
         description: it.description || it.item || "",
-        supplier, demandNo, poNo,
-        grr: [...(grrBySr.get(it.srNo) ?? [])].join(", "),
+        supplier, demandNo, demandId: p.demandId ?? null,
+        poNo, poId: p.id,
+        grns: [...(grnsBySr.get(it.srNo)?.values() ?? [])],
         status,
         date: p.date,
       });

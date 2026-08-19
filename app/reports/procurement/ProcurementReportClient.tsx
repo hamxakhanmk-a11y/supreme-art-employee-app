@@ -1,17 +1,23 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtDate } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
+
+// A GRR that received a PO line — id (to open it), display number, gate pass.
+export interface GrrRef { id: number; label: string; gatePass: string }
 
 // One traced line: a PO item, with its demand, PO, GRR(s) and received status.
 export interface MasterRow {
   description: string;
   supplier: string;
-  demandNo: string;   // "" when the PO was standalone
-  poNo: string;       // with "u" suffix for unregistered
-  grr: string;        // comma-separated GRR numbers, "" when none yet
+  demandNo: string;         // "" when the PO was standalone
+  demandId: number | null;  // to open the demand (null when typed by hand)
+  poNo: string;             // with "u" suffix for unregistered
+  poId: number;             // to open the PO
+  grns: GrrRef[];           // the GRR(s) that received this line
   status: "received" | "partial" | "none";
-  date: string;       // PO date (for sorting / range)
+  date: string;             // PO date (for sorting / range)
 }
 
 const STATUS_META = {
@@ -37,7 +43,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     if (filter !== "all" && r.status !== filter) return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
-    return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${r.grr}`.toLowerCase().includes(s);
+    const grrHay = r.grns.map(g => `${g.label} ${g.gatePass}`).join(" ");
+    return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${grrHay}`.toLowerCase().includes(s);
   }), [rows, filter, q]);
 
   function exportXlsx() {
@@ -46,9 +53,14 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       sheets: [{
         sheetName: "Master Report",
         title: `Supreme Art — Procurement Master Report   ${fmtDate(from)} → ${fmtDate(to)}`,
-        headers: ["Description", "Supplier", "Demand No", "PO No", "GRR No", "Received"],
-        rows: shown.map(r => [r.description, r.supplier, r.demandNo, r.poNo, r.grr, STATUS_META[r.status].label]),
-        colWidths: [34, 26, 11, 10, 14, 18],
+        headers: ["Description", "Supplier", "Demand No", "PO No", "GRR No", "Gate Pass No", "Received"],
+        rows: shown.map(r => [
+          r.description, r.supplier, r.demandNo, r.poNo,
+          r.grns.map(g => g.label).join(", "),
+          r.grns.map(g => g.gatePass).filter(Boolean).join(", "),
+          STATUS_META[r.status].label,
+        ]),
+        colWidths: [34, 26, 11, 10, 14, 16, 18],
         freezeCols: 1,
       }],
     });
@@ -66,7 +78,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       <div className="no-print" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Master Report</h1>
         <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-          Every ordered item traced Demand → PO → GRR, with its delivery status.
+          Every ordered item traced Demand → PO → GRR, with its delivery status. Click any number to open the document.
         </p>
       </div>
 
@@ -90,8 +102,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           }}>{f.label} ({counts[f.key]})</button>
         ))}
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Description, supplier, demand / PO / GRR no…"
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 260, marginLeft: 6 }} />
+          placeholder="🔍 Description, supplier, demand / PO / GRR / gate pass…"
+          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 280, marginLeft: 6 }} />
         <div style={{ flex: 1 }} />
         <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0}>⬇ Export Excel</button>
         <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
@@ -106,23 +118,38 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           <thead>
             <tr>
               <th>Description</th><th>Supplier</th>
-              <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Received</th>
+              <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Gate Pass No</th><th>Received</th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
                 {q.trim() || filter !== "all" ? "No items match this filter." : "No purchase orders in this range."}
               </td></tr>
             ) : shown.map((r, i) => {
               const st = STATUS_META[r.status];
+              const gatePasses = r.grns.map(g => g.gatePass).filter(Boolean);
               return (
                 <tr key={i}>
                   <td style={{ fontWeight: 600, maxWidth: 320 }}>{r.description || "—"}</td>
                   <td>{r.supplier || "—"}</td>
-                  <td>{r.demandNo ? `#${r.demandNo}` : "—"}</td>
-                  <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{r.poNo}</td>
-                  <td style={{ color: r.grr ? "var(--text)" : "var(--text3)" }}>{r.grr ? `#${r.grr.split(", ").join(", #")}` : "—"}</td>
+                  <td>
+                    {r.demandNo
+                      ? (r.demandId != null
+                        ? <Link href={`/procurement/demand/${r.demandId}`} className="doc-link">#{r.demandNo}</Link>
+                        : `#${r.demandNo}`)
+                      : "—"}
+                  </td>
+                  <td><Link href={`/procurement/po/${r.poId}`} className="doc-link" style={{ fontWeight: 700 }}>#{r.poNo}</Link></td>
+                  <td>
+                    {r.grns.length === 0 ? "—" : r.grns.map((g, j) => (
+                      <span key={g.id}>
+                        {j > 0 && ", "}
+                        <Link href={`/procurement/grn/${g.id}`} className="doc-link">#{g.label}</Link>
+                      </span>
+                    ))}
+                  </td>
+                  <td style={{ color: gatePasses.length ? "var(--text)" : "var(--text3)" }}>{gatePasses.length ? gatePasses.join(", ") : "—"}</td>
                   <td>
                     <span style={{ padding: "2px 10px", borderRadius: 999, background: st.bg, color: st.fg, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{st.label}</span>
                   </td>
@@ -138,6 +165,11 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         <strong> Partially received</strong> when some has arrived, <strong>Not received</strong> when none has.
         Items only demanded (no PO yet) don&apos;t appear here — they have no supplier or PO.
       </div>
+
+      <style jsx>{`
+        .doc-link { color: var(--brand); font-weight: 700; text-decoration: none; }
+        .doc-link:hover { text-decoration: underline; }
+      `}</style>
     </div>
   );
 }
