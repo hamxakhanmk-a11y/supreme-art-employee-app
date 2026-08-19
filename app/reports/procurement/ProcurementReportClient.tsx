@@ -1,141 +1,72 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fmtDate } from "@/lib/procurement";
-import { downloadWorkbookXlsx, type SheetSpec } from "@/lib/xlsx";
+import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
-export interface DocRow {
-  kind: "demand" | "po" | "grn" | "inspection";
-  id: number;
-  no: number;
-  date: string;
-  ref: number | null;      // demand no on a PO, PO no on a GRN / inspection
-  party: string;           // requester / supplier / receiver
-  items: number | null;    // null where a count is meaningless (inspection)
-  status: string;          // Demand created | PO created | Delivered | Inspected
-  by: string;
+// One traced line: a PO item, with its demand, PO, GRR(s) and received status.
+export interface MasterRow {
+  description: string;
+  supplier: string;
+  demandNo: string;   // "" when the PO was standalone
+  poNo: string;       // with "u" suffix for unregistered
+  grr: string;        // comma-separated GRR numbers, "" when none yet
+  status: "received" | "partial" | "none";
+  date: string;       // PO date (for sorting / range)
 }
 
-// One fully-detailed spreadsheet line, tagged with the "kind-id" of its parent
-// document so the client can export exactly the rows the filters are showing.
-export interface ExportRow { key: string; cells: (string | number | null)[] }
-export interface ExportData {
-  demand: ExportRow[];
-  po: ExportRow[];
-  grn: ExportRow[];
-  inspection: ExportRow[];
-}
-
-// Column layout for each detailed export sheet (order matches page.tsx cells).
-const SHEETS = {
-  demand: {
-    sheetName: "Demands",
-    headers: ["Demand No", "Date", "Required By", "Demanded By", "Department", "Prepared By", "Approved By", "Status", "Sr", "Material", "Required For", "Qty", "Item Remarks", "Created By"],
-    colWidths: [11, 12, 12, 18, 18, 14, 14, 14, 5, 26, 20, 8, 22, 16],
-  },
-  po: {
-    sheetName: "Purchase Orders",
-    headers: ["PO No", "Date", "Demand Ref", "Supplier", "Supplier Address", "Supplier Contact", "Delivery Date", "Order Placed By", "Status", "Sr", "Description", "Qty", "UOM", "Rate", "Gross", "Tax %", "Tax Value", "Net Value", "Created By"],
-    colWidths: [10, 12, 11, 22, 28, 18, 13, 16, 13, 5, 26, 8, 8, 12, 13, 8, 13, 14, 16],
-  },
-  grn: {
-    sheetName: "Deliveries (GRR)",
-    headers: ["GRR No", "Gate Pass No", "Date", "PO Ref", "Received By", "Verified By", "Sr", "Item", "Qty", "Created By"],
-    colWidths: [10, 16, 12, 10, 16, 16, 5, 26, 8, 16],
-  },
-  inspection: {
-    sheetName: "Inspections",
-    headers: ["Insp No", "Date", "PO Ref", "Material Type", "Supplier", "Inspected By", "Parameter", "Standard", "Sample 1", "Sample 2", "Sample 3", "Sample 4"],
-    colWidths: [10, 12, 10, 20, 22, 16, 22, 16, 12, 12, 12, 12],
-  },
+const STATUS_META = {
+  received: { label: "Received", fg: "#15803D", bg: "#dcf5dc" },
+  partial: { label: "Partially received", fg: "#B45309", bg: "#fef3c7" },
+  none: { label: "Not received", fg: "#B91C1C", bg: "#fde8e8" },
 } as const;
 
-type Filter = "all" | "demand" | "po" | "delivered" | "inspection";
+type Filter = "all" | "received" | "partial" | "none";
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "demand", label: "Demand created" },
-  { key: "po", label: "PO created" },
-  { key: "delivered", label: "Delivered" },
-  { key: "inspection", label: "Inspected" },
-];
-
-const KIND = {
-  demand: { label: "Demand", fg: "#185FA5", bg: "#e0f2fe", href: "/procurement/demand" },
-  po: { label: "PO", fg: "#B45309", bg: "#fef3c7", href: "/procurement/po" },
-  grn: { label: "GRR", fg: "#15803D", bg: "#dcf5dc", href: "/procurement/grn" },
-  inspection: { label: "Inspection", fg: "#7C3AED", bg: "#ede9fe", href: "/procurement/inspection" },
-} as const;
-
-function matches(r: DocRow, f: Filter) {
-  if (f === "all") return true;
-  if (f === "demand") return r.kind === "demand";
-  if (f === "po") return r.kind === "po";
-  if (f === "inspection") return r.kind === "inspection";
-  return r.status === "Delivered";   // delivered = goods received
-}
-
-export default function ProcurementReportClient({ rows, from, to, exportData }: { rows: DocRow[]; from: string; to: string; exportData: ExportData }) {
+export default function ProcurementReportClient({ rows, from, to }: { rows: MasterRow[]; from: string; to: string }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
 
-  const shown = useMemo(() => rows.filter(r => {
-    if (!matches(r, filter)) return false;
-    if (!q.trim()) return true;
-    const hay = `${KIND[r.kind].label} ${r.no} ${r.party} ${r.status} ${r.by}`.toLowerCase();
-    return hay.includes(q.trim().toLowerCase());
-  }), [rows, filter, q]);
-
   const counts = useMemo(() => ({
     all: rows.length,
-    demand: rows.filter(r => r.kind === "demand").length,
-    po: rows.filter(r => r.kind === "po").length,
-    delivered: rows.filter(r => r.status === "Delivered").length,
-    inspection: rows.filter(r => r.kind === "inspection").length,
+    received: rows.filter(r => r.status === "received").length,
+    partial: rows.filter(r => r.status === "partial").length,
+    none: rows.filter(r => r.status === "none").length,
   }), [rows]);
 
+  const shown = useMemo(() => rows.filter(r => {
+    if (filter !== "all" && r.status !== filter) return false;
+    const s = q.trim().toLowerCase();
+    if (!s) return true;
+    return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${r.grr}`.toLowerCase().includes(s);
+  }), [rows, filter, q]);
+
   function exportXlsx() {
-    // Only export the document types the active filter is showing, and within
-    // those only the documents currently visible (respects the text search too).
-    const shownKeys = new Set(shown.map(r => `${r.kind}-${r.id}`));
-    const range = `${fmtDate(from)} → ${fmtDate(to)}`;
-
-    // Which detailed sheets this filter should produce.
-    const wantedKinds: (keyof ExportData)[] =
-      filter === "demand"     ? ["demand"] :
-      filter === "po"         ? ["po"] :
-      filter === "delivered"  ? ["grn"] :
-      filter === "inspection" ? ["inspection"] :
-      ["demand", "po", "grn", "inspection"];
-
-    const sheets: SheetSpec[] = [];
-    for (const kind of wantedKinds) {
-      const meta = SHEETS[kind];
-      const rowsForSheet = exportData[kind].filter(r => shownKeys.has(r.key)).map(r => r.cells);
-      if (rowsForSheet.length === 0) continue;
-      sheets.push({
-        sheetName: meta.sheetName,
-        title: `Supreme Art — ${meta.sheetName}   ${range}`,
-        headers: [...meta.headers],
-        rows: rowsForSheet,
-        colWidths: [...meta.colWidths],
-        freezeCols: 2,
-      });
-    }
-
-    const suffix = filter === "all" ? "all" : SHEETS[wantedKinds[0]].sheetName.toLowerCase().replace(/[^a-z]+/g, "-");
     downloadWorkbookXlsx({
-      filename: `procurement-${suffix}_${from}_to_${to}`,
-      sheets,
+      filename: `procurement-master_${from}_to_${to}`,
+      sheets: [{
+        sheetName: "Master Report",
+        title: `Supreme Art — Procurement Master Report   ${fmtDate(from)} → ${fmtDate(to)}`,
+        headers: ["Description", "Supplier", "Demand No", "PO No", "GRR No", "Received"],
+        rows: shown.map(r => [r.description, r.supplier, r.demandNo, r.poNo, r.grr, STATUS_META[r.status].label]),
+        colWidths: [34, 26, 11, 10, 14, 18],
+        freezeCols: 1,
+      }],
     });
   }
+
+  const FILTERS: { key: Filter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "received", label: "Received" },
+    { key: "partial", label: "Partially received" },
+    { key: "none", label: "Not received" },
+  ];
 
   return (
     <div className="fade-up">
       <div className="no-print" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Report</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Master Report</h1>
         <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-          Demands, purchase orders, goods received and inspections — filter by stage and date.
+          Every ordered item traced Demand → PO → GRR, with its delivery status.
         </p>
       </div>
 
@@ -148,73 +79,52 @@ export default function ProcurementReportClient({ rows, from, to, exportData }: 
         <button type="submit" className="btn btn-primary btn-sm">Apply</button>
       </form>
 
-      {/* Stage filter (instant) */}
+      {/* Status filter + search */}
       <div className="no-print" style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
         {FILTERS.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            style={{
-              padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${filter === f.key ? "var(--brand)" : "var(--border)"}`,
-              background: filter === f.key ? "var(--brand)" : "var(--bg)",
-              color: filter === f.key ? "#fff" : "var(--text)",
-            }}
-          >{f.label} ({counts[f.key]})</button>
+          <button key={f.key} onClick={() => setFilter(f.key)} style={{
+            padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer",
+            border: `1px solid ${filter === f.key ? "var(--brand)" : "var(--border)"}`,
+            background: filter === f.key ? "var(--brand)" : "var(--bg)",
+            color: filter === f.key ? "#fff" : "var(--text)",
+          }}>{f.label} ({counts[f.key]})</button>
         ))}
-        <input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Number, supplier, person…"
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 220, marginLeft: 6 }}
-        />
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Description, supplier, demand / PO / GRR no…"
+          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 260, marginLeft: 6 }} />
         <div style={{ flex: 1 }} />
         <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0}>⬇ Export Excel</button>
         <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
       </div>
 
       <div className="no-print" style={{ fontSize: 13, color: "var(--text2)", marginBottom: 10 }}>
-        Showing <strong>{shown.length}</strong> of {rows.length} document{rows.length === 1 ? "" : "s"} in range.
+        Showing <strong>{shown.length}</strong> of {rows.length} item{rows.length === 1 ? "" : "s"} in range.
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
             <tr>
-              <th>Type</th><th>No</th><th>Date</th><th>Ref No</th>
-              <th>Party</th><th className="num">Items</th><th>Status</th><th>Created by</th>
-              <th style={{ textAlign: "right" }} className="no-print">Open</th>
+              <th>Description</th><th>Supplier</th>
+              <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Received</th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
-                No procurement documents match this filter.
+              <tr><td colSpan={6} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
+                {q.trim() || filter !== "all" ? "No items match this filter." : "No purchase orders in this range."}
               </td></tr>
-            ) : shown.map(r => {
-              const k = KIND[r.kind];
+            ) : shown.map((r, i) => {
+              const st = STATUS_META[r.status];
               return (
-                <tr key={`${r.kind}-${r.id}`}>
+                <tr key={i}>
+                  <td style={{ fontWeight: 600, maxWidth: 320 }}>{r.description || "—"}</td>
+                  <td>{r.supplier || "—"}</td>
+                  <td>{r.demandNo ? `#${r.demandNo}` : "—"}</td>
+                  <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{r.poNo}</td>
+                  <td style={{ color: r.grr ? "var(--text)" : "var(--text3)" }}>{r.grr ? `#${r.grr.split(", ").join(", #")}` : "—"}</td>
                   <td>
-                    <span style={{ padding: "2px 10px", borderRadius: 999, background: k.bg, color: k.fg, fontSize: 11, fontWeight: 700 }}>{k.label}</span>
-                  </td>
-                  <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{r.no}</td>
-                  <td>{fmtDate(r.date)}</td>
-                  <td>{r.ref != null ? `#${r.ref}` : "—"}</td>
-                  <td>{r.party || "—"}</td>
-                  <td className="num">{r.items ?? "—"}</td>
-                  <td>
-                    <span style={{
-                      fontSize: 11.5, fontWeight: 700,
-                      color: r.status === "Delivered" ? "#15803D"
-                        : r.status === "Inspected" ? "#7C3AED"
-                        : r.status === "Partially delivered" ? "#B45309"
-                        : r.status === "PO created" ? "#B45309" : "#185FA5",
-                    }}>{r.status}</span>
-                  </td>
-                  <td style={{ fontSize: 12, color: "var(--text2)" }}>{r.by || "—"}</td>
-                  <td className="no-print" style={{ textAlign: "right" }}>
-                    <Link href={`${k.href}/${r.id}`} className="btn btn-sm">View</Link>
+                    <span style={{ padding: "2px 10px", borderRadius: 999, background: st.bg, color: st.fg, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{st.label}</span>
                   </td>
                 </tr>
               );
@@ -224,9 +134,9 @@ export default function ProcurementReportClient({ rows, from, to, exportData }: 
       </div>
 
       <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 10 }}>
-        A demand shows as <strong>PO created</strong> once it has been ordered, and a PO shows as
-        <strong> Delivered</strong> once its goods are received against a GRN.
-        Numbers run in blocks — demands from 5000, POs from 10000, GRNs from 15000, inspections from 20000.
+        One line per ordered item. <strong>Received</strong> once its full quantity is booked on a GRR,
+        <strong> Partially received</strong> when some has arrived, <strong>Not received</strong> when none has.
+        Items only demanded (no PO yet) don&apos;t appear here — they have no supplier or PO.
       </div>
     </div>
   );
