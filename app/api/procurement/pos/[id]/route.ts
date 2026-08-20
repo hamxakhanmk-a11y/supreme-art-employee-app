@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands, grns } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, tagSupplierRegistered } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
     items: JSON.stringify(items),
   }).where(eq(purchaseOrders.id, parseInt(id)));
-  await tagSupplierRegistered(b.supplierName, existing?.registered);
+  await syncSupplierFromPo(b.supplierName, {
+    registered: existing?.registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+  });
   await logActivity({ user: guard, action: "po.update", summary: `edited PO (id ${id})` });
   return NextResponse.json({ ok: true });
 }

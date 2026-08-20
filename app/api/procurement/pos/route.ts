@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextPoNo, tagSupplierRegistered } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextPoNo, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -73,8 +73,11 @@ export async function POST(req: Request) {
 
   // Mark the source demand as ordered.
   if (demandId) await db.update(demands).set({ status: "ordered" }).where(eq(demands.id, demandId));
-  // Sort the supplier into the registered / unregistered list.
-  await tagSupplierRegistered(b.supplierName, registered);
+  // Push the supplier's details (list, NTN, STRN, address, contact) onto the
+  // saved directory so the next PO for this supplier auto-fills them.
+  await syncSupplierFromPo(b.supplierName, {
+    registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+  });
 
   await logActivity({
     user: guard, action: "po.create",

@@ -97,6 +97,26 @@ export async function tagSupplierRegistered(name: string | null | undefined, reg
   await db.update(suppliers).set({ registered }).where(ilike(suppliers.name, n));
 }
 
+// When a PO is saved, push its supplier details (registered flag, NTN, STRN,
+// address, contact) onto the matching directory row, so the next PO for that
+// supplier auto-fills them. Only non-empty fields are written — a blank on one
+// PO never wipes a value the directory already has.
+export async function syncSupplierFromPo(
+  name: string | null | undefined,
+  d: { registered?: boolean | null; ntn?: string | null; strn?: string | null; address?: string | null; phone?: string | null },
+) {
+  const n = (name || "").trim();
+  if (!n) return;
+  const set: Record<string, unknown> = {};
+  if (d.registered != null) set.registered = d.registered;
+  if (d.ntn && String(d.ntn).trim()) set.ntn = String(d.ntn).trim();
+  if (d.strn && String(d.strn).trim()) set.strn = String(d.strn).trim();
+  if (d.address && String(d.address).trim()) set.address = String(d.address).trim();
+  if (d.phone && String(d.phone).trim()) set.contact = String(d.phone).trim();
+  if (Object.keys(set).length === 0) return;
+  await db.update(suppliers).set(set).where(ilike(suppliers.name, n));
+}
+
 // ============ Partial-receipt tracking (PO ↔ GRN) ============
 // A PO's goods can arrive across several GRNs — one product now, another later,
 // or half a quantity at a time. We reconcile every GRN line against its PO line

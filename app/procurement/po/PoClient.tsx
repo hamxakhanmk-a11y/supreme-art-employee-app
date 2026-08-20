@@ -433,7 +433,16 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{docNoLabel(p.poNo, p.registered)}</td>
                 <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
                 <td>{fmtDate(p.date)}</td>
-                <td>{p.supplierName || "—"}</td>
+                <td>
+                  <div>{p.supplierName || "—"}</div>
+                  {(p.supplierNtn || p.supplierStrn) && (
+                    <div style={{ fontSize: 10.5, color: "var(--text3)", marginTop: 1 }}>
+                      {p.supplierNtn ? `NTN ${p.supplierNtn}` : ""}
+                      {p.supplierNtn && p.supplierStrn ? " · " : ""}
+                      {p.supplierStrn ? `STRN ${p.supplierStrn}` : ""}
+                    </div>
+                  )}
+                </td>
                 <td>{fmtDate(p.expectedDate)}</td>
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
                 <td><TaxCell p={p} /></td>
