@@ -9,13 +9,14 @@ import { downloadWorkbookXlsx } from "@/lib/xlsx";
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
   supplierName: string | null; supplierAddress: string | null; supplierPhone: string | null;
+  supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string; registered: boolean | null; discount: number | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
 }
-interface Supplier { id: number; name: string; address: string | null; contact: string | null; registered: boolean | null }
+interface Supplier { id: number; name: string; address: string | null; contact: string | null; ntn: string | null; strn: string | null; registered: boolean | null }
 
 const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
 
@@ -38,6 +39,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [supplierName, setSupplierName] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierNtn, setSupplierNtn] = useState("");
+  const [supplierStrn, setSupplierStrn] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [terms, setTerms] = useState(PO_DEFAULT_TERMS.join("\n"));
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
@@ -50,7 +53,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setEditId(null); setEditNo(null);
     setDemandId(""); setDemandNoManual(""); setDate(new Date().toISOString().slice(0, 10));
     setSelectedSupplierId(""); setSupplierMsg("");
-    setSupplierName(""); setSupplierAddress(""); setSupplierPhone("");
+    setSupplierName(""); setSupplierAddress(""); setSupplierPhone(""); setSupplierNtn(""); setSupplierStrn("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setRegistered(null);
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
@@ -70,6 +73,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setDemandNoManual(p.demandNo != null ? String(p.demandNo) : "");
     setDate((p.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setSupplierName(p.supplierName || ""); setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
+    setSupplierNtn(p.supplierNtn || ""); setSupplierStrn(p.supplierStrn || "");
     setExpectedDate((p.expectedDate || "").slice(0, 10));
     setTerms(p.terms || ""); setOrderPlacedBy(p.orderPlacedBy || "");
     setRegistered(p.registered);
@@ -106,6 +110,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setSupplierName(s.name);
     setSupplierAddress(s.address || "");
     setSupplierPhone(s.contact || "");
+    setSupplierNtn(s.ntn || "");
+    setSupplierStrn(s.strn || "");
     if (s.registered != null) setRegistered(s.registered);
   }
   // Save whatever's typed to the supplier directory (dedupes by name server-side).
@@ -116,7 +122,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     try {
       const res = await fetch("/api/procurement/suppliers", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone, registered }),
+        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone, ntn: supplierNtn, strn: supplierStrn, registered }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Save failed");
@@ -150,7 +156,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           demandId: demandId || null, demandNo: demandNoManual, date, supplierName, supplierAddress, supplierPhone,
-          expectedDate, terms, orderPlacedBy, registered, items: clean,
+          supplierNtn, supplierStrn, expectedDate, terms, orderPlacedBy, registered, items: clean,
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -296,6 +302,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             </Field>
             <Field label="Address"><input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="auth-input" /></Field>
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
+            <Field label="NTN #"><input value={supplierNtn} onChange={e => setSupplierNtn(e.target.value)} className="auth-input" placeholder="e.g. 1234567-8" /></Field>
+            <Field label="STRN #"><input value={supplierStrn} onChange={e => setSupplierStrn(e.target.value)} className="auth-input" placeholder="Sales-tax reg. no." /></Field>
           </div>
 
           {/* Tax status is fixed by the list this PO is being created in. */}

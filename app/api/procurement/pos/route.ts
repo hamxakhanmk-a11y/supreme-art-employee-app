@@ -55,6 +55,8 @@ export async function POST(req: Request) {
     supplierAddress: b.supplierAddress || null,
     supplierContact: b.supplierContact || null,
     supplierPhone: b.supplierPhone || null,
+    supplierNtn: b.supplierNtn || null,
+    supplierStrn: b.supplierStrn || null,
     expectedDate: b.expectedDate || null,
     specification: b.specification || null,
     terms: b.terms || null,

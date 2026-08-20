@@ -496,6 +496,8 @@ export const purchaseOrders = pgTable("purchase_orders", {
   supplierAddress: text("supplier_address"),
   supplierContact: varchar("supplier_contact", { length: 160 }),
   supplierPhone: varchar("supplier_phone", { length: 60 }),
+  supplierNtn: varchar("supplier_ntn", { length: 40 }),
+  supplierStrn: varchar("supplier_strn", { length: 40 }),
   specification: text("specification"),
   terms: text("terms"),
   discount: doublePrecision("discount").default(0),
@@ -531,6 +533,8 @@ export const suppliers = pgTable("suppliers", {
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
   contact: varchar("contact", { length: 160 }),
+  ntn: varchar("ntn", { length: 40 }),
+  strn: varchar("strn", { length: 40 }),
   // true = registered (sales-tax invoice), false = unregistered, null = unmarked.
   registered: boolean("registered"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

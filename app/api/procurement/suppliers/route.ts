@@ -28,6 +28,8 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: "Supplier name is required" }, { status: 400 });
   const address = String(b.address || "").trim() || null;
   const contact = String(b.contact || "").trim() || null;
+  const ntn = String(b.ntn || "").trim() || null;
+  const strn = String(b.strn || "").trim() || null;
   const registered = typeof b.registered === "boolean" ? b.registered : null;
 
   const [existing] = await db.select().from(suppliers).where(ilike(suppliers.name, name)).limit(1);
@@ -36,12 +38,14 @@ export async function POST(req: Request) {
       .set({
         address: address ?? existing.address,
         contact: contact ?? existing.contact,
+        ntn: ntn ?? existing.ntn,
+        strn: strn ?? existing.strn,
         registered: registered ?? existing.registered,
       })
       .where(eq(suppliers.id, existing.id)).returning();
     return NextResponse.json({ supplier: updated, existed: true });
   }
-  const [row] = await db.insert(suppliers).values({ name, address, contact, registered }).returning();
+  const [row] = await db.insert(suppliers).values({ name, address, contact, ntn, strn, registered }).returning();
   return NextResponse.json({ supplier: row });
 }
 

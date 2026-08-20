@@ -38,6 +38,8 @@ export default async function PoView({ params, searchParams }: { params: Promise
             <div className="pf-toline"><b>Supplier Name:</b> {p.supplierName || "_______________________________"}</div>
             <div className="pf-toline"><b>Address:</b> {p.supplierAddress || "_______________________________"}</div>
             <div className="pf-toline"><b>Contact #:</b> {p.supplierPhone || "_______________________________"}</div>
+            {p.supplierNtn && <div className="pf-toline"><b>NTN:</b> {p.supplierNtn}</div>}
+            {p.supplierStrn && <div className="pf-toline"><b>STRN:</b> {p.supplierStrn}</div>}
             {p.registered != null && (
               <div className="pf-toline"><b>Tax status:</b> {p.registered ? "Registered (sales-tax invoice)" : "Unregistered"}</div>
             )}

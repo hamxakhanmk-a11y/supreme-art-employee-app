@@ -376,7 +376,11 @@ DO $$ BEGIN
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_ntn varchar(40);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_strn varchar(40);
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS ntn varchar(40);
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS strn varchar(40);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS registered boolean;
 
   -- One-time data migrations, keyed so each runs exactly once.
