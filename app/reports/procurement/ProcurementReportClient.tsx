@@ -30,6 +30,7 @@ type Filter = "all" | "received" | "partial" | "none";
 
 export default function ProcurementReportClient({ rows, from, to }: { rows: MasterRow[]; from: string; to: string }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [supplierFilter, setSupplierFilter] = useState("");
   const [q, setQ] = useState("");
 
   const counts = useMemo(() => ({
@@ -39,13 +40,19 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     none: rows.filter(r => r.status === "none").length,
   }), [rows]);
 
+  const suppliers = useMemo(
+    () => [...new Set(rows.map(r => r.supplier).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [rows],
+  );
+
   const shown = useMemo(() => rows.filter(r => {
     if (filter !== "all" && r.status !== filter) return false;
+    if (supplierFilter && r.supplier !== supplierFilter) return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
     const grrHay = r.grns.map(g => `${g.label} ${g.gatePass}`).join(" ");
     return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${grrHay}`.toLowerCase().includes(s);
-  }), [rows, filter, q]);
+  }), [rows, filter, supplierFilter, q]);
 
   function exportXlsx() {
     downloadWorkbookXlsx({
@@ -53,14 +60,14 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       sheets: [{
         sheetName: "Master Report",
         title: `Supreme Art — Procurement Master Report   ${fmtDate(from)} → ${fmtDate(to)}`,
-        headers: ["Description", "Supplier", "Demand No", "PO No", "GRR No", "Gate Pass No", "Received"],
+        headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Received"],
         rows: shown.map(r => [
-          r.description, r.supplier, r.demandNo, r.poNo,
+          r.description, r.supplier, fmtDate(r.date), r.demandNo, r.poNo,
           r.grns.map(g => g.label).join(", "),
           r.grns.map(g => g.gatePass).filter(Boolean).join(", "),
           STATUS_META[r.status].label,
         ]),
-        colWidths: [34, 26, 11, 10, 14, 16, 18],
+        colWidths: [34, 26, 12, 11, 10, 14, 16, 18],
         freezeCols: 1,
       }],
     });
@@ -101,9 +108,14 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
             color: filter === f.key ? "#fff" : "var(--text)",
           }}>{f.label} ({counts[f.key]})</button>
         ))}
+        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
+          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, maxWidth: 220, marginLeft: 6 }}>
+          <option value="">All suppliers ({suppliers.length})</option>
+          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Description, supplier, demand / PO / GRR / gate pass…"
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 280, marginLeft: 6 }} />
+          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 280 }} />
         <div style={{ flex: 1 }} />
         <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0}>⬇ Export Excel</button>
         <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
@@ -117,13 +129,13 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         <table>
           <thead>
             <tr>
-              <th>Description</th><th>Supplier</th>
+              <th>Description</th><th>Supplier</th><th>Date</th>
               <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Gate Pass No</th><th>Received</th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
                 {q.trim() || filter !== "all" ? "No items match this filter." : "No purchase orders in this range."}
               </td></tr>
             ) : shown.map((r, i) => {
@@ -133,6 +145,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
                 <tr key={i}>
                   <td style={{ fontWeight: 600, maxWidth: 320 }}>{r.description || "—"}</td>
                   <td>{r.supplier || "—"}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{fmtDate(r.date)}</td>
                   <td>
                     {r.demandNo
                       ? (r.demandId != null
