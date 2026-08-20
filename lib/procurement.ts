@@ -254,7 +254,7 @@ export const FORM_COPIES: Record<Stage, string[]> = {
 export const FORM_META = {
   demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "21-07-2026" },
   po:     { code: "PUR/QR/006", title: "PURCHASE ORDER", issue: "01", issueDate: "21-07-2026" },
-  grn:    { code: "PUR/QR/006", title: "GOODS RECEIPTS REPORT (Store)", issue: "01", issueDate: "21-07-2026" },
+  grn:    { code: "PUR/QR/007", title: "GOODS RECEIPTS REPORT (Store)", issue: "01", issueDate: "21-07-2026" },
   inspection: { code: "QC/QR/004", title: "INCOMING MATERIAL INSPECTION FORM", issue: "01", issueDate: "09-07-2026" },
 } as const;
 
