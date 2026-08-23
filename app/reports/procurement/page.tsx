@@ -75,8 +75,10 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
 
     poItems.forEach((it, i) => {
       const r = receipts[i];
-      const status: MasterRow["status"] = r.fulfilled ? "received"
-        : (r.hasReceipt || r.received > 0) ? "partial" : "none";
+      // Status keys off the actual received quantity: nothing received → "not
+      // received", even if a GRR merely lists the line with a blank/0 qty.
+      const status: MasterRow["status"] = (r.fulfilled && r.received > 0) ? "received"
+        : r.received > 0 ? "partial" : "none";
       rows.push({
         description: it.description || it.item || "",
         supplier, demandNo, demandId: p.demandId ?? null,
