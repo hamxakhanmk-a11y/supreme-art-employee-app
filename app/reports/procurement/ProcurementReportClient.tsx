@@ -5,7 +5,7 @@ import { fmtDate } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 // A GRR that received a PO line — id (to open it), display number, gate pass.
-export interface GrrRef { id: number; label: string; gatePass: string }
+export interface GrrRef { id: number; label: string; gatePass: string; invNo: string }
 
 // One traced line: a PO item, with its demand, PO, GRR(s) and received status.
 export interface MasterRow {
@@ -50,7 +50,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     if (supplierFilter && r.supplier !== supplierFilter) return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
-    const grrHay = r.grns.map(g => `${g.label} ${g.gatePass}`).join(" ");
+    const grrHay = r.grns.map(g => `${g.label} ${g.gatePass} ${g.invNo}`).join(" ");
     return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${grrHay}`.toLowerCase().includes(s);
   }), [rows, filter, supplierFilter, q]);
 
@@ -60,14 +60,15 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       sheets: [{
         sheetName: "Master Report",
         title: `Supreme Art — Procurement Master Report   ${fmtDate(from)} → ${fmtDate(to)}`,
-        headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Received"],
+        headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Invoice No", "Received"],
         rows: shown.map(r => [
           r.description, r.supplier, fmtDate(r.date), r.demandNo, r.poNo,
           r.grns.map(g => g.label).join(", "),
           r.grns.map(g => g.gatePass).filter(Boolean).join(", "),
+          r.grns.map(g => g.invNo).filter(Boolean).join(", "),
           STATUS_META[r.status].label,
         ]),
-        colWidths: [34, 26, 12, 11, 10, 14, 16, 18],
+        colWidths: [34, 26, 12, 11, 10, 14, 16, 16, 18],
         freezeCols: 1,
       }],
     });
@@ -130,17 +131,18 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           <thead>
             <tr>
               <th>Description</th><th>Supplier</th><th>Date</th>
-              <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Gate Pass No</th><th>Received</th>
+              <th>Demand #</th><th>PO #</th><th>GRR #</th><th>Gate Pass No</th><th>Invoice No</th><th>Received</th>
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)", fontSize: 13 }}>
                 {q.trim() || filter !== "all" ? "No items match this filter." : "No purchase orders in this range."}
               </td></tr>
             ) : shown.map((r, i) => {
               const st = STATUS_META[r.status];
               const gatePasses = r.grns.map(g => g.gatePass).filter(Boolean);
+              const invNos = r.grns.map(g => g.invNo).filter(Boolean);
               return (
                 <tr key={i}>
                   <td style={{ fontWeight: 600, maxWidth: 320 }}>{r.description || "—"}</td>
@@ -163,6 +165,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
                     ))}
                   </td>
                   <td style={{ color: gatePasses.length ? "var(--text)" : "var(--text3)" }}>{gatePasses.length ? gatePasses.join(", ") : "—"}</td>
+                  <td style={{ color: invNos.length ? "var(--text)" : "var(--text3)" }}>{invNos.length ? invNos.join(", ") : "—"}</td>
                   <td>
                     <span style={{ padding: "2px 10px", borderRadius: 999, background: st.bg, color: st.fg, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>{st.label}</span>
                   </td>
