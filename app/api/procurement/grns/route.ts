@@ -22,17 +22,12 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
-  // A GRR belongs to the same list as its PO. When a PO is picked we inherit
-  // its tax status; otherwise (standalone) we take it from the list the user
-  // is in. Registered and unregistered GRRs are numbered as separate sequences.
-  let registered = b.registered === true ? true : b.registered === false ? false : null;
-
   // Optional link to a PO (picker) — stamps its number and marks it received.
   let poId: number | null = null;
   let poNo: number | null = null;
   if (b.poId) {
     const [p] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, Number(b.poId)));
-    if (p) { poId = p.id; poNo = p.poNo; registered = p.registered; }
+    if (p) { poId = p.id; poNo = p.poNo; }
   }
   // Manual "PO Ref No" — overrides / fills the number when typed by hand.
   if (b.poNo != null && String(b.poNo).trim() !== "") {
@@ -40,17 +35,13 @@ export async function POST(req: Request) {
     if (!isNaN(n)) poNo = n;
   }
 
-  if (registered === null) {
-    return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
-  }
-  const grnNo = await nextGrnNo(registered);
+  const grnNo = await nextGrnNo();
 
   const items = Array.isArray(b.items) ? b.items : [];
   const [row] = await db.insert(grns).values({
     grnNo,
     poId,
     poNo,
-    registered,
     gatePassNo: b.gatePassNo || null,
     invNo: b.invNo || null,
     date: b.date || new Date().toISOString().slice(0, 10),

@@ -32,7 +32,7 @@ export default async function GrnPage() {
         remaining: r.remaining != null ? String(r.remaining) : "",
         ordered: r.orderedRaw,
       }));
-    return { id: p.id, poNo: p.poNo, registered: p.registered, supplierName: p.supplierName, outstanding };
+    return { id: p.id, poNo: p.poNo, supplierName: p.supplierName, outstanding };
   }).filter(p => p.outstanding.length > 0);
 
   return <GrnClient rows={rows} openPos={openPos} />;

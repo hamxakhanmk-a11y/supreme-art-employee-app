@@ -238,28 +238,20 @@ export function nextNumber(currentMax: number | null | undefined, start: number)
   return Math.max(Number(currentMax ?? 0), start - 1) + 1;
 }
 
-// Registered and unregistered documents run as two independent sequences. Both
-// start at the same block (PO 10000, GRR 15000); the unregistered sequence is
-// distinguished on paper by a "u" suffix (10000u, 15000u…) via docNoLabel().
-// The next number is scoped to the matching tax status, so the two lists never
-// share numbers and each stays gapless within itself.
-export async function nextPoNo(registered: boolean): Promise<number> {
-  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders)
-    .where(eq(purchaseOrders.registered, registered));
+// POs and GRRs each run as a single sequence (PO from 10000, GRR from 15000).
+export async function nextPoNo(): Promise<number> {
+  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders);
   return nextNumber(n, NUMBER_START.po);
 }
-export async function nextGrnNo(registered: boolean): Promise<number> {
-  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns)
-    .where(eq(grns.registered, registered));
+export async function nextGrnNo(): Promise<number> {
+  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns);
   return nextNumber(n, NUMBER_START.grn);
 }
 
-// Display number for a PO / GRR: unregistered documents (registered === false)
-// carry a "u" suffix so 10000 (registered) and 10000u (unregistered) are told
-// apart at a glance. Registered and unmarked print the bare number.
-export function docNoLabel(no: number | null | undefined, registered: boolean | null | undefined): string {
+// Display number for a PO / GRR.
+export function docNoLabel(no: number | null | undefined): string {
   if (no == null) return "";
-  return `${no}${registered === false ? "u" : ""}`;
+  return `${no}`;
 }
 
 // Each form prints one page per copy, named at the foot of the page.
@@ -437,6 +429,34 @@ DO $$ BEGIN
     UPDATE grns g SET grn_no = o.newno FROM gordered o WHERE g.id = o.id;
 
     INSERT INTO procurement_migrations(key) VALUES ('split_unreg_sequence_v1');
+  END IF;
+
+  -- The registered / unregistered split has been removed. Fold any old
+  -- unregistered POs and GRRs back into one sequence: renumber them above the
+  -- highest number currently in use (so nothing collides), repoint their GRRs,
+  -- and clear the tax flag on everything.
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'merge_unreg_sequence_v1') THEN
+    WITH base AS (SELECT COALESCE(MAX(po_no), 9999) AS m FROM purchase_orders WHERE registered IS DISTINCT FROM false),
+    ordered AS (
+      SELECT id, row_number() OVER (ORDER BY date ASC, id ASC) AS rn
+      FROM purchase_orders WHERE registered = false
+    )
+    UPDATE purchase_orders p SET po_no = base.m + o.rn FROM ordered o, base WHERE p.id = o.id;
+
+    UPDATE grns g SET po_no = p.po_no
+      FROM purchase_orders p WHERE g.po_id = p.id AND p.registered = false;
+
+    WITH gbase AS (SELECT COALESCE(MAX(grn_no), 14999) AS m FROM grns WHERE registered IS DISTINCT FROM false),
+    gordered AS (
+      SELECT id, row_number() OVER (ORDER BY date ASC, id ASC) AS rn
+      FROM grns WHERE registered = false
+    )
+    UPDATE grns g SET grn_no = gbase.m + o.rn FROM gordered o, gbase WHERE g.id = o.id;
+
+    UPDATE purchase_orders SET registered = NULL WHERE registered IS NOT NULL;
+    UPDATE grns SET registered = NULL WHERE registered IS NOT NULL;
+
+    INSERT INTO procurement_migrations(key) VALUES ('merge_unreg_sequence_v1');
   END IF;
 END $$;`);
   ensured = true;
