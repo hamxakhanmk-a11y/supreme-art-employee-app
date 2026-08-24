@@ -31,7 +31,7 @@ export default async function PoView({ params, searchParams }: { params: Promise
         copies={FORM_COPIES.po}
         backHref={fromReport ? "/reports/procurement" : "/procurement/po"}
         backLabel={fromReport ? "← Back to Report" : "← Back"} compact
-        pdfFilename={`PO-${docNoLabel(p.poNo)}.pdf`}>
+        pdfFilename={`PO-${docNoLabel(p.poNo, p.registered)}.pdf`}>
         <div className="pf-metarow">
           <div className="pf-to">
             <div className="pf-tohead">To:</div>
@@ -40,10 +40,13 @@ export default async function PoView({ params, searchParams }: { params: Promise
             <div className="pf-toline"><b>Contact #:</b> {p.supplierPhone || "_______________________________"}</div>
             {p.supplierNtn && <div className="pf-toline"><b>NTN:</b> {p.supplierNtn}</div>}
             {p.supplierStrn && <div className="pf-toline"><b>STRN:</b> {p.supplierStrn}</div>}
+            {p.registered != null && (
+              <div className="pf-toline"><b>Tax status:</b> {p.registered ? "Registered (sales-tax invoice)" : "Unregistered"}</div>
+            )}
           </div>
           <table className="pf-fieldtable">
             <tbody>
-              <tr><td>P.O. No:</td><td className="u">{docNoLabel(p.poNo)}</td></tr>
+              <tr><td>P.O. No:</td><td className="u">{docNoLabel(p.poNo, p.registered)}</td></tr>
               <tr><td>Date:</td><td className="u">{fmtDate(p.date)}</td></tr>
               <tr><td>Delivery Date:</td><td className="u">{fmtDate(p.expectedDate)}</td></tr>
               <tr><td>Demand Form Ref No:</td><td className="u">{p.demandNo ?? ""}</td></tr>

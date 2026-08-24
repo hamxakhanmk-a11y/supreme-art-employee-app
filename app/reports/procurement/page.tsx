@@ -44,7 +44,7 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       if (d && !srByDesc.has(d)) srByDesc.set(d, it.srNo);
     }
     const grnRef = (g: typeof poGrns[number]): GrrRef => ({
-      id: g.id, label: docNoLabel(g.grnNo), gatePass: g.gatePassNo || "", invNo: g.invNo || "",
+      id: g.id, label: docNoLabel(g.grnNo, g.registered), gatePass: g.gatePassNo || "", invNo: g.invNo || "",
     });
     const grnsBySr = new Map<number, Map<number, GrrRef>>();
     for (const g of poGrns) {
@@ -58,7 +58,7 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
       }
     }
 
-    const poNo = docNoLabel(p.poNo);
+    const poNo = docNoLabel(p.poNo, p.registered);
     const demandNo = p.demandNo != null ? String(p.demandNo) : "";
     const supplier = p.supplierName || "";
 

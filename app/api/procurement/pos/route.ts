@@ -22,7 +22,13 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
-  const poNo = await nextPoNo();
+  // Every PO belongs to a list. Registered and unregistered are numbered as two
+  // separate sequences, so we must know which one before assigning a number.
+  const registered = b.registered === true ? true : b.registered === false ? false : null;
+  if (registered === null) {
+    return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
+  }
+  const poNo = await nextPoNo(registered);
 
   // Optional link to a demand (picker) — stamps its number and marks it ordered.
   let demandId: number | null = null;
@@ -55,6 +61,7 @@ export async function POST(req: Request) {
     specification: b.specification || null,
     terms: b.terms || null,
     discount: Number(b.discount) || 0,
+    registered,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
@@ -69,7 +76,7 @@ export async function POST(req: Request) {
   // Push the supplier's details (list, NTN, STRN, address, contact) onto the
   // saved directory so the next PO for this supplier auto-fills them.
   await syncSupplierFromPo(b.supplierName, {
-    ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+    registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
   });
 
   await logActivity({
