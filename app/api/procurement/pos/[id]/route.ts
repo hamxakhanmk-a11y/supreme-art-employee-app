@@ -36,7 +36,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   // unregistered lists, which would break its number. Keep the stored value.
   const [existing] = await db.select({ registered: purchaseOrders.registered })
     .from(purchaseOrders).where(eq(purchaseOrders.id, parseInt(id)));
+  // Unregistered POs can have their number set by hand (blank = keep current).
+  const manualNo = existing?.registered === false ? String(b.manualPoNo ?? "").replace(/[^0-9]/g, "") : "";
   await db.update(purchaseOrders).set({
+    ...(manualNo !== "" ? { poNo: parseInt(manualNo, 10) } : {}),
     date: b.date || new Date().toISOString().slice(0, 10),
     demandNo,
     demandByName: b.demandByName || null,

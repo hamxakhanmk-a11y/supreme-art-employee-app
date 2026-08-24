@@ -43,7 +43,10 @@ export async function POST(req: Request) {
   if (registered === null) {
     return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
   }
-  const grnNo = await nextGrnNo(registered);
+  // Unregistered GRRs may be numbered by hand (the "u" is display-only); blank =
+  // auto. Registered GRRs are always auto.
+  const manualNo = registered === false ? String(b.manualGrnNo ?? "").replace(/[^0-9]/g, "") : "";
+  const grnNo = manualNo !== "" ? parseInt(manualNo, 10) : await nextGrnNo(registered);
 
   const items = Array.isArray(b.items) ? b.items : [];
   const [row] = await db.insert(grns).values({

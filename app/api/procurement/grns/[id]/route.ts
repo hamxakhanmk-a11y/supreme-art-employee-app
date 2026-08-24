@@ -31,7 +31,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const n = parseInt(String(b.poNo), 10);
     if (!isNaN(n)) poNo = n;
   }
+  // Unregistered GRRs can have their number set by hand (blank = keep current).
+  const [existing] = await db.select({ registered: grns.registered }).from(grns).where(eq(grns.id, parseInt(id)));
+  const manualNo = existing?.registered === false ? String(b.manualGrnNo ?? "").replace(/[^0-9]/g, "") : "";
   await db.update(grns).set({
+    ...(manualNo !== "" ? { grnNo: parseInt(manualNo, 10) } : {}),
     gatePassNo: b.gatePassNo || null,
     invNo: b.invNo || null,
     poNo,

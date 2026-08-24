@@ -31,6 +31,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   const [demandId, setDemandId] = useState("");
   const [demandNoManual, setDemandNoManual] = useState("");
+  const [manualPoNo, setManualPoNo] = useState(""); // unregistered only — blank = auto
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [supplierList, setSupplierList] = useState<Supplier[]>(suppliers);
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
@@ -51,7 +52,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   function resetForm() {
     setEditId(null); setEditNo(null);
-    setDemandId(""); setDemandNoManual(""); setDate(new Date().toISOString().slice(0, 10));
+    setDemandId(""); setDemandNoManual(""); setManualPoNo(""); setDate(new Date().toISOString().slice(0, 10));
     setSelectedSupplierId(""); setSupplierMsg("");
     setSupplierName(""); setSupplierAddress(""); setSupplierPhone(""); setSupplierNtn(""); setSupplierStrn("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
@@ -71,6 +72,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setEditId(p.id); setEditNo(p.poNo);
     setDemandId(""); setSelectedSupplierId(""); setSupplierMsg("");
     setDemandNoManual(p.demandNo != null ? String(p.demandNo) : "");
+    setManualPoNo(p.registered === false ? String(p.poNo) : "");
     setDate((p.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setSupplierName(p.supplierName || ""); setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
     setSupplierNtn(p.supplierNtn || ""); setSupplierStrn(p.supplierStrn || "");
@@ -155,7 +157,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       const res = await fetch(editId ? `/api/procurement/pos/${editId}` : "/api/procurement/pos", {
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          demandId: demandId || null, demandNo: demandNoManual, date, supplierName, supplierAddress, supplierPhone,
+          demandId: demandId || null, demandNo: demandNoManual, manualPoNo, date, supplierName, supplierAddress, supplierPhone,
           supplierNtn, supplierStrn, expectedDate, terms, orderPlacedBy, registered, items: clean,
         }),
       });
@@ -267,6 +269,15 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
           <SectionLabel>ORDER</SectionLabel>
           <div style={grid}>
+            {registered === false && (
+              <Field label="PO Number (leave blank to auto-number)">
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <input value={manualPoNo} onChange={e => setManualPoNo(e.target.value.replace(/[^0-9]/g, ""))} className="auth-input"
+                    inputMode="numeric" placeholder="e.g. 10005" style={{ flex: 1 }} />
+                  <span style={{ fontWeight: 800, color: "#9A3412", fontSize: 15 }}>u</span>
+                </div>
+              </Field>
+            )}
             <Field label="From demand (optional)">
               <select value={demandId} onChange={e => pickDemand(e.target.value)} className="auth-input">
                 <option value="">— None (standalone PO) —</option>

@@ -28,7 +28,10 @@ export async function POST(req: Request) {
   if (registered === null) {
     return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
   }
-  const poNo = await nextPoNo(registered);
+  // Unregistered POs may be numbered by hand (the "u" is display-only); blank =
+  // auto. Registered POs are always auto.
+  const manualNo = registered === false ? String(b.manualPoNo ?? "").replace(/[^0-9]/g, "") : "";
+  const poNo = manualNo !== "" ? parseInt(manualNo, 10) : await nextPoNo(registered);
 
   // Optional link to a demand (picker) — stamps its number and marks it ordered.
   let demandId: number | null = null;

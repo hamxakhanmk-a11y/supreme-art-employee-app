@@ -34,6 +34,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [poId, setPoId] = useState("");
   const [poNoManual, setPoNoManual] = useState("");
+  const [manualGrnNo, setManualGrnNo] = useState(""); // unregistered only — blank = auto
   const [gatePassNo, setGatePassNo] = useState("");
   const [invNo, setInvNo] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -43,7 +44,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   function resetForm() {
     setEditId(null); setEditNo(null); setRegistered(null);
-    setPoId(""); setPoNoManual(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setPoNoManual(""); setManualGrnNo(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
@@ -59,6 +60,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   function openEdit(g: Grn) {
     setEditId(g.id); setEditNo(g.grnNo); setRegistered(g.registered); setPoId("");
     setPoNoManual(g.poNo != null ? String(g.poNo) : "");
+    setManualGrnNo(g.registered === false ? String(g.grnNo) : "");
     setGatePassNo(g.gatePassNo || ""); setInvNo(g.invNo || "");
     setDate((g.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setVerifiedBy(g.verifiedBy || ""); setReceivedBy(g.receivedBy || "");
@@ -96,7 +98,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       const clean = items.filter(it => it.item.trim());
       const res = await fetch(editId ? `/api/procurement/grns/${editId}` : "/api/procurement/grns", {
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, registered, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, manualGrnNo, registered, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -190,6 +192,15 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 14 }}>
+            {registered === false && (
+              <Field label="GRR Number (leave blank to auto-number)">
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <input value={manualGrnNo} onChange={e => setManualGrnNo(e.target.value.replace(/[^0-9]/g, ""))} className="auth-input"
+                    inputMode="numeric" placeholder="e.g. 15005" style={{ flex: 1 }} />
+                  <span style={{ fontWeight: 800, color: "#9A3412", fontSize: 15 }}>u</span>
+                </div>
+              </Field>
+            )}
             <Field label="For PO (optional) — decides the list">
               <select value={poId} onChange={e => pickPo(e.target.value)} className="auth-input">
                 <option value="">— None (standalone GRR) —</option>
