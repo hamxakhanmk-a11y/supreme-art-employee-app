@@ -438,6 +438,17 @@ DO $$ BEGIN
 
     INSERT INTO procurement_migrations(key) VALUES ('split_unreg_sequence_v1');
   END IF;
+
+  -- The registered/unregistered removal cleared every tax flag; that change has
+  -- now been reverted. The unregistered POs/GRRs were deleted, so everything
+  -- that remains is the registered set — re-mark it registered=true. This also
+  -- restores correct two-sequence numbering (new registered docs continue from
+  -- the current max; unregistered starts a fresh 10000u/15000u series).
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'restore_registered_flag_v1') THEN
+    UPDATE purchase_orders SET registered = true WHERE registered IS NULL;
+    UPDATE grns SET registered = true WHERE registered IS NULL;
+    INSERT INTO procurement_migrations(key) VALUES ('restore_registered_flag_v1');
+  END IF;
 END $$;`);
   ensured = true;
 }
