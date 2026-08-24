@@ -25,6 +25,8 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
+  // A GRR is "final" once its invoice number is in; without it, it's pending.
+  const [invFilter, setInvFilter] = useState<"all" | "final" | "pending">("all");
 
   const [poId, setPoId] = useState("");
   const [poNoManual, setPoNoManual] = useState("");
@@ -95,9 +97,18 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     if (res.ok) router.refresh(); else alert("Delete failed");
   }
 
+  // Final = invoice received (Inv No filled). Pending = still awaiting invoice.
+  const hasInv = (g: Grn) => !!(g.invNo && g.invNo.trim());
+  const counts = {
+    all: rows.length,
+    final: rows.filter(hasInv).length,
+    pending: rows.filter(g => !hasInv(g)).length,
+  };
+  const base = invFilter === "all" ? rows : invFilter === "final" ? rows.filter(hasInv) : rows.filter(g => !hasInv(g));
+
   // Search GRR#, PO#, gate-pass, invoice, sign-off names and every item line.
   const qs = q.trim().toLowerCase();
-  const shown = !qs ? rows : rows.filter(g => {
+  const shown = !qs ? base : base.filter(g => {
     const its = parseItems<GrnItem>(g.items);
     const hay = [
       `#${g.grnNo}`, String(g.grnNo), g.poNo != null ? `#${g.poNo}` : "", String(g.poNo ?? ""),
@@ -186,6 +197,12 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </div>
       )}
 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <FilterTab label="All" n={counts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
+        <FilterTab label="Final (invoice in)" n={counts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
+        <FilterTab label="Pending invoice" n={counts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
+      </div>
+
       <div style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, or item…"
@@ -197,12 +214,14 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : "No GRRs yet."}</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : "No GRRs yet."}</td></tr>
             ) : shown.map(g => (
               <tr key={g.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
                 <td>#{g.grnNo}</td>
-                <td>{g.invNo || "—"}</td>
+                <td>{g.invNo && g.invNo.trim()
+                  ? g.invNo
+                  : <span style={{ padding: "2px 8px", borderRadius: 999, background: "#fef3c7", color: "#B45309", fontSize: 10.5, fontWeight: 700 }}>Pending</span>}</td>
                 <td>{g.poNo != null ? `#${g.poNo}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
@@ -222,6 +241,19 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label><span className="auth-field-label">{label}</span>{children}</label>;
+}
+// Filter pill above the GRR register.
+function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
+  label: string; n: number; active: boolean; onClick: () => void; color?: string;
+}) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "6px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+      border: `1px solid ${active ? color : "var(--border)"}`,
+      background: active ? color : "transparent",
+      color: active ? "#fff" : "var(--text2)",
+    }}>{label} <span style={{ opacity: 0.85 }}>({n})</span></button>
+  );
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
 const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };
