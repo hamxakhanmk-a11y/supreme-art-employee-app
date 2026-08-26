@@ -68,7 +68,7 @@ export default function AppIntro() {
     <div id="app-intro" className={fading ? "intro-fade-out" : ""} aria-hidden="true">
       <div className="app-intro-row">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <div className="app-intro-logo"><img src="/logo.png" alt="Supreme Art" /></div>
+        <div className="app-intro-logo"><img src="/logo-urdu.png" alt="Supreme Art" /></div>
         <div className="app-intro-name">
           <div className="app-intro-name-main">Supreme Art</div>
           <div className="app-intro-name-sub">Private Limited</div>
