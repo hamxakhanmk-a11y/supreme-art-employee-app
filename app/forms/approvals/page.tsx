@@ -10,7 +10,7 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function ApprovalsPage() {
-  if (await isViewOnly()) return <ViewOnlyNotice title="Approvals are edit-only" />;
+  if (await isViewOnly("forms")) return <ViewOnlyNotice title="Approvals are edit-only" />;
   const [requests, emps, types] = await Promise.all([
     db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt)),
     db.select({

@@ -33,7 +33,7 @@ const DEFAULT_CHECK_OUT = "16:45";
 const ROW_PILLS = ["present", "absent", "leave"] as const;
 
 export default function AttendancePage() {
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("attendance");
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [rows, setRows] = useState<Row[]>([]);

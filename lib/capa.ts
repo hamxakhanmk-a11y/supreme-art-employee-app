@@ -114,6 +114,8 @@ export function fmtDate(d: string | null | undefined): string {
 
 export const CAPA_FORM_REV = "Form Rev: 01";
 export const CAPA_FOOTER_NOTE = "This document is confidential and for internal use only.";
+// Document-control number printed on every CAPA report (screen + print).
+export const CAPA_DOC_NO = "QMR/QR/004";
 
 // Idempotent runtime migration — same approach as ensureProcurementTables(),
 // so a fresh deployment doesn't need a manual migration step.

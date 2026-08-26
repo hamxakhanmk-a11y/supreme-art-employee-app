@@ -2,7 +2,18 @@
 import { useEffect, useMemo, useState } from "react";
 
 interface ModuleDef { key: string; label: string; hint: string }
-interface RolePerm { role: string; label: string; color: string; builtin: boolean; modules: string[]; canEdit: boolean }
+interface RolePerm { role: string; label: string; color: string; builtin: boolean; modules: string[]; editModules: string[] }
+
+type Level = "none" | "view" | "edit";
+// Mirrors moduleEditKind() in lib/permissions: reports are view-only, purchase.*
+// permissions are actions (grant = edit), everything else has view vs edit.
+type Kind = "view" | "action" | "section";
+function kindOf(key: string): Kind {
+  if (key.startsWith("reports.")) return "view";
+  if (key.startsWith("purchase")) return "action";
+  if (key === "station.delete") return "action";
+  return "section";
+}
 
 // Which sub-tab a permission belongs under. Prefix rules first, then exact keys,
 // so new module keys slot in automatically (e.g. any future purchase.* or
@@ -14,14 +25,16 @@ const GROUP_ORDER = [
 function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
-  if (["demand", "po", "grn", "inspection"].includes(key)) return "Procurement";
+  if (["demand", "po", "grn"].includes(key)) return "Procurement";
   switch (key) {
     case "employees":  return "Employees";
     case "attendance": return "Attendance";
     case "forms":      return "Forms & Leave";
+    case "capa":       return "Forms & Leave";
     case "salary":     return "Salary";
     case "kpi":        return "KPI";
     case "station":    return "Station";
+    case "station.delete": return "Station";
     case "store":      return "Store";
     default:           return "Other";
   }
@@ -100,27 +113,39 @@ export default function RolesClient() {
     [modules, activeTab],
   );
 
-  function toggleModule(role: string, key: string) {
+  const levelOf = (r: RolePerm, key: string): Level =>
+    r.editModules.includes(key) ? "edit" : r.modules.includes(key) ? "view" : "none";
+
+  // Apply a level to one module, honouring its kind (view-kind can't reach
+  // "edit"; edit implies access).
+  function applyLevel(r: RolePerm, key: string, level: Level): RolePerm {
+    const mod = new Set(r.modules);
+    const ed = new Set(r.editModules);
+    const k = kindOf(key);
+    const wantEdit = level === "edit" && k !== "view";
+    const wantView = level !== "none";
+    if (wantView) mod.add(key); else mod.delete(key);
+    if (wantEdit) ed.add(key); else ed.delete(key);
+    return { ...r, modules: [...mod], editModules: [...ed] };
+  }
+  function setLevel(role: string, key: string, level: Level) {
+    setSavedRole(null);
+    setRoles(rs => rs.map(r => (r.role === role ? applyLevel(r, key, level) : r)));
+  }
+  // Bulk-set every module in the current sub-tab. "edit" grants edit where the
+  // kind allows (actions/sections) and view for reports; "view" grants view for
+  // sections/reports and clears actions (they have no view-only state).
+  function setTabLevel(role: string, level: Level) {
     setSavedRole(null);
     setRoles(rs => rs.map(r => {
       if (r.role !== role) return r;
-      const has = r.modules.includes(key);
-      return { ...r, modules: has ? r.modules.filter(m => m !== key) : [...r.modules, key] };
-    }));
-  }
-  function setCanEdit(role: string, canEdit: boolean) {
-    setSavedRole(null);
-    setRoles(rs => rs.map(r => (r.role === role ? { ...r, canEdit } : r)));
-  }
-  // "All" / "None" act on the modules in the current sub-tab only.
-  function setTabAll(role: string, on: boolean) {
-    setSavedRole(null);
-    const keys = tabModules.map(m => m.key);
-    setRoles(rs => rs.map(r => {
-      if (r.role !== role) return r;
-      const set = new Set(r.modules);
-      if (on) keys.forEach(k => set.add(k)); else keys.forEach(k => set.delete(k));
-      return { ...r, modules: [...set] };
+      let out = r;
+      for (const m of tabModules) {
+        const k = kindOf(m.key);
+        const lvl: Level = level === "view" && k === "action" ? "none" : level;
+        out = applyLevel(out, m.key, lvl);
+      }
+      return out;
     }));
   }
 
@@ -132,7 +157,7 @@ export default function RolesClient() {
     try {
       const res = await fetch("/api/roles", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: r.role, modules: r.modules, canEdit: r.canEdit }),
+        body: JSON.stringify({ role: r.role, modules: r.modules, editModules: r.editModules }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -214,12 +239,15 @@ export default function RolesClient() {
 
           <div style={{ fontSize: 12.5, color: "var(--text2)", marginBottom: 12 }}>
             Showing <b style={{ color: "var(--text)" }}>{activeTab}</b> permissions for every role.
+            Set each section to <b>View</b> (open, read-only) or <b>Edit</b> (make changes). A role can be
+            View here and Edit on another tab.
           </div>
 
           <div style={{ display: "grid", gap: 14 }}>
             {roles.map(r => {
               const accent = r.color || "var(--brand)";
-              const onCount = tabModules.filter(m => r.modules.includes(m.key)).length;
+              const viewCount = tabModules.filter(m => r.modules.includes(m.key)).length;
+              const editCount = tabModules.filter(m => r.editModules.includes(m.key)).length;
               return (
                 <div key={r.role} style={{
                   background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
@@ -230,38 +258,23 @@ export default function RolesClient() {
                     {!r.builtin && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: accent, background: `${accent}18`, padding: "1px 7px", borderRadius: 999 }}>CUSTOM</span>
                     )}
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}>{onCount}/{tabModules.length} in {activeTab}</span>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text2)", cursor: "pointer" }}>
-                      <input type="checkbox" checked={!r.canEdit} onChange={e => setCanEdit(r.role, !e.target.checked)} />
-                      Read-only (view but can’t edit)
-                    </label>
+                    <span style={{ fontSize: 11, color: "var(--text3)" }}>{viewCount} view · {editCount} edit in {activeTab}</span>
                     <div style={{ flex: 1 }} />
-                    <button onClick={() => setTabAll(r.role, true)} style={linkBtn}>All in tab</button>
-                    <button onClick={() => setTabAll(r.role, false)} style={linkBtn}>None</button>
+                    <button onClick={() => setTabLevel(r.role, "edit")} style={linkBtn}>Edit all</button>
+                    <button onClick={() => setTabLevel(r.role, "view")} style={linkBtn}>View all</button>
+                    <button onClick={() => setTabLevel(r.role, "none")} style={linkBtn}>None</button>
                     {!r.builtin && (
                       <button onClick={() => deleteRole(r.role, r.label)} style={{ ...linkBtn, color: "#A32D2D" }}>Delete role</button>
                     )}
                   </div>
 
                   <div style={{
-                    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 8,
+                    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 8,
                   }}>
-                    {tabModules.map(m => {
-                      const on = r.modules.includes(m.key);
-                      return (
-                        <label key={m.key} style={{
-                          display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px",
-                          border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer",
-                          background: on ? "var(--bg2)" : "transparent",
-                        }}>
-                          <input type="checkbox" checked={on} onChange={() => toggleModule(r.role, m.key)} style={{ marginTop: 2 }} />
-                          <span>
-                            <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
-                            <span style={{ display: "block", fontSize: 11, color: "var(--text2)", marginTop: 1 }}>{m.hint}</span>
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {tabModules.map(m => (
+                      <ModuleRow key={m.key} m={m} level={levelOf(r, m.key)}
+                        onSet={lvl => setLevel(r.role, m.key, lvl)} />
+                    ))}
                   </div>
 
                   <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
@@ -278,6 +291,48 @@ export default function RolesClient() {
         </>
       )}
     </div>
+  );
+}
+
+// One permission row: a label + hint, and a control whose shape depends on the
+// module's kind — reports get View/Off, purchase actions get Allow/Off, and
+// normal sections get the full None / View / Edit segmented control.
+function ModuleRow({ m, level, onSet }: { m: ModuleDef; level: Level; onSet: (l: Level) => void }) {
+  const kind = kindOf(m.key);
+  const on = level !== "none";
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px",
+      border: "1px solid var(--border)", borderRadius: 8,
+      background: on ? "var(--bg2)" : "transparent",
+    }}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
+        <span style={{ display: "block", fontSize: 11, color: "var(--text2)", marginTop: 1 }}>{m.hint}</span>
+      </span>
+      <div style={{ display: "flex", flexShrink: 0, borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)" }}>
+        <Seg label="Off" active={kind === "action" ? level !== "edit" : level === "none"} onClick={() => onSet("none")} />
+        {kind === "action" ? (
+          <Seg label="Allow" active={level === "edit"} onClick={() => onSet("edit")} color="#15803D" />
+        ) : (
+          <>
+            <Seg label="View" active={level === "view"} onClick={() => onSet("view")} color="#185FA5" />
+            {kind === "section" && (
+              <Seg label="Edit" active={level === "edit"} onClick={() => onSet("edit")} color="#15803D" />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+function Seg({ label, active, onClick, color = "#475569" }: { label: string; active: boolean; onClick: () => void; color?: string }) {
+  return (
+    <button onClick={onClick} style={{
+      border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700,
+      padding: "5px 9px", background: active ? color : "transparent",
+      color: active ? "#fff" : "var(--text3)",
+    }}>{label}</button>
   );
 }
 

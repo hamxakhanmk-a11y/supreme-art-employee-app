@@ -125,11 +125,16 @@ export async function guardWrite(module?: ModuleKey): Promise<SessionUser | Next
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   if (user.role === "superadmin") return user;
   const perm = await getPerm(user.role);
-  if (!perm.canEdit) {
+  const editModules = perm.editModules ?? [];
+  if (module) {
+    if (!perm.modules.includes(module)) {
+      return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
+    }
+    if (!editModules.includes(module)) {
+      return NextResponse.json({ error: "Your role is view-only in this section." }, { status: 403 });
+    }
+  } else if (!editModules.length) {
     return NextResponse.json({ error: "Your role is view-only and can't make changes." }, { status: 403 });
-  }
-  if (module && !perm.modules.includes(module)) {
-    return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
   }
   return user;
 }

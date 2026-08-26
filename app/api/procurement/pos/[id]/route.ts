@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { purchaseOrders, demands } from "@/lib/schema";
+import { purchaseOrders, demands, grns } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,15 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const n = parseInt(String(b.demandNo), 10);
     if (!isNaN(n)) demandNo = n;
   }
+  // The tax status (which list / sequence the PO belongs to) is fixed at
+  // creation — editing never moves a PO between the registered and
+  // unregistered lists, which would break its number. Keep the stored value.
+  const [existing] = await db.select({ registered: purchaseOrders.registered })
+    .from(purchaseOrders).where(eq(purchaseOrders.id, parseInt(id)));
+  // Unregistered POs can have their number set by hand (blank = keep current).
+  const manualNo = existing?.registered === false ? String(b.manualPoNo ?? "").replace(/[^0-9]/g, "") : "";
   await db.update(purchaseOrders).set({
+    ...(manualNo !== "" ? { poNo: parseInt(manualNo, 10) } : {}),
     date: b.date || new Date().toISOString().slice(0, 10),
     demandNo,
     demandByName: b.demandByName || null,
@@ -39,6 +47,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     supplierAddress: b.supplierAddress || null,
     supplierContact: b.supplierContact || null,
     supplierPhone: b.supplierPhone || null,
+    supplierNtn: b.supplierNtn || null,
+    supplierStrn: b.supplierStrn || null,
     expectedDate: b.expectedDate || null,
     specification: b.specification || null,
     terms: b.terms || null,
@@ -48,6 +58,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
     items: JSON.stringify(items),
   }).where(eq(purchaseOrders.id, parseInt(id)));
+  await syncSupplierFromPo(b.supplierName, {
+    registered: existing?.registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+  });
   await logActivity({ user: guard, action: "po.update", summary: `edited PO (id ${id})` });
   return NextResponse.json({ ok: true });
 }
@@ -59,8 +72,25 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const poId = parseInt(id);
 
-  // Note the linked demand (if any) before deleting so we can re-open it.
-  const [po] = await db.select({ demandId: purchaseOrders.demandId }).from(purchaseOrders).where(eq(purchaseOrders.id, poId));
+  // Note the linked demand + tax status before deleting.
+  const [po] = await db.select({ demandId: purchaseOrders.demandId, registered: purchaseOrders.registered })
+    .from(purchaseOrders).where(eq(purchaseOrders.id, poId));
+  if (!po) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // GRRs raised against this PO decide how deletion behaves:
+  //  • Unregistered PO  → its GRRs are deleted with it (auto-cascade).
+  //  • Registered PO    → blocked while GRRs exist; delete the GRRs first, so
+  //    received-goods records are never silently discarded.
+  const linkedGrns = await db.select({ id: grns.id }).from(grns).where(eq(grns.poId, poId));
+  if (linkedGrns.length) {
+    if (po.registered === false) {
+      await db.delete(grns).where(eq(grns.poId, poId));
+    } else {
+      return NextResponse.json({
+        error: `This PO has ${linkedGrns.length} GRR(s). Delete the GRR(s) first, then delete the PO.`,
+      }, { status: 409 });
+    }
+  }
   await db.delete(purchaseOrders).where(eq(purchaseOrders.id, poId));
 
   // Deleting a demand's only PO should re-open that demand so a new PO can be

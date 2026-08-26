@@ -39,7 +39,7 @@ type RowState = {
 const fmt = (n: number) => n.toLocaleString("en-PK");
 
 export default function SalaryGeneratorPage() {
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("salary");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
   const [year, setYear] = useState<number>(CURRENT_YEAR);

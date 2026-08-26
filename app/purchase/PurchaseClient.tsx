@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { useMe } from "@/components/MeProvider";
+import { useCanEdit } from "@/components/MeProvider";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import {
   PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_STATUS_STYLE,
@@ -81,13 +81,11 @@ const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—";
 
 export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }) {
-  const me = useMe();
-  const isSuper = me.user?.role === "superadmin";
-  const canRaise      = isSuper || me.modules.includes("purchase.raise");
-  const canEditPr     = isSuper || me.modules.includes("purchase.edit");
-  const canReceive    = isSuper || me.modules.includes("purchase.receive");
-  const canDeletePr   = isSuper || me.modules.includes("purchase.delete");
-  const canHrApprove  = isSuper || me.modules.includes("purchase.hr-approve");
+  const canRaise      = useCanEdit("purchase.raise");
+  const canEditPr     = useCanEdit("purchase.edit");
+  const canReceive    = useCanEdit("purchase.receive");
+  const canDeletePr   = useCanEdit("purchase.delete");
+  const canHrApprove  = useCanEdit("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");

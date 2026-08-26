@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { exitReasonFor } from "@/lib/employeesServer";
 import EmployeeProfileTabs from "@/components/EmployeeProfileTabs";
 import DeleteEmployeeButton from "@/components/DeleteEmployeeButton";
 import ProfileExportButton from "@/components/ProfileExportButton";
@@ -14,11 +15,12 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
   const empId = parseInt(id);
   if (isNaN(empId)) notFound();
 
-  const [empArr, edu, exp, others] = await Promise.all([
+  const [empArr, edu, exp, others, exitReason] = await Promise.all([
     db.select().from(employees).where(eq(employees.id, empId)),
     db.select().from(educationRecords).where(eq(educationRecords.employeeId, empId)),
     db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
     db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
+    exitReasonFor(empId),
   ]);
   const emp = empArr[0];
   if (!emp) notFound();
@@ -56,7 +58,10 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
                 : emp.status === "resigned"
                 ? { background: "#fcdada", color: "#A32D2D", border: "1px solid #f3c2c2" }
                 : { background: "#e2e8f0", color: "#475569", border: "1px solid #cbd5e1" }),
-            }}>{emp.status}{emp.status === "resigned" && (emp as any).resignationDate ? ` · ${new Date((emp as any).resignationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}</span>
+            }}>{emp.status === "resigned" ? "Exited" : emp.status}{emp.status === "resigned" && (emp as any).resignationDate ? ` · ${new Date((emp as any).resignationDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}</span>
+            {emp.status === "resigned" && exitReason && (
+              <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>Reason: {exitReason}</span>
+            )}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

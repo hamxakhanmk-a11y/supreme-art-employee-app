@@ -1,8 +1,8 @@
 // Shared helpers for the Procurement module (Demand → PO → GRN).
 // Line items live as JSON in each form's `items` column.
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, ilike, max } from "drizzle-orm";
 import { db } from "./db";
-import { grns, purchaseOrders } from "./schema";
+import { grns, purchaseOrders, suppliers } from "./schema";
 
 export type Stage = "demand" | "po" | "grn" | "inspection";
 
@@ -63,6 +63,58 @@ export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string
 export function fmtMoney(n: number, blankZero = true): string {
   if (blankZero && !n) return "";
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// ============ Unregistered-supplier yearly limit ============
+// Purchases from an UNREGISTERED supplier (no sales-tax invoice) are capped at
+// this amount per supplier, per financial year.
+export const UNREGISTERED_YEAR_LIMIT = 75000;
+
+// A PO's grand total = sum of line net values, less any discount.
+export function poGrandTotal(items: PoItem[], discount: number | null | undefined = 0): number {
+  const net = items.reduce((s, it) => s + poLineMoney(it).net, 0);
+  return Math.max(0, net - (Number(discount) || 0));
+}
+
+// The financial year (1 Jul – 30 Jun) that contains date `d`. Dates are the
+// "YYYY-MM-DD" strings the DB stores, so string comparison is safe.
+export function financialYear(d: Date = new Date()): { start: string; end: string; label: string } {
+  const y = d.getFullYear();
+  const startY = d.getMonth() >= 6 ? y : y - 1; // Jul(=6)…Dec → this year; Jan…Jun → last year
+  return { start: `${startY}-07-01`, end: `${startY + 1}-06-30`, label: `${startY}–${startY + 1}` };
+}
+
+// Normalise a supplier name for matching (POs store the name, not an id).
+export function normSupplier(s: string | null | undefined): string {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+// Mirror a PO's registered/unregistered mark onto the saved supplier directory
+// so the supplier lands in the right list. No-op for blank names / unmarked.
+export async function tagSupplierRegistered(name: string | null | undefined, registered: boolean | null | undefined) {
+  const n = (name || "").trim();
+  if (!n || registered == null) return;
+  await db.update(suppliers).set({ registered }).where(ilike(suppliers.name, n));
+}
+
+// When a PO is saved, push its supplier details (registered flag, NTN, STRN,
+// address, contact) onto the matching directory row, so the next PO for that
+// supplier auto-fills them. Only non-empty fields are written — a blank on one
+// PO never wipes a value the directory already has.
+export async function syncSupplierFromPo(
+  name: string | null | undefined,
+  d: { registered?: boolean | null; ntn?: string | null; strn?: string | null; address?: string | null; phone?: string | null },
+) {
+  const n = (name || "").trim();
+  if (!n) return;
+  const set: Record<string, unknown> = {};
+  if (d.registered != null) set.registered = d.registered;
+  if (d.ntn && String(d.ntn).trim()) set.ntn = String(d.ntn).trim();
+  if (d.strn && String(d.strn).trim()) set.strn = String(d.strn).trim();
+  if (d.address && String(d.address).trim()) set.address = String(d.address).trim();
+  if (d.phone && String(d.phone).trim()) set.contact = String(d.phone).trim();
+  if (Object.keys(set).length === 0) return;
+  await db.update(suppliers).set(set).where(ilike(suppliers.name, n));
 }
 
 // ============ Partial-receipt tracking (PO ↔ GRN) ============
@@ -186,6 +238,30 @@ export function nextNumber(currentMax: number | null | undefined, start: number)
   return Math.max(Number(currentMax ?? 0), start - 1) + 1;
 }
 
+// Registered and unregistered documents run as two independent sequences. Both
+// start at the same block (PO 10000, GRR 15000); the unregistered sequence is
+// distinguished on paper by a "u" suffix (10000u, 15000u…) via docNoLabel().
+// The next number is scoped to the matching tax status, so the two lists never
+// share numbers and each stays gapless within itself.
+export async function nextPoNo(registered: boolean): Promise<number> {
+  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders)
+    .where(eq(purchaseOrders.registered, registered));
+  return nextNumber(n, NUMBER_START.po);
+}
+export async function nextGrnNo(registered: boolean): Promise<number> {
+  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns)
+    .where(eq(grns.registered, registered));
+  return nextNumber(n, NUMBER_START.grn);
+}
+
+// Display number for a PO / GRR: unregistered documents (registered === false)
+// carry a "u" suffix so 10000 (registered) and 10000u (unregistered) are told
+// apart at a glance. Registered and unmarked print the bare number.
+export function docNoLabel(no: number | null | undefined, registered: boolean | null | undefined): string {
+  if (no == null) return "";
+  return `${no}${registered === false ? "u" : ""}`;
+}
+
 // Each form prints one page per copy, named at the foot of the page.
 export const FORM_COPIES: Record<Stage, string[]> = {
   demand: ["Store Copy", "Procurement Copy"],
@@ -198,7 +274,7 @@ export const FORM_COPIES: Record<Stage, string[]> = {
 export const FORM_META = {
   demand: { code: "PUR/QR/005", title: "MATERIAL DEMAND FORM", issue: "01", issueDate: "21-07-2026" },
   po:     { code: "PUR/QR/006", title: "PURCHASE ORDER", issue: "01", issueDate: "21-07-2026" },
-  grn:    { code: "PUR/QR/006", title: "GOODS RECEIPTS REPORT (Store)", issue: "01", issueDate: "21-07-2026" },
+  grn:    { code: "PUR/QR/007", title: "GOODS RECEIPTS REPORT (Store)", issue: "01", issueDate: "21-07-2026" },
   inspection: { code: "QC/QR/004", title: "INCOMING MATERIAL INSPECTION FORM", issue: "01", issueDate: "09-07-2026" },
 } as const;
 
@@ -319,6 +395,60 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_ntn varchar(40);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_strn varchar(40);
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS ntn varchar(40);
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS strn varchar(40);
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS registered boolean;
+
+  -- One-time data migrations, keyed so each runs exactly once.
+  CREATE TABLE IF NOT EXISTS procurement_migrations (
+    key text PRIMARY KEY,
+    applied_at timestamp NOT NULL DEFAULT now()
+  );
+
+  -- Each GRR inherits its PO's tax status (standalone GRRs stay unmarked).
+  UPDATE grns g SET registered = p.registered
+    FROM purchase_orders p
+    WHERE g.po_id = p.id AND g.registered IS NULL AND p.registered IS NOT NULL;
+
+  -- Split registered / unregistered into their own sequences. Registered POs
+  -- keep the existing 10000 series; unregistered POs (and their GRRs) are
+  -- renumbered into a fresh 10000 / 15000 series of their own, ordered by date.
+  -- Registered and unregistered may now share an integer — the "u" suffix on
+  -- unregistered documents keeps them distinct on paper.
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'split_unreg_sequence_v1') THEN
+    WITH ordered AS (
+      SELECT id, 10000 + (row_number() OVER (ORDER BY date ASC, id ASC) - 1)::int AS newno
+      FROM purchase_orders WHERE registered = false
+    )
+    UPDATE purchase_orders p SET po_no = o.newno FROM ordered o WHERE p.id = o.id;
+
+    -- Keep each GRR's denormalised po_no pointing at its PO's new number.
+    UPDATE grns g SET po_no = p.po_no
+      FROM purchase_orders p WHERE g.po_id = p.id AND p.registered = false;
+
+    WITH gordered AS (
+      SELECT id, 15000 + (row_number() OVER (ORDER BY date ASC, id ASC) - 1)::int AS newno
+      FROM grns WHERE registered = false
+    )
+    UPDATE grns g SET grn_no = o.newno FROM gordered o WHERE g.id = o.id;
+
+    INSERT INTO procurement_migrations(key) VALUES ('split_unreg_sequence_v1');
+  END IF;
+
+  -- The registered/unregistered removal cleared every tax flag; that change has
+  -- now been reverted. The unregistered POs/GRRs were deleted, so everything
+  -- that remains is the registered set — re-mark it registered=true. This also
+  -- restores correct two-sequence numbering (new registered docs continue from
+  -- the current max; unregistered starts a fresh 10000u/15000u series).
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'restore_registered_flag_v1') THEN
+    UPDATE purchase_orders SET registered = true WHERE registered IS NULL;
+    UPDATE grns SET registered = true WHERE registered IS NULL;
+    INSERT INTO procurement_migrations(key) VALUES ('restore_registered_flag_v1');
+  END IF;
 END $$;`);
   ensured = true;
 }

@@ -8,7 +8,8 @@ import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
 
-export default async function DemandView({ params }: { params: Promise<{ id: string }> }) {
+export default async function DemandView({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string }> }) {
+  const fromReport = (await searchParams).ref === "report";
   await requireModule("demand");
   await ensureProcurementTables();
   const { id } = await params;
@@ -26,7 +27,9 @@ export default async function DemandView({ params }: { params: Promise<{ id: str
   return (
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
-        copies={copies} backHref="/procurement/demand"
+        copies={copies}
+        backHref={fromReport ? "/reports/procurement" : "/procurement/demand"}
+        backLabel={fromReport ? "← Back to Report" : "← Back"}
         pdfFilename={`Demand-${d.demandNo}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">

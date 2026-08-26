@@ -13,6 +13,5 @@ export default async function ProcurementHome() {
   if (perm.modules.includes("demand")) redirect("/procurement/demand");
   if (perm.modules.includes("po")) redirect("/procurement/po");
   if (perm.modules.includes("grn")) redirect("/procurement/grn");
-  if (perm.modules.includes("inspection")) redirect("/procurement/inspection");
   redirect("/");
 }

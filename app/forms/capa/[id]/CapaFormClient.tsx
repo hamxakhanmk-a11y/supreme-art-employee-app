@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMe, useCanEdit } from "@/components/MeProvider";
 import {
-  CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE,
+  CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE, CAPA_DOC_NO,
   parseCapaData, type CapaData, type CapaStatus,
 } from "@/lib/capa";
 
@@ -119,8 +119,11 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
       {/* ── The report ── */}
       <div className="capa-sheet">
         <div className="capa-watermark" aria-hidden />
+        <div className="capa-docno">Doc No: {CAPA_DOC_NO}</div>
 
-        <header className="capa-head">
+        {/* A <div>, not a <header> — the global print stylesheet hides every
+            <header> element, which would drop this report's own header. */}
+        <div className="capa-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" className="capa-logo" />
           <div className="capa-head-text">
@@ -128,7 +131,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
             <div className="capa-sub">Supreme Art (Private) Limited</div>
           </div>
           <div className="capa-logo-spacer" />
-        </header>
+        </div>
 
         <div className="capa-refbar">
           <span className="capa-lbl">CAPA No.:</span>
@@ -152,20 +155,20 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           <DateCell label="Detection Date" value={d.detection_date} onChange={v => set("detection_date", v)} ro={ro} />
         </div>
 
-        <SectionHead n={3} title="ROOT CAUSE ANALYSIS" />
-        <div className="capa-grid">
-          <Area label="Root Cause (5-Why / Fishbone Analysis)" value={d.root_cause} onChange={v => set("root_cause", v)} ph="Why → Why → Why…" rows={4} ro={ro} />
-          <ListCell label="Category" value={d.category} onChange={v => set("category", v)} options={CAPA_CATEGORIES} id="cat" ro={ro} />
-          <Cell label="Analysis Done By" value={d.analysis_done_by} onChange={v => set("analysis_done_by", v)} ph="Name" ro={ro} />
-          <DateCell label="Analysis Date" value={d.analysis_date} onChange={v => set("analysis_date", v)} ro={ro} />
-        </div>
-
-        <SectionHead n={4} title="ACTIONS" />
+        <SectionHead n={3} title="ACTIONS" />
         <div className="capa-grid">
           <Area label="Corrective Action (immediate steps to contain / correct)" value={d.corrective_action} onChange={v => set("corrective_action", v)} rows={3} ro={ro} />
           <Area label="Preventive Action (systematic changes to prevent recurrence)" value={d.preventive_action} onChange={v => set("preventive_action", v)} rows={3} ro={ro} />
           <DateCell label="Action Date" value={d.action_date} onChange={v => set("action_date", v)} ro={ro} />
           <Cell label="Action By" value={d.action_by} onChange={v => set("action_by", v)} ph="Name" ro={ro} />
+        </div>
+
+        <SectionHead n={4} title="ROOT CAUSE ANALYSIS" />
+        <div className="capa-grid">
+          <Area label="Root Cause (5-Why / Fishbone Analysis)" value={d.root_cause} onChange={v => set("root_cause", v)} ph="Why → Why → Why…" rows={4} ro={ro} />
+          <ListCell label="Category" value={d.category} onChange={v => set("category", v)} options={CAPA_CATEGORIES} id="cat" ro={ro} />
+          <Cell label="Analysis Done By" value={d.analysis_done_by} onChange={v => set("analysis_done_by", v)} ph="Name" ro={ro} />
+          <DateCell label="Analysis Date" value={d.analysis_date} onChange={v => set("analysis_date", v)} ro={ro} />
         </div>
 
         <SectionHead n={5} title="VERIFICATION & CLOSURE" />
@@ -201,6 +204,14 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           position: absolute; inset: 0;
           background: url('/logo.png') center 55% / 46% no-repeat;
           opacity: 0.05; pointer-events: none;
+        }
+        /* Document-control number — a right-aligned line at the top of every
+           CAPA report. In normal flow (not absolute) so it renders the same on
+           screen and in print. */
+        .capa-docno {
+          text-align: right;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+          color: var(--text2); white-space: nowrap;
         }
         .capa-head {
           display: flex; align-items: center; gap: 16px;
@@ -256,7 +267,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         }
 
         @media print {
-          @page { size: A4 portrait; margin: 12mm 10mm; }
+          @page { size: A4 portrait; margin: 10mm 10mm; }
           .no-print, .app-sidebar, header { display: none !important; }
           html, body { background: #fff !important; }
           main { padding: 0 !important; }
@@ -265,28 +276,47 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
             padding: 0; max-width: none;
           }
           .capa-watermark { opacity: 0.05; }
-          .capa-title { font-size: 16pt; color: #7C1F1F; }
+
+          /* Doc-control number — right-aligned at the top on paper too. */
+          .capa-docno { font-size: 8.5pt; color: #7C1F1F; margin-bottom: 2px; }
+          /* Header — logo, title and company line stay on the printout. */
+          .capa-head { gap: 12px; padding-bottom: 5px; }
+          .capa-logo { height: 40px; }
+          .capa-logo-spacer { width: 40px; }
+          .capa-title { font-size: 14pt; color: #7C1F1F; }
+          .capa-sub { font-size: 9pt; margin-top: 1px; }
+
+          .capa-refbar {
+            background: transparent !important; border: none;
+            border-bottom: 1px solid #7C1F1F; padding: 3px 0;
+            margin-bottom: 8px; font-size: 10.5pt;
+          }
           /* Print the section bars as light rules with red text — matches the
              approved paper form rather than the dark on-screen bars. */
           .capa-section-head {
             background: transparent !important; color: #7C1F1F !important;
-            border-bottom: 1.5px solid #7C1F1F; border-radius: 0;
-            padding: 2px 0; margin: 12px 0 8px;
-            font-size: 10.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            border-bottom: 1.25px solid #7C1F1F; border-radius: 0;
+            padding: 1px 0; margin: 8px 0 5px;
+            font-size: 9.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact;
           }
-          .capa-grid { gap: 10px 22px; }
-          .capa-lbl { font-size: 7.5pt; color: #1a3a5c; }
+          .capa-grid { gap: 6px 20px; }
+          .capa-lbl { font-size: 7pt; color: #1a3a5c; margin-bottom: 2px; }
           .capa-cell input[type="text"], .capa-cell input[type="date"] {
-            font-size: 10pt; padding: 2px 0; border-bottom: 1px solid #333;
+            font-size: 9pt; padding: 1px 0; border-bottom: 1px solid #333;
           }
-          .capa-cell textarea {
-            font-size: 10pt; border: none; border-bottom: 1px solid #333;
-            border-radius: 0; padding: 2px 0; min-height: 0;
+          .capa-cell textarea, .capa-cell .print-ta-mirror {
+            font-size: 9pt; line-height: 1.3; border: none; border-bottom: 1px solid #333;
+            border-radius: 0; padding: 1px 0; min-height: 0;
           }
-          .capa-refbar { background: transparent !important; border: none; border-bottom: 1px solid #7C1F1F; padding: 4px 0; }
-          /* Keep a section and its fields together across a page break. */
+          .capa-foot { margin-top: 10px; padding-top: 6px; font-size: 8pt; }
+
+          /* The report is as long as its contents: every answer prints in full
+             (see components/PrintTextareas.tsx), so a heavily written-up CAPA
+             runs past two pages rather than losing text off the bottom of a
+             box. Keep each section heading with the fields under it, and let
+             the field grids flow across page breaks so the pages fill densely. */
           .capa-section-head { break-after: avoid; page-break-after: avoid; }
-          .capa-grid { break-inside: avoid-page; }
+          .capa-cell:not(.full) { break-inside: avoid; }
         }
       `}</style>
     </div>

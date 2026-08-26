@@ -28,15 +28,39 @@ export async function POST(req: Request) {
   if (!name) return NextResponse.json({ error: "Supplier name is required" }, { status: 400 });
   const address = String(b.address || "").trim() || null;
   const contact = String(b.contact || "").trim() || null;
+  const ntn = String(b.ntn || "").trim() || null;
+  const strn = String(b.strn || "").trim() || null;
+  const registered = typeof b.registered === "boolean" ? b.registered : null;
 
   const [existing] = await db.select().from(suppliers).where(ilike(suppliers.name, name)).limit(1);
   if (existing) {
     const [updated] = await db.update(suppliers)
-      .set({ address: address ?? existing.address, contact: contact ?? existing.contact })
+      .set({
+        address: address ?? existing.address,
+        contact: contact ?? existing.contact,
+        ntn: ntn ?? existing.ntn,
+        strn: strn ?? existing.strn,
+        registered: registered ?? existing.registered,
+      })
       .where(eq(suppliers.id, existing.id)).returning();
     return NextResponse.json({ supplier: updated, existed: true });
   }
-  const [row] = await db.insert(suppliers).values({ name, address, contact }).returning();
+  const [row] = await db.insert(suppliers).values({ name, address, contact, ntn, strn, registered }).returning();
+  return NextResponse.json({ supplier: row });
+}
+
+// PATCH { id, registered } — retag a saved supplier as registered / unregistered
+// from the supplier lists panel.
+export async function PATCH(req: Request) {
+  const guard = await guardWrite("po");
+  if (guard instanceof NextResponse) return guard;
+  await ensureProcurementTables();
+  const b = await req.json().catch(() => ({}));
+  const id = parseInt(String(b.id), 10);
+  if (isNaN(id)) return NextResponse.json({ error: "Supplier id is required" }, { status: 400 });
+  const registered = typeof b.registered === "boolean" ? b.registered : null;
+  const [row] = await db.update(suppliers).set({ registered }).where(eq(suppliers.id, id)).returning();
+  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ supplier: row });
 }
 

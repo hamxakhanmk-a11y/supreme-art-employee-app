@@ -29,7 +29,7 @@ export default function Sidebar() {
   if (activeModule === "procurement" && me) {
     const stageOf: Record<string, string> = {
       "/procurement/demand": "demand", "/procurement/po": "po",
-      "/procurement/grn": "grn", "/procurement/inspection": "inspection",
+      "/procurement/grn": "grn",
     };
     links = links.filter(l => !stageOf[l.href] || canModule(stageOf[l.href]));
   }

@@ -3,12 +3,13 @@ import { db } from "@/lib/db";
 import { grns } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, FORM_META, FORM_COPIES, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, type GrnItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
 
-export default async function GrnView({ params }: { params: Promise<{ id: string }> }) {
+export default async function GrnView({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ref?: string }> }) {
+  const fromReport = (await searchParams).ref === "report";
   await requireModule("grn");
   await ensureProcurementTables();
   const { id } = await params;
@@ -20,19 +21,21 @@ export default async function GrnView({ params }: { params: Promise<{ id: string
   return (
     <div className="fade-up">
       <ProcurementPrint code={m.code} title={m.title} issue={m.issue} issueDate={m.issueDate}
-        copies={FORM_COPIES.grn} backHref="/procurement/grn"
+        copies={FORM_COPIES.grn}
+        backHref={fromReport ? "/reports/procurement" : "/procurement/grn"}
+        backLabel={fromReport ? "← Back to Report" : "← Back"}
         pdfFilename={`GRR-${g.gatePassNo || g.id}.pdf`}>
         <div className="pf-metarow">
           <table className="pf-fieldtable">
             <tbody>
-              <tr><td>GRR No:</td><td className="u">{g.grnNo}</td></tr>
+              <tr><td>GRR No:</td><td className="u">{docNoLabel(g.grnNo, g.registered)}</td></tr>
               <tr><td>Inward gate pass No:</td><td className="u">{g.gatePassNo || ""}</td></tr>
               <tr><td>Inv No:</td><td className="u">{g.invNo || ""}</td></tr>
             </tbody>
           </table>
           <table className="pf-fieldtable">
             <tbody>
-              <tr><td>PO Ref No:</td><td className="u">{g.poNo ?? ""}</td></tr>
+              <tr><td>PO Ref No:</td><td className="u">{g.poNo != null ? docNoLabel(g.poNo, g.registered) : ""}</td></tr>
               <tr><td>Date:</td><td className="u">{fmtDate(g.date)}</td></tr>
             </tbody>
           </table>

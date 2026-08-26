@@ -6,7 +6,7 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function NewEmployeePage() {
-  if (await isViewOnly()) return <ViewOnlyNotice />;
+  if (await isViewOnly("employees")) return <ViewOnlyNotice />;
   return (
     <div>
       <div style={{ marginBottom: 20 }}>

@@ -61,10 +61,12 @@ export default function MonthlyRegisterClient({
 
   const [sort, setSort] = useState<SortKey>("id");
 
-  // Active employees only (inactive can be toggled later if needed)
+  // Show active employees, plus anyone who has attendance this month even if
+  // they've since exited — so a mid-month leaver's record still appears.
+  const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active"), sort),
-    [employees, sort]
+    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithRecords.has(e.id)), sort),
+    [employees, sort, empIdsWithRecords]
   );
 
   // Live "time required": only counts calendar days that have actually been
@@ -246,7 +248,7 @@ export default function MonthlyRegisterClient({
                 📋 Monthly Attendance Register — {MONTHS[month - 1]} {year}
               </th>
             </tr>
-            <tr>
+            <tr className="register-head">
               <th className="fz fz1">Emp ID</th>
               <th className="fz fz2">Full Name</th>
               <th className="col-dept">Department</th>
@@ -279,7 +281,10 @@ export default function MonthlyRegisterClient({
               return (
                 <tr key={emp.id}>
                   <td className="emp-id fz fz1">{emp.employeeId}</td>
-                  <td className="emp-name fz fz2">{emp.firstName} {emp.lastName}</td>
+                  <td className="emp-name fz fz2">
+                    {emp.firstName} {emp.lastName}
+                    {emp.status !== "active" && <span className="exited-tag">exited</span>}
+                  </td>
                   <td className="emp-dept">{emp.department || "—"}</td>
                   <td className="emp-desig">{emp.designation || "—"}</td>
                   {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -319,7 +324,9 @@ export default function MonthlyRegisterClient({
       </div>
 
       <style jsx global>{`
-        .register-wrap { max-width: 100%; }
+        /* Cap the height so the table scrolls inside its own box — that lets the
+           column-header row stay frozen at the top while the rows scroll. */
+        .register-wrap { max-width: 100%; max-height: 78vh; }
         .register-table {
           border-collapse: collapse;
           font-size: 11px;
@@ -370,6 +377,7 @@ export default function MonthlyRegisterClient({
         .register-table .tot-c { font-weight: 700; font-size: 12px; background: #fdf8ee; }
         .register-table .emp-id  { font-weight: 700; color: var(--brand); text-align: left; padding-left: 10px; }
         .register-table .emp-name { font-weight: 600; text-align: left; padding-left: 10px; }
+        .register-table .exited-tag { margin-left: 6px; font-size: 8.5px; font-weight: 700; color: #9A3412; background: #ffedd5; border-radius: 999px; padding: 1px 5px; vertical-align: middle; }
         .register-table .emp-desig { text-align: left; padding-left: 10px; color: var(--text2); }
         .register-table .emp-dept { text-align: left; padding-left: 10px; color: var(--text2); width: 82px; white-space: normal; line-height: 1.15; }
         /* Frozen Emp ID + Name columns — stay pinned while day columns scroll (Excel-style). */
@@ -377,31 +385,41 @@ export default function MonthlyRegisterClient({
         .register-table thead th.fz { z-index: 4; }
         .register-table .fz1 { left: 0; width: 120px; min-width: 120px; max-width: 120px; }
         .register-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
+        /* Freeze the column-header row at the top of the scroll box; the red
+           banner above it scrolls away. Frozen corner cells (Emp ID / Name) get
+           the highest z so they win in both directions. */
+        .register-table thead tr.register-head th { position: sticky; top: 0; z-index: 4; }
+        .register-table thead tr.register-head th.fz { z-index: 6; }
         .register-table tbody tr:hover td { background: var(--bg2); }
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
         @media print {
-          @page { size: A4 landscape; margin: 5mm; }
+          @page { size: A4 landscape; margin: 6mm; }
           .register-banner { display: table-row !important; }
-          .register-wrap { overflow: visible !important; border: none !important; box-shadow: none !important; }
-          /* Fits A4 landscape at 100%: Department + Designation are dropped on
-             paper, and the day/total header min-widths are released so those
-             columns shrink to content. */
-          .register-table { font-size: 8.5px; width: 100%; }
-          .register-table th, .register-table td { padding: 2px 2px; }
-          .register-table thead th { font-size: 8.5px; }
-          .register-table .tot-c, .register-table .tot-h { font-size: 8.5px; }
-          .register-table .day-h { min-width: 0; padding: 2px 1px; }
-          .register-table .day-c { width: auto; min-width: 0; padding: 2px 1px; }
+          .register-wrap { overflow: visible !important; max-height: none !important; border: none !important; box-shadow: none !important; }
+          /* The table can't get wider than the page, so we make it a little
+             bigger downward instead: slightly larger text and taller rows.
+             Names stay on one line (there's spare width); Department +
+             Designation are dropped on paper. */
+          .register-table { font-size: 9.5px; width: 100%; }
+          .register-table th, .register-table td { padding: 4px 2px; }
+          .register-table thead th { font-size: 9.5px; }
+          .register-table .tot-c, .register-table .tot-h { font-size: 9.5px; }
+          .register-table .day-h { min-width: 0; padding: 4px 1px; }
+          .register-table .day-c { width: auto; min-width: 0; padding: 4px 1px; font-size: 9.5px; }
           .register-table .tot-h { min-width: 0; }
           .register-table .col-dept, .register-table .emp-dept,
           .register-table .col-desig, .register-table .emp-desig { display: none; }
-          .register-table .emp-id { padding-left: 4px; }
+          .register-table .emp-id { padding-left: 4px; font-size: 9px; }
           .register-table .emp-name { padding-left: 4px; }
-          .register-table .status-pill { padding: 1px 3px !important; font-size: 8.5px !important; }
+          .register-table .status-pill { padding: 1px 3px !important; font-size: 9px !important; }
           /* Un-freeze for print so columns lay out normally on paper. */
           .register-table .fz { position: static; box-shadow: none; }
+          .register-table thead tr.register-head th { position: static; }
           .register-table .fz1, .register-table .fz2 { width: auto; min-width: 0; max-width: none; }
+          /* Keep each employee on one line and repeat the header on every page. */
+          .register-table tbody tr { break-inside: avoid; }
+          .register-table thead { display: table-header-group; }
         }
       `}</style>
     </>

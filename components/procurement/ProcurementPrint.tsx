@@ -8,10 +8,10 @@ import { COMPANY } from "@/lib/procurement";
 // The header reproduces the block used across the Word templates: a control
 // strip (Doc No / Issue Status / Issue date) above the company details.
 export default function ProcurementPrint({
-  code, title, issue, issueDate, backHref, copies, pdfFilename, compact, children,
+  code, title, issue, issueDate, backHref, backLabel = "← Back", copies, pdfFilename, compact, children,
 }: {
   code: string; title: string; issue: string; issueDate: string;
-  backHref: string; copies?: string[];
+  backHref: string; backLabel?: string; copies?: string[];
   pdfFilename?: string;   // pre-fills the filename in the browser's Save-as-PDF dialog
   compact?: boolean;      // tighter typography so a long form (PO) fits one A4 page
   children: React.ReactNode;
@@ -66,7 +66,7 @@ export default function ProcurementPrint({
   return (
     <div id={rootId}>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
-        <Link href={backHref} className="btn">← Back</Link>
+        <Link href={backHref} className="btn">{backLabel}</Link>
         <button onClick={doPrint} className="btn btn-primary">🖨 Print</button>
         <button onClick={savePdf} className="btn" title="Opens the print dialog — choose &quot;Save as PDF&quot; as the destination">💾 Save as PDF</button>
         {sheets.length > 1 && (

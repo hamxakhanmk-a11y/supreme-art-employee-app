@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, DEPARTMENTS, type DemandItem } from "@/lib/procurement";
 
@@ -16,12 +16,13 @@ const blankItem = (n: number): DemandItem => ({ srNo: n, material: "", requiredF
 
 export default function DemandClient({ rows }: { rows: Demand[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("demand");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [requiredBy, setRequiredBy] = useState("");
@@ -78,6 +79,21 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
     if (res.ok) router.refresh(); else alert("Delete failed");
   }
 
+  // Search across number, people, department and every line item (material,
+  // required-for, remarks).
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return rows;
+    return rows.filter(d => {
+      const items = parseItems<DemandItem>(d.items);
+      const hay = [
+        `#${d.demandNo}`, String(d.demandNo), d.demandBy, d.department, d.preparedBy, d.approvedBy,
+        ...items.flatMap(it => [it.material, it.requiredFor, it.remarks]),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(s);
+    });
+  }, [rows, q]);
+
   return (
     <div className="fade-up">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
@@ -125,6 +141,12 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
         </div>
       )}
 
+      <div style={{ marginBottom: 10 }}>
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Search demands — number, person, department, or item description…"
+          style={searchInput} />
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
@@ -134,9 +156,9 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No demands yet.</td></tr>
-            ) : rows.map(d => (
+            {shown.length === 0 ? (
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{q.trim() ? "No demands match your search." : "No demands yet."}</td></tr>
+            ) : shown.map(d => (
               <tr key={d.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{d.demandNo}</td>
                 <td>{fmtDate(d.date)}</td>
@@ -207,3 +229,4 @@ function StatusBadge({ status }: { status: string }) {
   return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{status}</span>;
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
+const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };

@@ -443,6 +443,9 @@ export const setupTokens = pgTable("setup_tokens", {
 export const rolePermissions = pgTable("role_permissions", {
   role: varchar("role", { length: 20 }).primaryKey(),
   modules: text("modules").notNull().default(""),
+  // Which of the granted modules the role may also EDIT (subset of `modules`).
+  // NULL = legacy row → derive from `canEdit` (edit-all or view-all).
+  editModules: text("edit_modules"),
   canEdit: boolean("can_edit").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -493,9 +496,14 @@ export const purchaseOrders = pgTable("purchase_orders", {
   supplierAddress: text("supplier_address"),
   supplierContact: varchar("supplier_contact", { length: 160 }),
   supplierPhone: varchar("supplier_phone", { length: 60 }),
+  supplierNtn: varchar("supplier_ntn", { length: 40 }),
+  supplierStrn: varchar("supplier_strn", { length: 40 }),
   specification: text("specification"),
   terms: text("terms"),
   discount: doublePrecision("discount").default(0),
+  // Supplier tax status for THIS order. true = registered (has sales-tax
+  // invoice), false = unregistered, null = not yet marked.
+  registered: boolean("registered"),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
   createdByUserId: integer("created_by_user_id"),
@@ -525,6 +533,10 @@ export const suppliers = pgTable("suppliers", {
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
   contact: varchar("contact", { length: 160 }),
+  ntn: varchar("ntn", { length: 40 }),
+  strn: varchar("strn", { length: 40 }),
+  // true = registered (sales-tax invoice), false = unregistered, null = unmarked.
+  registered: boolean("registered"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -535,6 +547,9 @@ export const grns = pgTable("grns", {
   invNo: varchar("inv_no", { length: 60 }),          // supplier invoice number — entered by hand
   poId: integer("po_id"),                            // nullable — GRN can be standalone
   poNo: integer("po_no"),                            // denormalised for display
+  // Tax status, inherited from the PO. true = registered (15000 series),
+  // false = unregistered (15000u series), null = unmarked/standalone.
+  registered: boolean("registered"),
   date: date("date").notNull(),
   receivedBy: varchar("received_by", { length: 120 }),
   verifiedBy: varchar("verified_by", { length: 120 }),

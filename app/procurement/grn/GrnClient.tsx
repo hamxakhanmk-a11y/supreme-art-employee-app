@@ -3,30 +3,38 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, type GrnItem } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, type GrnItem } from "@/lib/procurement";
 
 interface Grn {
   id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; poNo: number | null;
+  registered: boolean | null;
   date: string; verifiedBy: string | null; receivedBy: string | null; items: string;
 }
 interface OutLine { poSrNo: number; item: string; uom: string; remaining: string; ordered: string }
 interface OpenPo {
-  id: number; poNo: number; supplierName: string | null; outstanding: OutLine[];
+  id: number; poNo: number; registered: boolean | null; supplierName: string | null; outstanding: OutLine[];
 }
 
 const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "" });
 
 export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("grn");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [listFilter, setListFilter] = useState<"all" | "reg" | "unreg">("all");
+  // A GRR is "final" once its invoice number is in; without it, it's pending.
+  const [invFilter, setInvFilter] = useState<"all" | "final" | "pending">("all");
+  const [q, setQ] = useState("");
 
+  // Which list the GRR belongs to — fixes its sequence (15000 vs 15000u).
+  const [registered, setRegistered] = useState<boolean | null>(null);
   const [poId, setPoId] = useState("");
   const [poNoManual, setPoNoManual] = useState("");
+  const [manualGrnNo, setManualGrnNo] = useState(""); // unregistered only — blank = auto
   const [gatePassNo, setGatePassNo] = useState("");
   const [invNo, setInvNo] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -35,14 +43,24 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [items, setItems] = useState<GrnItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
 
   function resetForm() {
-    setEditId(null); setEditNo(null);
-    setPoId(""); setPoNoManual(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
+    setEditId(null); setEditNo(null); setRegistered(null);
+    setPoId(""); setPoNoManual(""); setManualGrnNo(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
+  // One "New GRR" flow — the PO you pick decides the list: a registered PO
+  // sends the GRR to the registered list (15000 series), an unregistered PO to
+  // the unregistered list (15000u series). A standalone GRR (no PO) picks its
+  // list with the small toggle in the form.
+  function startCreate() {
+    resetForm();
+    setOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   function openEdit(g: Grn) {
-    setEditId(g.id); setEditNo(g.grnNo); setPoId("");
+    setEditId(g.id); setEditNo(g.grnNo); setRegistered(g.registered); setPoId("");
     setPoNoManual(g.poNo != null ? String(g.poNo) : "");
+    setManualGrnNo(g.registered === false ? String(g.grnNo) : "");
     setGatePassNo(g.gatePassNo || ""); setInvNo(g.invNo || "");
     setDate((g.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setVerifiedBy(g.verifiedBy || ""); setReceivedBy(g.receivedBy || "");
@@ -56,8 +74,9 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   function pickPo(id: string) {
     setPoId(id);
     const p = openPos.find(x => String(x.id) === id);
-    if (!p) return;
-    setPoNoManual(String(p.poNo));   // auto-fill the ref, still editable
+    if (!p) { setRegistered(null); return; }   // "None" → standalone, list chosen below
+    setPoNoManual(String(p.poNo));             // auto-fill the ref, still editable
+    setRegistered(p.registered);               // the PO decides which list this GRR lands in
     // Only the lines still awaiting delivery, pre-filled with what's outstanding.
     if (p.outstanding.length) {
       setItems(p.outstanding.map((o, i) => ({
@@ -71,12 +90,15 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   async function save() {
     if (!gatePassNo.trim()) { setErr("Please enter the inward gate pass number."); return; }
+    if (!editId && !poId && registered == null) {
+      setErr("Pick a PO, or choose Registered / Unregistered for this standalone GRR."); return;
+    }
     setBusy(true); setErr("");
     try {
       const clean = items.filter(it => it.item.trim());
       const res = await fetch(editId ? `/api/procurement/grns/${editId}` : "/api/procurement/grns", {
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, manualGrnNo, registered, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -84,10 +106,43 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     finally { setBusy(false); }
   }
   async function del(g: Grn) {
-    if (!confirm(`Delete GRR #${g.grnNo}?`)) return;
+    if (!confirm(`Delete GRR #${docNoLabel(g.grnNo, g.registered)}?`)) return;
     const res = await fetch(`/api/procurement/grns/${g.id}`, { method: "DELETE" });
     if (res.ok) router.refresh(); else alert("Delete failed");
   }
+
+  // ---- Registered / Unregistered GRR lists ----
+  const counts = {
+    all: rows.length,
+    reg: rows.filter(g => g.registered === true).length,
+    unreg: rows.filter(g => g.registered === false).length,
+  };
+  const shownRows = rows.filter(g =>
+    listFilter === "all" ? true
+    : listFilter === "reg" ? g.registered === true
+    : g.registered === false);
+
+  // ---- Final (invoice in) vs Pending (awaiting invoice), within the list above ----
+  const hasInv = (g: Grn) => !!(g.invNo && g.invNo.trim());
+  const invCounts = {
+    all: shownRows.length,
+    final: shownRows.filter(hasInv).length,
+    pending: shownRows.filter(g => !hasInv(g)).length,
+  };
+  const base = invFilter === "all" ? shownRows : invFilter === "final" ? shownRows.filter(hasInv) : shownRows.filter(g => !hasInv(g));
+
+  // Search GRR#, PO#, gate-pass, invoice, sign-off names and every item line.
+  const qs = q.trim().toLowerCase();
+  const shown = !qs ? base : base.filter(g => {
+    const its = parseItems<GrnItem>(g.items);
+    const hay = [
+      `#${docNoLabel(g.grnNo, g.registered)}`, String(g.grnNo),
+      g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "", String(g.poNo ?? ""),
+      g.gatePassNo, g.invNo, g.receivedBy, g.verifiedBy,
+      ...its.flatMap(it => [it.item, it.remarks]),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(qs);
+  });
 
   return (
     <div className="fade-up">
@@ -96,18 +151,65 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Goods Receipts Reports (Store)</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Record goods received against a PO, or standalone.</p>
         </div>
-        {canEdit && <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New GRR"}</button>}
+        {canEdit && (open
+          ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button>
+          : <button onClick={startCreate} className="btn btn-primary">＋ New GRR</button>
+        )}
       </div>
 
       {open && canEdit && (
         <div className="card" style={{ marginBottom: 18, padding: 18 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{editId ? `✏️ Edit GRR #${editNo}` : "＋ New GRR"}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
+            {editId ? `✏️ Edit GRR #${docNoLabel(editNo, registered)}` : "＋ New GRR"}
+          </div>
+
+          {(!editId && !poId) ? (
+            // Standalone GRR (no PO) — pick a list, or choose a PO below to follow its list.
+            <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)" }}>Standalone GRR — list:</span>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="radio" name="grnreg" checked={registered === true} onChange={() => setRegistered(true)} /> Registered
+              </label>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                <input type="radio" name="grnreg" checked={registered === false} onChange={() => setRegistered(false)} /> Unregistered
+              </label>
+              <span style={{ fontSize: 11.5, color: "var(--text3)" }}>…or pick a PO below and the GRR follows that PO&apos;s list.</span>
+            </div>
+          ) : (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 12,
+              padding: "6px 12px", borderRadius: 8, fontSize: 12.5,
+              background: registered === false ? "#fff7ed" : "#f0fdf4",
+              border: `1px solid ${registered === false ? "#fed7aa" : "#bbf7d0"}`,
+              color: registered === false ? "#9A3412" : "#166534",
+            }}>
+              <b>{registered === false ? "Unregistered list" : "Registered list"}</b>
+              <span style={{ color: "var(--text3)" }}>
+                {registered === false ? "— 15000u series" : "— 15000 series"}{poId ? " · from the selected PO" : ""}
+              </span>
+            </div>
+          )}
+
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginBottom: 14 }}>
-            <Field label="For PO (optional)">
+            {registered === false && (
+              <Field label="GRR Number (leave blank to auto-number)">
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <input value={manualGrnNo} onChange={e => setManualGrnNo(e.target.value.replace(/[^0-9]/g, ""))} className="auth-input"
+                    inputMode="numeric" placeholder="e.g. 15005" style={{ flex: 1 }} />
+                  <span style={{ fontWeight: 800, color: "#9A3412", fontSize: 15 }}>u</span>
+                </div>
+              </Field>
+            )}
+            <Field label="For PO (optional) — decides the list">
               <select value={poId} onChange={e => pickPo(e.target.value)} className="auth-input">
                 <option value="">— None (standalone GRR) —</option>
-                {openPos.map(p => <option key={p.id} value={p.id}>PO #{p.poNo}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                <optgroup label="Registered POs">
+                  {openPos.filter(p => p.registered === true).map(p => <option key={p.id} value={p.id}>PO #{docNoLabel(p.poNo, p.registered)}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                </optgroup>
+                <optgroup label="Unregistered POs">
+                  {openPos.filter(p => p.registered === false).map(p => <option key={p.id} value={p.id}>PO #{docNoLabel(p.poNo, p.registered)}{p.supplierName ? ` · ${p.supplierName}` : ""}</option>)}
+                </optgroup>
               </select>
             </Field>
             <Field label="PO Ref No (or type manually)">
@@ -162,18 +264,40 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </div>
       )}
 
+      {/* Registered / Unregistered GRR lists */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
+        <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
+        <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
+      </div>
+
+      {/* Final (invoice in) vs Pending (awaiting invoice) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <FilterTab label="All" n={invCounts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
+        <FilterTab label="Final (invoice in)" n={invCounts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
+        <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, or item…"
+          style={searchInput} />
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No GRRs yet.</td></tr>
-            ) : rows.map(g => (
+            {shown.length === 0 ? (
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+            ) : shown.map(g => (
               <tr key={g.id}>
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
-                <td>#{g.grnNo}</td>
-                <td>{g.invNo || "—"}</td>
-                <td>{g.poNo ? `#${g.poNo}` : "—"}</td>
+                <td>#{docNoLabel(g.grnNo, g.registered)}</td>
+                <td>{g.invNo && g.invNo.trim()
+                  ? g.invNo
+                  : <span style={{ padding: "2px 8px", borderRadius: 999, background: "#fef3c7", color: "#B45309", fontSize: 10.5, fontWeight: 700 }}>Pending</span>}</td>
+                <td>{g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
@@ -193,4 +317,18 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label><span className="auth-field-label">{label}</span>{children}</label>;
 }
+// Registered / Unregistered filter pill above the GRR register.
+function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
+  label: string; n: number; active: boolean; onClick: () => void; color?: string;
+}) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "6px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+      border: `1px solid ${active ? color : "var(--border)"}`,
+      background: active ? color : "transparent",
+      color: active ? "#fff" : "var(--text2)",
+    }}>{label} <span style={{ opacity: 0.85 }}>({n})</span></button>
+  );
+}
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
+const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };

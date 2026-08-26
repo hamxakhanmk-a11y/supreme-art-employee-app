@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { desc, eq, max } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextNumber, NUMBER_START } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextPoNo, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,16 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
-  const [{ n }] = await db.select({ n: max(purchaseOrders.poNo) }).from(purchaseOrders);
-  const poNo = nextNumber(n, NUMBER_START.po);
+  // Every PO belongs to a list. Registered and unregistered are numbered as two
+  // separate sequences, so we must know which one before assigning a number.
+  const registered = b.registered === true ? true : b.registered === false ? false : null;
+  if (registered === null) {
+    return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
+  }
+  // Unregistered POs may be numbered by hand (the "u" is display-only); blank =
+  // auto. Registered POs are always auto.
+  const manualNo = registered === false ? String(b.manualPoNo ?? "").replace(/[^0-9]/g, "") : "";
+  const poNo = manualNo !== "" ? parseInt(manualNo, 10) : await nextPoNo(registered);
 
   // Optional link to a demand (picker) — stamps its number and marks it ordered.
   let demandId: number | null = null;
@@ -50,10 +58,13 @@ export async function POST(req: Request) {
     supplierAddress: b.supplierAddress || null,
     supplierContact: b.supplierContact || null,
     supplierPhone: b.supplierPhone || null,
+    supplierNtn: b.supplierNtn || null,
+    supplierStrn: b.supplierStrn || null,
     expectedDate: b.expectedDate || null,
     specification: b.specification || null,
     terms: b.terms || null,
     discount: Number(b.discount) || 0,
+    registered,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
@@ -65,6 +76,11 @@ export async function POST(req: Request) {
 
   // Mark the source demand as ordered.
   if (demandId) await db.update(demands).set({ status: "ordered" }).where(eq(demands.id, demandId));
+  // Push the supplier's details (list, NTN, STRN, address, contact) onto the
+  // saved directory so the next PO for this supplier auto-fills them.
+  await syncSupplierFromPo(b.supplierName, {
+    registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+  });
 
   await logActivity({
     user: guard, action: "po.create",

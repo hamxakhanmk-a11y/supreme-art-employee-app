@@ -35,10 +35,10 @@ export type ModuleKey =
   | "purchase.hr-approve"
   | "purchase.receive"
   | "station"
+  | "station.delete"
   | "demand"
   | "po"
   | "grn"
-  | "inspection"
   | "store"
   | "capa";
 
@@ -51,7 +51,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "reports.leaves",      label: "Report · Leaves",      hint: "Leave history — filters & export" },
   { key: "reports.halfday",     label: "Report · Half-Day",    hint: "Half-day history — filters & export" },
   { key: "reports.salary",      label: "Report · Salary",      hint: "Salary records — view & reprint slips" },
-  { key: "reports.procurement", label: "Report · Procurement", hint: "Demand / PO / GRR / Inspection register" },
+  { key: "reports.procurement", label: "Report · Procurement", hint: "Procurement master report — Demand → PO → GRR" },
   { key: "reports.station",     label: "Report · Station",     hint: "Hourly-leave register from Station" },
   { key: "reports.activity",    label: "Report · Activity Log", hint: "Audit trail of who did what" },
   { key: "salary",     label: "Salary",      hint: "Generate & view salary slips" },
@@ -62,11 +62,11 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "purchase.receive",    label: "Purchase · Receive",     hint: "Mark material received (Admin)" },
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
   { key: "purchase.hr-approve", label: "Purchase · HR Approval", hint: "HR-approve or HR-reject a raised PR" },
-  { key: "station",    label: "Station",     hint: "Station terminal & hourly-leave report" },
+  { key: "station",        label: "Station",          hint: "Station terminal & hourly-leave report — punch, edit times" },
+  { key: "station.delete", label: "Station · Delete", hint: "Delete an hourly-leave trip from the Station report" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
-  { key: "inspection", label: "Inspection",   hint: "Procurement — incoming material inspection (QC)" },
   { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];
@@ -96,8 +96,21 @@ function expandMasters(modules: ModuleKey[]): ModuleKey[] {
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
 
 export interface RolePerm {
-  modules: ModuleKey[];
-  canEdit: boolean;
+  modules: ModuleKey[];       // sections the role can OPEN (view access)
+  canEdit: boolean;           // derived: can edit at least one section
+  editModules?: ModuleKey[];  // subset of `modules` the role may also edit
+}
+
+// How a module's edit permission behaves in the Role Permissions UI:
+//  - "view":    reports — view only, never edited (no edit toggle).
+//  - "action":  purchase.* — the permission IS an action, so granting = edit.
+//  - "section": everything else — has a real view-vs-edit distinction.
+export type EditKind = "view" | "action" | "section";
+export function moduleEditKind(key: string): EditKind {
+  if (key.startsWith("reports.")) return "view";
+  if (key.startsWith("purchase")) return "action";
+  if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
+  return "section";
 }
 
 // ============ Roles ============
@@ -145,7 +158,7 @@ export const DEFAULT_PERMS: Record<string, RolePerm> = {
 };
 
 function fullAccess(): RolePerm {
-  return { modules: [...ALL_MODULE_KEYS], canEdit: true };
+  return { modules: [...ALL_MODULE_KEYS], canEdit: true, editModules: [...ALL_MODULE_KEYS] };
 }
 
 // Anything we're prepared to accept from a stored row. That's the catalog keys
@@ -239,28 +252,42 @@ export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
 
   // Seed every editable role from its default (custom roles start blank), then
-  // let stored rows override.
+  // let stored rows override. Default edit set = every accessible section when
+  // the default is editable, none when it's view-only (CEO).
   const data: Record<string, RolePerm> = {};
   for (const rm of await loadRoles()) {
     if (rm.key === "superadmin") continue; // always full — set below
     const d = DEFAULT_PERMS[rm.key];
-    data[rm.key] = d ? { modules: [...d.modules], canEdit: d.canEdit } : { modules: [], canEdit: true };
+    const modules = d ? [...d.modules] : [];
+    const editModules = d ? (d.canEdit ? [...d.modules] : []) : [];
+    data[rm.key] = { modules, canEdit: !!editModules.length, editModules };
   }
 
   try {
     const rows = await db.select().from(rolePermissions);
     for (const r of rows) {
       if (r.role === "superadmin") continue; // always full, ignore any stored row
-      data[r.role] = { modules: sanitizeModules(r.modules), canEdit: r.canEdit };
+      const modules = sanitizeModules(r.modules);
+      // NULL edit_modules = legacy row: derive from the old global canEdit flag.
+      const editModules = r.editModules == null
+        ? (r.canEdit ? [...modules] : [])
+        : sanitizeModules(r.editModules);
+      data[r.role] = { modules, canEdit: !!editModules.length, editModules };
     }
   } catch {
     // Table missing (not migrated yet) → fall back to defaults, never lock out.
   }
 
   // Expand legacy umbrella keys ("reports", "purchase") so every downstream
-  // check and the Role Permissions UI sees the fine-grained set.
+  // check and the Role Permissions UI sees the fine-grained set. Edit set is
+  // expanded too, then clamped to what the role can actually access.
   for (const role of Object.keys(data)) {
-    data[role].modules = expandMasters(data[role].modules);
+    const p = data[role];
+    p.modules = expandMasters(p.modules);
+    const editExpanded = expandMasters(p.editModules ?? []);
+    const access = new Set(p.modules);
+    p.editModules = editExpanded.filter(k => access.has(k));
+    p.canEdit = p.editModules.length > 0;
   }
 
   data.superadmin = fullAccess(); // invariant: owner is always full-access
@@ -271,7 +298,13 @@ export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
 export async function getPerm(role: string): Promise<RolePerm> {
   if (role === "superadmin") return fullAccess();
   const all = await loadAllPerms();
-  return all[role] ?? { modules: [], canEdit: false };
+  return all[role] ?? { modules: [], canEdit: false, editModules: [] };
+}
+
+export async function roleCanEdit(role: string, moduleKey: ModuleKey): Promise<boolean> {
+  if (role === "superadmin") return true;
+  const p = await getPerm(role);
+  return (p.editModules ?? []).includes(moduleKey);
 }
 
 // Idempotently create the table. Reads tolerate its absence (defaults), but the
@@ -281,12 +314,15 @@ let tableEnsured = false;
 export async function ensureRolePermissionsTable() {
   if (tableEnsured) return;
   await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS role_permissions (
-      role varchar(20) PRIMARY KEY,
-      modules text NOT NULL DEFAULT '',
-      can_edit boolean NOT NULL DEFAULT true,
-      updated_at timestamp NOT NULL DEFAULT now()
-    )
+    DO $$ BEGIN
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        role varchar(20) PRIMARY KEY,
+        modules text NOT NULL DEFAULT '',
+        can_edit boolean NOT NULL DEFAULT true,
+        updated_at timestamp NOT NULL DEFAULT now()
+      );
+      ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS edit_modules text;
+    END $$;
   `);
   tableEnsured = true;
 }

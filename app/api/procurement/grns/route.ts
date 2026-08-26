@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { desc, eq, max } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, nextNumber, NUMBER_START, recomputePoStatus } from "@/lib/procurement";
+import { ensureProcurementTables, nextGrnNo, recomputePoStatus } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -22,15 +22,17 @@ export async function POST(req: Request) {
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
 
-  const [{ n }] = await db.select({ n: max(grns.grnNo) }).from(grns);
-  const grnNo = nextNumber(n, NUMBER_START.grn);
+  // A GRR belongs to the same list as its PO. When a PO is picked we inherit
+  // its tax status; otherwise (standalone) we take it from the list the user
+  // is in. Registered and unregistered GRRs are numbered as separate sequences.
+  let registered = b.registered === true ? true : b.registered === false ? false : null;
 
   // Optional link to a PO (picker) — stamps its number and marks it received.
   let poId: number | null = null;
   let poNo: number | null = null;
   if (b.poId) {
     const [p] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, Number(b.poId)));
-    if (p) { poId = p.id; poNo = p.poNo; }
+    if (p) { poId = p.id; poNo = p.poNo; registered = p.registered; }
   }
   // Manual "PO Ref No" — overrides / fills the number when typed by hand.
   if (b.poNo != null && String(b.poNo).trim() !== "") {
@@ -38,11 +40,20 @@ export async function POST(req: Request) {
     if (!isNaN(n)) poNo = n;
   }
 
+  if (registered === null) {
+    return NextResponse.json({ error: "Choose the Registered or Unregistered list first." }, { status: 400 });
+  }
+  // Unregistered GRRs may be numbered by hand (the "u" is display-only); blank =
+  // auto. Registered GRRs are always auto.
+  const manualNo = registered === false ? String(b.manualGrnNo ?? "").replace(/[^0-9]/g, "") : "";
+  const grnNo = manualNo !== "" ? parseInt(manualNo, 10) : await nextGrnNo(registered);
+
   const items = Array.isArray(b.items) ? b.items : [];
   const [row] = await db.insert(grns).values({
     grnNo,
     poId,
     poNo,
+    registered,
     gatePassNo: b.gatePassNo || null,
     invNo: b.invNo || null,
     date: b.date || new Date().toISOString().slice(0, 10),
