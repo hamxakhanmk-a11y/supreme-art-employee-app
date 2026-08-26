@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
+import AppIntro from "@/components/AppIntro";
 import PrintWatermark from "@/components/PrintWatermark";
 import { MeProvider } from "@/components/MeProvider";
 
@@ -22,6 +23,7 @@ export default function RootLayout({
       </head>
       <body>
         <MeProvider>
+          <AppIntro />
           <PrintWatermark />
           <TopNav />
           <div style={{ display: "flex", alignItems: "flex-start" }}>
