@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import TopNav from "@/components/TopNav";
 import Sidebar from "@/components/Sidebar";
+import AppIntro from "@/components/AppIntro";
 import PrintWatermark from "@/components/PrintWatermark";
 import PrintTextareas from "@/components/PrintTextareas";
 import { MeProvider } from "@/components/MeProvider";
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body>
         <MeProvider>
+          <AppIntro />
           <PrintWatermark />
           <PrintTextareas />
           <TopNav />
