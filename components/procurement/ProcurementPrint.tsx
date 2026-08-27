@@ -22,6 +22,8 @@ export default function ProcurementPrint({
 
   // Which copies to include on the next Print / Save-as-PDF. "" = all.
   const [selectedCopy, setSelectedCopy] = useState<string>("");
+  // 2-up: print two copies stacked on one A4 page (cut the page to separate).
+  const [twoUp, setTwoUp] = useState(false);
   // Stable per-instance id so the print-copy CSS scoping only affects this sheet.
   const [rootId] = useState(() => `pf-${Math.random().toString(36).slice(2, 9)}`);
 
@@ -64,7 +66,7 @@ export default function ProcurementPrint({
   }
 
   return (
-    <div id={rootId}>
+    <div id={rootId} className={twoUp ? "pf-2up" : undefined}>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <Link href={backHref} className="btn">{backLabel}</Link>
         <button onClick={doPrint} className="btn btn-primary">🖨 Print</button>
@@ -78,8 +80,15 @@ export default function ProcurementPrint({
             </select>
           </label>
         )}
+        {sheets.length > 1 && !selectedCopy && (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--text2)", cursor: "pointer" }}>
+            <input type="checkbox" checked={twoUp} onChange={(e) => setTwoUp(e.target.checked)} />
+            2 copies per page <span style={{ color: "var(--text3)" }}>(cut to separate)</span>
+          </label>
+        )}
       </div>
 
+      <div className="pf-sheets">
       {sheets.map((copy, i) => (
         <div className={`pf-sheet${compact ? " pf-sheet--compact" : ""}`} data-copy={copy} key={i}>
           <table className="pf-head">
@@ -113,6 +122,7 @@ export default function ProcurementPrint({
           {copy && <div className="pf-copy">{copy}</div>}
         </div>
       ))}
+      </div>
 
       <style jsx global>{`
         /* Column layout so the signature block can be pushed to the page foot. */
@@ -291,6 +301,45 @@ export default function ProcurementPrint({
           .pf-sheet--compact .pf-copy { font-size: 10px !important; margin-top: 6px !important; }
           /* Force the whole sheet onto a single page. */
           .pf-sheet--compact { page-break-inside: avoid; break-inside: avoid; }
+
+          /* ── 2 copies per A4 page ── each copy takes half the sheet; a dashed
+             rule marks where to cut. Typography shrinks so a short form (GRR /
+             Demand) fits its half. Break after every 2nd copy, not every one. */
+          .pf-2up .pf-sheet {
+            min-height: 0 !important;
+            height: 148mm !important;   /* ~half of A4 (297mm); two = one page */
+            padding: 5mm 10mm !important;
+            box-sizing: border-box; overflow: hidden;
+            font-size: 10px !important;
+          }
+          .pf-2up .pf-sheet + .pf-sheet {
+            break-before: auto !important; page-break-before: auto !important;
+            border-top: none !important; margin-top: 0 !important;
+          }
+          /* Cut line under the top copy of each pair. */
+          .pf-2up .pf-sheets .pf-sheet:nth-child(odd) {
+            border-bottom: 1px dashed #888 !important;
+          }
+          /* Page break after the bottom copy of each pair. */
+          .pf-2up .pf-sheets .pf-sheet:nth-child(2n) {
+            break-after: page; page-break-after: always;
+          }
+          .pf-2up .pf-sheet .pf-title { font-size: 13px !important; letter-spacing: 1px !important; margin: 5px 0 5px !important; padding-bottom: 5px !important; }
+          .pf-2up .pf-sheet .pf-head td { padding: 2px 6px !important; font-size: 9.5px !important; }
+          .pf-2up .pf-sheet .pf-ctrl td { font-size: 9px !important; }
+          .pf-2up .pf-sheet .pf-orgcell { padding: 5px 8px !important; }
+          .pf-2up .pf-sheet .pf-orgname { font-size: 11px !important; }
+          .pf-2up .pf-sheet .pf-org { font-size: 9px !important; line-height: 1.25 !important; }
+          .pf-2up .pf-sheet .pf-orginner { gap: 10px !important; }
+          .pf-2up .pf-sheet .pf-orginner img { width: 72px !important; }
+          .pf-2up .pf-sheet .pf-metarow { margin-bottom: 6px !important; }
+          .pf-2up .pf-sheet .pf-fieldtable td { padding: 1px 6px !important; font-size: 9.5px !important; }
+          .pf-2up .pf-sheet .pf-table th,
+          .pf-2up .pf-sheet .pf-table td { padding: 2px 5px !important; font-size: 9px !important; }
+          .pf-2up .pf-sheet .pf-sign { padding-top: 8px !important; }
+          .pf-2up .pf-sheet .pf-sign .lbl { min-height: 18px !important; font-size: 9.5px !important; }
+          .pf-2up .pf-sheet .pf-sign .line { height: 16px !important; font-size: 9px !important; }
+          .pf-2up .pf-sheet .pf-copy { font-size: 8.5px !important; margin-top: 5px !important; }
         }
       `}</style>
     </div>
