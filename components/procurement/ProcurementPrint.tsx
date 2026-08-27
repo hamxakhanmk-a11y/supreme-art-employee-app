@@ -320,8 +320,9 @@ export default function ProcurementPrint({
           .pf-2up .pf-sheets .pf-sheet:nth-child(odd) {
             border-bottom: 1px dashed #888 !important;
           }
-          /* Page break after the bottom copy of each pair. */
-          .pf-2up .pf-sheets .pf-sheet:nth-child(2n) {
+          /* Page break after the bottom copy of each pair — but never after the
+             last copy, or the browser prints a trailing blank page. */
+          .pf-2up .pf-sheets .pf-sheet:nth-child(2n):not(:last-child) {
             break-after: page; page-break-after: always;
           }
           .pf-2up .pf-sheet .pf-title { font-size: 13px !important; letter-spacing: 1px !important; margin: 5px 0 5px !important; padding-bottom: 5px !important; }
