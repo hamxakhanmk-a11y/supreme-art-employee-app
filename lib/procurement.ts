@@ -264,7 +264,7 @@ export function docNoLabel(no: number | null | undefined, registered: boolean | 
 
 // Each form prints one page per copy, named at the foot of the page.
 export const FORM_COPIES: Record<Stage, string[]> = {
-  demand: ["Store Copy", "Procurement Copy"],
+  demand: ["Finance Copy", "Procurement Copy"],
   po: ["Procurement Copy", "Supplier Copy", "Finance Copy"],
   grn: ["Finance Copy", "Store Copy"],
   inspection: [],
