@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { stationLeaves, employees } from "@/lib/schema";
 import { and, gte, lte, isNotNull, isNull, eq, desc, sql } from "drizzle-orm";
+import { SHIFT_END } from "@/lib/attendance";
 
 // Idempotently add the punch-out reason column. Called before any read/write
 // that touches it, so production self-migrates on deploy without a manual step.
@@ -9,6 +10,21 @@ export async function ensureStationReasonColumn() {
   if (reasonColumnEnsured) return;
   await db.execute(sql`ALTER TABLE station_leaves ADD COLUMN IF NOT EXISTS reason varchar(200)`);
   reasonColumnEnsured = true;
+}
+
+// Auto-close trips left open past the day they started: stamp the punch-in at
+// that day's duty end (16:45 Karachi) and record the leave only up to then. The
+// person drops off the "who's out" board the next day, while the day's hourly
+// leave is still captured. Time outside after duty end never counts.
+export async function closeStaleTrips() {
+  await ensureStationReasonColumn();
+  await db.execute(sql`
+    UPDATE station_leaves
+    SET in_at = ((date + ${SHIFT_END}::time) AT TIME ZONE 'Asia/Karachi'),
+        minutes = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (((date + ${SHIFT_END}::time) AT TIME ZONE 'Asia/Karachi') - out_at)) / 60))::int
+    WHERE in_at IS NULL
+      AND date < (now() AT TIME ZONE 'Asia/Karachi')::date
+  `);
 }
 
 // Sum of completed Station leave minutes per (employeeId, date), split by type.
@@ -33,7 +49,7 @@ export interface StationTrip {
 }
 
 export async function stationTrips(fromISO: string, toISO: string): Promise<StationTrip[]> {
-  await ensureStationReasonColumn();
+  await closeStaleTrips();
   const rows = await db.select({
     id: stationLeaves.id,
     employeeId: stationLeaves.employeeId,
@@ -83,7 +99,7 @@ export interface OutNow {
 }
 
 export async function currentlyOut(): Promise<OutNow[]> {
-  await ensureStationReasonColumn();
+  await closeStaleTrips();
   const rows = await db.select({
     id: stationLeaves.id,
     employeeId: stationLeaves.employeeId,
@@ -114,6 +130,7 @@ export async function currentlyOut(): Promise<OutNow[]> {
 }
 
 export async function stationMinutesByEmpDay(fromISO: string, toISO: string): Promise<Map<string, LeaveMins>> {
+  await closeStaleTrips();
   const rows = await db.select({
     employeeId: stationLeaves.employeeId, date: stationLeaves.date,
     type: stationLeaves.type, minutes: stationLeaves.minutes,

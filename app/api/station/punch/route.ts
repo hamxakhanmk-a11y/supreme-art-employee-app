@@ -5,6 +5,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStationReasonColumn } from "@/lib/stationServer";
+import { SHIFT_END } from "@/lib/attendance";
 
 // POST /api/station/punch  { pin, type?, reason? }
 // Toggle: if the employee has an open trip, punch them back IN (fills inAt +
@@ -41,11 +42,14 @@ export async function POST(req: NextRequest) {
     const name = `${emp.firstName} ${emp.lastName}`;
 
     if (open) {
+      // Duty end (16:45) on the trip's out-day, in Karachi time. Leave is only
+      // counted up to duty end — coming back after 16:45 adds nothing.
+      const dutyEnd = sql`((${stationLeaves.date} + ${SHIFT_END}::time) AT TIME ZONE 'Asia/Karachi')`;
       // Compute duration in-DB so it's exact regardless of server/JS timezone.
       const [row] = await db.update(stationLeaves)
         .set({
           inAt: stamp,
-          minutes: sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (${stamp} - ${stationLeaves.outAt})) / 60))::int`,
+          minutes: sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (LEAST(${stamp}, ${dutyEnd}) - ${stationLeaves.outAt})) / 60))::int`,
         })
         .where(eq(stationLeaves.id, open.id)).returning();
       await logActivity({

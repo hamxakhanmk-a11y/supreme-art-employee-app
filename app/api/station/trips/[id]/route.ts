@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStationReasonColumn } from "@/lib/stationServer";
+import { SHIFT_END } from "@/lib/attendance";
 
 // Look up a trip's employee (id + name) for the activity log.
 async function tripEmp(tripId: number) {
@@ -47,8 +48,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const set: Record<string, unknown> = { date, outAt: outStamp, type, reason };
     if (inTime) {
       const inStamp = sql`((${date}::date + ${inTime}::time) AT TIME ZONE 'Asia/Karachi')`;
+      // Leave is only counted up to duty end (16:45) on that day.
+      const dutyEnd = sql`((${date}::date + ${SHIFT_END}::time) AT TIME ZONE 'Asia/Karachi')`;
       set.inAt = inStamp;
-      set.minutes = sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (${inStamp} - ${outStamp})) / 60))::int`;
+      set.minutes = sql`GREATEST(0, ROUND(EXTRACT(EPOCH FROM (LEAST(${inStamp}, ${dutyEnd}) - ${outStamp})) / 60))::int`;
     } else {
       // Still out — no check-in, no duration yet.
       set.inAt = null;
