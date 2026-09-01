@@ -71,6 +71,12 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];
 
+// Dormant features remain valid permission keys so saving another role cannot
+// erase their stored assignments. They are omitted only from Role Permissions.
+// Remove "kpi" from this set when the KPI module is brought back.
+export const HIDDEN_MODULE_KEYS = new Set<ModuleKey>(["kpi"]);
+export const VISIBLE_MODULES = MODULES.filter((m) => !HIDDEN_MODULE_KEYS.has(m.key));
+
 // Legacy umbrella keys expand into their fine-grained members at load time so
 // existing roles keep working the moment we introduce the split. A role stored
 // with "reports" gets treated as if it also had every "reports.*" key, and the

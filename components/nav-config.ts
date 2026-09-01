@@ -28,7 +28,9 @@ export const MODULES_BASE: ModuleDef[] = [
   { key: "attendance", label: "Attendance", module: "attendance" },
   { key: "forms",      label: "Forms",      module: "forms" },
   { key: "salary",     label: "Salary",     module: "salary" },
-  { key: "kpi",        label: "KPI",        module: "kpi" },
+  // KPI is intentionally dormant. Keep its routes/config below so it can be
+  // restored later without rebuilding; adding this MODULES_BASE entry back
+  // is all that is needed to return the top-nav tab.
   { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
   { key: "station",    label: "Station",    module: "station" },
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
