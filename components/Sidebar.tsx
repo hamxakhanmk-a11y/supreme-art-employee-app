@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMe } from "@/components/MeProvider";
 import { getSubNav, pathToModule } from "@/components/nav-config";
+import { useFlowIndicator } from "@/components/useFlowIndicator";
 
 // The vertical sub-nav column, sitting between the top bar and the page.
 // Only renders when the current module has sub-tabs — hidden entirely on
@@ -15,6 +16,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const meState = useMe();
   const me = meState.user ? { ...meState.user, modules: meState.modules } : null;
+  // Liquid selector that glides between the sub-nav items.
+  const flowRef = useFlowIndicator<HTMLElement>("y", ".sb-item.active", [pathname, meState.modules.join(","), meState.user?.role]);
 
   if (HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
 
@@ -50,7 +53,8 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="app-sidebar no-print"
+      ref={flowRef as React.RefObject<HTMLElement>}
+      className="app-sidebar no-print flow-connected"
       style={{
         width: 222,
         minWidth: 222,
@@ -62,6 +66,7 @@ export default function Sidebar() {
         minHeight: "calc(100vh - 56px)",
       }}
     >
+      <span className="flow-indicator flow-indicator-y" aria-hidden="true" />
       {links.map((link) => {
         const active = isActive(link.href);
         return (
