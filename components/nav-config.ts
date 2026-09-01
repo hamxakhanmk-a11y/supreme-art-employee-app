@@ -80,6 +80,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/reports/attendance", label: "📊 Attendance Register", variant: "report", needs: "reports.attendance" },
         { href: "/reports/leaves", label: "📊 Leave History", variant: "report", needs: "reports.leaves" },
         { href: "/reports/half-day", label: "📊 Half-Day History", variant: "report", needs: "reports.halfday" },
+        { href: "/reports/overtime", label: "📊 Overtime Report", variant: "report", needs: "reports.attendance" },
       ];
     case "forms": {
       if (path === "/forms") return [];
