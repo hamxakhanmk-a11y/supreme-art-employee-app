@@ -19,7 +19,7 @@ function kindOf(key: string): Kind {
 // so new module keys slot in automatically (e.g. any future purchase.* or
 // reports.*). Order mirrors the top navigation.
 const GROUP_ORDER = [
-  "Attendance", "Forms & Leave", "Salary", "KPI", "Purchase",
+  "Attendance", "Forms & Leave", "Salary", "Purchase",
   "Station", "Procurement", "Store", "Reports", "Employees",
 ];
 function groupOf(key: string): string {
@@ -32,7 +32,6 @@ function groupOf(key: string): string {
     case "forms":      return "Forms & Leave";
     case "capa":       return "Forms & Leave";
     case "salary":     return "Salary";
-    case "kpi":        return "KPI";
     case "station":    return "Station";
     case "station.delete": return "Station";
     case "store":      return "Store";

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useMe } from "@/components/MeProvider";
 import { MODULES_BASE, MODULE_HOME, pathToModule } from "@/components/nav-config";
+import { useFlowIndicator } from "@/components/useFlowIndicator";
 
 const HIDE_ON = ["/login"];
 
@@ -16,6 +17,8 @@ export default function TopNav() {
     ? { ...meState.user, modules: meState.modules, canEdit: meState.canEdit }
     : null;
   const [menuOpen, setMenuOpen] = useState(false);
+  // Liquid selector that glides between the module tabs.
+  const flowRef = useFlowIndicator<HTMLDivElement>("x", ".mode-btn.active", [pathname, meState.modules.join(","), meState.user?.role]);
   const hidden = HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"));
 
   if (hidden) return null;
@@ -61,7 +64,8 @@ export default function TopNav() {
           </span>
         </Link>
 
-        <div className="mode-switch" style={{ marginLeft: "1rem" }}>
+        <div ref={flowRef} className="mode-switch flow-connected" style={{ marginLeft: "1rem" }}>
+          <span className="flow-indicator flow-indicator-x" aria-hidden="true" />
           {modules.map((m) => {
             const active = m.key === activeModule;
             return (

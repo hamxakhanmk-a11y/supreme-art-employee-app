@@ -5,7 +5,7 @@ import { rolePermissions, users } from "@/lib/schema";
 import { guardSuperAdmin } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import {
-  MODULES,
+  VISIBLE_MODULES,
   ALL_MODULE_KEYS,
   loadRoles,
   loadAllPerms,
@@ -36,7 +36,7 @@ export async function GET() {
   }));
   // Every assignable role (incl. superadmin) for user-role pickers.
   const allRoles = metas.map(m => ({ key: m.key, label: m.label, color: m.color, builtin: m.builtin }));
-  return NextResponse.json({ modules: MODULES, roles, allRoles });
+  return NextResponse.json({ modules: VISIBLE_MODULES, roles, allRoles });
 }
 
 // Create a new custom role.
