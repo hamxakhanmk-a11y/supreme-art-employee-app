@@ -42,14 +42,25 @@ export default function Sidebar() {
 
   if (links.length === 0) return null;
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    if (href === "/kpi") return pathname === "/kpi";
-    if (href === "/employees") return pathname === "/employees" || /^\/employees\/\d+/.test(pathname);
-    if (href === pathname) return true;
-    if (pathname.startsWith(href + "/")) return true;
-    return false;
+  // How strongly a link matches the current path (longer = more specific), or
+  // -1 for no match. Only the single best match is highlighted — otherwise a
+  // parent like /station would also match /station/out, leaving two "active"
+  // items (and the flowing pill covers only one, hiding the other's text).
+  const matchLen = (href: string): number => {
+    if (href === "/") return pathname === "/" ? 1 : -1;
+    if (href === "/kpi") return pathname === "/kpi" ? href.length : -1;
+    if (href === "/employees") return (pathname === "/employees" || /^\/employees\/\d+/.test(pathname)) ? href.length : -1;
+    if (pathname === href) return href.length;
+    if (pathname.startsWith(href + "/")) return href.length;
+    return -1;
   };
+  let activeHref = "";
+  let bestLen = -1;
+  for (const l of links) {
+    const len = matchLen(l.href);
+    if (len > bestLen) { bestLen = len; activeHref = l.href; }
+  }
+  const isActive = (href: string) => bestLen >= 0 && href === activeHref;
 
   return (
     <aside
