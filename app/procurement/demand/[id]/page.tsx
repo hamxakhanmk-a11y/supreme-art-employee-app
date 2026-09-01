@@ -17,12 +17,8 @@ export default async function DemandView({ params, searchParams }: { params: Pro
   if (!d) notFound();
   const items = parseItems<DemandItem>(d.items);
   const m = FORM_META.demand;
-  // The requesting department keeps the first copy; older demands saved before
-  // the department was mandatory fall back to the original label.
-  const copies = [
-    d.department ? `${d.department} Copy` : FORM_COPIES.demand[0],
-    ...FORM_COPIES.demand.slice(1),
-  ];
+  // Two fixed copies: Finance + Procurement.
+  const copies = FORM_COPIES.demand;
 
   return (
     <div className="fade-up">

@@ -184,6 +184,19 @@ export const stationLeaves = pgTable("station_leaves", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Daily overtime hours per employee — recorded on the Overtime page, shown as a
+// monthly grid. One row per (employee, date); `hours` is a decimal (e.g. 2.5).
+export const overtime = pgTable("overtime", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  hours: doublePrecision("hours").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({ uq: uniqueIndex("overtime_emp_date_uq").on(t.employeeId, t.date) }));
+
 // =====================
 // PURCHASE REQUISITIONS (PR Register)
 // =====================
