@@ -58,7 +58,7 @@ export function useFlowIndicator<T extends HTMLElement>(
         void box.offsetWidth; // reflow, so re-adding restarts the animation
         box.classList.add("is-flowing");
         clearTimeout((box as any)._flowTimer);
-        (box as any)._flowTimer = setTimeout(() => box.classList.remove("is-flowing"), 1180);
+        (box as any)._flowTimer = setTimeout(() => box.classList.remove("is-flowing"), 460);
       }
     };
 

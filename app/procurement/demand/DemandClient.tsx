@@ -130,7 +130,6 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
           <ItemsGrid items={items} setItem={setItem} addRow={addRow} removeRow={removeRow} />
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, margin: "14px 0" }}>
-            <Field label="Prepared by"><input value={preparedBy} onChange={e => setPreparedBy(e.target.value)} className="auth-input" /></Field>
             <Field label="Approved by"><input value={approvedBy} onChange={e => setApprovedBy(e.target.value)} className="auth-input" /></Field>
           </div>
 
