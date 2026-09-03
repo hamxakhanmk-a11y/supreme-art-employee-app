@@ -18,7 +18,7 @@ export default function TopNav() {
     : null;
   const [menuOpen, setMenuOpen] = useState(false);
   // Liquid selector that glides between the module tabs.
-  const flowRef = useFlowIndicator<HTMLDivElement>("x", ".mode-btn.active", [pathname, meState.modules.join(","), meState.user?.role]);
+  const flowRef = useFlowIndicator<HTMLDivElement>("x", ".mode-btn.active", pathname, [meState.modules.join(","), meState.user?.role]);
   const hidden = HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"));
 
   if (hidden) return null;

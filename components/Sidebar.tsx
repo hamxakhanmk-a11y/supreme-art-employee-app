@@ -17,7 +17,7 @@ export default function Sidebar() {
   const meState = useMe();
   const me = meState.user ? { ...meState.user, modules: meState.modules } : null;
   // Liquid selector that glides between the sub-nav items.
-  const flowRef = useFlowIndicator<HTMLElement>("y", ".sb-item.active", [pathname, meState.modules.join(","), meState.user?.role]);
+  const flowRef = useFlowIndicator<HTMLElement>("y", ".sb-item.active", pathname, [meState.modules.join(","), meState.user?.role]);
 
   if (HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
 

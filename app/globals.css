@@ -336,7 +336,6 @@ td {
 tbody tr {
   position: relative;
   transition: transform 0.15s, box-shadow 0.15s;
-  will-change: transform;
 }
 tbody tr:hover {
   transform: scale(1.005);
@@ -722,6 +721,9 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
    travelling so the movement reads as liquid. Position and size come from
    CSS custom properties written by components/useFlowIndicator.ts. */
 .flow-connected { position: relative; isolation: isolate; }
+/* Set for one frame while the pill is repositioned without animating —
+   first paint, and when the nav fills out after permissions resolve. */
+.flow-connected.flow-no-anim > .flow-indicator { transition: none !important; }
 
 .flow-indicator {
   position: absolute; z-index: 0; pointer-events: none;
