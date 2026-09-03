@@ -290,7 +290,7 @@ export default function RangeRegisterClient({
         .range-table thead tr.range-head-top th { position: sticky; top: 0; z-index: 4; box-sizing: border-box; height: 28px; }
         .range-table thead tr.range-head-sub th { position: sticky; top: 28px; z-index: 4; }
         .range-table thead tr.range-head-top th.fz { z-index: 6; }
-        .range-table tbody tr:hover td { background: var(--bg2); }
+        .range-table tbody tr:hover td { background: var(--row-hover); }
 
         @media print {
           @page { size: A4 landscape; margin: 5mm; }

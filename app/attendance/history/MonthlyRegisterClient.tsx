@@ -390,7 +390,7 @@ export default function MonthlyRegisterClient({
            the highest z so they win in both directions. */
         .register-table thead tr.register-head th { position: sticky; top: 0; z-index: 4; }
         .register-table thead tr.register-head th.fz { z-index: 6; }
-        .register-table tbody tr:hover td { background: var(--bg2); }
+        .register-table tbody tr:hover td { background: var(--row-hover); }
         .register-table tbody tr:hover td.day-c[style] { /* keep colored cells */ }
 
         @media print {

@@ -162,7 +162,7 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
         .ot-table .fz2 { left: 120px; box-shadow: 2px 0 0 var(--border); }
         .ot-table thead tr.ot-head th { position: sticky; top: 0; z-index: 4; }
         .ot-table thead tr.ot-head th.fz { z-index: 6; }
-        .ot-table tbody tr:hover td { background: var(--bg2); }
+        .ot-table tbody tr:hover td { background: var(--row-hover); }
 
         @media print {
           @page { size: A4 landscape; margin: 6mm; }
