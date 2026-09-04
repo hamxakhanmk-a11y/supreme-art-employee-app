@@ -329,7 +329,6 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
           border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top;
         }
         .kpi-entry-table thead th { background: var(--bg2); font-weight: 700; font-size: 11.5px; white-space: nowrap; }
-        .kpi-entry-table tbody tr:hover td { background: var(--row-hover); }
       `}</style>
     </div>
   );

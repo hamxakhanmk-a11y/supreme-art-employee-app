@@ -575,7 +575,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         /* Zebra/hover shading has to be repainted on the pinned cell too,
            otherwise it looks detached from its row. */
         .pr-table tbody tr:nth-child(even) .pr-actions { background: #fbf8f3; }
-        .pr-table tbody tr:hover .pr-actions { background: var(--row-hover); }
         .pr-items { list-style: none; margin: 0; padding: 0; }
         .pr-items li { padding: 1px 0; line-height: 1.35; }
         .pr-cat { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px;

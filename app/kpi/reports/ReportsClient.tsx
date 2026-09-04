@@ -131,7 +131,6 @@ export default function ReportsClient({
         .kpi-report-table th, .kpi-report-table td { border-bottom: 1px solid var(--border); padding: 8px 12px; text-align: left; }
         .kpi-report-table thead th { background: var(--bg2); font-weight: 700; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.3px; }
         .kpi-desig-row td { background: #faf6ef; font-weight: 700; font-size: 11.5px; }
-        .kpi-report-table tbody tr:hover td { background: var(--row-hover); }
       `}</style>
     </div>
   );

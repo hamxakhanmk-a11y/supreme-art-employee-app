@@ -344,10 +344,23 @@ tbody tr:hover {
   z-index: 2;
 }
 /* The tint goes on the cells, not the row — a td background paints over its
-   tr, so setting it on the row alone would be invisible. Cells carrying an
-   inline background (the coloured attendance codes) keep it, since an inline
-   style outranks this rule. */
-tbody tr:hover td { background: var(--row-hover); transition: background 0.15s; }
+   tr, so setting it on the row alone would be invisible.
+
+   It is applied as a background-IMAGE, not a background-color, and that is
+   load-bearing. Frozen/pinned cells (.fz, .pr-actions) have no colour of
+   their own: they rely on the opaque td background rule above to
+   mask the cells scrolling beneath them. Replacing that with a 10%-alpha
+   tint made them see-through, so the day columns showed straight through
+   the frozen Emp ID / Name columns on whichever row you hovered. Painting
+   the tint as an image layers it over the opaque colour instead, leaving
+   the mask intact.
+
+   Cells with an inline background (the coloured attendance codes) use the
+   background shorthand, which resets background-image — so they keep their
+   own colour untinted, which is what we want. */
+tbody tr:hover td {
+  background-image: linear-gradient(var(--row-hover), var(--row-hover));
+}
 
 /* Tables with a frozen first column or a pinned actions column opt out of the
    zoom only. A transform makes the row the containing block for any sticky
