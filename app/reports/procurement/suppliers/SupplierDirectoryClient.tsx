@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney } from "@/lib/procurement";
@@ -7,6 +8,7 @@ import { fmtMoney } from "@/lib/procurement";
 export interface DirectoryRow {
   product: string;
   supplier: string;
+  poId: number;
   poNo: number;
   date: string;
   rate: number | null;
@@ -23,10 +25,12 @@ function rateLabel(rate: number | null, uom: string): string {
 }
 
 // Per-supplier rollup inside a product group: how many times ordered, and
-// the rate from the most recent order (POs compare by po #, higher = later).
-type SupplierAgg = { count: number; rate: number | null; uom: string; poNo: number };
+// the rate + PO from the most recent order (compare by po #, higher = later)
+// — that PO is also where "click this supplier" should land.
+type SupplierAgg = { count: number; rate: number | null; uom: string; poNo: number; poId: number };
 
 export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [view, setView] = useState<ViewMode>("orders");
@@ -55,10 +59,10 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
       if (!suppliersMap) { suppliersMap = new Map(); map.set(r.product, suppliersMap); }
       const cur = suppliersMap.get(r.supplier);
       if (!cur) {
-        suppliersMap.set(r.supplier, { count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo });
+        suppliersMap.set(r.supplier, { count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo, poId: r.poId });
       } else {
         cur.count += 1;
-        if (r.poNo > cur.poNo) { cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; }
+        if (r.poNo > cur.poNo) { cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; cur.poId = r.poId; }
       }
     }
     let list = [...map.entries()].map(([product, suppliersMap]) => ({ product, suppliers: suppliersMap }));
@@ -97,13 +101,15 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
     }
   }
 
+  const openPo = (poId: number) => router.push(`/procurement/po/${poId}?ref=suppliers`);
+
   return (
     <div className="fade-up">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Product / Supplier Directory</h1>
           <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Which supplier a product was ordered from, and at what rate, drawn from Purchase Order history. Read-only — nothing here can be edited.
+            Which supplier a product was ordered from, and at what rate, drawn from Purchase Order history. Read-only — click a row to open its PO.
           </p>
         </div>
         <Link href="/reports/procurement" className="btn btn-sm">← Procurement Report</Link>
@@ -138,7 +144,12 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                 <tr><td colSpan={3} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
-                <tr key={i}>
+                <tr
+                  key={i}
+                  onClick={() => openPo(r.poId)}
+                  style={{ cursor: "pointer" }}
+                  title="Tap to open this Purchase Order"
+                >
                   <td>{r.product}</td>
                   <td>{r.supplier}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
@@ -162,13 +173,17 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                     <td>{g.product}</td>
                     <td>
                       {[...g.suppliers.entries()].map(([s, agg]) => (
-                        <span key={s} style={{
-                          display: "inline-block", marginRight: 6, marginBottom: 2,
-                          padding: "2px 8px", borderRadius: 999, fontSize: 11.5,
-                          background: multi ? "var(--brand-soft)" : "var(--bg2)",
-                          color: multi ? "var(--brand)" : "var(--text2)",
-                          fontWeight: multi ? 700 : 500,
-                        }}>
+                        <span
+                          key={s}
+                          onClick={() => openPo(agg.poId)}
+                          title="Tap to open this supplier's most recent PO for this product"
+                          style={{
+                            display: "inline-block", marginRight: 6, marginBottom: 2,
+                            padding: "2px 8px", borderRadius: 999, fontSize: 11.5, cursor: "pointer",
+                            background: multi ? "var(--brand-soft)" : "var(--bg2)",
+                            color: multi ? "var(--brand)" : "var(--text2)",
+                            fontWeight: multi ? 700 : 500,
+                          }}>
                           {s}
                           <span style={{ opacity: 0.8, fontWeight: 500 }}> · {rateLabel(agg.rate, agg.uom)}</span>
                           {agg.count > 1 ? ` ×${agg.count}` : ""}

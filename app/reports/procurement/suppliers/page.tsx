@@ -18,6 +18,7 @@ export default async function SupplierDirectoryPage() {
 
   await ensureProcurementTables();
   const pos = await db.select({
+    id: purchaseOrders.id,
     poNo: purchaseOrders.poNo,
     date: purchaseOrders.date,
     supplierName: purchaseOrders.supplierName,
@@ -27,7 +28,8 @@ export default async function SupplierDirectoryPage() {
   // Flatten every PO line into its own row — one product, one supplier, one
   // rate, one date/PO ref. No grouping or dedup here: that happens
   // client-side so the user can toggle between "every order" and "by
-  // product" views.
+  // product" views. poId is the actual purchase_orders.id — that's what the
+  // PO detail route needs, not the display poNo.
   const rows: DirectoryRow[] = [];
   for (const po of pos) {
     const items = parseItems<PoItem>(po.items);
@@ -38,6 +40,7 @@ export default async function SupplierDirectoryPage() {
       rows.push({
         product: desc,
         supplier: (po.supplierName || "").trim() || "—",
+        poId: po.id,
         poNo: po.poNo,
         date: fmtDate(po.date),
         rate: rate && rate > 0 ? rate : null,
