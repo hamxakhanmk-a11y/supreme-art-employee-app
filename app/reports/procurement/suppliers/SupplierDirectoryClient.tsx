@@ -27,19 +27,18 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.product} ${r.supplier}`.toLowerCase().includes(s);
-  }).sort((a, b) => b.poNo - a.poNo), [rows, q, supplierFilter]);
+  }).sort((a, b) => a.product.localeCompare(b.product)), [rows, q, supplierFilter]);
 
   // Grouped view: one row per product, listing every supplier it's ever been
   // ordered from and how many times. Groups on the exact description as typed
   // on the PO — free-text product names, so near-duplicates ("Compressor
   // oil" vs "Compressor Oil 20L") are not merged automatically.
   const byProduct = useMemo(() => {
-    const map = new Map<string, { product: string; suppliers: Map<string, number>; lastDate: string; lastPoNo: number }>();
+    const map = new Map<string, { product: string; suppliers: Map<string, number> }>();
     for (const r of rows) {
       let g = map.get(r.product);
-      if (!g) { g = { product: r.product, suppliers: new Map(), lastDate: r.date, lastPoNo: r.poNo }; map.set(r.product, g); }
+      if (!g) { g = { product: r.product, suppliers: new Map() }; map.set(r.product, g); }
       g.suppliers.set(r.supplier, (g.suppliers.get(r.supplier) || 0) + 1);
-      if (r.poNo > g.lastPoNo) { g.lastPoNo = r.poNo; g.lastDate = r.date; }
     }
     let list = [...map.values()];
     if (supplierFilter) list = list.filter(g => g.suppliers.has(supplierFilter));
@@ -54,8 +53,8 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By order", title: "Product / Supplier — every order",
-          headers: ["PO #", "Date", "Product / Description", "Supplier"],
-          rows: filteredOrders.map(r => [r.poNo, r.date, r.product, r.supplier]),
+          headers: ["Product / Description", "Supplier"],
+          rows: filteredOrders.map(r => [r.product, r.supplier]),
         }],
       });
     } else {
@@ -63,11 +62,10 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By product", title: "Product / Supplier — grouped by product",
-          headers: ["Product / Description", "Supplier(s)", "Last Ordered", "Last PO #"],
+          headers: ["Product / Description", "Supplier(s)"],
           rows: byProduct.map(g => [
             g.product,
             [...g.suppliers.entries()].map(([s, n]) => n > 1 ? `${s} (${n})` : s).join(", "),
-            g.lastDate, g.lastPoNo,
           ]),
         }],
       });
@@ -108,16 +106,14 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         {view === "orders" ? (
           <table>
             <thead>
-              <tr><th style={{ width: 70 }}>PO #</th><th style={{ width: 100 }}>Date</th><th>Product / Description</th><th>Supplier</th></tr>
+              <tr><th>Product / Description</th><th>Supplier</th></tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={4} className="empty">No matching orders.</td></tr>
+                <tr><td colSpan={2} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
                 <tr key={i}>
-                  <td className="num">{r.poNo}</td>
-                  <td>{r.date}</td>
                   <td>{r.product}</td>
                   <td>{r.supplier}</td>
                 </tr>
@@ -127,11 +123,11 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         ) : (
           <table>
             <thead>
-              <tr><th>Product / Description</th><th>Supplier(s)</th><th style={{ width: 110 }}>Last Ordered</th><th style={{ width: 70 }}>PO #</th></tr>
+              <tr><th>Product / Description</th><th>Supplier(s)</th></tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={4} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={2} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((g, i) => {
                 const multi = g.suppliers.size > 1;
@@ -139,7 +135,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <tr key={i}>
                     <td>{g.product}</td>
                     <td>
-                      {[...g.suppliers.entries()].map(([s, n], j) => (
+                      {[...g.suppliers.entries()].map(([s, n]) => (
                         <span key={s} style={{
                           display: "inline-block", marginRight: 6, marginBottom: 2,
                           padding: "2px 8px", borderRadius: 999, fontSize: 11.5,
@@ -149,8 +145,6 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                         }}>{s}{n > 1 ? ` ×${n}` : ""}</span>
                       ))}
                     </td>
-                    <td>{g.lastDate}</td>
-                    <td className="num">{g.lastPoNo}</td>
                   </tr>
                 );
               })}
