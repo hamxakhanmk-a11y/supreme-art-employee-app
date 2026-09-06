@@ -8,8 +8,9 @@ import { isAssignableRole } from "@/lib/permissions";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  let caller;
   try {
-    await requireAuth(ADMIN_ROLES);
+    caller = await requireAuth(ADMIN_ROLES);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: e.status || 401 });
   }
@@ -17,7 +18,18 @@ export async function GET() {
     id: users.id, email: users.email, name: users.name, role: users.role,
     active: users.active, lastLoginAt: users.lastLoginAt, createdAt: users.createdAt,
   }).from(users).orderBy(desc(users.createdAt));
-  return NextResponse.json({ users: rows });
+
+  // The Super Admin role is the owner’s alone to see. This endpoint is
+  // superadmin-only today, so the mask is a no-op right now — but it keeps
+  // the list safe the moment this route (or a future one built on the same
+  // query) is ever opened to Admin/HR, without anyone having to remember to
+  // add it then. A non-owner sees every other superadmin’s role as "admin";
+  // the caller always sees their own role correctly.
+  const visible = caller.role === "superadmin"
+    ? rows
+    : rows.map(r => (r.role === "superadmin" && r.id !== caller.id) ? { ...r, role: "admin" } : r);
+
+  return NextResponse.json({ users: visible });
 }
 
 // Add an email to the allowlist. On next Google sign-in with that address the

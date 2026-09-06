@@ -66,6 +66,7 @@ export interface SubNavItem {
   label: string;
   variant?: "report";   // rendered as a distinct pill (see Sidebar / globals.css)
   needs?: string;        // module key the item requires (else it's filtered out)
+  superadminOnly?: boolean; // hidden from everyone except the owner
 }
 
 export function getSubNav(path: string, module: string): SubNavItem[] {
@@ -128,6 +129,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRR" },
         { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", superadminOnly: true },
       ];
     case "store":
       // Store has its own overview landing + iframe-owned sidebar for the

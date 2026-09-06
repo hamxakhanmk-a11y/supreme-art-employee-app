@@ -39,6 +39,9 @@ export default function Sidebar() {
   // Items that declare a `needs` module are hidden unless the role has it
   // (e.g. the Procurement → Report link needs reports.procurement).
   if (me) links = links.filter(l => !l.needs || canModule(l.needs));
+  // Some items (e.g. the Supplier Directory) are hidden from every role but
+  // the owner, regardless of granted module permissions.
+  links = links.filter(l => !l.superadminOnly || me?.role === "superadmin");
 
   if (links.length === 0) return null;
 
