@@ -291,7 +291,12 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
             {shown.length === 0 ? (
               <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(g => (
-              <tr key={g.id}>
+              <tr
+                key={g.id}
+                onClick={() => router.push(`/procurement/grn/${g.id}`)}
+                style={{ cursor: "pointer" }}
+                title="Tap to view / print this GRR"
+              >
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>{g.gatePassNo || "—"}</td>
                 <td>#{docNoLabel(g.grnNo, g.registered)}</td>
                 <td>{g.invNo && g.invNo.trim()
@@ -300,7 +305,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <td>{g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(g)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(g)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}

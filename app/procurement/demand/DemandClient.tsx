@@ -158,7 +158,12 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
             {shown.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{q.trim() ? "No demands match your search." : "No demands yet."}</td></tr>
             ) : shown.map(d => (
-              <tr key={d.id}>
+              <tr
+                key={d.id}
+                onClick={() => router.push(`/procurement/demand/${d.id}`)}
+                style={{ cursor: "pointer" }}
+                title="Tap to view / print this demand"
+              >
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{d.demandNo}</td>
                 <td>{fmtDate(d.date)}</td>
                 <td>{fmtDate(d.requiredBy)}</td>
@@ -166,7 +171,9 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
                 <td>{d.department || "—"}</td>
                 <td className="num">{parseItems<DemandItem>(d.items).length}</td>
                 <td><StatusBadge status={d.status} /></td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                {/* stopPropagation so Edit/Delete don’t also fire the row’s
+                    navigation on the way to their own click handler. */}
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/demand/${d.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(d)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(d)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}

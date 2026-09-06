@@ -440,7 +440,12 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             {shown.length === 0 ? (
               <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(p => (
-              <tr key={p.id}>
+              <tr
+                key={p.id}
+                onClick={() => router.push(`/procurement/po/${p.id}`)}
+                style={{ cursor: "pointer" }}
+                title="Tap to view / print this PO"
+              >
                 <td style={{ fontWeight: 700, color: "var(--brand)" }}>#{docNoLabel(p.poNo, p.registered)}</td>
                 <td>{p.demandNo ? `#${p.demandNo}` : "—"}</td>
                 <td>{fmtDate(p.date)}</td>
@@ -458,7 +463,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
                 <td><TaxCell p={p} /></td>
                 <td><StatusBadge status={p.status} /></td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(p)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(p)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
