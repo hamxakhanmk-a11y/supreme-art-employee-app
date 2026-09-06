@@ -155,6 +155,7 @@ export function pathToModule(path: string): string {
   if (path.startsWith("/reports/procurement")) return "procurement";
   if (path.startsWith("/reports/station")) return "station";
   if (path.startsWith("/reports/activity")) return "activity";
+  if (path.startsWith("/reports/purchase")) return "purchase";
   if (path.startsWith("/reports")) return "attendance"; // register / leaves / half-day (+ bare)
   if (path.startsWith("/salary")) return "salary";
   if (path.startsWith("/kpi")) return "kpi";
