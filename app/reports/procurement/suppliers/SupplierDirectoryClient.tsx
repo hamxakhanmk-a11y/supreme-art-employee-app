@@ -13,6 +13,10 @@ export interface DirectoryRow {
   date: string;
   rate: number | null;
   uom: string;
+  gross: number | null;
+  taxPct: number;
+  taxValue: number;
+  net: number | null;
 }
 
 type ViewMode = "orders" | "byProduct";
@@ -24,9 +28,26 @@ function rateLabel(rate: number | null, uom: string): string {
   return uom ? `${money} / ${uom}` : money;
 }
 
+// Plain currency, blank when the underlying value is null (rate or qty
+// was never entered, so Gross/Net would be a meaningless 0).
+function moneyOrDash(n: number | null): string {
+  return n == null ? "—" : fmtMoney(n, false);
+}
+
+// "225.00 (18%)" — blank when there's no gross to tax in the first place,
+// and just the money (no percent) when the line has 0% tax.
+function taxLabel(gross: number | null, taxValue: number, taxPct: number): string {
+  if (gross == null) return "—";
+  if (!taxPct) return fmtMoney(taxValue, false) || "—";
+  return `${fmtMoney(taxValue, false)} (${taxPct}%)`;
+}
+
 // Per-supplier rollup inside a product group: how many times ordered, and
 // the rate + PO from the most recent order (compare by po #, higher = later)
-// — that PO is also where "click this supplier" should land.
+// — that PO is also where "click this supplier" should land. Gross/Tax/Net
+// are per-order totals (depend on quantity ordered that time), so they're
+// shown on the "every order" line-item view, not aggregated into this chip —
+// click through to the PO for a specific order's full financial breakdown.
 type SupplierAgg = { count: number; rate: number | null; uom: string; poNo: number; poId: number };
 
 export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
@@ -78,8 +99,11 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By order", title: "Product / Supplier / Rate — every order",
-          headers: ["Product / Description", "Supplier", "Rate"],
-          rows: filteredOrders.map(r => [r.product, r.supplier, rateLabel(r.rate, r.uom)]),
+          headers: ["Product / Description", "Supplier", "Rate", "Gross", "Tax", "Net Value"],
+          rows: filteredOrders.map(r => [
+            r.product, r.supplier, rateLabel(r.rate, r.uom),
+            moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
+          ]),
         }],
       });
     } else {
@@ -137,11 +161,18 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         {view === "orders" ? (
           <table>
             <thead>
-              <tr><th>Product / Description</th><th>Supplier</th><th style={{ width: 150 }}>Rate</th></tr>
+              <tr>
+                <th>Product / Description</th>
+                <th>Supplier</th>
+                <th style={{ width: 150 }}>Rate</th>
+                <th className="num" style={{ width: 110 }}>Gross</th>
+                <th className="num" style={{ width: 120 }}>Tax</th>
+                <th className="num" style={{ width: 110 }}>Net Value</th>
+              </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={3} className="empty">No matching orders.</td></tr>
+                <tr><td colSpan={6} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
                 <tr
@@ -153,6 +184,9 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td>{r.product}</td>
                   <td>{r.supplier}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
+                  <td className="num">{moneyOrDash(r.gross)}</td>
+                  <td className="num">{taxLabel(r.gross, r.taxValue, r.taxPct)}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>{moneyOrDash(r.net)}</td>
                 </tr>
               ))}
             </tbody>

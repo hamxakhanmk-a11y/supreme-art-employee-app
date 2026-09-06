@@ -36,15 +36,36 @@ export default async function SupplierDirectoryPage() {
     for (const it of items) {
       const desc = (it.description || it.item || "").trim();
       if (!desc) continue;
-      const rate = qtyToNum(it.rate);
+
+      const rateNum = qtyToNum(it.rate);
+      const rate = rateNum && rateNum > 0 ? rateNum : null;
+      const qtyNum = qtyToNum(it.quantity);
+      const qty = qtyNum && qtyNum > 0 ? qtyNum : null;
+      const taxPct = qtyToNum(it.tax) || 0;
+
+      // Gross/Tax/Net only mean something once both qty and rate are usable
+      // numbers — otherwise leave them blank rather than show a misleading 0.
+      let gross: number | null = null;
+      let taxValue = 0;
+      let net: number | null = null;
+      if (rate != null && qty != null) {
+        gross = qty * rate;
+        taxValue = gross * taxPct / 100;
+        net = gross + taxValue;
+      }
+
       rows.push({
         product: desc,
         supplier: (po.supplierName || "").trim() || "—",
         poId: po.id,
         poNo: po.poNo,
         date: fmtDate(po.date),
-        rate: rate && rate > 0 ? rate : null,
+        rate,
         uom: (it.uom || "").trim(),
+        gross,
+        taxPct,
+        taxValue,
+        net,
       });
     }
   }
