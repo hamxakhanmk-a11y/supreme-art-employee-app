@@ -3,14 +3,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
-import { fmtMoney } from "@/lib/procurement";
+import { fmtMoney, fmtDate } from "@/lib/procurement";
 
 export interface DirectoryRow {
   product: string;
   supplier: string;
   poId: number;
   poNo: number;
-  date: string;
+  date: string;         // ISO yyyy-mm-dd, "" if never set
   rate: number | null;
   uom: string;
   gross: number | null;
@@ -54,6 +54,8 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
   const router = useRouter();
   const [q, setQ] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>("orders");
 
   const suppliers = useMemo(
@@ -61,21 +63,39 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
     [rows],
   );
 
+  const inRange = (r: DirectoryRow) => {
+    if (!fromDate && !toDate) return true;
+    const d = r.date ? r.date.slice(0, 10) : "";
+    if (!d) return false;
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
+  };
+
   const filteredOrders = useMemo(() => rows.filter(r => {
     if (supplierFilter && r.supplier !== supplierFilter) return false;
+    if (!inRange(r)) return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.product} ${r.supplier}`.toLowerCase().includes(s);
-  }).sort((a, b) => a.product.localeCompare(b.product)), [rows, q, supplierFilter]);
+  }).sort((a, b) => (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate]);
+
+  const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
+    gross: s.gross + (r.gross ?? 0),
+    tax: s.tax + r.taxValue,
+    net: s.net + (r.net ?? 0),
+  }), { gross: 0, tax: 0, net: 0 }), [filteredOrders]);
 
   // Grouped view: one row per product, listing every supplier it's ever been
   // ordered from, how many times, and the rate from the most recent order.
   // Groups on the exact description as typed on the PO — free-text product
   // names, so near-duplicates ("Compressor oil" vs "Compressor Oil 20L")
-  // are not merged automatically.
+  // are not merged automatically. Respects the same date range as the
+  // "every order" view.
   const byProduct = useMemo(() => {
     const map = new Map<string, Map<string, SupplierAgg>>();
     for (const r of rows) {
+      if (!inRange(r)) continue;
       let suppliersMap = map.get(r.product);
       if (!suppliersMap) { suppliersMap = new Map(); map.set(r.product, suppliersMap); }
       const cur = suppliersMap.get(r.supplier);
@@ -91,7 +111,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
     const s = q.trim().toLowerCase();
     if (s) list = list.filter(g => g.product.toLowerCase().includes(s) || [...g.suppliers.keys()].some(sp => sp.toLowerCase().includes(s)));
     return list.sort((a, b) => a.product.localeCompare(b.product));
-  }, [rows, q, supplierFilter]);
+  }, [rows, q, supplierFilter, fromDate, toDate]);
 
   function exportXlsx() {
     if (view === "orders") {
@@ -99,11 +119,14 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By order", title: "Product / Supplier / Rate — every order",
-          headers: ["Product / Description", "Supplier", "Rate", "Gross", "Tax", "Net Value"],
-          rows: filteredOrders.map(r => [
-            r.product, r.supplier, rateLabel(r.rate, r.uom),
-            moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
-          ]),
+          headers: ["Date", "Product / Description", "Supplier", "Rate", "Gross", "Tax", "Net Value"],
+          rows: [
+            ...filteredOrders.map(r => [
+              r.date ? fmtDate(r.date) : "—", r.product, r.supplier, rateLabel(r.rate, r.uom),
+              moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
+            ]),
+            ["", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false)],
+          ],
         }],
       });
     } else {
@@ -153,15 +176,19 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           <option value="">All suppliers</option>
           {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title="From date" style={{ width: 145 }} />
+        <span style={{ color: "var(--text3)" }}>–</span>
+        <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
         <div style={{ flex: 1 }} />
         <button className="btn btn-sm" onClick={exportXlsx}>⬇ Export Excel</button>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="rpt-table-wrap">
         {view === "orders" ? (
-          <table>
+          <table className="rpt-table">
             <thead>
               <tr>
+                <th style={{ width: 100 }}>Date</th>
                 <th>Product / Description</th>
                 <th>Supplier</th>
                 <th style={{ width: 150 }}>Rate</th>
@@ -172,15 +199,16 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
             </thead>
             <tbody>
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={6} className="empty">No matching orders.</td></tr>
+                <tr><td colSpan={7} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
                 <tr
                   key={i}
                   onClick={() => openPo(r.poId)}
-                  style={{ cursor: "pointer" }}
+                  className="rpt-row-clickable"
                   title="Tap to open this Purchase Order"
                 >
+                  <td>{r.date ? fmtDate(r.date) : "—"}</td>
                   <td>{r.product}</td>
                   <td>{r.supplier}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
@@ -190,9 +218,19 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                 </tr>
               ))}
             </tbody>
+            {filteredOrders.length > 0 && (
+              <tfoot>
+                <tr className="rpt-total-row">
+                  <td colSpan={4}>Total — {filteredOrders.length} order{filteredOrders.length === 1 ? "" : "s"}</td>
+                  <td className="num">{fmtMoney(ordersTotals.gross, false)}</td>
+                  <td className="num">{fmtMoney(ordersTotals.tax, false)}</td>
+                  <td className="num">{fmtMoney(ordersTotals.net, false)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         ) : (
-          <table>
+          <table className="rpt-table">
             <thead>
               <tr><th>Product / Description</th><th>Supplier(s) — latest rate each</th></tr>
             </thead>

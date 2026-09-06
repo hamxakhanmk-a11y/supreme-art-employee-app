@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { purchaseOrders } from "@/lib/schema";
-import { ensureProcurementTables, parseItems, fmtDate, qtyToNum, type PoItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, qtyToNum, type PoItem } from "@/lib/procurement";
 import SupplierDirectoryClient, { type DirectoryRow } from "./SupplierDirectoryClient";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export default async function SupplierDirectoryPage() {
         supplier: (po.supplierName || "").trim() || "—",
         poId: po.id,
         poNo: po.poNo,
-        date: fmtDate(po.date),
+        date: po.date || "",  // ISO yyyy-mm-dd, formatted for display client-side
         rate,
         uom: (it.uom || "").trim(),
         gross,

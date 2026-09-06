@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
 import { PR_CATEGORIES } from "@/lib/purchase";
 
 export interface ExpenseRow {
+  prId: number;
   prNo: number | null;
   date: string;            // ISO yyyy-mm-dd, "" if never set
   department: string;
@@ -28,6 +30,7 @@ function qtyLabel(qty: number | null, uom: string): string {
 }
 
 export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -90,6 +93,11 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       .sort((a, b) => b.total - a.total);
   }, [rows, q, fromDate, toDate]);
 
+  const byCategoryGrand = useMemo(
+    () => byCategory.reduce((s, g) => ({ count: s.count + g.count, total: s.total + g.total }), { count: 0, total: 0 }),
+    [byCategory],
+  );
+
   function exportXlsx() {
     if (view === "lines") {
       downloadWorkbookXlsx({
@@ -97,10 +105,13 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
         sheets: [{
           sheetName: "Expenses", title: "Expense Report — every line item",
           headers: ["Date", "Category", "Description", "Quantity", "Value"],
-          rows: filtered.map(r => [
-            r.date ? fmtDate(r.date) : "—", r.category || "—", r.description || "—",
-            qtyLabel(r.quantity, r.uom), moneyOrDash(r.value),
-          ]),
+          rows: [
+            ...filtered.map(r => [
+              r.date ? fmtDate(r.date) : "—", r.category || "—", r.description || "—",
+              qtyLabel(r.quantity, r.uom), moneyOrDash(r.value),
+            ]),
+            ["", "", "", "Total", fmtMoney(total, false)],
+          ],
         }],
       });
     } else {
@@ -109,11 +120,16 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
         sheets: [{
           sheetName: "By category", title: "Expense Report — by category",
           headers: ["Category", "Line Items", "Total Value"],
-          rows: byCategory.map(g => [g.category, g.count, fmtMoney(g.total, false)]),
+          rows: [
+            ...byCategory.map(g => [g.category, g.count, fmtMoney(g.total, false)]),
+            ["Total", byCategoryGrand.count, fmtMoney(byCategoryGrand.total, false)],
+          ],
         }],
       });
     }
   }
+
+  const openPr = (prId: number) => router.push(`/purchase?open=${prId}`);
 
   return (
     <div className="fade-up">
@@ -121,7 +137,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Expense Report</h1>
           <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Every expense line raised through Purchase Requisitions, with its category and value. Read-only.
+            Every expense line raised through Purchase Requisitions, with its category and value. Read-only — click a row to open its requisition.
           </p>
         </div>
         <Link href="/purchase" className="btn btn-sm">← PR Register</Link>
@@ -148,25 +164,22 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
         <button className="btn btn-sm" onClick={exportXlsx}>⬇ Export Excel</button>
       </div>
 
-      {view === "lines" && (
-        <div style={{ display: "flex", gap: 20, alignItems: "baseline", marginBottom: 12, fontSize: 13, color: "var(--text2)" }}>
-          <span><strong style={{ color: "var(--text)", fontSize: 16 }}>{fmtMoney(total, false)}</strong> total across {filtered.length} line{filtered.length === 1 ? "" : "s"}</span>
-          {valuedCount < filtered.length && (
-            <span>({filtered.length - valuedCount} line{filtered.length - valuedCount === 1 ? "" : "s"} not yet valued)</span>
-          )}
+      {view === "lines" && valuedCount < filtered.length && (
+        <div style={{ marginBottom: 10, fontSize: 12.5, color: "var(--text2)" }}>
+          {filtered.length - valuedCount} line{filtered.length - valuedCount === 1 ? "" : "s"} not yet valued
         </div>
       )}
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="rpt-table-wrap">
         {view === "lines" ? (
-          <table>
+          <table className="rpt-table">
             <thead>
               <tr>
                 <th style={{ width: 100 }}>Date</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th style={{ width: 130 }}>Quantity</th>
-                <th className="num" style={{ width: 120 }}>Value</th>
+                <th className="num" style={{ width: 130 }}>Value</th>
               </tr>
             </thead>
             <tbody>
@@ -174,7 +187,12 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
                 <tr><td colSpan={5} className="empty">No matching expenses.</td></tr>
               )}
               {filtered.map((r, i) => (
-                <tr key={i}>
+                <tr
+                  key={i}
+                  onClick={() => openPr(r.prId)}
+                  className="rpt-row-clickable"
+                  title="Tap to open this requisition"
+                >
                   <td>{r.date ? fmtDate(r.date) : "—"}</td>
                   <td>{r.category || "—"}</td>
                   <td>{r.description || "—"}</td>
@@ -183,11 +201,19 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
                 </tr>
               ))}
             </tbody>
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr className="rpt-total-row">
+                  <td colSpan={4}>Total — {filtered.length} line{filtered.length === 1 ? "" : "s"}</td>
+                  <td className="num">{fmtMoney(total, false)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         ) : (
-          <table>
+          <table className="rpt-table">
             <thead>
-              <tr><th>Category</th><th className="num" style={{ width: 110 }}>Line Items</th><th className="num" style={{ width: 140 }}>Total Value</th></tr>
+              <tr><th>Category</th><th className="num" style={{ width: 110 }}>Line Items</th><th className="num" style={{ width: 150 }}>Total Value</th></tr>
             </thead>
             <tbody>
               {byCategory.length === 0 && (
@@ -197,10 +223,19 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
                 <tr key={i}>
                   <td>{g.category}</td>
                   <td className="num">{g.count}</td>
-                  <td className="num" style={{ fontWeight: 700 }}>{fmtMoney(g.total, false)}</td>
+                  <td className="num" style={{ fontWeight: 600 }}>{fmtMoney(g.total, false)}</td>
                 </tr>
               ))}
             </tbody>
+            {byCategory.length > 0 && (
+              <tfoot>
+                <tr className="rpt-total-row">
+                  <td>Total</td>
+                  <td className="num">{byCategoryGrand.count}</td>
+                  <td className="num">{fmtMoney(byCategoryGrand.total, false)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         )}
       </div>

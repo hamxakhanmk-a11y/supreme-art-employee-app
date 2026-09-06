@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { useCanEdit } from "@/components/MeProvider";
@@ -146,6 +147,19 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
     });
     setEditId(r.id); setShowForm(true); setError(null);
   };
+
+  // Deep link from another report (e.g. the Expense Report): /purchase?open=123
+  // opens that requisition’s edit form on arrival, same as clicking Edit.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId) return;
+    const id = parseInt(openId, 10);
+    const row = rows.find(r => r.id === id);
+    if (row) openEdit(row);
+    // Only ever act on the URL once, right after the page loads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const save = async () => {
     const items = draft.items.filter(i => i.itemName.trim());

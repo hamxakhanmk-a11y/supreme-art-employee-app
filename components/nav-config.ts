@@ -75,6 +75,8 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       return [
         { href: "/", label: "Dashboard" },
         { href: "/employees", label: "Employees" },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", superadminOnly: true },
+        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", superadminOnly: true },
       ];
     case "attendance":
       return [

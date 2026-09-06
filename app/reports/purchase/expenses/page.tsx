@@ -32,13 +32,17 @@ export default async function ExpenseReportPage() {
   // Flatten every line item into its own expense row — one description, one
   // value, one category. parsePrItems already handles both the modern
   // multi-item JSON and the legacy single-line scalar columns, so old and
-  // new requisitions come through the same shape.
+  // new requisitions come through the same shape. prId is the requisition's
+  // actual purchase_requisitions.id — that's what /purchase?open= needs to
+  // deep-link back to it, not the display prNo (which isn't unique — one PR
+  // can have several item rows sharing the same prNo).
   const rows: ExpenseRow[] = [];
   for (const pr of prs) {
     const items = parsePrItems(pr);
     for (const it of items) {
       if (!it.itemName && it.value == null) continue;
       rows.push({
+        prId: pr.id,
         prNo: pr.prNo,
         date: pr.date || "",                       // ISO yyyy-mm-dd, or "" if never set
         department: pr.department || "",
