@@ -116,7 +116,10 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/kpi/reports", label: "Reports" },
       ];
     case "purchase":
-      return [{ href: "/purchase", label: "PR Register" }];
+      return [
+        { href: "/purchase", label: "PR Register" },
+        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", superadminOnly: true },
+      ];
     case "station":
       return [
         { href: "/station", label: "Terminal" },
