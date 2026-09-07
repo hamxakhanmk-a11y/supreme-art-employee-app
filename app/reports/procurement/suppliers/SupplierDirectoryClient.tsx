@@ -8,6 +8,10 @@ import { fmtMoney, fmtDate } from "@/lib/procurement";
 export interface DirectoryRow {
   product: string;
   supplier: string;
+  supplierAddress: string;
+  supplierPhone: string;
+  supplierNtn: string;
+  supplierStrn: string;
   poId: number;
   poNo: number;
   date: string;         // ISO yyyy-mm-dd, "" if never set
@@ -42,13 +46,21 @@ function taxLabel(gross: number | null, taxValue: number, taxPct: number): strin
   return `${fmtMoney(taxValue, false)} (${taxPct}%)`;
 }
 
-// Per-supplier rollup inside a product group: how many times ordered, and
-// the rate + PO from the most recent order (compare by po #, higher = later)
-// — that PO is also where "click this supplier" should land. Gross/Tax/Net
-// are per-order totals (depend on quantity ordered that time), so they're
-// shown on the "every order" line-item view, not aggregated into this chip —
-// click through to the PO for a specific order's full financial breakdown.
-type SupplierAgg = { count: number; rate: number | null; uom: string; poNo: number; poId: number };
+// Per-(product, supplier) rollup: how many times ordered, and the rate +
+// contact details from the most recent order (compare by po #, higher =
+// later) — that PO is also where "click this row" should land, and its
+// snapshot of the supplier's address/NTN/STRN/phone is what's shown (a
+// supplier's details can drift order to order, e.g. an updated phone
+// number, so "latest wins" same as the rate). Two orders for the same
+// product from the same supplier — even months apart — collapse into this
+// one row; they don't get a row each. Gross/Tax/Net are per-order totals
+// (depend on quantity ordered that time), so they're shown on the "every
+// order" line-item view, not here — click through to the PO for a specific
+// order's full financial breakdown.
+type SupplierAgg = {
+  count: number; rate: number | null; uom: string; poNo: number; poId: number;
+  address: string; phone: string; ntn: string; strn: string;
+};
 
 export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
   const router = useRouter();
@@ -86,12 +98,16 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
     net: s.net + (r.net ?? 0),
   }), { gross: 0, tax: 0, net: 0 }), [filteredOrders]);
 
-  // Grouped view: one row per product, listing every supplier it's ever been
-  // ordered from, how many times, and the rate from the most recent order.
-  // Groups on the exact description as typed on the PO — free-text product
-  // names, so near-duplicates ("Compressor oil" vs "Compressor Oil 20L")
-  // are not merged automatically. Respects the same date range as the
-  // "every order" view.
+  // One row per (product, supplier) pair — every order of that product from
+  // that supplier, any month, collapses into this single row (count tracks
+  // how many). Sorted by product first so every supplier of the same
+  // product lands on consecutive rows (rowSpan-merged in the table below),
+  // then by supplier name within that group. Groups on the exact
+  // description as typed on the PO — free-text product names, so
+  // near-duplicates ("Compressor oil" vs "Compressor Oil 20L") aren't
+  // merged automatically. Respects the same date range as the "every
+  // order" view.
+  type FlatRow = { product: string; supplier: string; agg: SupplierAgg; isFirstOfProduct: boolean; groupSize: number };
   const byProduct = useMemo(() => {
     const map = new Map<string, Map<string, SupplierAgg>>();
     for (const r of rows) {
@@ -100,17 +116,34 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
       if (!suppliersMap) { suppliersMap = new Map(); map.set(r.product, suppliersMap); }
       const cur = suppliersMap.get(r.supplier);
       if (!cur) {
-        suppliersMap.set(r.supplier, { count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo, poId: r.poId });
+        suppliersMap.set(r.supplier, {
+          count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo, poId: r.poId,
+          address: r.supplierAddress, phone: r.supplierPhone, ntn: r.supplierNtn, strn: r.supplierStrn,
+        });
       } else {
         cur.count += 1;
-        if (r.poNo > cur.poNo) { cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; cur.poId = r.poId; }
+        if (r.poNo > cur.poNo) {
+          cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; cur.poId = r.poId;
+          cur.address = r.supplierAddress; cur.phone = r.supplierPhone; cur.ntn = r.supplierNtn; cur.strn = r.supplierStrn;
+        }
       }
     }
-    let list = [...map.entries()].map(([product, suppliersMap]) => ({ product, suppliers: suppliersMap }));
-    if (supplierFilter) list = list.filter(g => g.suppliers.has(supplierFilter));
+    let products = [...map.entries()];
+    if (supplierFilter) products = products.filter(([, m]) => m.has(supplierFilter));
     const s = q.trim().toLowerCase();
-    if (s) list = list.filter(g => g.product.toLowerCase().includes(s) || [...g.suppliers.keys()].some(sp => sp.toLowerCase().includes(s)));
-    return list.sort((a, b) => a.product.localeCompare(b.product));
+    if (s) products = products.filter(([product, m]) => product.toLowerCase().includes(s) || [...m.keys()].some(sp => sp.toLowerCase().includes(s)));
+    products.sort((a, b) => a[0].localeCompare(b[0]));
+
+    const flat: FlatRow[] = [];
+    for (const [product, suppliersMap] of products) {
+      let entries = [...suppliersMap.entries()];
+      if (supplierFilter) entries = entries.filter(([sp]) => sp === supplierFilter);
+      entries.sort((a, b) => a[0].localeCompare(b[0]));
+      entries.forEach(([supplier, agg], i) => {
+        flat.push({ product, supplier, agg, isFirstOfProduct: i === 0, groupSize: entries.length });
+      });
+    }
+    return flat;
   }, [rows, q, supplierFilter, fromDate, toDate]);
 
   function exportXlsx() {
@@ -133,15 +166,12 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
       downloadWorkbookXlsx({
         filename: "product-supplier-directory",
         sheets: [{
-          sheetName: "By product", title: "Product / Supplier / Rate — grouped by product",
-          headers: ["Product / Description", "Supplier(s) — latest rate each"],
-          rows: byProduct.map(g => [
-            g.product,
-            [...g.suppliers.entries()].map(([s, agg]) => {
-              let label = `${s} - ${rateLabel(agg.rate, agg.uom)}`;
-              if (agg.count > 1) label += ` (x${agg.count})`;
-              return label;
-            }).join(", "),
+          sheetName: "By product", title: "Product / Supplier directory — grouped by product",
+          headers: ["Product / Description", "Supplier", "Location", "NTN", "STRN", "Contact #", "Rate"],
+          rows: byProduct.map(r => [
+            r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""),
+            r.agg.address || "", r.agg.ntn || "", r.agg.strn || "", r.agg.phone || "",
+            rateLabel(r.agg.rate, r.agg.uom),
           ]),
         }],
       });
@@ -232,39 +262,50 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         ) : (
           <table className="rpt-table">
             <thead>
-              <tr><th>Product / Description</th><th>Supplier(s) — latest rate each</th></tr>
+              <tr>
+                <th>Product / Description</th>
+                <th>Supplier</th>
+                <th>Location</th>
+                <th style={{ width: 110 }}>NTN</th>
+                <th style={{ width: 110 }}>STRN</th>
+                <th style={{ width: 120 }}>Contact #</th>
+                <th style={{ width: 150 }}>Rate</th>
+              </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={2} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={7} className="empty">No matching products.</td></tr>
               )}
-              {byProduct.map((g, i) => {
-                const multi = g.suppliers.size > 1;
-                return (
-                  <tr key={i}>
-                    <td>{g.product}</td>
-                    <td>
-                      {[...g.suppliers.entries()].map(([s, agg]) => (
-                        <span
-                          key={s}
-                          onClick={() => openPo(agg.poId)}
-                          title="Tap to open this supplier's most recent PO for this product"
-                          style={{
-                            display: "inline-block", marginRight: 6, marginBottom: 2,
-                            padding: "2px 8px", borderRadius: 999, fontSize: 11.5, cursor: "pointer",
-                            background: multi ? "var(--brand-soft)" : "var(--bg2)",
-                            color: multi ? "var(--brand)" : "var(--text2)",
-                            fontWeight: multi ? 700 : 500,
-                          }}>
-                          {s}
-                          <span style={{ opacity: 0.8, fontWeight: 500 }}> · {rateLabel(agg.rate, agg.uom)}</span>
-                          {agg.count > 1 ? ` ×${agg.count}` : ""}
-                        </span>
-                      ))}
+              {byProduct.map((r, i) => (
+                <tr
+                  key={`${r.product}__${r.supplier}__${i}`}
+                  onClick={() => openPo(r.agg.poId)}
+                  className="rpt-row-clickable"
+                  title="Tap to open this supplier's most recent PO for this product"
+                >
+                  {r.isFirstOfProduct && (
+                    <td
+                      rowSpan={r.groupSize}
+                      style={{
+                        verticalAlign: "top",
+                        fontWeight: r.groupSize > 1 ? 700 : 400,
+                        background: r.groupSize > 1 ? "var(--bg2)" : undefined,
+                      }}
+                    >
+                      {r.product}
                     </td>
-                  </tr>
-                );
-              })}
+                  )}
+                  <td>
+                    {r.supplier}
+                    {r.agg.count > 1 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--text3)" }}>×{r.agg.count}</span>}
+                  </td>
+                  <td style={{ fontSize: 12, whiteSpace: "normal", maxWidth: 220 }}>{r.agg.address || "—"}</td>
+                  <td style={{ fontSize: 12 }}>{r.agg.ntn || "—"}</td>
+                  <td style={{ fontSize: 12 }}>{r.agg.strn || "—"}</td>
+                  <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
+                  <td>{rateLabel(r.agg.rate, r.agg.uom)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
