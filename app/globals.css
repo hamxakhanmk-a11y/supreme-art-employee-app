@@ -420,15 +420,24 @@ th.num, th.num-strong { text-align: right; }
    the page. The "liquid pill" active-indicator (see useFlowIndicator) only
    knows how to slide vertically — it's built for the column layout — so on
    this strip it's hidden and the active chip gets a plain solid background
-   instead, same colours, just not animated. ---------- */
+   instead, same colours, just not animated.
+
+   .app-body also gets a CSS zoom below 860px, scaling every page's text,
+   spacing and tables down together — most of this app's sizing is inline
+   px styles set per-component, not rem-based, so a root font-size tweak
+   wouldn't reach most of it; zoom scales the rendered pixels uniformly
+   without having to touch every component. Scoped to .app-body (not
+   html/body) so TopNav — sticky, with a position:fixed sign-out overlay —
+   stays at its real size and un-affected. ---------- */
 .app-main { padding: 1.75rem; }
 @media (max-width: 860px) {
-  .app-body { flex-direction: column !important; align-items: stretch !important; }
+  .app-body { flex-direction: column !important; align-items: stretch !important; zoom: 0.85; }
   .app-sidebar {
     position: static !important;
     top: auto;
     width: 100% !important;
     min-width: 0 !important;
+    height: auto !important;
     min-height: 0 !important;
     flex-direction: row !important;
     align-items: center;
@@ -438,22 +447,32 @@ th.num, th.num-strong { text-align: right; }
     scrollbar-width: none;
     border-right: none !important;
     border-bottom: 1px solid var(--border);
-    padding: 10px 12px !important;
-    gap: 8px !important;
+    padding: 8px 10px !important;
+    gap: 6px !important;
   }
   .app-sidebar::-webkit-scrollbar { display: none; }
   .app-sidebar .sb-item { flex: 0 0 auto; white-space: nowrap; margin: 0 !important; }
   .app-sidebar .sb-item--report::before { display: none; }
   .app-sidebar .flow-indicator { display: none; }
-  .app-sidebar .sb-item.active {
+  /* Same specificity as the base .flow-connected > .sb-item.active rule
+     further down this file (3 classes each) — with both !important, plain
+     source order decides, and that rule (defined later) was winning,
+     leaving the active chip's text white-on-transparent (invisible). The
+     compound .app-sidebar.flow-connected selector below (both classes live
+     on the same <aside>) adds a 4th class to win outright, regardless of
+     order. */
+  .app-sidebar.flow-connected .sb-item.active {
     background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%) !important;
-    color: #fff;
-    transform: none;
+    color: #fff !important;
+    transform: none !important;
   }
-  .app-main { padding: 14px; }
+  .app-main { padding: 12px; }
   .topnav-row { padding: 0 12px !important; gap: 10px !important; }
   .topnav-date { display: none; }
-  .rpt-table-wrap { max-height: 60vh; }
+  .rpt-table-wrap { max-height: 55vh; }
+}
+@media (max-width: 480px) {
+  .app-body { zoom: 0.78; }
 }
 
 
