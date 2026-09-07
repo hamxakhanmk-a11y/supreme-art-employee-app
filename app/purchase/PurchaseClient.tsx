@@ -149,17 +149,25 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   };
 
   // Deep link from another report (e.g. the Expense Report): /purchase?open=123
-  // opens that requisition’s edit form on arrival, same as clicking Edit.
+  // just scrolls to and highlights that requisition's row in the register —
+  // it does not open the edit form, since the report is only pointing at the
+  // row, not asking to edit it.
+  const [highlightId, setHighlightId] = useState<number | null>(null);
   const searchParams = useSearchParams();
   useEffect(() => {
     const openId = searchParams.get("open");
     if (!openId) return;
     const id = parseInt(openId, 10);
-    const row = rows.find(r => r.id === id);
-    if (row) openEdit(row);
+    if (rows.some(r => r.id === id)) setHighlightId(id);
     // Only ever act on the URL once, right after the page loads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (highlightId == null) return;
+    document.getElementById(`pr-row-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setHighlightId(null), 4000);
+    return () => clearTimeout(t);
+  }, [highlightId]);
 
   const save = async () => {
     const items = draft.items.filter(i => i.itemName.trim());
@@ -476,7 +484,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
             {filtered.map(r => {
               const st = PR_STATUS_STYLE[r.status] ?? { color: "var(--text2)", bg: "var(--bg2)" };
               return (
-                <tr key={r.id}>
+                <tr key={r.id} id={`pr-row-${r.id}`} className={r.id === highlightId ? "pr-row-highlight" : undefined}>
                   <td style={{ whiteSpace: "nowrap" }}>{fmtDate(r.date)}</td>
                   <td style={{ fontWeight: 700, color: "var(--brand)" }}>{r.prNo ?? "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.department || "—"}</td>

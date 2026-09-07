@@ -28,9 +28,9 @@ export default function RootLayout({
           <PrintWatermark />
           <PrintTextareas />
           <TopNav />
-          <div style={{ display: "flex", alignItems: "flex-start" }}>
+          <div className="app-body" style={{ display: "flex", alignItems: "flex-start" }}>
             <Sidebar />
-            <main style={{ flex: 1, minWidth: 0, padding: "1.75rem", minHeight: "calc(100vh - 56px)" }}>
+            <main className="app-main" style={{ flex: 1, minWidth: 0, minHeight: "calc(100vh - 56px)" }}>
               {children}
             </main>
           </div>

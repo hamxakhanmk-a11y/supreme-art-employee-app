@@ -49,6 +49,7 @@ export default function TopNav() {
     >
       {/* Top row — 56px slim topbar */}
       <div
+        className="topnav-row"
         style={{
           display: "flex",
           alignItems: "center",
@@ -129,7 +130,7 @@ export default function TopNav() {
           </div>
         )}
 
-        <div style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700, marginLeft: 14 }}>
+        <div className="topnav-date" style={{ textAlign: "right", lineHeight: 1.05, color: "var(--brand)", fontWeight: 700, marginLeft: 14 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.18em", opacity: 0.85, textTransform: "uppercase" }}>
             {new Date().toLocaleDateString("en-GB", { weekday: "short" })}
           </div>

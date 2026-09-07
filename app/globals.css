@@ -286,7 +286,8 @@ input[type=date] { font-family: inherit; }
 .tab:hover:not(.active) { color: var(--text); }
 
 /* Mode-switch (segmented pill from tracker) */
-.mode-switch { display: flex; gap: 4px; background: var(--bg2); padding: 3px; border-radius: var(--radius-sm); }
+.mode-switch { display: flex; gap: 4px; background: var(--bg2); padding: 3px; border-radius: var(--radius-sm); overflow-x: auto; scrollbar-width: none; }
+.mode-switch::-webkit-scrollbar { display: none; }
 .mode-btn {
   padding: 6px 14px;
   font-size: 13px;
@@ -371,6 +372,12 @@ tbody tr:hover td {
 .ot-table tbody tr:hover,
 .pr-table tbody tr:hover { transform: none; }
 
+.pr-row-highlight td { animation: prRowFlash 4s ease-out; }
+@keyframes prRowFlash {
+  0%, 35% { background: var(--brand-soft); }
+  100% { background: transparent; }
+}
+
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .num-strong { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 th.num, th.num-strong { text-align: right; }
@@ -403,6 +410,22 @@ th.num, th.num-strong { text-align: right; }
   border-top: 2px solid var(--border2); border-bottom: none;
 }
 @media print { .rpt-table-wrap { border: none; box-shadow: none; overflow: visible; max-height: none; } }
+
+/* ---------- Responsive: the left sub-nav sidebar is a fixed 222px column
+   (see .app-sidebar) — on a phone-width screen that alone eats most of the
+   viewport, squeezing every page's content (report tables especially) down
+   to a sliver and making them look cut off. Below 860px the sidebar is
+   dropped entirely (its sections are still reachable from each module's own
+   overview page) and the main content takes the full width, with tighter
+   padding and a shorter report-table max-height so everything fits. ---------- */
+.app-main { padding: 1.75rem; }
+@media (max-width: 860px) {
+  .app-sidebar { display: none !important; }
+  .app-main { padding: 14px; }
+  .topnav-row { padding: 0 12px !important; gap: 10px !important; }
+  .topnav-date { display: none; }
+  .rpt-table-wrap { max-height: 60vh; }
+}
 
 
 .table-summary {
