@@ -78,7 +78,7 @@ export default function AssignClient({ employees }: { employees: Emp[] }) {
         </div>
       )}
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         <table>
           <thead>
             <tr>

@@ -161,7 +161,7 @@ export default function LeaveHistoryClient({
         <strong>{totals.total}</strong> rows · <strong>{totals.days}</strong> days total · <strong>{totals.approved}</strong> approved · <strong>{totals.pending}</strong> pending · <strong>{totals.rejected}</strong> rejected
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? <div className="empty">Loading…</div>
           : filtered.length === 0 ? <div className="empty">No leave records match.</div>
           : (

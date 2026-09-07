@@ -94,7 +94,7 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
         )}
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {filtered.length === 0 ? (
           <div className="empty">{query ? `No matches for "${query}"` : "No leave requests yet."}</div>
         ) : (

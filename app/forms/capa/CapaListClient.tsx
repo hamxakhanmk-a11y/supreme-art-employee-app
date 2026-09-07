@@ -112,7 +112,7 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
             : <>No CAPAs match this filter.</>}
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>

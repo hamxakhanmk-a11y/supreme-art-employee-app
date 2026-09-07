@@ -126,7 +126,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         Showing <strong>{shown.length}</strong> of {rows.length} item{rows.length === 1 ? "" : "s"} in range.
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         <table>
           <thead>
             <tr>

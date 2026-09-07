@@ -101,6 +101,7 @@ export default function ReportsClient({
                   <span style={{ opacity: 0.85 }}>Dept avg</span> <ScorePill s={dep.avg} />
                 </span>
               </div>
+              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <table className="kpi-report-table">
                 <thead>
                   <tr>
@@ -117,6 +118,7 @@ export default function ReportsClient({
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           ))}
           <div style={{ fontSize: 11, color: "var(--text3)", display: "flex", gap: 14, flexWrap: "wrap" }}>

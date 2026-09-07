@@ -392,6 +392,7 @@ th.num, th.num-strong { text-align: right; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-sm);
   max-height: 70vh;
 }

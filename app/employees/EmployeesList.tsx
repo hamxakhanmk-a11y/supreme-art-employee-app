@@ -146,7 +146,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
         <strong>{rows.filter(r => r.status === "resigned").length}</strong> exited
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {filtered.length === 0 ? (
           <div className="empty">
             {query ? <>No employees match "<strong>{query}</strong>".</> : <>No employees yet.</>}

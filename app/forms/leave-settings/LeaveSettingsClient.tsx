@@ -128,6 +128,7 @@ export default function LeaveSettingsClient() {
             No leave types yet. Add one above.
           </div>
         ) : (
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
@@ -175,6 +176,7 @@ export default function LeaveSettingsClient() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
         <div style={{ padding: "10px 14px", borderTop: "1px solid var(--border)", fontSize: 11, color: "var(--text2)" }}>
           Changes save automatically when you tab out of a field. Saving: {saving ? <span style={{ color: "var(--brand)" }}>writing…</span> : "idle"}

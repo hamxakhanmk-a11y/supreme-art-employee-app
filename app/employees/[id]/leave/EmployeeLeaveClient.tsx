@@ -128,7 +128,7 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? <div className="empty">Loading…</div>
           : rows.length === 0 ? <div className="empty">No leave records in this range.</div>
           : (

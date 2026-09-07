@@ -95,7 +95,7 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
         })}
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? <div className="empty">Loading…</div>
           : sorted.length === 0 ? <div className="empty">No attendance records in this range.</div>
           : (

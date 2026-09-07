@@ -108,7 +108,7 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
           <span>{filtered.length} record{filtered.length === 1 ? "" : "s"}</span>
           <span>Total net: <strong style={{ color: "var(--brand)" }}>PKR {fmt(totals.net)}</strong> · Gross: PKR {fmt(totals.gross)} · Deductions: PKR {fmt(totals.deductions)}</span>
         </div>
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ minWidth: 1000 }}>
             <thead>
               <tr>

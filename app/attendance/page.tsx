@@ -386,7 +386,7 @@ export default function AttendancePage() {
       )}
 
       {/* Table */}
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? (
           <div className="empty">Loading…</div>
         ) : rows.length === 0 ? (

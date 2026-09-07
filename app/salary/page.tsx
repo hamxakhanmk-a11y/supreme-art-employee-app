@@ -263,7 +263,7 @@ export default function SalaryGeneratorPage() {
               Total gross: <strong>PKR {fmt(totalGross)}</strong> · Total net: <strong>PKR {fmt(totalNet)}</strong>
             </div>
           </div>
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             <table style={{ minWidth: 1100 }}>
               <thead>
                 <tr>
