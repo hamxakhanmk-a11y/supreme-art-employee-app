@@ -519,6 +519,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   // Supplier tax status for THIS order. true = registered (has sales-tax
   // invoice), false = unregistered, null = not yet marked.
   registered: boolean("registered"),
+  // Manually-entered reference rate for the register list (not tied to any
+  // one line item) — e.g. "150 / Per Kg". Filled in by hand after the PO is
+  // raised, from the list itself.
+  rate: doublePrecision("rate"),
+  rateUom: varchar("rate_uom", { length: 20 }),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
   createdByUserId: integer("created_by_user_id"),

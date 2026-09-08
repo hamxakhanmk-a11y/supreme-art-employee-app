@@ -46,6 +46,9 @@ export interface GrnItem { srNo: number; item: string; quantity: string; remarks
 // Default sales-tax percentage seeded on every new PO line.
 export const PO_DEFAULT_TAX = 18;
 
+// Unit the manual reference "Rate" column (register list) is quoted per.
+export const PO_RATE_UOM_OPTIONS = ["Per Kg", "Per Piece"] as const;
+
 // Derived money for one PO line: gross = qty × rate, tax value = gross × tax%,
 // net = gross + tax value. Tolerant of blanks (treated as 0).
 export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string }) {
@@ -411,6 +414,8 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_concerned_person varchar(160);
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS brand varchar(160);
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS concerned_person varchar(160);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate double precision;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate_uom varchar(20);
 
   -- One-time data migrations, keyed so each runs exactly once.
   CREATE TABLE IF NOT EXISTS procurement_migrations (
