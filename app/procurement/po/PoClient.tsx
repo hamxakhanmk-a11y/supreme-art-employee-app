@@ -8,15 +8,18 @@ import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
-  supplierName: string | null; supplierAddress: string | null; supplierPhone: string | null;
-  supplierNtn: string | null; supplierStrn: string | null;
+  supplierName: string | null; supplierBrand: string | null; supplierAddress: string | null; supplierPhone: string | null;
+  supplierConcernedPerson: string | null; supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string; registered: boolean | null; discount: number | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
 }
-interface Supplier { id: number; name: string; address: string | null; contact: string | null; ntn: string | null; strn: string | null; registered: boolean | null }
+interface Supplier {
+  id: number; name: string; brand: string | null; address: string | null; contact: string | null;
+  concernedPerson: string | null; ntn: string | null; strn: string | null; registered: boolean | null;
+}
 
 const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
 
@@ -38,8 +41,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [savingSupplier, setSavingSupplier] = useState(false);
   const [supplierMsg, setSupplierMsg] = useState("");
   const [supplierName, setSupplierName] = useState("");
+  const [supplierBrand, setSupplierBrand] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierConcernedPerson, setSupplierConcernedPerson] = useState("");
   const [supplierNtn, setSupplierNtn] = useState("");
   const [supplierStrn, setSupplierStrn] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
@@ -54,7 +59,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setEditId(null); setEditNo(null);
     setDemandId(""); setDemandNoManual(""); setManualPoNo(""); setDate(new Date().toISOString().slice(0, 10));
     setSelectedSupplierId(""); setSupplierMsg("");
-    setSupplierName(""); setSupplierAddress(""); setSupplierPhone(""); setSupplierNtn(""); setSupplierStrn("");
+    setSupplierName(""); setSupplierBrand(""); setSupplierAddress(""); setSupplierPhone("");
+    setSupplierConcernedPerson(""); setSupplierNtn(""); setSupplierStrn("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setRegistered(null);
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
@@ -74,7 +80,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setDemandNoManual(p.demandNo != null ? String(p.demandNo) : "");
     setManualPoNo(p.registered === false ? String(p.poNo) : "");
     setDate((p.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
-    setSupplierName(p.supplierName || ""); setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
+    setSupplierName(p.supplierName || ""); setSupplierBrand(p.supplierBrand || "");
+    setSupplierAddress(p.supplierAddress || ""); setSupplierPhone(p.supplierPhone || "");
+    setSupplierConcernedPerson(p.supplierConcernedPerson || "");
     setSupplierNtn(p.supplierNtn || ""); setSupplierStrn(p.supplierStrn || "");
     setExpectedDate((p.expectedDate || "").slice(0, 10));
     setTerms(p.terms || ""); setOrderPlacedBy(p.orderPlacedBy || "");
@@ -110,8 +118,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     const s = supplierList.find(x => String(x.id) === id);
     if (!s) return;
     setSupplierName(s.name);
+    setSupplierBrand(s.brand || "");
     setSupplierAddress(s.address || "");
     setSupplierPhone(s.contact || "");
+    setSupplierConcernedPerson(s.concernedPerson || "");
     setSupplierNtn(s.ntn || "");
     setSupplierStrn(s.strn || "");
     if (s.registered != null) setRegistered(s.registered);
@@ -124,7 +134,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     try {
       const res = await fetch("/api/procurement/suppliers", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address: supplierAddress, contact: supplierPhone, ntn: supplierNtn, strn: supplierStrn, registered }),
+        body: JSON.stringify({
+          name, brand: supplierBrand, address: supplierAddress, contact: supplierPhone,
+          concernedPerson: supplierConcernedPerson, ntn: supplierNtn, strn: supplierStrn, registered,
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Save failed");
@@ -157,7 +170,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       const res = await fetch(editId ? `/api/procurement/pos/${editId}` : "/api/procurement/pos", {
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          demandId: demandId || null, demandNo: demandNoManual, manualPoNo, date, supplierName, supplierAddress, supplierPhone,
+          demandId: demandId || null, demandNo: demandNoManual, manualPoNo, date,
+          supplierName, supplierBrand, supplierAddress, supplierPhone, supplierConcernedPerson,
           supplierNtn, supplierStrn, expectedDate, terms, orderPlacedBy, registered, items: clean,
         }),
       });
@@ -311,8 +325,14 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <Field label="Supplier name">
               <input value={supplierName} onChange={e => { setSupplierName(e.target.value); setSelectedSupplierId(""); }} className="auth-input" />
             </Field>
+            <Field label="Brand name">
+              <input value={supplierBrand} onChange={e => setSupplierBrand(e.target.value)} className="auth-input" />
+            </Field>
             <Field label="Address"><input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="auth-input" /></Field>
             <Field label="Contact #"><input value={supplierPhone} onChange={e => setSupplierPhone(e.target.value)} className="auth-input" /></Field>
+            <Field label="Concerned Person">
+              <input value={supplierConcernedPerson} onChange={e => setSupplierConcernedPerson(e.target.value)} className="auth-input" />
+            </Field>
             <Field label="NTN #"><input value={supplierNtn} onChange={e => setSupplierNtn(e.target.value)} className="auth-input" placeholder="e.g. 1234567-8" /></Field>
             <Field label="STRN #"><input value={supplierStrn} onChange={e => setSupplierStrn(e.target.value)} className="auth-input" placeholder="Sales-tax reg. no." /></Field>
           </div>

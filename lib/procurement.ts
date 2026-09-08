@@ -103,7 +103,10 @@ export async function tagSupplierRegistered(name: string | null | undefined, reg
 // PO never wipes a value the directory already has.
 export async function syncSupplierFromPo(
   name: string | null | undefined,
-  d: { registered?: boolean | null; ntn?: string | null; strn?: string | null; address?: string | null; phone?: string | null },
+  d: {
+    registered?: boolean | null; ntn?: string | null; strn?: string | null; address?: string | null;
+    phone?: string | null; brand?: string | null; concernedPerson?: string | null;
+  },
 ) {
   const n = (name || "").trim();
   if (!n) return;
@@ -113,6 +116,8 @@ export async function syncSupplierFromPo(
   if (d.strn && String(d.strn).trim()) set.strn = String(d.strn).trim();
   if (d.address && String(d.address).trim()) set.address = String(d.address).trim();
   if (d.phone && String(d.phone).trim()) set.contact = String(d.phone).trim();
+  if (d.brand && String(d.brand).trim()) set.brand = String(d.brand).trim();
+  if (d.concernedPerson && String(d.concernedPerson).trim()) set.concernedPerson = String(d.concernedPerson).trim();
   if (Object.keys(set).length === 0) return;
   await db.update(suppliers).set(set).where(ilike(suppliers.name, n));
 }
@@ -402,6 +407,10 @@ DO $$ BEGIN
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS ntn varchar(40);
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS strn varchar(40);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS registered boolean;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_brand varchar(160);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_concerned_person varchar(160);
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS brand varchar(160);
+  ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS concerned_person varchar(160);
 
   -- One-time data migrations, keyed so each runs exactly once.
   CREATE TABLE IF NOT EXISTS procurement_migrations (

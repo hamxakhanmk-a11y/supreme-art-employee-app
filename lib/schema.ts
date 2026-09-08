@@ -502,6 +502,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   date: date("date").notNull(),
   demandByName: varchar("demand_by_name", { length: 160 }),
   supplierName: varchar("supplier_name", { length: 200 }),
+  supplierBrand: varchar("supplier_brand", { length: 160 }),
   expectedDate: date("expected_date"),
   orderPlacedBy: varchar("order_placed_by", { length: 120 }),
   approvedBy: varchar("approved_by", { length: 120 }),
@@ -509,6 +510,7 @@ export const purchaseOrders = pgTable("purchase_orders", {
   supplierAddress: text("supplier_address"),
   supplierContact: varchar("supplier_contact", { length: 160 }),
   supplierPhone: varchar("supplier_phone", { length: 60 }),
+  supplierConcernedPerson: varchar("supplier_concerned_person", { length: 160 }),
   supplierNtn: varchar("supplier_ntn", { length: 40 }),
   supplierStrn: varchar("supplier_strn", { length: 40 }),
   specification: text("specification"),
@@ -544,8 +546,10 @@ export const inspections = pgTable("inspections", {
 export const suppliers = pgTable("suppliers", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
+  brand: varchar("brand", { length: 160 }),
   address: text("address"),
   contact: varchar("contact", { length: 160 }),
+  concernedPerson: varchar("concerned_person", { length: 160 }),
   ntn: varchar("ntn", { length: 40 }),
   strn: varchar("strn", { length: 40 }),
   // true = registered (sales-tax invoice), false = unregistered, null = unmarked.

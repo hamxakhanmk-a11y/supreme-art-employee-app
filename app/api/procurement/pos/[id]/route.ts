@@ -44,9 +44,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     demandNo,
     demandByName: b.demandByName || null,
     supplierName: b.supplierName || null,
+    supplierBrand: b.supplierBrand || null,
     supplierAddress: b.supplierAddress || null,
     supplierContact: b.supplierContact || null,
     supplierPhone: b.supplierPhone || null,
+    supplierConcernedPerson: b.supplierConcernedPerson || null,
     supplierNtn: b.supplierNtn || null,
     supplierStrn: b.supplierStrn || null,
     expectedDate: b.expectedDate || null,
@@ -60,6 +62,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   }).where(eq(purchaseOrders.id, parseInt(id)));
   await syncSupplierFromPo(b.supplierName, {
     registered: existing?.registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+    brand: b.supplierBrand, concernedPerson: b.supplierConcernedPerson,
   });
   await logActivity({ user: guard, action: "po.update", summary: `edited PO (id ${id})` });
   return NextResponse.json({ ok: true });

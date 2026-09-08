@@ -16,9 +16,9 @@ export async function GET() {
   return NextResponse.json({ suppliers: rows });
 }
 
-// POST { name, address?, contact? } — save a new supplier. If one with the same
-// name already exists (case-insensitive) it's updated with any new details
-// rather than duplicated.
+// POST { name, brand?, address?, contact?, concernedPerson? } — save a new
+// supplier. If one with the same name already exists (case-insensitive) it's
+// updated with any new details rather than duplicated.
 export async function POST(req: Request) {
   const guard = await guardWrite("po");
   if (guard instanceof NextResponse) return guard;
@@ -26,8 +26,10 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => ({}));
   const name = String(b.name || "").trim();
   if (!name) return NextResponse.json({ error: "Supplier name is required" }, { status: 400 });
+  const brand = String(b.brand || "").trim() || null;
   const address = String(b.address || "").trim() || null;
   const contact = String(b.contact || "").trim() || null;
+  const concernedPerson = String(b.concernedPerson || "").trim() || null;
   const ntn = String(b.ntn || "").trim() || null;
   const strn = String(b.strn || "").trim() || null;
   const registered = typeof b.registered === "boolean" ? b.registered : null;
@@ -36,8 +38,10 @@ export async function POST(req: Request) {
   if (existing) {
     const [updated] = await db.update(suppliers)
       .set({
+        brand: brand ?? existing.brand,
         address: address ?? existing.address,
         contact: contact ?? existing.contact,
+        concernedPerson: concernedPerson ?? existing.concernedPerson,
         ntn: ntn ?? existing.ntn,
         strn: strn ?? existing.strn,
         registered: registered ?? existing.registered,
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
       .where(eq(suppliers.id, existing.id)).returning();
     return NextResponse.json({ supplier: updated, existed: true });
   }
-  const [row] = await db.insert(suppliers).values({ name, address, contact, ntn, strn, registered }).returning();
+  const [row] = await db.insert(suppliers).values({ name, brand, address, contact, concernedPerson, ntn, strn, registered }).returning();
   return NextResponse.json({ supplier: row });
 }
 

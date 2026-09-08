@@ -55,9 +55,11 @@ export async function POST(req: Request) {
     date: b.date || new Date().toISOString().slice(0, 10),
     demandByName: b.demandByName || null,
     supplierName: b.supplierName || null,
+    supplierBrand: b.supplierBrand || null,
     supplierAddress: b.supplierAddress || null,
     supplierContact: b.supplierContact || null,
     supplierPhone: b.supplierPhone || null,
+    supplierConcernedPerson: b.supplierConcernedPerson || null,
     supplierNtn: b.supplierNtn || null,
     supplierStrn: b.supplierStrn || null,
     expectedDate: b.expectedDate || null,
@@ -80,6 +82,7 @@ export async function POST(req: Request) {
   // saved directory so the next PO for this supplier auto-fills them.
   await syncSupplierFromPo(b.supplierName, {
     registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
+    brand: b.supplierBrand, concernedPerson: b.supplierConcernedPerson,
   });
 
   await logActivity({
