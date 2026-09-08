@@ -14,6 +14,8 @@ export interface DirectoryRow {
   supplierConcernedPerson: string;
   supplierNtn: string;
   supplierStrn: string;
+  poRate: number | null;   // manual reference rate set on the PO register list (not per item)
+  poRateUom: string | null; // "Per Kg" | "Per Piece"
   poId: number;
   poNo: number;
   date: string;         // ISO yyyy-mm-dd, "" if never set
@@ -62,6 +64,7 @@ function taxLabel(gross: number | null, taxValue: number, taxPct: number): strin
 type SupplierAgg = {
   count: number; rate: number | null; uom: string; poNo: number; poId: number;
   brand: string; address: string; phone: string; concernedPerson: string; ntn: string; strn: string;
+  poRate: number | null; poRateUom: string | null;
 };
 
 export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
@@ -122,6 +125,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo, poId: r.poId,
           brand: r.supplierBrand, address: r.supplierAddress, phone: r.supplierPhone,
           concernedPerson: r.supplierConcernedPerson, ntn: r.supplierNtn, strn: r.supplierStrn,
+          poRate: r.poRate, poRateUom: r.poRateUom,
         });
       } else {
         cur.count += 1;
@@ -129,6 +133,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; cur.poId = r.poId;
           cur.brand = r.supplierBrand; cur.address = r.supplierAddress; cur.phone = r.supplierPhone;
           cur.concernedPerson = r.supplierConcernedPerson; cur.ntn = r.supplierNtn; cur.strn = r.supplierStrn;
+          cur.poRate = r.poRate; cur.poRateUom = r.poRateUom;
         }
       }
     }
@@ -156,13 +161,13 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By order", title: "Product / Supplier / Rate — every order",
-          headers: ["Date", "Product / Description", "Supplier", "Brand", "Rate", "Gross", "Tax", "Net Value"],
+          headers: ["Date", "Product / Description", "Supplier", "Brand", "Rate", "Manual Rate", "Gross", "Tax", "Net Value"],
           rows: [
             ...filteredOrders.map(r => [
               r.date ? fmtDate(r.date) : "—", r.product, r.supplier, r.supplierBrand || "", rateLabel(r.rate, r.uom),
-              moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
+              rateLabel(r.poRate, r.poRateUom || ""), moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
             ]),
-            ["", "", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false)],
+            ["", "", "", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false)],
           ],
         }],
       });
@@ -171,11 +176,11 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By product", title: "Product / Supplier directory — grouped by product",
-          headers: ["Product / Description", "Supplier", "Brand", "Location", "NTN", "STRN", "Contact #", "Concerned Person", "Rate"],
+          headers: ["Product / Description", "Supplier", "Brand", "Location", "NTN", "STRN", "Contact #", "Concerned Person", "Rate", "Manual Rate"],
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
             r.agg.address || "", r.agg.ntn || "", r.agg.strn || "", r.agg.phone || "", r.agg.concernedPerson || "",
-            rateLabel(r.agg.rate, r.agg.uom),
+            rateLabel(r.agg.rate, r.agg.uom), rateLabel(r.agg.poRate, r.agg.poRateUom || ""),
           ]),
         }],
       });
@@ -227,6 +232,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                 <th>Supplier</th>
                 <th>Brand</th>
                 <th style={{ width: 150 }}>Rate</th>
+                <th style={{ width: 150 }}>Manual Rate</th>
                 <th className="num" style={{ width: 110 }}>Gross</th>
                 <th className="num" style={{ width: 120 }}>Tax</th>
                 <th className="num" style={{ width: 110 }}>Net Value</th>
@@ -234,7 +240,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
             </thead>
             <tbody>
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={8} className="empty">No matching orders.</td></tr>
+                <tr><td colSpan={9} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
                 <tr
@@ -248,6 +254,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td>{r.supplier}</td>
                   <td style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
+                  <td>{rateLabel(r.poRate, r.poRateUom || "")}</td>
                   <td className="num">{moneyOrDash(r.gross)}</td>
                   <td className="num">{taxLabel(r.gross, r.taxValue, r.taxPct)}</td>
                   <td className="num" style={{ fontWeight: 700 }}>{moneyOrDash(r.net)}</td>
@@ -257,7 +264,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
             {filteredOrders.length > 0 && (
               <tfoot>
                 <tr className="rpt-total-row">
-                  <td colSpan={5}>Total — {filteredOrders.length} order{filteredOrders.length === 1 ? "" : "s"}</td>
+                  <td colSpan={6}>Total — {filteredOrders.length} order{filteredOrders.length === 1 ? "" : "s"}</td>
                   <td className="num">{fmtMoney(ordersTotals.gross, false)}</td>
                   <td className="num">{fmtMoney(ordersTotals.tax, false)}</td>
                   <td className="num">{fmtMoney(ordersTotals.net, false)}</td>
@@ -278,11 +285,12 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                 <th style={{ width: 120 }}>Contact #</th>
                 <th>Concerned Person</th>
                 <th style={{ width: 150 }}>Rate</th>
+                <th style={{ width: 150 }}>Manual Rate</th>
               </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={9} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={10} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((r, i) => (
                 <tr
@@ -314,6 +322,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
                   <td>{rateLabel(r.agg.rate, r.agg.uom)}</td>
+                  <td>{rateLabel(r.agg.poRate, r.agg.poRateUom || "")}</td>
                 </tr>
               ))}
             </tbody>
