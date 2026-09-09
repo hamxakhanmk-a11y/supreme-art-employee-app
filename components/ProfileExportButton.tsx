@@ -1,12 +1,12 @@
 "use client";
-import { downloadCSV } from "@/lib/csv";
+import { downloadRegisterXlsx } from "@/lib/xlsx";
 
-// Section-header rows (blank value) act as a visual divider once opened in
-// Excel — same grouping as the print form and the profile tabs.
+// Section-header rows (blank value) act as a visual divider — same grouping
+// as the print form and the profile tabs.
 const section = (title: string): [string, string] => [`— ${title} —`, ""];
 
 export default function ProfileExportButton({ employee }: { employee: any }) {
-  const exportCSV = () => {
+  const exportXlsx = () => {
     const rows: [string, any][] = [
       ["Employee ID", employee.employeeId],
 
@@ -80,8 +80,21 @@ export default function ProfileExportButton({ employee }: { employee: any }) {
       section("NOTES"),
       ["Notes", employee.notes],
     ];
-    downloadCSV(`employee-${employee.employeeId}`, ["Field", "Value"], rows);
+    downloadRegisterXlsx({
+      filename: `employee-${employee.employeeId}`,
+      sheetName: "Profile",
+      title: `${employee.firstName || ""} ${employee.lastName || ""} — Employee Profile`.trim(),
+      headers: ["Field", "Value"],
+      colWidths: [26, 34],
+      freezeCols: 0,
+      // CNIC/phone/account numbers etc. are already stored as strings and
+      // passed straight through (not run through Number()), so ExcelJS
+      // writes them as text cells — that's what stops Excel from
+      // reinterpreting a long digit string as a number and mangling it into
+      // scientific notation.
+      rows,
+    });
   };
 
-  return <button onClick={exportCSV} className="btn">⬇ Excel (CSV)</button>;
+  return <button onClick={exportXlsx} className="btn">⬇ Excel</button>;
 }

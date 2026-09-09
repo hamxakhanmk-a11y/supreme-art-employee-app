@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { downloadCSV } from "@/lib/csv";
+import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { employees } from "@/lib/schema";
 
 type Row = typeof employees.$inferSelect & { exitReason: string | null };
@@ -28,23 +28,49 @@ const HEADERS = [
   "Notes",
 ];
 
+// Wide columns for free-text fields, narrower for codes/percentages, default
+// otherwise — wide enough that a real .xlsx's own header text doesn't get
+// clipped either (unlike plain CSV, which carries no column-width info at
+// all and always opens at Excel's narrow default).
+function widthFor(h: string): number {
+  if (h.includes("Address") || h === "Notes" || h === "Email") return 28;
+  if (h === "First Name" || h === "Last Name" || h === "Father's Name" || h.includes("Name") || h.includes("Manager")) return 18;
+  if (h.includes("%")) return 10;
+  if (h === "Employee ID") return 14;
+  return 15;
+}
+const COL_WIDTHS = HEADERS.map(widthFor);
+
 export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
-  const exportCSV = () => {
-    downloadCSV("employees", HEADERS, rows.map(r => [
-      r.employeeId,
-      r.firstName, r.lastName, r.fatherName || "", r.dob || "", r.gender || "", r.maritalStatus || "", r.nationality || "", r.religion || "", r.bloodGroup || "",
-      r.cnic || "", r.cnicExpiry || "", r.passportNumber || "", r.passportExpiry || "", r.ssiNumber || "", r.ssiExpiry || "", r.ubiNumber || "", r.ubiExpiry || "",
-      r.phone || "", r.altPhone || "", r.email || "", r.currentAddress || "", r.permanentAddress || "", r.city || "",
-      r.emergencyName || "", r.emergencyRelation || "", r.emergencyPhone || "",
-      r.designation || "", r.department || "", r.joiningDate || "", r.employmentType || "", r.reportingManager || "", r.workLocation || "", r.shift || "",
-      r.status, r.contractExpiry || "", r.resignationDate || "", r.exitReason || "", r.kpiTemplate || "",
-      r.basicSalary ?? "", r.conveyance ?? "", r.accommodation ?? "", r.food ?? "",
-      r.houseRentPercent ?? "", r.medicalPercent ?? "", r.incomeTaxPercent ?? "", r.incomeTaxAmount ?? "",
-      r.eobiEmployeePercent ?? "", r.eobiEmployeeAmount ?? "", r.eobiEmployerPercent ?? "", r.eobiEmployerAmount ?? "",
-      r.minimumWage ?? "", r.essiContribution ?? "",
-      r.bankName || "", r.accountTitle || "", r.accountNumber || "", r.iban || "",
-      r.notes || "",
-    ]));
+  const exportXlsx = () => {
+    downloadRegisterXlsx({
+      filename: "employees",
+      sheetName: "Employees",
+      title: `Employee Directory — ${rows.length} record${rows.length === 1 ? "" : "s"}`,
+      headers: HEADERS,
+      colWidths: COL_WIDTHS,
+      freezeCols: 1,
+      // CNIC/phone/account numbers etc. are stored as strings on purpose —
+      // passed straight through (not run through Number()) so ExcelJS writes
+      // them as text cells. That's what stops Excel from "helpfully"
+      // reinterpreting a 13-digit CNIC as a number and mangling it into
+      // scientific notation.
+      rows: rows.map(r => [
+        r.employeeId,
+        r.firstName, r.lastName, r.fatherName || "", r.dob || "", r.gender || "", r.maritalStatus || "", r.nationality || "", r.religion || "", r.bloodGroup || "",
+        r.cnic || "", r.cnicExpiry || "", r.passportNumber || "", r.passportExpiry || "", r.ssiNumber || "", r.ssiExpiry || "", r.ubiNumber || "", r.ubiExpiry || "",
+        r.phone || "", r.altPhone || "", r.email || "", r.currentAddress || "", r.permanentAddress || "", r.city || "",
+        r.emergencyName || "", r.emergencyRelation || "", r.emergencyPhone || "",
+        r.designation || "", r.department || "", r.joiningDate || "", r.employmentType || "", r.reportingManager || "", r.workLocation || "", r.shift || "",
+        r.status, r.contractExpiry || "", r.resignationDate || "", r.exitReason || "", r.kpiTemplate || "",
+        r.basicSalary ?? "", r.conveyance ?? "", r.accommodation ?? "", r.food ?? "",
+        r.houseRentPercent ?? "", r.medicalPercent ?? "", r.incomeTaxPercent ?? "", r.incomeTaxAmount ?? "",
+        r.eobiEmployeePercent ?? "", r.eobiEmployeeAmount ?? "", r.eobiEmployerPercent ?? "", r.eobiEmployerAmount ?? "",
+        r.minimumWage ?? "", r.essiContribution ?? "",
+        r.bankName || "", r.accountTitle || "", r.accountNumber || "", r.iban || "",
+        r.notes || "",
+      ]),
+    });
   };
 
   // Bulk print: one full detail form per employee, in whatever's currently
@@ -60,7 +86,7 @@ export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
       ) : (
         <button className="btn btn-print" disabled>🖨 Print</button>
       )}
-      <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
+      <button onClick={exportXlsx} className="btn" disabled={!rows.length}>⬇ Excel</button>
       <Link href="/employees/form/print" className="btn">📄 Blank Form</Link>
       <Link href="/employees/new" className="btn btn-primary">＋ Add Employee</Link>
     </div>
