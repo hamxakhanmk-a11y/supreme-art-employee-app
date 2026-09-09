@@ -47,9 +47,19 @@ export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
     ]));
   };
 
+  // Bulk print: one full detail form per employee, in whatever's currently
+  // filtered/searched here — same fields as the single-employee Print
+  // Profile, not the compact table. Built from the ids so the print-all page
+  // can pull each employee's full record itself.
+  const printHref = `/employees/print-all?ids=${rows.map(r => r.id).join(",")}`;
+
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
+      {rows.length > 0 ? (
+        <Link href={printHref} className="btn btn-print">🖨 Print</Link>
+      ) : (
+        <button className="btn btn-print" disabled>🖨 Print</button>
+      )}
       <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
       <Link href="/employees/form/print" className="btn">📄 Blank Form</Link>
       <Link href="/employees/new" className="btn btn-primary">＋ Add Employee</Link>
