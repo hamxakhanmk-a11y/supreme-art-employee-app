@@ -49,9 +49,6 @@ export const PO_DEFAULT_TAX = 18;
 // Unit the manual reference "Rate" column (register list) is quoted per.
 export const PO_RATE_UOM_OPTIONS = ["Per Kg", "Per Piece", "Per Liter", "Per Box"] as const;
 
-// Sales-tax percentage choices for that same manual Rate — picked, not typed.
-export const PO_RATE_TAX_OPTIONS = [0, 5, 17, 18] as const;
-
 // "829 / Per Kg +18%" — the manual Rate column's display, shared by the PO
 // register list and the Supplier Directory report so both read the same way.
 // Tax only appears once a percentage has actually been picked (0% picked on

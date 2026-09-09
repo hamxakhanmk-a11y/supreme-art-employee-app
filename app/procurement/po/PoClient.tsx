@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, PO_RATE_UOM_OPTIONS, PO_RATE_TAX_OPTIONS, manualRateLabel, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, PO_RATE_UOM_OPTIONS, manualRateLabel, type PoItem, type DemandItem } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
@@ -210,7 +210,8 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     const trimmed = rateDraft.trim();
     const rate = trimmed === "" ? null : Number(trimmed);
     if (rate !== null && (!isFinite(rate) || rate < 0)) { alert("Rate must be a positive number."); return; }
-    const rateTaxPct = rate === null || taxDraft === "" ? null : Number(taxDraft);
+    const rateTaxPct = rate === null || taxDraft.trim() === "" ? null : Number(taxDraft);
+    if (rateTaxPct !== null && (!isFinite(rateTaxPct) || rateTaxPct < 0)) { alert("Tax % must be a positive number."); return; }
     setSavingRate(true);
     try {
       const res = await fetch(`/api/procurement/pos/${id}`, {
@@ -515,26 +516,28 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
                 <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                   {editingRateId === p.id ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <input
                         type="number" min={0} step="0.01" inputMode="decimal" autoFocus
                         value={rateDraft} onChange={e => setRateDraft(e.target.value)}
-                        style={{ width: 64, padding: "3px 6px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 5 }}
+                        placeholder="Rate"
+                        style={{ width: 78, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
                       />
                       <select
                         value={uomDraft} onChange={e => setUomDraft(e.target.value)}
-                        style={{ padding: "3px 4px", fontSize: 11.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                        style={{ width: 100, padding: "4px 5px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 5 }}
                       >
                         {PO_RATE_UOM_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
-                      <select
-                        value={taxDraft} onChange={e => setTaxDraft(e.target.value)}
-                        title="Sales tax %"
-                        style={{ padding: "3px 4px", fontSize: 11.5, border: "1px solid var(--border)", borderRadius: 5 }}
-                      >
-                        <option value="">No tax</option>
-                        {PO_RATE_TAX_OPTIONS.map(t => <option key={t} value={t}>{t}%</option>)}
-                      </select>
+                      <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                        <input
+                          type="number" min={0} step="0.01" inputMode="decimal"
+                          value={taxDraft} onChange={e => setTaxDraft(e.target.value)}
+                          title="Sales tax %" placeholder="Tax"
+                          style={{ width: 62, padding: "4px 18px 4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                        />
+                        <span style={{ position: "absolute", right: 6, fontSize: 11.5, color: "var(--text3)", pointerEvents: "none" }}>%</span>
+                      </div>
                       <button onClick={() => saveRate(p.id)} disabled={savingRate} title="Save"
                         style={{ background: "none", border: "none", color: "#166534", cursor: "pointer", fontSize: 15, padding: 0 }}>✓</button>
                       <button onClick={() => setEditingRateId(null)} disabled={savingRate} title="Cancel"
