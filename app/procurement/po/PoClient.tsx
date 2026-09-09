@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, PO_RATE_UOM_OPTIONS, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, PO_RATE_UOM_OPTIONS, PO_RATE_TAX_OPTIONS, manualRateLabel, type PoItem, type DemandItem } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
@@ -12,7 +12,7 @@ interface Po {
   supplierConcernedPerson: string | null; supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string; registered: boolean | null; discount: number | null;
-  rate: number | null; rateUom: string | null;
+  rate: number | null; rateUom: string | null; rateTaxPct: number | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
@@ -198,21 +198,24 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [editingRateId, setEditingRateId] = useState<number | null>(null);
   const [rateDraft, setRateDraft] = useState("");
   const [uomDraft, setUomDraft] = useState<string>(PO_RATE_UOM_OPTIONS[0]);
+  const [taxDraft, setTaxDraft] = useState(""); // "" = no tax picked
   const [savingRate, setSavingRate] = useState(false);
   function startEditRate(p: Po) {
     setEditingRateId(p.id);
     setRateDraft(p.rate == null ? "" : String(p.rate));
     setUomDraft(p.rateUom || PO_RATE_UOM_OPTIONS[0]);
+    setTaxDraft(p.rateTaxPct == null ? "" : String(p.rateTaxPct));
   }
   async function saveRate(id: number) {
     const trimmed = rateDraft.trim();
     const rate = trimmed === "" ? null : Number(trimmed);
     if (rate !== null && (!isFinite(rate) || rate < 0)) { alert("Rate must be a positive number."); return; }
+    const rateTaxPct = rate === null || taxDraft === "" ? null : Number(taxDraft);
     setSavingRate(true);
     try {
       const res = await fetch(`/api/procurement/pos/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rate, rateUom: rate === null ? null : uomDraft }),
+        body: JSON.stringify({ rate, rateUom: rate === null ? null : uomDraft, rateTaxPct }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setEditingRateId(null);
@@ -524,6 +527,14 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                       >
                         {PO_RATE_UOM_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
+                      <select
+                        value={taxDraft} onChange={e => setTaxDraft(e.target.value)}
+                        title="Sales tax %"
+                        style={{ padding: "3px 4px", fontSize: 11.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                      >
+                        <option value="">No tax</option>
+                        {PO_RATE_TAX_OPTIONS.map(t => <option key={t} value={t}>{t}%</option>)}
+                      </select>
                       <button onClick={() => saveRate(p.id)} disabled={savingRate} title="Save"
                         style={{ background: "none", border: "none", color: "#166534", cursor: "pointer", fontSize: 15, padding: 0 }}>✓</button>
                       <button onClick={() => setEditingRateId(null)} disabled={savingRate} title="Cancel"
@@ -540,7 +551,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                         color: p.rate == null ? "var(--text3)" : "var(--text)",
                       }}
                     >
-                      {p.rate == null ? "＋ Rate" : `${p.rate.toLocaleString()} / ${p.rateUom || "—"} ✎`}
+                      {p.rate == null ? "＋ Rate" : `${manualRateLabel(p.rate, p.rateUom, p.rateTaxPct)} ✎`}
                     </button>
                   )}
                 </td>

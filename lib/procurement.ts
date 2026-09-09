@@ -47,7 +47,22 @@ export interface GrnItem { srNo: number; item: string; quantity: string; remarks
 export const PO_DEFAULT_TAX = 18;
 
 // Unit the manual reference "Rate" column (register list) is quoted per.
-export const PO_RATE_UOM_OPTIONS = ["Per Kg", "Per Piece"] as const;
+export const PO_RATE_UOM_OPTIONS = ["Per Kg", "Per Piece", "Per Liter", "Per Box"] as const;
+
+// Sales-tax percentage choices for that same manual Rate — picked, not typed.
+export const PO_RATE_TAX_OPTIONS = [0, 5, 17, 18] as const;
+
+// "829 / Per Kg +18%" — the manual Rate column's display, shared by the PO
+// register list and the Supplier Directory report so both read the same way.
+// Tax only appears once a percentage has actually been picked (0% picked on
+// purpose still shows "+0%"; never-set stays silent rather than implying 0).
+export function manualRateLabel(rate: number | null, uom: string | null, taxPct: number | null): string {
+  if (rate == null) return "—";
+  let s = rate.toLocaleString();
+  if (uom) s += ` / ${uom}`;
+  if (taxPct != null) s += ` +${taxPct}%`;
+  return s;
+}
 
 // Derived money for one PO line: gross = qty × rate, tax value = gross × tax%,
 // net = gross + tax value. Tolerant of blanks (treated as 0).
@@ -416,6 +431,7 @@ DO $$ BEGIN
   ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS concerned_person varchar(160);
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate double precision;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate_uom varchar(20);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate_tax_pct double precision;
 
   -- One-time data migrations, keyed so each runs exactly once.
   CREATE TABLE IF NOT EXISTS procurement_migrations (

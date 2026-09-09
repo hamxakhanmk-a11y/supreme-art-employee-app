@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
-import { fmtMoney, fmtDate } from "@/lib/procurement";
+import { fmtMoney, fmtDate, manualRateLabel } from "@/lib/procurement";
 
 export interface DirectoryRow {
   product: string;
@@ -15,7 +15,8 @@ export interface DirectoryRow {
   supplierNtn: string;
   supplierStrn: string;
   poRate: number | null;   // manual reference rate set on the PO register list (not per item)
-  poRateUom: string | null; // "Per Kg" | "Per Piece"
+  poRateUom: string | null; // "Per Kg" | "Per Piece" | "Per Liter" | "Per Box"
+  poRateTaxPct: number | null;
   poId: number;
   poNo: number;
   date: string;         // ISO yyyy-mm-dd, "" if never set
@@ -64,7 +65,7 @@ function taxLabel(gross: number | null, taxValue: number, taxPct: number): strin
 type SupplierAgg = {
   count: number; rate: number | null; uom: string; poNo: number; poId: number;
   brand: string; address: string; phone: string; concernedPerson: string; ntn: string; strn: string;
-  poRate: number | null; poRateUom: string | null;
+  poRate: number | null; poRateUom: string | null; poRateTaxPct: number | null;
 };
 
 export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
@@ -125,7 +126,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           count: 1, rate: r.rate, uom: r.uom, poNo: r.poNo, poId: r.poId,
           brand: r.supplierBrand, address: r.supplierAddress, phone: r.supplierPhone,
           concernedPerson: r.supplierConcernedPerson, ntn: r.supplierNtn, strn: r.supplierStrn,
-          poRate: r.poRate, poRateUom: r.poRateUom,
+          poRate: r.poRate, poRateUom: r.poRateUom, poRateTaxPct: r.poRateTaxPct,
         });
       } else {
         cur.count += 1;
@@ -133,7 +134,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           cur.rate = r.rate; cur.uom = r.uom; cur.poNo = r.poNo; cur.poId = r.poId;
           cur.brand = r.supplierBrand; cur.address = r.supplierAddress; cur.phone = r.supplierPhone;
           cur.concernedPerson = r.supplierConcernedPerson; cur.ntn = r.supplierNtn; cur.strn = r.supplierStrn;
-          cur.poRate = r.poRate; cur.poRateUom = r.poRateUom;
+          cur.poRate = r.poRate; cur.poRateUom = r.poRateUom; cur.poRateTaxPct = r.poRateTaxPct;
         }
       }
     }
@@ -165,7 +166,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           rows: [
             ...filteredOrders.map(r => [
               r.date ? fmtDate(r.date) : "—", r.product, r.supplier, r.supplierBrand || "", rateLabel(r.rate, r.uom),
-              rateLabel(r.poRate, r.poRateUom || ""), moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
+              manualRateLabel(r.poRate, r.poRateUom, r.poRateTaxPct), moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
             ]),
             ["", "", "", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false)],
           ],
@@ -180,7 +181,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
             r.agg.address || "", r.agg.ntn || "", r.agg.strn || "", r.agg.phone || "", r.agg.concernedPerson || "",
-            rateLabel(r.agg.rate, r.agg.uom), rateLabel(r.agg.poRate, r.agg.poRateUom || ""),
+            rateLabel(r.agg.rate, r.agg.uom), manualRateLabel(r.agg.poRate, r.agg.poRateUom, r.agg.poRateTaxPct),
           ]),
         }],
       });
@@ -254,7 +255,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td>{r.supplier}</td>
                   <td style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
-                  <td>{rateLabel(r.poRate, r.poRateUom || "")}</td>
+                  <td>{manualRateLabel(r.poRate, r.poRateUom, r.poRateTaxPct)}</td>
                   <td className="num">{moneyOrDash(r.gross)}</td>
                   <td className="num">{taxLabel(r.gross, r.taxValue, r.taxPct)}</td>
                   <td className="num" style={{ fontWeight: 700 }}>{moneyOrDash(r.net)}</td>
@@ -322,7 +323,7 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
                   <td>{rateLabel(r.agg.rate, r.agg.uom)}</td>
-                  <td>{rateLabel(r.agg.poRate, r.agg.poRateUom || "")}</td>
+                  <td>{manualRateLabel(r.agg.poRate, r.agg.poRateUom, r.agg.poRateTaxPct)}</td>
                 </tr>
               ))}
             </tbody>

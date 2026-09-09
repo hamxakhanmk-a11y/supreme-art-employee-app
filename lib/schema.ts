@@ -520,10 +520,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   // invoice), false = unregistered, null = not yet marked.
   registered: boolean("registered"),
   // Manually-entered reference rate for the register list (not tied to any
-  // one line item) — e.g. "150 / Per Kg". Filled in by hand after the PO is
-  // raised, from the list itself.
+  // one line item) — e.g. "150 / Per Kg +18%". Filled in by hand after the
+  // PO is raised, from the list itself.
   rate: doublePrecision("rate"),
   rateUom: varchar("rate_uom", { length: 20 }),
+  rateTaxPct: doublePrecision("rate_tax_pct"),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
   createdByUserId: integer("created_by_user_id"),

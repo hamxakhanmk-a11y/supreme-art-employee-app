@@ -68,8 +68,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   return NextResponse.json({ ok: true });
 }
 
-// PATCH { rate, rateUom } — set just the manual reference rate from the
-// register list, without touching anything else on the PO.
+// PATCH { rate, rateUom, rateTaxPct } — set just the manual reference rate
+// from the register list, without touching anything else on the PO.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite("po");
   if (guard instanceof NextResponse) return guard;
@@ -81,7 +81,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ error: "Rate must be a positive number." }, { status: 400 });
   }
   const rateUom = b.rateUom ? String(b.rateUom).trim() || null : null;
-  await db.update(purchaseOrders).set({ rate, rateUom }).where(eq(purchaseOrders.id, parseInt(id)));
+  const rateTaxPct = b.rateTaxPct === null || b.rateTaxPct === "" || b.rateTaxPct === undefined ? null : Number(b.rateTaxPct);
+  if (rateTaxPct !== null && (!isFinite(rateTaxPct) || rateTaxPct < 0)) {
+    return NextResponse.json({ error: "Tax % must be a positive number." }, { status: 400 });
+  }
+  await db.update(purchaseOrders).set({ rate, rateUom, rateTaxPct }).where(eq(purchaseOrders.id, parseInt(id)));
   await logActivity({ user: guard, action: "po.set-rate", summary: `set reference rate on PO (id ${id})` });
   return NextResponse.json({ ok: true });
 }

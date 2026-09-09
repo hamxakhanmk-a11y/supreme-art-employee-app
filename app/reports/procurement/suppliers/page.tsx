@@ -30,6 +30,7 @@ export default async function SupplierDirectoryPage() {
     supplierStrn: purchaseOrders.supplierStrn,
     poRate: purchaseOrders.rate,
     poRateUom: purchaseOrders.rateUom,
+    poRateTaxPct: purchaseOrders.rateTaxPct,
     items: purchaseOrders.items,
   }).from(purchaseOrders).orderBy(purchaseOrders.poNo);
 
@@ -73,6 +74,7 @@ export default async function SupplierDirectoryPage() {
         supplierStrn: (po.supplierStrn || "").trim(),
         poRate: po.poRate,
         poRateUom: po.poRateUom,
+        poRateTaxPct: po.poRateTaxPct,
         poId: po.id,
         poNo: po.poNo,
         date: po.date || "",  // ISO yyyy-mm-dd, formatted for display client-side
