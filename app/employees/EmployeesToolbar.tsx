@@ -1,28 +1,50 @@
 "use client";
 import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
+import type { employees } from "@/lib/schema";
 
-type Row = {
-  id: number; employeeId: string;
-  firstName: string; lastName: string;
-  fatherName: string | null;
-  designation: string | null; department: string | null;
-  cnic: string | null; phone: string | null; email: string | null;
-  joiningDate: string | null;
-  status: string;
-};
+type Row = typeof employees.$inferSelect & { exitReason: string | null };
+
+const HEADERS = [
+  "Employee ID",
+  // Personal
+  "First Name", "Last Name", "Father's Name", "Date of Birth", "Gender", "Marital Status", "Nationality", "Religion", "Blood Group",
+  // Identification
+  "CNIC", "CNIC Expiry", "Passport Number", "Passport Expiry", "EOBI Number", "EOBI Expiry", "ESSI Number", "ESSI Expiry",
+  // Contact
+  "Phone", "Alternate Phone", "Email", "Current Address", "Permanent Address", "City",
+  "Emergency Name", "Emergency Relationship", "Emergency Phone",
+  // Job
+  "Designation", "Department", "Joining Date", "Employment Type", "Reporting Manager", "Work Location", "Shift",
+  "Status", "Contract Expiry", "Resignation Date", "Exit Reason", "KPI Template",
+  // Salary
+  "Basic Salary (PKR)", "Conveyance (PKR)", "Accommodation (PKR)", "Food (PKR)",
+  "House Rent %", "Medical %", "Income Tax %", "Income Tax Amount (PKR)",
+  "EOBI Employee %", "EOBI Employee Amount (PKR)", "EOBI Employer %", "EOBI Employer Amount (PKR)",
+  "Minimum Wage (PKR)", "ESSI Contribution (PKR)",
+  // Banking
+  "Bank Name", "Account Title", "Account Number", "IBAN",
+  // Notes
+  "Notes",
+];
 
 export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
   const exportCSV = () => {
-    downloadCSV("employees",
-      ["Employee ID", "First Name", "Last Name", "Father's Name", "Designation", "Department", "CNIC", "Phone", "Email", "Joining Date", "Status"],
-      rows.map(r => [
-        r.employeeId, r.firstName, r.lastName, r.fatherName || "",
-        r.designation || "", r.department || "",
-        r.cnic || "", r.phone || "", r.email || "",
-        r.joiningDate || "", r.status,
-      ])
-    );
+    downloadCSV("employees", HEADERS, rows.map(r => [
+      r.employeeId,
+      r.firstName, r.lastName, r.fatherName || "", r.dob || "", r.gender || "", r.maritalStatus || "", r.nationality || "", r.religion || "", r.bloodGroup || "",
+      r.cnic || "", r.cnicExpiry || "", r.passportNumber || "", r.passportExpiry || "", r.ssiNumber || "", r.ssiExpiry || "", r.ubiNumber || "", r.ubiExpiry || "",
+      r.phone || "", r.altPhone || "", r.email || "", r.currentAddress || "", r.permanentAddress || "", r.city || "",
+      r.emergencyName || "", r.emergencyRelation || "", r.emergencyPhone || "",
+      r.designation || "", r.department || "", r.joiningDate || "", r.employmentType || "", r.reportingManager || "", r.workLocation || "", r.shift || "",
+      r.status, r.contractExpiry || "", r.resignationDate || "", r.exitReason || "", r.kpiTemplate || "",
+      r.basicSalary ?? "", r.conveyance ?? "", r.accommodation ?? "", r.food ?? "",
+      r.houseRentPercent ?? "", r.medicalPercent ?? "", r.incomeTaxPercent ?? "", r.incomeTaxAmount ?? "",
+      r.eobiEmployeePercent ?? "", r.eobiEmployeeAmount ?? "", r.eobiEmployerPercent ?? "", r.eobiEmployerAmount ?? "",
+      r.minimumWage ?? "", r.essiContribution ?? "",
+      r.bankName || "", r.accountTitle || "", r.accountNumber || "", r.iban || "",
+      r.notes || "",
+    ]));
   };
 
   return (

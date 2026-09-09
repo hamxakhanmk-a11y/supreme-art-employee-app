@@ -6,19 +6,12 @@ import { useState, useMemo } from "react";
 import EmployeesToolbar from "./EmployeesToolbar";
 import PrintHeader from "@/components/PrintHeader";
 import { useCanEdit } from "@/components/MeProvider";
+import type { employees } from "@/lib/schema";
 
-type Row = {
-  id: number; employeeId: string;
-  firstName: string; lastName: string;
-  fatherName: string | null;
-  designation: string | null; department: string | null;
-  cnic: string | null; phone: string | null; email: string | null;
-  joiningDate: string | null;
-  status: string;
-  resignationDate: string | null;
-  exitReason: string | null;
-  photoUrl: string | null;
-};
+// Full DB row (every column) plus the one computed field — the table itself
+// only displays a handful of these, but the Excel export (EmployeesToolbar)
+// needs the rest.
+type Row = typeof employees.$inferSelect & { exitReason: string | null };
 
 // Exited employees are shown as "Exited" — not "resigned" — since they may have
 // left for any reason (captured separately as the exit reason).

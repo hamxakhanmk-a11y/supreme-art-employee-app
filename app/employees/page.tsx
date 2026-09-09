@@ -14,16 +14,11 @@ export default async function EmployeesPage() {
       db.select().from(employees).orderBy(desc(employees.createdAt)),
       exitReasonsMap(),
     ]);
+    // Full row (every column) so the directory's Excel export can include
+    // everything, not just the fields the compact table itself displays.
     rows = result.map((r) => ({
-      id: r.id, employeeId: r.employeeId,
-      firstName: r.firstName, lastName: r.lastName,
-      fatherName: r.fatherName,
-      designation: r.designation, department: r.department,
-      cnic: r.cnic, phone: r.phone, email: r.email,
-      joiningDate: r.joiningDate, status: r.status,
-      resignationDate: r.resignationDate,
+      ...r,
       exitReason: reasons.get(r.id) ?? null,
-      photoUrl: r.photoUrl,
     }));
   } catch (e: any) {
     dbError = e?.message ?? "DB error";
