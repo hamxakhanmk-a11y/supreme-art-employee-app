@@ -8,13 +8,17 @@ type Data = {
   firstName?: string; lastName?: string; fatherName?: string; dob?: string;
   gender?: string; maritalStatus?: string; nationality?: string; religion?: string; bloodGroup?: string;
   cnic?: string; cnicExpiry?: string; passportNumber?: string; passportExpiry?: string;
-  ssiNumber?: string; ubiNumber?: string;
+  ssiNumber?: string; ssiExpiry?: string; ubiNumber?: string; ubiExpiry?: string;
   phone?: string; altPhone?: string; email?: string;
   currentAddress?: string; permanentAddress?: string; city?: string;
   emergencyName?: string; emergencyRelation?: string; emergencyPhone?: string;
   designation?: string; department?: string; joiningDate?: string; employmentType?: string;
   reportingManager?: string; workLocation?: string; shift?: string;
-  basicSalary?: any;
+  status?: string; contractExpiry?: string; resignationDate?: string; kpiTemplate?: string;
+  basicSalary?: any; conveyance?: any; houseRentPercent?: any; medicalPercent?: any;
+  incomeTaxPercent?: any; incomeTaxAmount?: any;
+  eobiEmployeePercent?: any; eobiEmployeeAmount?: any; eobiEmployerPercent?: any; eobiEmployerAmount?: any;
+  minimumWage?: any; essiContribution?: any; accommodation?: any; food?: any;
   bankName?: string; accountTitle?: string; accountNumber?: string; iban?: string;
   notes?: string;
   photoUrl?: string;
@@ -33,6 +37,8 @@ function fmt(d?: string) {
 
 export default function PrintableForm({ data = {} }: { data?: Data }) {
   const v = (x?: any) => x ? String(x) : "";
+  const money = (x?: any) => (x != null && x !== "" ? Number(x).toLocaleString() : "");
+  const pct = (x?: any) => (x != null && x !== "" ? `${x}%` : "");
 
   // All attachable documents discovered from the employee record.
   const allAttachables: AttachDoc[] = useMemo(() => {
@@ -156,7 +162,11 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
           </PairRow>
           <PairRow>
             <Pair label="EOBI Number" value={data.ssiNumber} flex />
+            <Pair label="EOBI Expiry" value={fmt(data.ssiExpiry)} flex />
+          </PairRow>
+          <PairRow>
             <Pair label="ESSI Number" value={data.ubiNumber} flex />
+            <Pair label="ESSI Expiry" value={fmt(data.ubiExpiry)} flex />
           </PairRow>
         </Section>
 
@@ -195,7 +205,38 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
           </PairRow>
           <PairRow>
             <Pair label="Shift" value={data.shift} flex />
-            <Pair label="Basic Salary (PKR)" value={data.basicSalary ? Number(data.basicSalary).toLocaleString() : ""} flex />
+            <Pair label="Status" value={data.status} flex />
+            <Pair label="KPI Template" value={data.kpiTemplate} flex />
+          </PairRow>
+          <PairRow>
+            <Pair label="Contract Expiry" value={fmt(data.contractExpiry)} flex />
+            <Pair label="Resignation Date" value={fmt(data.resignationDate)} flex />
+          </PairRow>
+        </Section>
+
+        {/* Compensation */}
+        <Section title="Compensation / Salary Details">
+          <PairRow>
+            <Pair label="Basic Salary (PKR)" value={money(data.basicSalary)} flex />
+            <Pair label="Conveyance (PKR)" value={money(data.conveyance)} flex />
+            <Pair label="Accommodation (PKR)" value={money(data.accommodation)} flex />
+            <Pair label="Food (PKR)" value={money(data.food)} flex />
+          </PairRow>
+          <PairRow>
+            <Pair label="House Rent %" value={pct(data.houseRentPercent)} flex />
+            <Pair label="Medical %" value={pct(data.medicalPercent)} flex />
+            <Pair label="Income Tax %" value={pct(data.incomeTaxPercent)} flex />
+            <Pair label="Income Tax Amount (PKR)" value={money(data.incomeTaxAmount)} flex />
+          </PairRow>
+          <PairRow>
+            <Pair label="EOBI Employee %" value={pct(data.eobiEmployeePercent)} flex />
+            <Pair label="EOBI Employee Amount (PKR)" value={money(data.eobiEmployeeAmount)} flex />
+            <Pair label="EOBI Employer %" value={pct(data.eobiEmployerPercent)} flex />
+            <Pair label="EOBI Employer Amount (PKR)" value={money(data.eobiEmployerAmount)} flex />
+          </PairRow>
+          <PairRow>
+            <Pair label="Minimum Wage (PKR)" value={money(data.minimumWage)} flex />
+            <Pair label="ESSI Contribution (PKR)" value={money(data.essiContribution)} flex />
           </PairRow>
         </Section>
 
@@ -257,6 +298,11 @@ export default function PrintableForm({ data = {} }: { data?: Data }) {
             <Pair label="Account Number" value={data.accountNumber} flex />
             <Pair label="IBAN" value={data.iban} flex />
           </PairRow>
+        </Section>
+
+        {/* Notes */}
+        <Section title="Notes">
+          <Pair label="Notes" value={data.notes} />
         </Section>
 
         {/* Documents checklist — auto-ticked from the picker above */}
