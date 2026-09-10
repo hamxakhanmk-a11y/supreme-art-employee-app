@@ -32,25 +32,43 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/me")
-      .then(r => r.json())
-      .then(d => {
-        if (!alive) return;
-        if (d.authenticated) {
-          setMe({
-            loading: false,
-            authenticated: true,
-            user: d.user,
-            modules: d.modules ?? [],
-            editModules: d.editModules ?? [],
-            canEdit: d.canEdit ?? true,
-          });
-        } else {
-          setMe({ ...DEFAULT, loading: false });
-        }
-      })
-      .catch(() => { if (alive) setMe({ ...DEFAULT, loading: false }); });
-    return () => { alive = false; };
+    const load = () => {
+      fetch("/api/auth/me")
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return;
+          if (d.authenticated) {
+            setMe({
+              loading: false,
+              authenticated: true,
+              user: d.user,
+              modules: d.modules ?? [],
+              editModules: d.editModules ?? [],
+              canEdit: d.canEdit ?? true,
+            });
+          } else {
+            setMe({ ...DEFAULT, loading: false });
+          }
+        })
+        .catch(() => { if (alive) setMe({ ...DEFAULT, loading: false }); });
+    };
+
+    load();
+    // Permissions are fetched once and held for the life of the tab — if an
+    // admin grants a module while this tab has been open the whole time,
+    // nothing here would ever notice. Re-checking whenever the tab regains
+    // focus/visibility means "grant access, tell the person to switch back
+    // to the tab" is enough, instead of requiring them to know to hard-reload.
+    const onFocus = () => load();
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   return <MeContext.Provider value={me}>{children}</MeContext.Provider>;
