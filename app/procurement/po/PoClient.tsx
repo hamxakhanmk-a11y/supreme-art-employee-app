@@ -204,7 +204,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setEditingRateId(p.id);
     setRateDraft(p.rate == null ? "" : String(p.rate));
     setUomDraft(p.rateUom || PO_RATE_UOM_OPTIONS[0]);
-    setTaxDraft(p.rateTaxPct == null ? "" : String(p.rateTaxPct));
+    // Defaults to 18% (same default used everywhere else in the PO form)
+    // until edited — a saved rate keeps whatever tax % it was actually
+    // saved with, including 0.
+    setTaxDraft(p.rateTaxPct == null ? String(PO_DEFAULT_TAX) : String(p.rateTaxPct));
   }
   async function saveRate(id: number) {
     const trimmed = rateDraft.trim();
