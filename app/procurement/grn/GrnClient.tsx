@@ -89,7 +89,6 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   function removeRow(i: number) { setItems(l => l.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
 
   async function save() {
-    if (!gatePassNo.trim()) { setErr("Please enter the inward gate pass number."); return; }
     if (!editId && !poId && registered == null) {
       setErr("Pick a PO, or choose Registered / Unregistered for this standalone GRR."); return;
     }
@@ -216,9 +215,9 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
               <input value={poNoManual} onChange={e => setPoNoManual(e.target.value)} className="auth-input"
                 inputMode="numeric" placeholder="e.g. 10012" />
             </Field>
-            <Field label="Inward gate pass No *">
+            <Field label="Inward gate pass No">
               <input value={gatePassNo} onChange={e => setGatePassNo(e.target.value)} className="auth-input"
-                required placeholder="e.g. 12001" />
+                placeholder="e.g. 12001" />
             </Field>
             <Field label="Inv No">
               <input value={invNo} onChange={e => setInvNo(e.target.value)} className="auth-input"
