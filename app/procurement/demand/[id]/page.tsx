@@ -75,7 +75,6 @@ export default async function DemandView({ params, searchParams }: { params: Pro
           <div>
             <div className="lbl">Approved By:</div>
             <div className="line">{d.approvedBy || ""}</div>
-            <div className="cap">HOD</div>
           </div>
         </div>
       </ProcurementPrint>
