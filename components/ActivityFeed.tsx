@@ -24,14 +24,16 @@ function familyOf(action: string) {
   return FAMILY[action.split(".")[0]] ?? { label: action, color: "#6b6960", bg: "#f1f1ef" };
 }
 
+const ACTIVITY_TIME_ZONE = "Asia/Karachi";
+
 function fmtTime(d: Date | string) {
-  return new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleTimeString("en-US", { timeZone: ACTIVITY_TIME_ZONE, hour: "2-digit", minute: "2-digit", hour12: true });
 }
 function dayKey(d: Date | string) {
-  return new Date(d).toDateString();
+  return new Date(d).toLocaleDateString("en-CA", { timeZone: ACTIVITY_TIME_ZONE });
 }
 function fmtDay(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-GB", { timeZone: ACTIVITY_TIME_ZONE, weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 }
 
 // Vertical audit-trail feed grouped by day. Server-renderable (no hooks).
@@ -62,7 +64,7 @@ export default function ActivityFeed({ rows, linkEmployees = false }: { rows: Ac
             const fam = familyOf(r.action);
             return (
               <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "9px 4px", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, minWidth: 40, paddingTop: 2 }}>{fmtTime(r.createdAt)}</span>
+                <span style={{ fontSize: 11, color: "var(--text3)", fontWeight: 600, minWidth: 68, flexShrink: 0, whiteSpace: "nowrap", paddingTop: 2 }}>{fmtTime(r.createdAt)}</span>
                 <span style={{
                   fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
                   color: fam.color, background: fam.bg, borderRadius: 999, padding: "3px 8px",
