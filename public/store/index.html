@@ -513,6 +513,12 @@ body:not(.role-admin) .admin-only{display:none!important}
         <div class="page-title">Activity Log</div>
         <span style="font-size:12px;color:#888">Tracks deletions, qty edits, and user management actions.</span>
       </div>
+      <div class="card no-print" style="padding:12px 16px;margin-bottom:14px;border-color:#A32D2D;background:#fdf3f3">
+        <b>This tab is no longer where Store activity is recorded.</b> Every Store action (stock in/out,
+        qty edits, deletions) is now logged in the main app's Activity Log instead, alongside everything
+        else across the system.
+        <a href="/reports/activity" target="_top" style="color:#A32D2D;font-weight:700">Open Activity Log →</a>
+      </div>
       <div class="search-bar no-print">
         <select id="act-user-filter" onchange="renderActivity()" style="width:220px"></select>
         <button class="btn btn-sm" onclick="document.getElementById('act-user-filter').value='';renderActivity()">Clear</button>
@@ -1849,7 +1855,7 @@ async function bulkDeleteTxns(kind,historyOnly){
   if(historyOnly){
     confirmed=await confirmDialog({
       title:'Permanently delete '+ids.length+' record'+plural+' from history?',
-      message:'• Current stock quantities will NOT be adjusted (use this for cleaning up old records).\n• The records will be gone from Stock In / Out / Issuance views.\n• An entry is written to the Activity Log so you can see what was purged.\n\nThis cannot be undone.',
+      message:'• Current stock quantities will NOT be adjusted (use this for cleaning up old records).\n• The records will be gone from Stock In / Out / Issuance views.\n• An entry is written to the main app\'s Activity Log (Reports → Activity Log) so you can see what was purged.\n\nThis cannot be undone.',
       variant:'danger',
       confirmText:'Delete from History'
     });
