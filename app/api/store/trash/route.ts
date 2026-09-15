@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const b = await req.json().catch(() => ({}));
     const id = Number(b?.id);
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-    const [target] = await db.select({ sku: storeParts.sku, name: storeParts.name }).from(storeParts)
+    const [target] = await db.select({ sku: storeParts.sku, name: storeParts.name, module: storeParts.module }).from(storeParts)
       .where(and(eq(storeParts.id, id), isNotNull(storeParts.deletedAt)));
     if (!target) return NextResponse.json({ error: "Trashed part not found" }, { status: 404 });
     if (target.sku) {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     }
     await db.update(storeParts).set({ deletedAt: null }).where(eq(storeParts.id, id));
     await logActivity({
-      user: guard, action: "store.part.restore",
+      user: guard, action: `store.${target.module}.part.restore`,
       summary: `restored store part "${target.sku ? `[${target.sku}] ` : ""}${target.name}" from trash`,
     });
     return NextResponse.json({ ok: true });
@@ -83,8 +83,10 @@ export async function DELETE(req: NextRequest) {
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });
   try {
     const id = parseInt(idParam);
+    const [target] = await db.select({ module: storeParts.module }).from(storeParts)
+      .where(and(eq(storeParts.id, id), isNotNull(storeParts.deletedAt)));
     await db.execute(sql`DELETE FROM parts WHERE id = ${id} AND deleted_at IS NOT NULL`);
-    await logActivity({ user: guard, action: "store.part.purge", summary: `permanently deleted store part #${id}` });
+    await logActivity({ user: guard, action: `store.${target?.module || "unknown"}.part.purge`, summary: `permanently deleted store part #${id}` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

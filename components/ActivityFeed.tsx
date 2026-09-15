@@ -18,10 +18,26 @@ const FAMILY: Record<string, { label: string; color: string; bg: string }> = {
   kpi:        { label: "KPI",        color: "#9333EA", bg: "#f3e8ff" },
   purchase:   { label: "Purchase",   color: "#0E7490", bg: "#cffafe" },
   station:    { label: "Station",    color: "#9333EA", bg: "#f3e8ff" },
+  store:      { label: "Store",      color: "#4F46E5", bg: "#e0e7ff" },
 };
 
+const STORE_MODULE_LABEL: Record<string, string> = {
+  machinery: "Store · Machinery",
+  consumables: "Store · Inks & Consumables",
+};
+
+// Store actions carry a second segment for which module they're in
+// (store.machinery.txn.in / store.consumables.part.qty_edit), so the badge
+// can show machinery vs. inks apart at a glance — everything else is a flat
+// "family.verb" action.
 function familyOf(action: string) {
-  return FAMILY[action.split(".")[0]] ?? { label: action, color: "#6b6960", bg: "#f1f1ef" };
+  const parts = action.split(".");
+  const fam = FAMILY[parts[0]];
+  if (!fam) return { label: action, color: "#6b6960", bg: "#f1f1ef" };
+  if (parts[0] === "store" && STORE_MODULE_LABEL[parts[1]]) {
+    return { ...fam, label: STORE_MODULE_LABEL[parts[1]] };
+  }
+  return fam;
 }
 
 const ACTIVITY_TIME_ZONE = "Asia/Karachi";

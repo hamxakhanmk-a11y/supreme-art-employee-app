@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (type !== "in" && type !== "out") {
       return NextResponse.json({ error: "type must be 'in' or 'out'" }, { status: 400 });
     }
-    const [p] = await db.select({ qty: storeParts.qty, name: storeParts.name, sku: storeParts.sku, unit: storeParts.unit })
+    const [p] = await db.select({ qty: storeParts.qty, name: storeParts.name, sku: storeParts.sku, unit: storeParts.unit, module: storeParts.module })
       .from(storeParts).where(eq(storeParts.id, partId));
     if (!p) return NextResponse.json({ error: "Part not found" }, { status: 400 });
     if (type === "out" && p.qty < qty) {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     });
     const label = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
     await logActivity({
-      user: guard, action: `store.txn.${type}`,
+      user: guard, action: `store.${p.module}.txn.${type}`,
       summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${label}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}`.trim(),
     });
     return NextResponse.json(row);
@@ -102,7 +102,7 @@ export async function DELETE(req: NextRequest) {
     const partIds = Array.from(new Set(txns.map(t => t.partId)));
     const parts = await db.select({
       id: storeParts.id, name: storeParts.name, sku: storeParts.sku,
-      unit: storeParts.unit, qty: storeParts.qty,
+      unit: storeParts.unit, qty: storeParts.qty, module: storeParts.module,
     }).from(storeParts).where(inArray(storeParts.id, partIds));
     const partsMap = new Map(parts.map(p => [p.id, p]));
 
@@ -137,8 +137,9 @@ export async function DELETE(req: NextRequest) {
       const sign = t.type === "in" ? "+" : "-";
       const who = t.type === "in" ? (t.ref || "—") : (t.issuedTo || "—");
       const prefix = historyOnly ? "Purged from history" : "Reversed";
+      const mod = p?.module || "unknown";
       await logActivity({
-        user: guard, action: historyOnly ? "store.txn.purge" : "store.txn.delete",
+        user: guard, action: historyOnly ? `store.${mod}.txn.purge` : `store.${mod}.txn.delete`,
         summary: `${prefix} ${verb}: ${sign}${t.qty} ${p?.unit || ""} of "${label}" on ${t.date} (${t.type === "in" ? "ref" : "to"}: ${who})`,
       });
     }

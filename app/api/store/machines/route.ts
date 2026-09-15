@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       INSERT INTO machines (name, module) VALUES (${name}, ${mod})
       ON CONFLICT (module, name) DO NOTHING
     `);
-    await logActivity({ user: guard, action: "store.machine.add", summary: `added store machine "${name}" (${mod})` });
+    await logActivity({ user: guard, action: `store.${mod}.machine.add`, summary: `added store machine "${name}" (${mod})` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -62,7 +62,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Cannot delete: parts are assigned to this machine. Reassign them first." }, { status: 400 });
     }
     await db.delete(storeMachines).where(and(eq(storeMachines.name, name), eq(storeMachines.module, mod)));
-    await logActivity({ user: guard, action: "store.machine.delete", summary: `deleted store machine "${name}" (${mod})` });
+    await logActivity({ user: guard, action: `store.${mod}.machine.delete`, summary: `deleted store machine "${name}" (${mod})` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

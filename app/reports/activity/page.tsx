@@ -14,6 +14,9 @@ const TYPES = [
   { value: "salary", label: "Salary" },
   { value: "employee", label: "Employee" },
   { value: "kpi", label: "KPI" },
+  { value: "store", label: "Store — all" },
+  { value: "store.machinery", label: "Store — Machinery" },
+  { value: "store.consumables", label: "Store — Inks & Consumables" },
 ];
 
 export default async function ActivityLogPage({ searchParams }: { searchParams: Promise<SP> }) {

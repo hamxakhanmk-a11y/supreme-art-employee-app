@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       INSERT INTO categories (name, module) VALUES (${name}, ${mod})
       ON CONFLICT (module, name) DO NOTHING
     `);
-    await logActivity({ user: guard, action: "store.category.add", summary: `added store category "${name}" (${mod})` });
+    await logActivity({ user: guard, action: `store.${mod}.category.add`, summary: `added store category "${name}" (${mod})` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -60,7 +60,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Cannot delete: parts are using this category. Reassign them first." }, { status: 400 });
     }
     await db.delete(storeCategories).where(and(eq(storeCategories.name, name), eq(storeCategories.module, mod)));
-    await logActivity({ user: guard, action: "store.category.delete", summary: `deleted store category "${name}" (${mod})` });
+    await logActivity({ user: guard, action: `store.${mod}.category.delete`, summary: `deleted store category "${name}" (${mod})` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

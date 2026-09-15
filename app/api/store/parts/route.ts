@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         unit: storeParts.unit, qty: storeParts.qty, minQty: storeParts.minQty,
         desc: storeParts.description, imageUrl: storeParts.imageUrl,
       });
-      await logActivity({ user: guard, action: "store.part.add", summary: `added store part "${skuVal ? `[${skuVal}] ` : ""}${name}" (${mod})` });
+      await logActivity({ user: guard, action: `store.${mod}.part.add`, summary: `added store part "${skuVal ? `[${skuVal}] ` : ""}${name}" (${mod})` });
       return NextResponse.json(row);
     } catch (e: any) {
       if (String(e?.message || "").toLowerCase().includes("parts_sku") || e?.code === "23505") {
@@ -181,7 +181,7 @@ export async function PUT(req: NextRequest) {
         issuedTo: diff < 0 ? "Manual Adjustment" : "",
       });
       await logActivity({
-        user: guard, action: "store.part.qty_edit",
+        user: guard, action: `store.${partInfo.module}.part.qty_edit`,
         summary: `edited qty of "${partInfo.sku ? `[${partInfo.sku}] ` : ""}${partInfo.name}": ${beforeQty} → ${qtyVal} ${partInfo.unit} (${sign}${diff})`,
       });
     }
@@ -199,10 +199,10 @@ export async function DELETE(req: NextRequest) {
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });
   try {
     const id = parseInt(idParam);
-    const [existing] = await db.select({ name: storeParts.name, sku: storeParts.sku }).from(storeParts).where(eq(storeParts.id, id));
+    const [existing] = await db.select({ name: storeParts.name, sku: storeParts.sku, module: storeParts.module }).from(storeParts).where(eq(storeParts.id, id));
     await db.update(storeParts).set({ deletedAt: new Date() }).where(eq(storeParts.id, id));
     await logActivity({
-      user: guard, action: "store.part.trash",
+      user: guard, action: `store.${existing?.module || "unknown"}.part.trash`,
       summary: `moved store part "${existing?.sku ? `[${existing.sku}] ` : ""}${existing?.name || `#${id}`}" to trash`,
     });
     return NextResponse.json({ ok: true });
