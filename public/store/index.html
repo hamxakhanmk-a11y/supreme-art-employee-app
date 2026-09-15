@@ -2053,15 +2053,36 @@ function renderInventory(){
 }
 
 // Compute running balance per transaction by part. Returns {txnId: balanceAfter}.
-// Sorted by date asc then id asc so older entries accumulate first.
+//
+// Anchored to the part's REAL qty on hand and walked BACKWARDS, not summed
+// forwards from zero. The part's qty is the authoritative stock figure — it's
+// what the Inventory page shows and what Stock Out checks against — whereas
+// the transaction list is only a record of movements, and the two can legally
+// disagree (a qty corrected by hand before edits were logged, a record purged
+// from history without adjusting stock, data migrated in from the old system).
+// Summing forwards from zero meant any such gap silently poisoned every row
+// forever: the newest entry would claim 177kg while the shelf and the
+// Inventory page both said 102kg.
+//
+// Walking back from the current qty instead means the newest row ALWAYS equals
+// the real stock on hand, and each earlier row is that balance with the later
+// movements undone. Any unexplained historical gap lands on the oldest entries
+// — where the untracked change actually happened — instead of on today's.
 function computeBalances(){
   const byPart={};
   state.transactions.forEach(t=>{(byPart[t.partId]=byPart[t.partId]||[]).push(t)});
   const out={};
+  const delta=t=>t.type==='in'?t.qty:-t.qty;
   Object.keys(byPart).forEach(pid=>{
     const list=byPart[pid].slice().sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:a.id-b.id));
-    let bal=0;
-    list.forEach(t=>{bal+=t.type==='in'?t.qty:-t.qty;out[t.id]=bal;});
+    const part=state.parts.find(p=>String(p.id)===String(pid));
+    // No part row (shouldn't happen — loadAll filters to loaded parts) → fall
+    // back to the old sum-from-zero so the column still shows something.
+    let bal=part?part.qty:list.reduce((s,t)=>s+delta(t),0);
+    for(let i=list.length-1;i>=0;i--){
+      out[list[i].id]=bal;
+      bal-=delta(list[i]);
+    }
   });
   return out;
 }
