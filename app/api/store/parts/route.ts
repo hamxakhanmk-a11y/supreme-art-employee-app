@@ -176,14 +176,22 @@ export async function PUT(req: NextRequest) {
       // in-memory transaction list rather than re-fetching after every
       // action — can append it and have the balance actually reflect the
       // edit immediately, instead of only after a full page reload.
+      // Set on all four ref/notes/issuedTo/purpose columns (not just the pair
+      // for this direction) since Stock In reads ref+notes while Stock Out
+      // and the combined Issuance log read issuedTo+purpose — a decrease
+      // only filling issuedTo left the "why" (the before→after detail)
+      // invisible wherever the table actually reads purpose instead of notes.
+      const label = `Qty Edit (${diff > 0 ? "increase" : "decrease"})`;
+      const detail = `Qty corrected via Edit: ${beforeQty} → ${qtyVal} ${partInfo.unit}`;
       const [txn] = await db.insert(storeTransactions).values({
         type: diff > 0 ? "in" : "out",
         partId: id,
         qty: Math.abs(diff),
         date: new Date().toISOString().slice(0, 10),
-        ref: diff > 0 ? "Manual Adjustment" : "",
-        notes: `Manual adjustment via Edit: ${beforeQty} → ${qtyVal} ${partInfo.unit}`,
-        issuedTo: diff < 0 ? "Manual Adjustment" : "",
+        ref: label,
+        notes: detail,
+        issuedTo: label,
+        purpose: detail,
       }).returning({
         id: storeTransactions.id, type: storeTransactions.type, partId: storeTransactions.partId,
         qty: storeTransactions.qty, date: sql<string>`${storeTransactions.date}::text`.as("date"),
