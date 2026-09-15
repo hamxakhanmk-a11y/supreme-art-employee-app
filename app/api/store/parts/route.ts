@@ -165,13 +165,18 @@ export async function PUT(req: NextRequest) {
       throw e;
     }
 
+    let adjustmentTxn: unknown = null;
     if (partInfo && qtyVal !== null && beforeQty !== qtyVal) {
       const diff = qtyVal - (beforeQty ?? 0);
       const sign = diff > 0 ? "+" : "";
       // Adjustment transaction so the Stock In/Out log — and its computed
       // running balance — stays truthful, instead of only the part's own
-      // qty column changing with no visible record of why.
-      await db.insert(storeTransactions).values({
+      // qty column changing with no visible record of why. Returned to the
+      // caller (not just written) so the store UI — which keeps its own
+      // in-memory transaction list rather than re-fetching after every
+      // action — can append it and have the balance actually reflect the
+      // edit immediately, instead of only after a full page reload.
+      const [txn] = await db.insert(storeTransactions).values({
         type: diff > 0 ? "in" : "out",
         partId: id,
         qty: Math.abs(diff),
@@ -179,13 +184,19 @@ export async function PUT(req: NextRequest) {
         ref: diff > 0 ? "Manual Adjustment" : "",
         notes: `Manual adjustment via Edit: ${beforeQty} → ${qtyVal} ${partInfo.unit}`,
         issuedTo: diff < 0 ? "Manual Adjustment" : "",
+      }).returning({
+        id: storeTransactions.id, type: storeTransactions.type, partId: storeTransactions.partId,
+        qty: storeTransactions.qty, date: sql<string>`${storeTransactions.date}::text`.as("date"),
+        ref: storeTransactions.ref, notes: storeTransactions.notes,
+        issuedTo: storeTransactions.issuedTo, purpose: storeTransactions.purpose,
       });
+      adjustmentTxn = txn;
       await logActivity({
         user: guard, action: `store.${partInfo.module}.part.qty_edit`,
         summary: `edited qty of "${partInfo.sku ? `[${partInfo.sku}] ` : ""}${partInfo.name}": ${beforeQty} → ${qtyVal} ${partInfo.unit} (${sign}${diff})`,
       });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, adjustmentTxn });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

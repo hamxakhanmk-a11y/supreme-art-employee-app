@@ -1780,7 +1780,7 @@ async function updatePart(){
       desc:document.getElementById('f-edit-desc').value.trim(),
       imageUrl:finalImageUrl
     };
-    await apiFetch('/api/store/parts','PUT',payload);
+    const saved=await apiFetch('/api/store/parts','PUT',payload);
     const p=state.parts.find(x=>x.id===id);
     if(p){
       p.sku=sku||null;p.name=name;p.category=payload.category;p.machine=payload.machine;
@@ -1788,6 +1788,13 @@ async function updatePart(){
       p.imageUrl=finalImageUrl;
       if(qty!==undefined)p.qty=qty;
     }
+    // A qty change makes the server write a matching adjustment transaction
+    // (so the Stock In/Out balance stays truthful) — it's returned here
+    // because this page keeps its own in-memory transaction list rather
+    // than re-fetching after every action, and without pushing it in the
+    // balance calc would keep computing off the old total until a full
+    // page reload happened to pull it in.
+    if(saved&&saved.adjustmentTxn)state.transactions.unshift(saved.adjustmentTxn);
     // Best-effort: clean up the previous blob if the image was replaced or removed.
     if (oldImageUrl && oldImageUrl !== finalImageUrl) deleteRemoteImage(oldImageUrl);
     closeModal('editPart');
