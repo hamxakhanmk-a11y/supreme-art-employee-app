@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { storeParts } from "@/lib/schema";
+import { storeParts, storeTransactions } from "@/lib/schema";
 import { and, asc, eq, isNull, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
@@ -106,7 +106,12 @@ export async function POST(req: NextRequest) {
 }
 
 // PUT — edit a part. If `qty` is included, it OVERWRITES the running total
-// (matches the live store's behaviour) and logs the delta.
+// (matches the live store's behaviour), logs the delta, AND records an
+// adjustment transaction for it — without that, the transaction log's
+// running "Balance" column (computed client-side purely from transaction
+// history) would silently drift away from the real qty on hand the moment
+// anyone corrected a count here, with nothing in Stock In/Out to explain
+// the gap.
 export async function PUT(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
@@ -163,6 +168,18 @@ export async function PUT(req: NextRequest) {
     if (partInfo && qtyVal !== null && beforeQty !== qtyVal) {
       const diff = qtyVal - (beforeQty ?? 0);
       const sign = diff > 0 ? "+" : "";
+      // Adjustment transaction so the Stock In/Out log — and its computed
+      // running balance — stays truthful, instead of only the part's own
+      // qty column changing with no visible record of why.
+      await db.insert(storeTransactions).values({
+        type: diff > 0 ? "in" : "out",
+        partId: id,
+        qty: Math.abs(diff),
+        date: new Date().toISOString().slice(0, 10),
+        ref: diff > 0 ? "Manual Adjustment" : "",
+        notes: `Manual adjustment via Edit: ${beforeQty} → ${qtyVal} ${partInfo.unit}`,
+        issuedTo: diff < 0 ? "Manual Adjustment" : "",
+      });
       await logActivity({
         user: guard, action: "store.part.qty_edit",
         summary: `edited qty of "${partInfo.sku ? `[${partInfo.sku}] ` : ""}${partInfo.name}": ${beforeQty} → ${qtyVal} ${partInfo.unit} (${sign}${diff})`,
