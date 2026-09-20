@@ -86,6 +86,10 @@ export default function SupplierDirectoryClient({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>(byProductOnly ? "byProduct" : "orders");
+  // Restricted roles are pinned to By-product no matter what `view` holds —
+  // hiding the tabs alone would leave the per-order view one stray setView
+  // away. Everything that branches on the view reads this, not `view`.
+  const activeView: ViewMode = byProductOnly ? "byProduct" : view;
 
   // ---- Inline rate / tax editing (By product view) ----
   // Writes straight back to the line item on that product's most recent PO —
@@ -195,7 +199,7 @@ export default function SupplierDirectoryClient({
   }, [rows, q, supplierFilter, fromDate, toDate]);
 
   function exportXlsx() {
-    if (view === "orders") {
+    if (activeView === "orders") {
       downloadWorkbookXlsx({
         filename: "product-supplier-directory",
         sheets: [{
@@ -264,7 +268,7 @@ export default function SupplierDirectoryClient({
       </div>
 
       <div className="rpt-table-wrap">
-        {view === "orders" ? (
+        {activeView === "orders" ? (
           <table className="rpt-table">
             <thead>
               <tr>
