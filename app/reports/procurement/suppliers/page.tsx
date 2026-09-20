@@ -39,7 +39,8 @@ export default async function SupplierDirectoryPage() {
   const rows: DirectoryRow[] = [];
   for (const po of pos) {
     const items = parseItems<PoItem>(po.items);
-    for (const it of items) {
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+      const it = items[itemIndex];
       const desc = (it.description || it.item || "").trim();
       if (!desc) continue;
 
@@ -71,6 +72,7 @@ export default async function SupplierDirectoryPage() {
         supplierStrn: (po.supplierStrn || "").trim(),
         poId: po.id,
         poNo: po.poNo,
+        itemIndex,      // which line of that PO this row came from — the By-product view edits it in place
         date: po.date || "",  // ISO yyyy-mm-dd, formatted for display client-side
         rate,
         uom: (it.uom || "").trim(),

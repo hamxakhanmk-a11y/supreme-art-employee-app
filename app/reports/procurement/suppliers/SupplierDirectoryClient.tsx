@@ -16,6 +16,7 @@ export interface DirectoryRow {
   supplierStrn: string;
   poId: number;
   poNo: number;
+  itemIndex: number;
   date: string;         // ISO yyyy-mm-dd, "" if never set
   rate: number | null;
   uom: string;
@@ -60,7 +61,7 @@ function taxLabel(gross: number | null, taxValue: number, taxPct: number): strin
 // order" line-item view, not here — click through to the PO for a specific
 // order's full financial breakdown.
 type SupplierAgg = {
-  count: number; rate: number | null; uom: string; taxPct: number; poNo: number; poId: number;
+  count: number; rate: number | null; uom: string; taxPct: number; poNo: number; poId: number; itemIndex: number;
   brand: string; address: string; phone: string; concernedPerson: string; ntn: string; strn: string;
 };
 
@@ -79,6 +80,35 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>("orders");
+
+  // ---- Inline rate / tax editing (By product view) ----
+  // Writes straight back to the line item on that product's most recent PO —
+  // the same field the PO form edits — so the PO, its print and every total
+  // derived from it all move together. Keyed by PO + line, since one product
+  // can sit on several POs from different suppliers.
+  const [editKey, setEditKey] = useState<string | null>(null);
+  const [rateDraft, setRateDraft] = useState("");
+  const [taxDraft, setTaxDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const keyOf = (agg: SupplierAgg) => `${agg.poId}__${agg.itemIndex}`;
+  function startEdit(agg: SupplierAgg) {
+    setEditKey(keyOf(agg));
+    setRateDraft(agg.rate == null ? "" : String(agg.rate));
+    setTaxDraft(String(agg.taxPct));
+  }
+  async function saveEdit(agg: SupplierAgg) {
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/procurement/pos/${agg.poId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIndex: agg.itemIndex, rate: rateDraft.trim(), tax: taxDraft.trim() }),
+      });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
+      setEditKey(null);
+      router.refresh();
+    } catch (e) { alert(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSavingEdit(false); }
+  }
 
   const suppliers = useMemo(
     () => [...new Set(rows.map(r => r.supplier))].sort((a, b) => a.localeCompare(b)),
@@ -127,14 +157,14 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
       const cur = suppliersMap.get(r.supplier);
       if (!cur) {
         suppliersMap.set(r.supplier, {
-          count: 1, rate: r.rate, uom: r.uom, taxPct: r.taxPct, poNo: r.poNo, poId: r.poId,
+          count: 1, rate: r.rate, uom: r.uom, taxPct: r.taxPct, poNo: r.poNo, poId: r.poId, itemIndex: r.itemIndex,
           brand: r.supplierBrand, address: r.supplierAddress, phone: r.supplierPhone,
           concernedPerson: r.supplierConcernedPerson, ntn: r.supplierNtn, strn: r.supplierStrn,
         });
       } else {
         cur.count += 1;
         if (r.poNo > cur.poNo) {
-          cur.rate = r.rate; cur.uom = r.uom; cur.taxPct = r.taxPct; cur.poNo = r.poNo; cur.poId = r.poId;
+          cur.rate = r.rate; cur.uom = r.uom; cur.taxPct = r.taxPct; cur.poNo = r.poNo; cur.poId = r.poId; cur.itemIndex = r.itemIndex;
           cur.brand = r.supplierBrand; cur.address = r.supplierAddress; cur.phone = r.supplierPhone;
           cur.concernedPerson = r.supplierConcernedPerson; cur.ntn = r.supplierNtn; cur.strn = r.supplierStrn;
         }
@@ -324,8 +354,50 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td style={{ fontSize: 12 }}>{r.agg.strn || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
-                  <td>{rateLabel(r.agg.rate, r.agg.uom)}</td>
-                  <td>{taxPctLabel(r.agg.rate, r.agg.taxPct)}</td>
+                  {editKey === keyOf(r.agg) ? (
+                    <>
+                      <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
+                        <input
+                          type="number" min={0} step="0.01" inputMode="decimal" autoFocus
+                          value={rateDraft} onChange={e => setRateDraft(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveEdit(r.agg); if (e.key === "Escape") setEditKey(null); }}
+                          placeholder="Rate"
+                          style={{ width: 90, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                        />
+                        {r.agg.uom && <span style={{ marginLeft: 5, fontSize: 11.5, color: "var(--text3)" }}>/ {r.agg.uom}</span>}
+                      </td>
+                      <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
+                        <input
+                          type="number" min={0} step="0.01" inputMode="decimal"
+                          value={taxDraft} onChange={e => setTaxDraft(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveEdit(r.agg); if (e.key === "Escape") setEditKey(null); }}
+                          title="Sales tax %" placeholder="Tax"
+                          style={{ width: 58, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                        />
+                        <button onClick={() => saveEdit(r.agg)} disabled={savingEdit} title="Save"
+                          style={{ background: "none", border: "none", color: "#166534", cursor: "pointer", fontSize: 15, padding: "0 2px", marginLeft: 4 }}>✓</button>
+                        <button onClick={() => setEditKey(null)} disabled={savingEdit} title="Cancel"
+                          style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>✕</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td
+                        onClick={e => { e.stopPropagation(); startEdit(r.agg); }}
+                        className="rpt-row-clickable"
+                        title="Click to edit the rate on this product's latest PO"
+                      >
+                        {rateLabel(r.agg.rate, r.agg.uom)} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>
+                      </td>
+                      <td
+                        onClick={e => { e.stopPropagation(); startEdit(r.agg); }}
+                        className="rpt-row-clickable"
+                        title="Click to edit the tax % on this product's latest PO"
+                      >
+                        {taxPctLabel(r.agg.rate, r.agg.taxPct)}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
