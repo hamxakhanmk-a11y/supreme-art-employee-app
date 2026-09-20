@@ -46,21 +46,6 @@ export interface GrnItem { srNo: number; item: string; quantity: string; remarks
 // Default sales-tax percentage seeded on every new PO line.
 export const PO_DEFAULT_TAX = 18;
 
-// Unit the manual reference "Rate" column (register list) is quoted per.
-export const PO_RATE_UOM_OPTIONS = ["Per Kg", "Per Piece", "Per Liter", "Per Box"] as const;
-
-// "829 / Per Kg +18%" — the manual Rate column's display, shared by the PO
-// register list and the Supplier Directory report so both read the same way.
-// Tax only appears once a percentage has actually been picked (0% picked on
-// purpose still shows "+0%"; never-set stays silent rather than implying 0).
-export function manualRateLabel(rate: number | null, uom: string | null, taxPct: number | null): string {
-  if (rate == null) return "—";
-  let s = rate.toLocaleString();
-  if (uom) s += ` / ${uom}`;
-  if (taxPct != null) s += ` +${taxPct}%`;
-  return s;
-}
-
 // Derived money for one PO line: gross = qty × rate, tax value = gross × tax%,
 // net = gross + tax value. Tolerant of blanks (treated as 0).
 export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string }) {

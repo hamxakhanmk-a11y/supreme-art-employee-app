@@ -519,9 +519,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   // Supplier tax status for THIS order. true = registered (has sales-tax
   // invoice), false = unregistered, null = not yet marked.
   registered: boolean("registered"),
-  // Manually-entered reference rate for the register list (not tied to any
-  // one line item) — e.g. "150 / Per Kg +18%". Filled in by hand after the
-  // PO is raised, from the list itself.
+  // Retired: the manual reference rate that used to be typed into the PO
+  // register list. Rates are entered per line item inside the PO itself now,
+  // and nothing reads these. Mapped only so the schema still matches the
+  // real table — the columns are left in place rather than dropped so the
+  // handful of rates already typed in aren't destroyed.
   rate: doublePrecision("rate"),
   rateUom: varchar("rate_uom", { length: 20 }),
   rateTaxPct: doublePrecision("rate_tax_pct"),

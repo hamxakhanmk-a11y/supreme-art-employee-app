@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, PO_RATE_UOM_OPTIONS, manualRateLabel, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
@@ -12,7 +12,6 @@ interface Po {
   supplierConcernedPerson: string | null; supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string; registered: boolean | null; discount: number | null;
-  rate: number | null; rateUom: string | null; rateTaxPct: number | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
@@ -191,41 +190,6 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     if (res.ok) { router.refresh(); return; }
     const j = await res.json().catch(() => ({}));
     alert(j.error || "Delete failed");
-  }
-  // ---- Manual reference "Rate" column (register list) ----
-  // Not tied to any line item — just a number + unit filled in by hand from
-  // the list itself, e.g. "150 / Per Kg". Click the cell to edit in place.
-  const [editingRateId, setEditingRateId] = useState<number | null>(null);
-  const [rateDraft, setRateDraft] = useState("");
-  const [uomDraft, setUomDraft] = useState<string>(PO_RATE_UOM_OPTIONS[0]);
-  const [taxDraft, setTaxDraft] = useState(""); // "" = no tax picked
-  const [savingRate, setSavingRate] = useState(false);
-  function startEditRate(p: Po) {
-    setEditingRateId(p.id);
-    setRateDraft(p.rate == null ? "" : String(p.rate));
-    setUomDraft(p.rateUom || PO_RATE_UOM_OPTIONS[0]);
-    // Defaults to 18% (same default used everywhere else in the PO form)
-    // until edited — a saved rate keeps whatever tax % it was actually
-    // saved with, including 0.
-    setTaxDraft(p.rateTaxPct == null ? String(PO_DEFAULT_TAX) : String(p.rateTaxPct));
-  }
-  async function saveRate(id: number) {
-    const trimmed = rateDraft.trim();
-    const rate = trimmed === "" ? null : Number(trimmed);
-    if (rate !== null && (!isFinite(rate) || rate < 0)) { alert("Rate must be a positive number."); return; }
-    const rateTaxPct = rate === null || taxDraft.trim() === "" ? null : Number(taxDraft);
-    if (rateTaxPct !== null && (!isFinite(rateTaxPct) || rateTaxPct < 0)) { alert("Tax % must be a positive number."); return; }
-    setSavingRate(true);
-    try {
-      const res = await fetch(`/api/procurement/pos/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rate, rateUom: rate === null ? null : uomDraft, rateTaxPct }),
-      });
-      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
-      setEditingRateId(null);
-      router.refresh();
-    } catch (e) { alert(e instanceof Error ? e.message : "Save failed"); }
-    finally { setSavingRate(false); }
   }
   // ---- Unregistered-supplier yearly limit (per supplier, current FY) ----
   const fy = financialYear();
@@ -490,11 +454,11 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
-            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Rate</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={10} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(p => (
               <tr
                 key={p.id}
@@ -517,50 +481,6 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 </td>
                 <td>{fmtDate(p.expectedDate)}</td>
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
-                <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
-                  {editingRateId === p.id ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <input
-                        type="number" min={0} step="0.01" inputMode="decimal" autoFocus
-                        value={rateDraft} onChange={e => setRateDraft(e.target.value)}
-                        placeholder="Rate"
-                        style={{ width: 78, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
-                      />
-                      <select
-                        value={uomDraft} onChange={e => setUomDraft(e.target.value)}
-                        style={{ width: 100, padding: "4px 5px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 5 }}
-                      >
-                        {PO_RATE_UOM_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                      <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                        <input
-                          type="number" min={0} step="0.01" inputMode="decimal"
-                          value={taxDraft} onChange={e => setTaxDraft(e.target.value)}
-                          title="Sales tax %" placeholder="Tax"
-                          style={{ width: 62, padding: "4px 18px 4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
-                        />
-                        <span style={{ position: "absolute", right: 6, fontSize: 11.5, color: "var(--text3)", pointerEvents: "none" }}>%</span>
-                      </div>
-                      <button onClick={() => saveRate(p.id)} disabled={savingRate} title="Save"
-                        style={{ background: "none", border: "none", color: "#166534", cursor: "pointer", fontSize: 15, padding: 0 }}>✓</button>
-                      <button onClick={() => setEditingRateId(null)} disabled={savingRate} title="Cancel"
-                        style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 14, padding: 0 }}>✕</button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => startEditRate(p)}
-                      title={p.rate == null ? "Add reference rate" : "Edit reference rate"}
-                      style={{
-                        display: "inline-block", padding: "1px 8px", borderRadius: 999, fontSize: 11.5,
-                        cursor: "pointer", background: "transparent",
-                        border: `1px ${p.rate == null ? "dashed" : "solid"} var(--border)`,
-                        color: p.rate == null ? "var(--text3)" : "var(--text)",
-                      }}
-                    >
-                      {p.rate == null ? "＋ Rate" : `${manualRateLabel(p.rate, p.rateUom, p.rateTaxPct)} ✎`}
-                    </button>
-                  )}
-                </td>
                 <td><TaxCell p={p} /></td>
                 <td><StatusBadge status={p.status} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
