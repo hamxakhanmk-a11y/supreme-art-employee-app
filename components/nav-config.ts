@@ -33,6 +33,9 @@ export const MODULES_BASE: ModuleDef[] = [
   // is all that is needed to return the top-nav tab.
   { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
   { key: "station",    label: "Station",    module: "station" },
+  // Deliberately not including `suppliers`: /procurement itself is gated on
+  // demand/po/grn, so a role holding only the Supplier Directory would get a
+  // tab that dead-ends. They reach the report from the Profile sidebar.
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
   { key: "store",      label: "Store",      module: "store" },
   { key: "activity",   label: "Activity Log", module: "reports.activity" },
@@ -75,7 +78,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       return [
         { href: "/", label: "Dashboard" },
         { href: "/employees", label: "Employees" },
-        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", superadminOnly: true },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: "suppliers" },
         { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", superadminOnly: true },
       ];
     case "attendance":
@@ -134,7 +137,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRR" },
         { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
-        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", superadminOnly: true },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: "suppliers" },
       ];
     case "store":
       // Store has its own overview landing + iframe-owned sidebar for the

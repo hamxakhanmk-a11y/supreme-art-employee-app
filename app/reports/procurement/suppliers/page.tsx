@@ -1,9 +1,17 @@
-// Product / Supplier directory — read-only, Super Admin only.
-// Answers "who did we order this product from, and at what rate", nothing
-// more. Does not touch Demand/PO/GRN data or forms in any way — pure read
-// over existing purchase_orders rows.
+// Product / Supplier directory. Answers "who did we order this product from,
+// and at what rate". Reads over existing purchase_orders rows; the only write
+// is correcting a line's rate / tax %, which goes back to that PO.
+//
+// Two levels of access:
+//   • Super Admin          — the whole report, including the per-order view
+//                            with each order's gross / tax / net value.
+//   • `suppliers` grant    — the By-product list only (product, supplier,
+//     (e.g. Engineer)        contact details, rate, tax %). Order values are
+//                            never sent to the browser for these roles.
+//   • `suppliers` + edit   — the above, plus editing rate / tax % in place.
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { purchaseOrders } from "@/lib/schema";
 import { ensureProcurementTables, parseItems, qtyToNum, type PoItem } from "@/lib/procurement";
@@ -14,7 +22,9 @@ export const dynamic = "force-dynamic";
 export default async function SupplierDirectoryPage() {
   const user = await getSession();
   if (!user) redirect("/login?next=/reports/procurement/suppliers");
-  if (user.role !== "superadmin") redirect("/");
+  const isOwner = user.role === "superadmin";
+  if (!isOwner && !(await roleCanAccess(user.role, "suppliers"))) redirect("/?denied=suppliers");
+  const canEditRates = isOwner || await roleCanEdit(user.role, "suppliers");
 
   await ensureProcurementTables();
   const pos = await db.select({
@@ -52,10 +62,14 @@ export default async function SupplierDirectoryPage() {
 
       // Gross/Tax/Net only mean something once both qty and rate are usable
       // numbers — otherwise leave them blank rather than show a misleading 0.
+      // They're also what the per-order view is made of, so for roles limited
+      // to By-product they're left out of the payload entirely rather than
+      // merely hidden — otherwise every order's value would still be sitting
+      // in the page's data for anyone who looked.
       let gross: number | null = null;
       let taxValue = 0;
       let net: number | null = null;
-      if (rate != null && qty != null) {
+      if (isOwner && rate != null && qty != null) {
         gross = qty * rate;
         taxValue = gross * taxPct / 100;
         net = gross + taxValue;
@@ -84,5 +98,5 @@ export default async function SupplierDirectoryPage() {
     }
   }
 
-  return <SupplierDirectoryClient rows={rows} />;
+  return <SupplierDirectoryClient rows={rows} byProductOnly={!isOwner} canEditRates={canEditRates} />;
 }

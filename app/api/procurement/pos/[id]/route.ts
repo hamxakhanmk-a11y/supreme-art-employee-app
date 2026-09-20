@@ -74,8 +74,15 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 // PO. Gross/Tax value/Net are always derived from rate × qty at render time,
 // so they follow automatically — here and on the printed PO.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("po");
-  if (guard instanceof NextResponse) return guard;
+  // Two ways in: PO editors, or roles granted edit on the Supplier Directory
+  // (Engineer, say) who can correct a rate there without any other PO access.
+  // Only ever touches one line's rate/tax — never the rest of the order.
+  let guard = await guardWrite("po");
+  if (guard instanceof NextResponse) {
+    const viaDirectory = await guardWrite("suppliers");
+    if (viaDirectory instanceof NextResponse) return guard;
+    guard = viaDirectory;
+  }
   await ensureProcurementTables();
   const { id } = await ctx.params;
   const b = await req.json().catch(() => ({}));

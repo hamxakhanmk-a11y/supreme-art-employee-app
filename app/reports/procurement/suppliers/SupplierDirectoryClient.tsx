@@ -73,13 +73,19 @@ function taxPctLabel(rate: number | null, taxPct: number): string {
   return `${taxPct}%`;
 }
 
-export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[] }) {
+// byProductOnly — roles granted `suppliers` (Engineer, say) get the
+// By-product list and nothing else; the per-order view and its order values
+// stay with the owner. canEditRates — whether the rate / tax % cells on that
+// list can be corrected in place.
+export default function SupplierDirectoryClient({
+  rows, byProductOnly = false, canEditRates = false,
+}: { rows: DirectoryRow[]; byProductOnly?: boolean; canEditRates?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [view, setView] = useState<ViewMode>("orders");
+  const [view, setView] = useState<ViewMode>(byProductOnly ? "byProduct" : "orders");
 
   // ---- Inline rate / tax editing (By product view) ----
   // Writes straight back to the line item on that product's most recent PO —
@@ -235,10 +241,12 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        <div className="tabs">
-          <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => setView("orders")}>Every order</button>
-          <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => setView("byProduct")}>By product</button>
-        </div>
+        {!byProductOnly && (
+          <div className="tabs">
+            <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => setView("orders")}>Every order</button>
+            <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => setView("byProduct")}>By product</button>
+          </div>
+        )}
         <input
           value={q} onChange={e => setQ(e.target.value)}
           placeholder="Search product or supplier…"
@@ -354,7 +362,12 @@ export default function SupplierDirectoryClient({ rows }: { rows: DirectoryRow[]
                   <td style={{ fontSize: 12 }}>{r.agg.strn || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
                   <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
-                  {editKey === keyOf(r.agg) ? (
+                  {!canEditRates ? (
+                    <>
+                      <td>{rateLabel(r.agg.rate, r.agg.uom)}</td>
+                      <td>{taxPctLabel(r.agg.rate, r.agg.taxPct)}</td>
+                    </>
+                  ) : editKey === keyOf(r.agg) ? (
                     <>
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                         <input

@@ -6,6 +6,7 @@ import {
   type PoItem, type GrnItem,
 } from "@/lib/procurement";
 import ProcurementReportClient, { type MasterRow, type GrrRef } from "./ProcurementReportClient";
+import { requireModule } from "@/lib/pageGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ type SP = { from?: string; to?: string };
 const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 export default async function ProcurementReportPage({ searchParams }: { searchParams: Promise<SP> }) {
+  // The layout now only requires "either report", so this one guards itself —
+  // a role holding just `suppliers` must not land on the master report.
+  await requireModule("reports.procurement");
   const sp = await searchParams;
   const now = new Date();
   const first = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;

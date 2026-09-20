@@ -39,6 +39,7 @@ export type ModuleKey =
   | "demand"
   | "po"
   | "grn"
+  | "suppliers"
   | "store"
   | "capa";
 
@@ -67,6 +68,11 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
+  // View = the Supplier Directory's By-product list (who supplies what, at
+  // what rate). Edit additionally allows correcting a product's rate / tax %
+  // in place, which writes to that line on its most recent PO. Super Admin
+  // also gets the full report — the per-order view with order values.
+  { key: "suppliers",  label: "Supplier Directory", hint: "Which supplier a product comes from & its rate — edit allows correcting the rate" },
   { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];
@@ -151,7 +157,7 @@ export const DEFAULT_PERMS: Record<string, RolePerm> = {
   hr:          { modules: [...ALL_MODULE_KEYS], canEdit: true },
   ceo:         { modules: [...ALL_MODULE_KEYS], canEdit: false },
   procurement: { modules: ["purchase", "po"], canEdit: true },
-  engineer:    { modules: ["purchase"], canEdit: true },
+  engineer:    { modules: ["purchase", "suppliers"], canEdit: true },
   // Finance starts on salary + its report plus the purchase register — tune it
   // in Role Permissions.
   finance:     { modules: ["salary", "reports.salary", "purchase"], canEdit: true },
