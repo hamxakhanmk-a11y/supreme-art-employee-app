@@ -770,37 +770,6 @@ body:not(.role-admin) .admin-only{display:none!important}
   </div>
 </div>
 
-<!-- PRINT SELECTION MODAL -->
-<div class="modal-overlay" id="modal-print">
-  <div class="modal modal-wide">
-    <div class="modal-title"><i class="ti ti-printer"></i> Select Entries to Print</div>
-    <div class="preset-row" id="preset-row-print">
-      <span class="preset-label"><i class="ti ti-calendar"></i> Quick range:</span>
-      <button class="preset-btn" onclick="applyDatePreset('print','today')">Today</button>
-      <button class="preset-btn" onclick="applyDatePreset('print','week')">This Week</button>
-      <button class="preset-btn" onclick="applyDatePreset('print','month')">This Month</button>
-      <button class="preset-btn" onclick="applyDatePreset('print','lastmonth')">Last Month</button>
-      <button class="preset-btn" onclick="applyDatePreset('print','year')">This Year</button>
-      <button class="preset-btn" onclick="applyDatePreset('print','all')">All</button>
-    </div>
-    <div class="sel-controls">
-      <button class="btn btn-sm" onclick="selAll('print',true)">Select All</button>
-      <button class="btn btn-sm" onclick="selAll('print',false)">Deselect All</button>
-      <span class="sel-count" id="sel-print-count">0 selected</span>
-    </div>
-    <div style="max-height:360px;overflow-y:auto;border:1px solid #e8e1d3;border-radius:8px">
-      <table class="sel-table">
-        <thead id="sel-print-thead"></thead>
-        <tbody id="sel-print-tbody"></tbody>
-      </table>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" onclick="closeModal('print')">Cancel</button>
-      <button class="btn btn-print" onclick="doPrint()"><i class="ti ti-printer"></i> Print Selected</button>
-    </div>
-  </div>
-</div>
-
 <!-- EXPORT SELECTION MODAL -->
 <div class="modal-overlay" id="modal-export">
   <div class="modal modal-wide">
@@ -1202,20 +1171,19 @@ function rowCells(sec,item,i){
 let _activeData=[];
 
 function openPrintModal(sec){
-  _activeSection=sec;
   const data=getSectionData(sec);
-  _activeData=data;
-  const headers=getHeaders(sec);
-  const thead=document.getElementById('sel-print-thead');
-  const tbody=document.getElementById('sel-print-tbody');
-  thead.innerHTML='<tr><th style="width:32px"><input type="checkbox" id="chk-all-print" checked onchange="selAll(\'print\',this.checked)"></th>'+headers.slice(1).map(h=>`<th>${h}</th>`).join('')+'</tr>';
-  tbody.innerHTML=data.length?data.map((item,i)=>{
-    const cells=rowCells(sec,item,i);
-    return`<tr><td><input type="checkbox" class="sel-chk-print" data-i="${i}" checked onchange="updCount('print')"></td>${cells.slice(1).map(c=>`<td>${c}</td>`).join('')}</tr>`;
-  }).join(''):'<tr><td colspan="8" style="text-align:center;color:#aaa;padding:1.5rem">No data to show</td></tr>';
-  document.getElementById('preset-row-print').style.display=sec==='inventory'?'none':'flex';
-  updCount('print');
-  openModal('print');
+  let selected=data;
+  if(sec!=='inventory'){
+    const prefix={stockin:'in',stockout:'out',issuance:'iss'}[sec];
+    const ids=new Set(Array.from(document.querySelectorAll('.txn-chk-'+prefix+':checked')).map(c=>parseInt(c.dataset.id)));
+    selected=data.filter(item=>ids.has(item.id));
+    if(!selected.length){
+      warnDialog('Nothing selected','Select one or more rows using the checkboxes in the history table, then press Print.');
+      return;
+    }
+  }
+  if(!selected.length){warnDialog('Nothing to print','No entries match the current filters.');return;}
+  doPrint(sec,selected);
 }
 
 function openExportModal(sec){
@@ -1306,14 +1274,8 @@ function storeIssuanceCode(sec){
   return state.module==='consumables'?'STR/QR/008/B':'STR/QR/008/A';
 }
 
-function doPrint(){
-  const idxs=[];
-  document.querySelectorAll('.sel-chk-print:checked').forEach(c=>idxs.push(parseInt(c.dataset.i)));
-  if(!idxs.length){warnDialog('Nothing selected','Please select at least one entry to print.');return;}
-  const sec=_activeSection;
-  const data=getSectionData(sec);
+function doPrint(sec,selected){
   const headers=getHeaders(sec);
-  const selected=idxs.map(i=>data[i]);
   const titleMap={inventory:'Inventory Report',stockin:'Stock In Report',stockout:'Stock Out Report',issuance:'Issuance Log'};
   const reportTitle=storeReportTitle(sec);
   const reportCode=storeIssuanceCode(sec);
@@ -1357,7 +1319,6 @@ function doPrint(){
   <script>window.onload=function(){setTimeout(()=>window.print(),300)}<\/script>
   </body></html>`);
   win.document.close();
-  closeModal('print');
 }
 
 function doExport(){
