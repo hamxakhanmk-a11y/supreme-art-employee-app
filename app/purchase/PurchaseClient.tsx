@@ -112,7 +112,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
     }
     if (q.trim()) {
       const s = q.toLowerCase();
-      const hay = `${r.prNo ?? ""} ${r.items.map(i => i.itemName).join(" ")} ${r.concernedPerson ?? ""} ${r.poNo ?? ""} ${r.remarks ?? ""}`.toLowerCase();
+      const hay = `${r.prNo ?? ""} ${r.items.map(i => i.itemName).join(" ")} ${r.concernedPerson ?? ""} ${r.remarks ?? ""}`.toLowerCase();
       if (!hay.includes(s)) return false;
     }
     return true;
@@ -282,7 +282,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const exportXlsx = async () => {
     setExporting(true); setExportError("");
     try {
-    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "PO No", "Remarks"];
+    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "Remarks"];
     // One spreadsheet line per item so multi-item PRs expand out fully.
     const data = filtered.flatMap(r => {
       const its = r.items.length ? r.items : [{ itemName: "", category: "", quantity: null, uom: "", value: null }];
@@ -291,7 +291,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         i.category ?? "", i.itemName ?? "", i.quantity ?? "", i.uom ?? "", i.value ?? "",
         fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate),
         r.hodApproval ?? "", r.hrApproval ?? "", r.receivedByAdmin ? "Yes" : "No",
-        r.receivedDate ? fmtDate(r.receivedDate) : "", r.status, r.poNo ?? "", r.remarks ?? "",
+        r.receivedDate ? fmtDate(r.receivedDate) : "", r.status, r.remarks ?? "",
       ]);
     });
     await downloadRegisterXlsx({
@@ -299,7 +299,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
       sheetName: "PR Register",
       title: "PURCHASE REQUISITION REGISTER",
       letterhead,
-      colWidths: [34,12,22,24,22,38,12,12,16,16,18,18,14,16,22,14,32],
+      colWidths: [34,12,22,24,22,38,12,12,16,16,18,18,14,16,22,32],
       headers, rows: data,
     });
     } catch (error) { setExportError(error instanceof Error ? error.message : "Export failed. Please retry."); }
@@ -341,7 +341,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
 
       {/* Filters */}
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        <input placeholder="Search item, person, PR#, PO#…" value={q} onChange={e => setQ(e.target.value)} style={{ width: 240 }} />
+        <input placeholder="Search item, person, PR#…" value={q} onChange={e => setQ(e.target.value)} style={{ width: 240 }} />
         <select value={dept} onChange={e => setDept(e.target.value)} style={{ width: 180 }}>
           <option value="">All departments</option>
           {PR_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -471,8 +471,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
               <select value={draft.status} onChange={e => set({ status: e.target.value })}>
                 {PR_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select></div>
-            <div><label className="form-label">PO No</label>
-              <input value={draft.poNo} onChange={e => set({ poNo: e.target.value })} /></div>
           </div>
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
@@ -490,13 +488,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
             <tr>
               <th>Date</th><th>PR#</th><th>Department</th><th>Requested by</th>
               <th style={{ minWidth: 220 }}>Items</th>
-              <th className="num">Value</th><th>Required</th><th>HOD</th><th>HR</th><th title="Material received by Admin">Received</th><th>Status</th><th>PO#</th><th>Remarks</th>
+              <th className="num">Value</th><th>Required</th><th>HOD</th><th>HR</th><th title="Material received by Admin">Received</th><th>Status</th><th>Remarks</th>
               <th className="no-print pr-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={14} className="empty">
+              <tr><td colSpan={13} className="empty">
                 {rows.length === 0 ? "No requisitions yet — raise the first one." : "Nothing matches the filters."}
               </td></tr>
             )}
@@ -556,7 +554,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                       {r.status}
                     </span>
                   </td>
-                  <td style={{ fontSize: 12 }}>{r.poNo || ""}</td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
                   {/* Actions stack in three rows: the HR decision pair, then
                       Mark Received, then the edit/delete group — so related
