@@ -68,7 +68,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       sheets: [{
         sheetName: "Master Report",
         title: "PROCUREMENT MASTER REPORT",
-        letterhead: { ...meta, company, logoUrl: "/logo.png" },
+        letterhead: { ...meta, company, logoUrl: "/logo-urdu.png" },
         headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Invoice No", "Received"],
         rows: shown.map(r => [
           r.description, r.supplier, fmtDate(r.date), r.demandNo, r.poNo,
@@ -99,8 +99,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         <div className="master-control"><span>Doc No. {meta.code}</span><span>Issue Status: {meta.issue}</span><span>Date: {meta.date}</span></div>
         <div className="master-company">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt={company.name} width={150} height={85} />
-          <div><strong>{company.name}</strong><h2>PROCUREMENT MASTER REPORT</h2></div>
+          <div className="master-logo"><img src="/logo-urdu.png" alt="Supreme Art" width={210} height={105} /><div>{company.name}</div></div>
+          <h2>PROCUREMENT MASTER REPORT</h2>
         </div>
       </div>
       <div className="no-print" style={{ marginBottom: 16 }}>
@@ -212,7 +212,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-control span:last-child { border-right: 0; }
           .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; border-top: 0; padding: 12px 20px; font-size: 11pt; line-height: 1.5; }
           .master-company img { object-fit: contain; flex-shrink: 0; }
-          .master-company strong { font-size: 14pt; }
+          .master-logo { width: 230px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
+          .master-company h2 { flex: 1; }
           .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 16px 0 8px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
           .master-table { overflow: visible !important; border-radius: 0; }
