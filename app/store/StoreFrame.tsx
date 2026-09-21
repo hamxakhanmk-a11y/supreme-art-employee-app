@@ -16,11 +16,12 @@ export default function StoreFrame({ module }: { module: "machinery" | "consumab
       if (event.source !== frameRef.current?.contentWindow || event.origin !== window.location.origin) return;
       const message = event.data;
       if (!message || message.type !== "store-excel-export") return;
-      const { section, title, headers, rows, from, to, filename } = message;
+      const { section, title, headers, rows, from, to, filename, headerGroups, colWidths } = message;
       const code = section === "issuance" ? (module === "consumables" ? "STR/QR/008/B" : "STR/QR/008/A") : undefined;
       try {
         await downloadWorkbookXlsx({ filename, sheets: [{
-          sheetName: String(title).slice(0, 31), title, headers, rows, freezeCols: 1,
+          sheetName: String(title).slice(0, 31), title, headers, rows, freezeCols: headerGroups ? 3 : 1,
+          headerGroups, colWidths,
           letterhead: { ...reportLetterhead(from || "", to || ""), code },
         }] });
         frameRef.current?.contentWindow?.postMessage({ type: "store-excel-result", ok: true }, event.origin);

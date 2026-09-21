@@ -462,7 +462,8 @@ body:not(.role-admin) .admin-only{display:none!important}
         </div>
       </div>
       <div class="search-bar no-print">
-        <input type="text" placeholder="Search by part, issued to..." id="iss-search" oninput="renderIssuance()">
+        <label>View <select id="movement-view" onchange="StoreMovement.change()"><option value="weekly">Weekly report</option><option value="daily">Daily report</option><option value="monthly">Monthly report</option><option value="history">Transaction history</option></select></label>
+        <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
         <span style="font-size:12px;color:#666">From</span>
         <input type="date" id="iss-date-from" onchange="renderIssuance()" style="width:150px">
         <span style="font-size:12px;color:#666">To</span>
@@ -471,6 +472,8 @@ body:not(.role-admin) .admin-only{display:none!important}
         <span class="bulk-info" id="iss-bulk-info" style="margin-left:auto"></span>
         <button class="btn btn-sm btn-danger-strong write-only" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
       </div>
+      <div id="movement-categories" class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+      <div id="movement-output"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
@@ -807,6 +810,7 @@ body:not(.role-admin) .admin-only{display:none!important}
   <img id="img-lightbox-img" alt="">
 </div>
 
+<script src="/store/movement-report.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 let state = {
@@ -1135,7 +1139,7 @@ function getSectionData(sec){
     const dT=(document.getElementById('iss-date-to')||{value:''}).value;
     return [...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
       const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||(t.issuedTo+t.ref+t.purpose).toLowerCase().includes(s);
-      return ms&&inDateRange(t.date,dF,dT);
+      return ms&&inDateRange(t.date,dF,dT)&&(!StoreMovement.category||getPartCat(t.partId)===StoreMovement.category);
     });
   }
   return [];
@@ -1171,6 +1175,7 @@ function rowCells(sec,item,i){
 let _activeData=[];
 
 function openPrintModal(sec){
+  if(sec==='issuance'&&StoreMovement.output('print'))return;
   const data=getSectionData(sec);
   let selected=data;
   if(sec!=='inventory'){
@@ -1185,6 +1190,7 @@ function openPrintModal(sec){
 }
 
 function openExportModal(sec){
+  if(sec==='issuance'&&StoreMovement.output('excel'))return;
   _activeSection=sec;
   const data=getSectionData(sec);
   _activeData=data;
@@ -2125,12 +2131,13 @@ function renderStockOut(){
 }
 
 function renderIssuance(){
+  if(StoreMovement.render())return;
   const search=(document.getElementById('iss-search')||{value:''}).value.toLowerCase();
   const dFrom=(document.getElementById('iss-date-from')||{value:''}).value;
   const dTo=(document.getElementById('iss-date-to')||{value:''}).value;
   const txns=[...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
     const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||(t.issuedTo+t.ref+t.purpose).toLowerCase().includes(search);
-    return ms&&inDateRange(t.date,dFrom,dTo);
+    return ms&&inDateRange(t.date,dFrom,dTo)&&(!StoreMovement.category||getPartCat(t.partId)===StoreMovement.category);
   });
   const bal=computeBalances();
   const tb=document.getElementById('issuance-table');

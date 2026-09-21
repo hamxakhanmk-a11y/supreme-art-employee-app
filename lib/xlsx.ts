@@ -28,6 +28,7 @@ export interface SheetSpec {
   sheetName: string;
   title: string;
   headers: string[];
+  headerGroups?: { label: string; start: number; span: number }[];
   rows: Cell[][];
   letterhead?: { code?: string; issue?: string; date: string; logoUrl: string;
     company: { name: string } };
@@ -50,9 +51,10 @@ async function loadExcel() {
 async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   const nCols = spec.headers.length;
   const headerRow = spec.letterhead ? 4 : 2;
+  const lastHeaderRow = headerRow + (spec.headerGroups?.length ? 1 : 0);
   const freeze = spec.freezeCols ?? 2;
   const ws = wb.addWorksheet(spec.sheetName.slice(0, 31), {
-    views: [{ state: "frozen", xSplit: freeze, ySplit: headerRow }],
+    views: [{ state: "frozen", xSplit: freeze, ySplit: lastHeaderRow }],
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
@@ -120,6 +122,25 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     c.border = BORDER;
   });
   header.height = 26;
+  if (spec.headerGroups?.length) {
+    const grouped = new Set<number>();
+    spec.headers.forEach((label, i) => {
+      const cell = ws.getCell(lastHeaderRow, i + 1);
+      cell.value = label;
+      cell.style = { ...header.getCell(i + 1).style };
+    });
+    for (const group of spec.headerGroups) {
+      ws.mergeCells(headerRow, group.start + 1, headerRow, group.start + group.span);
+      ws.getCell(headerRow, group.start + 1).value = group.label;
+      for (let i = group.start; i < group.start + group.span; i++) grouped.add(i);
+    }
+    spec.headers.forEach((_, i) => {
+      if (!grouped.has(i)) ws.mergeCells(headerRow, i + 1, lastHeaderRow, i + 1);
+    });
+    header.height = 36;
+    ws.getRow(lastHeaderRow).height = 22;
+    ws.pageSetup.printTitlesRow = "1:" + lastHeaderRow;
+  }
 
   // Data rows
   for (const row of spec.rows) {
@@ -128,6 +149,12 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       cell.border = BORDER;
       cell.alignment = { horizontal: col <= 2 ? "left" : "center", vertical: "top", wrapText: true };
       cell.font = { size: 10 };
+      if (spec.headerGroups?.length && typeof cell.value === "number") {
+        cell.numFmt = "#,##0.######";
+        const label = spec.headers[col - 1];
+        if (label === "In") cell.font = { size: 10, color: { argb: "FF15803D" } };
+        if (label === "Out" || label === "Total out") cell.font = { size: 10, color: { argb: "FFA32D2D" } };
+      }
       if (spec.dayRange) {
         const idx = col - 1;
         if (idx >= spec.dayRange[0] && idx <= spec.dayRange[1]) {
@@ -152,7 +179,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   });
 
   if (spec.letterhead) {
-    ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow + spec.rows.length, column: nCols } };
+    if (!spec.headerGroups?.length) ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow + spec.rows.length, column: nCols } };
     ws.pageSetup.printArea = "A1:" + ws.getColumn(nCols).letter + ws.rowCount;
   }
   return ws;
