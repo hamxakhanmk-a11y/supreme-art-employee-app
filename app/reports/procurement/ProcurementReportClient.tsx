@@ -98,7 +98,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       <div className="master-letterhead">
         <div className="master-company">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <div className="master-logo"><img src="/logo-urdu.png" alt="Supreme Art" width={150} height={73} /><div>{company.name}</div></div>
+          <div className="master-logo"><img src="/logo-urdu.png" alt="Supreme Art" width={135} height={66} /><div>{company.name}</div></div>
           <div className="master-heading"><h2>PROCUREMENT MASTER REPORT</h2><div className="master-control"><span>{meta.code}</span><span>Date: {meta.date}</span><span>Issue Status: {meta.issue}</span></div></div>
         </div>
       </div>
@@ -211,6 +211,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-control span:last-child { border-right: 0; }
           .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; font-size: 11pt; line-height: 1.5; }
           .master-company img { object-fit: contain; flex-shrink: 0; }
+          .master-logo img { display: block; margin: 0 auto 4px; }
           .master-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
           .master-heading { flex: 1; text-align: center; }
           .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 6px 0 10px; }

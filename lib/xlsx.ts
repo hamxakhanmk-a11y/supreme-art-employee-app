@@ -93,7 +93,12 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       reader.onerror = reject; reader.readAsDataURL(blob);
     });
     const imageId = wb.addImage({ base64, extension: "png" });
-    ws.addImage(imageId, { tl: { col: 0.45, row: 0.05 }, ext: { width: 150, height: 73 } });
+    const logoColumnPixels = (spec.colWidths?.[0] ?? 14) * 7 + 5;
+    const logoWidth = Math.min(135, logoColumnPixels - 12);
+    ws.addImage(imageId, {
+      tl: { col: (logoColumnPixels - logoWidth) / (2 * logoColumnPixels), row: 0.14 },
+      ext: { width: logoWidth, height: Math.round(logoWidth * 292 / 600) },
+    });
     ws.mergeCells(1, 2, 2, nCols);
     const title = ws.getCell(1, 2);
     title.value = spec.title;
