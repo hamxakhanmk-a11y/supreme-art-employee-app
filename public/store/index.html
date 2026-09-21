@@ -1293,6 +1293,19 @@ function updCount(type){
   if(el)el.textContent=sel+' of '+all+' selected';
 }
 
+function selectedDateRange(selected){
+  const dates=selected.map(x=>(x&&x.date)||'').filter(Boolean).sort();
+  return{from:dates[0]||'',to:dates[dates.length-1]||''};
+}
+function storeReportTitle(sec){
+  const section={inventory:'INVENTORY REPORT',stockin:'STOCK IN REPORT',stockout:'STOCK OUT REPORT',issuance:'ISSUANCE LOG'}[sec]||sec.toUpperCase();
+  return MODULE_LABEL[state.module].toUpperCase()+' — '+section;
+}
+function storeIssuanceCode(sec){
+  if(sec!=='issuance')return'';
+  return state.module==='consumables'?'STR/QR/008/B':'STR/QR/008/A';
+}
+
 function doPrint(){
   const idxs=[];
   document.querySelectorAll('.sel-chk-print:checked').forEach(c=>idxs.push(parseInt(c.dataset.i)));
@@ -1302,6 +1315,10 @@ function doPrint(){
   const headers=getHeaders(sec);
   const selected=idxs.map(i=>data[i]);
   const titleMap={inventory:'Inventory Report',stockin:'Stock In Report',stockout:'Stock Out Report',issuance:'Issuance Log'};
+  const reportTitle=storeReportTitle(sec);
+  const reportCode=storeIssuanceCode(sec);
+  const range=selectedDateRange(selected);
+  const rangeText=range.from&&range.to?(range.from===range.to?fmtDate(range.from):fmtDate(range.from)+' to '+fmtDate(range.to)):'All dates';
   const rows=selected.map((item,i)=>{
     const cells=rowCells(sec,item,i);
     return'<tr>'+cells.map((c,ci)=>`<td style="${ci===0?'color:#aaa;width:32px;':''}">${c}</td>`).join('')+'</tr>';
@@ -1312,26 +1329,31 @@ function doPrint(){
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',sans-serif;padding:28px;color:#1a1a1a;background:#fff}
-    .header{border-bottom:3px solid #8C2326;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end}
-    .header h1{font-size:20px;color:#8C2326;font-weight:700}
-    .header .meta{font-size:12px;color:#888;text-align:right;line-height:1.6}
+    .header{border:1px solid #222;padding:5px 10px;margin-bottom:8px;display:flex;align-items:center;gap:24px;background:#f5f5f5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .print-logo{width:210px;flex:none;text-align:center;color:#A32D2D;font:bold 9pt Arial,sans-serif}
+    .print-logo img{display:block;width:135px;height:66px;object-fit:contain;margin:0 auto 3px}
+    .heading{flex:1;text-align:center;font-family:'Times New Roman',serif}
+    .heading h1{font-size:20px;color:#A32D2D;font-weight:700;margin:3px 0 8px}
+    .control{display:grid;grid-template-columns:1fr 2fr 1fr;font-size:10px;align-items:center}
     table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
-    thead tr{background:#8C2326}
-    thead th{color:#fff;padding:9px 10px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.4px}
-    tbody td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:middle}
+    thead{display:table-header-group}
+    thead tr{background:#f3eee4;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead th{color:#222;padding:9px 10px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;border:1px solid #bbb}
+    tbody tr{break-inside:avoid}
+    tbody td{padding:8px 10px;vertical-align:middle}
     tbody tr:nth-child(even) td{background:#f8f8f6}
     .footer{margin-top:18px;font-size:11px;color:#bbb;text-align:right;padding-top:10px;border-top:1px solid #eee}
-    @media print{@page{margin:1.5cm}body{padding:0}}
+    @media print{@page{size:A4 landscape;margin:8mm}body{padding:0}}
   </style></head><body>
   <div class="header">
-    <div><h1>Parts Store</h1><div style="font-size:14px;color:#555;margin-top:3px">${titleMap[sec]||sec}</div></div>
-    <div class="meta">Printed: ${nowStr()}<br>Total entries: ${selected.length}</div>
+    <div class="print-logo"><img src="/logo-urdu.png" alt="Supreme Art">SUPREME ART PRIVATE LIMITED</div>
+    <div class="heading"><h1>${reportTitle}</h1><div class="control"><span>${reportCode}</span><span>Date: ${rangeText}</span><span>${selected.length} entries</span></div></div>
   </div>
   <table>
     <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="footer">Parts Store — Stock Management System</div>
+  <div class="footer">${MODULE_LABEL[state.module]} — Store Management System</div>
   <script>window.onload=function(){setTimeout(()=>window.print(),300)}<\/script>
   </body></html>`);
   win.document.close();
@@ -1349,34 +1371,20 @@ function doExport(){
   const titleMap={inventory:'Inventory',stockin:'Stock In',stockout:'Stock Out',issuance:'Issuance Log'};
   const sheetName=titleMap[sec]||sec;
 
-  const wb=XLSX.utils.book_new();
-  // Build rows: title block + headers + data
   const dataRows=selected.map((item,i)=>rowCells(sec,item,i));
-  const sheetData=[
-    ['Parts Store — '+sheetName+' Report'],
-    ['Exported on: '+nowStr(),'','','Total entries: '+selected.length],
-    [],
-    headers,
-    ...dataRows
-  ];
-  const ws=XLSX.utils.aoa_to_sheet(sheetData);
-
-  // Auto col widths
-  ws['!cols']=headers.map((_,ci)=>{
-    const maxW=Math.max(headers[ci].length,...dataRows.map(r=>String(r[ci]===undefined?'':r[ci]).length));
-    return{wch:Math.min(Math.max(maxW+3,12),42)};
-  });
-
-  // Merge title row across all columns
-  ws['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:headers.length-1}},
-    {s:{r:1,c:0},e:{r:1,c:2}}
-  ];
-
-  XLSX.utils.book_append_sheet(wb,ws,sheetName.substring(0,31));
-  XLSX.writeFile(wb,'PartsStore_'+sheetName.replace(/ /g,'_')+'_'+today()+'.xlsx');
-  closeModal('export');
+  const range=selectedDateRange(selected);
+  window.parent.postMessage({
+    type:'store-excel-export',section:sec,title:storeReportTitle(sec),headers,rows:dataRows,
+    from:range.from,to:range.to,
+    filename:(state.module==='consumables'?'Inks_Consumables':'Parts_Store')+'_'+sheetName.replace(/ /g,'_')+'_'+today()
+  },location.origin);
 }
+
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||!event.data||event.data.type!=='store-excel-result')return;
+  if(event.data.ok)closeModal('export');
+  else warnDialog('Export failed',event.data.error||'Please retry the export.');
+});
 
 // ---- Branded dialogs (replace native alert/confirm/prompt) ----
 function _escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
