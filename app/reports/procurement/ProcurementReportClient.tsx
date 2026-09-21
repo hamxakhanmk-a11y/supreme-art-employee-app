@@ -214,7 +214,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-logo img { display: block; margin: 0 auto 4px; }
           .master-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
           .master-heading { flex: 1; text-align: center; }
-          .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 6px 0 10px; }
+          .master-letterhead h2 { color: #a32d2d; text-align: center; font-size: 17pt; margin: 6px 0 10px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
           .master-table { overflow: visible !important; border-radius: 0; border: none !important; box-shadow: none !important; }
           .master-table table { table-layout: fixed; }

@@ -922,3 +922,7 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   .flow-connected > .sb-item.active { transform: none; }
 }
 @media print { .flow-indicator { display: none !important; } }
+
+@media print {
+  .procurement-report-title { color: #a32d2d !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

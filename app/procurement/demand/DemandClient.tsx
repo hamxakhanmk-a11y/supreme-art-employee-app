@@ -101,7 +101,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
     <div className="fade-up">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Material Demand Forms</h1>
+          <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Material Demand Forms</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Raise a demand — it flows to Purchase Orders. <span style={{ color: "var(--text3)" }}>PUR/QR/005</span></p>
         </div>
         {canEdit && (

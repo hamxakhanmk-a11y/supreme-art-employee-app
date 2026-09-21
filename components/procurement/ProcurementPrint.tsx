@@ -156,6 +156,7 @@ export default function ProcurementPrint({
            document's headline. Sits above a full-width black rule instead of
            a short text-underline. */
         .pf-title {
+          color: #a32d2d;
           text-align: center; font-weight: 700; font-size: 18px;
           letter-spacing: 1.5px;
           margin: 16px 0 14px; padding-bottom: 10px;

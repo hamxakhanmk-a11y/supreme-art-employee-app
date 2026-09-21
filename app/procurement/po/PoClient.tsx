@@ -242,7 +242,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     <div className="fade-up">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
+          <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Create a PO from a demand, or standalone. <span style={{ color: "var(--text3)" }}>PUR/QR/006</span></p>
         </div>
         {canEdit && (open

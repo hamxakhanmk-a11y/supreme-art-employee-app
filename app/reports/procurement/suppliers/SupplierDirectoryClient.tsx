@@ -280,7 +280,7 @@ export default function SupplierDirectoryClient({
     <div className="fade-up">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Product / Supplier Directory</h1>
+          <h1 className="procurement-report-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Product / Supplier Directory</h1>
           <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
             Which supplier a product was ordered from, and at what rate, drawn from Purchase Order history. Read-only — click a row to open its PO.
           </p>

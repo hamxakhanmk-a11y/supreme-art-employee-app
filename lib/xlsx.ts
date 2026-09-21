@@ -102,7 +102,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     ws.mergeCells(1, 2, 2, nCols);
     const title = ws.getCell(1, 2);
     title.value = spec.title;
-    title.font = { name: "Times New Roman", size: 16, bold: true };
+    title.font = { name: "Times New Roman", size: 16, bold: true, color: { argb: "FFA32D2D" } };
     title.alignment = { horizontal: "center", vertical: "middle" };
     for (let row = 1; row <= 3; row++) for (let col = 1; col <= nCols; col++) {
       ws.getCell(row,col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
