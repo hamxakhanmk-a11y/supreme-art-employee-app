@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { inReportRange, reportLetterhead } from "@/lib/report-export";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
 
@@ -150,14 +151,7 @@ export default function SupplierDirectoryClient({
     [rows],
   );
 
-  const inRange = (r: DirectoryRow) => {
-    if (!fromDate && !toDate) return true;
-    const d = r.date ? r.date.slice(0, 10) : "";
-    if (!d) return false;
-    if (fromDate && d < fromDate) return false;
-    if (toDate && d > toDate) return false;
-    return true;
-  };
+  const inRange = (r: DirectoryRow) => inReportRange(r.date, fromDate, toDate);
 
   const filteredOrders = useMemo(() => rows.filter(r => {
     if (supplierFilter && r.supplier !== supplierFilter) return false;
@@ -238,12 +232,18 @@ export default function SupplierDirectoryClient({
     return flat;
   }, [rows, rateNotes, q, supplierFilter, fromDate, toDate]);
 
-  function exportXlsx() {
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  async function exportXlsx() {
+    if (fromDate && toDate && fromDate > toDate) return;
+    setExporting(true); setExportError("");
+    try {
     if (activeView === "orders") {
-      downloadWorkbookXlsx({
+      await downloadWorkbookXlsx({
         filename: "product-supplier-directory",
         sheets: [{
-          sheetName: "By order", title: "Product / Supplier / Rate — every order",
+          sheetName: "By order", title: "SUPPLIER DIRECTORY — EVERY ORDER",
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,38,28,20,18,12,18,18,18],
           headers: ["Date", "Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Gross", "Tax", "Net Value"],
           rows: [
             ...filteredOrders.map(r => [
@@ -255,10 +255,11 @@ export default function SupplierDirectoryClient({
         }],
       });
     } else {
-      downloadWorkbookXlsx({
+      await downloadWorkbookXlsx({
         filename: "product-supplier-directory",
         sheets: [{
-          sheetName: "By product", title: "Product / Supplier directory — grouped by product",
+          sheetName: "By product", title: "SUPPLIER DIRECTORY — BY PRODUCT",
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,28,20,36,18,18,20,24,18,12,18],
           headers: ["Product / Description", "Supplier", "Brand", "Location", "NTN", "STRN", "Contact #", "Concerned Person", "Rate", "Tax %", "Rate source"],
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
@@ -269,6 +270,8 @@ export default function SupplierDirectoryClient({
         }],
       });
     }
+    } catch (error) { setExportError(error instanceof Error ? error.message : "Export failed. Please retry."); }
+    finally { setExporting(false); }
   }
 
   const openPo = (poId: number) => router.push(`/procurement/po/${poId}?ref=suppliers`);
@@ -305,7 +308,8 @@ export default function SupplierDirectoryClient({
         <span style={{ color: "var(--text3)" }}>–</span>
         <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
         <div style={{ flex: 1 }} />
-        <button className="btn btn-sm" onClick={exportXlsx}>⬇ Export Excel</button>
+        <button className="btn btn-sm" disabled={exporting || !!(fromDate && toDate && fromDate > toDate)} onClick={exportXlsx}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
+        {(exportError || (fromDate && toDate && fromDate > toDate)) && <span role="alert">{exportError || "From date must be on or before To date."}</span>}
       </div>
 
       <div className="rpt-table-wrap">

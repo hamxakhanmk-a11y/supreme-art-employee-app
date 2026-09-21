@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
@@ -19,6 +20,8 @@ const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", re
 
 export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
   const router = useRouter();
+  const reportRange = useReportRange(rows);
+  const datedRows = reportRange.rows;
   const canEdit = useCanEdit("grn");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -112,11 +115,11 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   // ---- Registered / Unregistered GRR lists ----
   const counts = {
-    all: rows.length,
-    reg: rows.filter(g => g.registered === true).length,
-    unreg: rows.filter(g => g.registered === false).length,
+    all: datedRows.length,
+    reg: datedRows.filter(g => g.registered === true).length,
+    unreg: datedRows.filter(g => g.registered === false).length,
   };
-  const shownRows = rows.filter(g =>
+  const shownRows = datedRows.filter(g =>
     listFilter === "all" ? true
     : listFilter === "reg" ? g.registered === true
     : g.registered === false);
@@ -277,6 +280,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
       </div>
 
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","Quantity","Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,12,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,it.quantity,it.remarks,g.receivedBy,g.verifiedBy]);})}} />
       <div style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, or item…"

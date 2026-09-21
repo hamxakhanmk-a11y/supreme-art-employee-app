@@ -29,7 +29,7 @@ export interface SheetSpec {
   title: string;
   headers: string[];
   rows: Cell[][];
-  letterhead?: { code: string; issue: string; date: string; logoUrl: string;
+  letterhead?: { code?: string; issue?: string; date: string; logoUrl: string;
     company: { name: string } };
   dayRange?: [number, number]; // inclusive 0-based column indices to color by code
   freezeCols?: number;         // sticky leading columns (default 2)
@@ -76,7 +76,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       return c;
     };
     ws.mergeCells(1, 1, 2, 1);
-    const control = merge(3, 2, nCols, h.code + "     |     Date: " + h.date + "     |     Issue Status: " + h.issue);
+    const control = merge(3, 2, nCols, [h.code, "Date: " + h.date, h.issue ? "Issue Status: " + h.issue : ""].filter(Boolean).join("     |     "));
     control.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     ws.getRow(1).height = 29;
     const logoName = ws.getCell(3, 1);
@@ -104,6 +104,9 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     title.value = spec.title;
     title.font = { name: "Times New Roman", size: 16, bold: true };
     title.alignment = { horizontal: "center", vertical: "middle" };
+    for (let row = 1; row <= 3; row++) for (let col = 1; col <= nCols; col++) {
+      ws.getCell(row,col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+    }
     ws.pageSetup.paperSize = 9; ws.pageSetup.printTitlesRow = "1:4";
     ws.headerFooter.oddFooter = "&L" + h.company.name + "&RPage &P of &N";
   }

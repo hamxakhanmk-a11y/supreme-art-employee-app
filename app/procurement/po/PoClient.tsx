@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
+import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
-import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
@@ -25,6 +25,8 @@ const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: 
 
 export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[]; openDemands: OpenDemand[]; suppliers: Supplier[] }) {
   const router = useRouter();
+  const reportRange = useReportRange(rows);
+  const datedRows = reportRange.rows;
   const canEdit = useCanEdit("po");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -212,12 +214,12 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   // ---- Tax-status filter for the PO register (Registered / Unregistered lists) ----
   const counts = {
-    all: rows.length,
-    reg: rows.filter(p => p.registered === true).length,
-    unreg: rows.filter(p => p.registered === false).length,
-    unmarked: rows.filter(p => p.registered == null).length,
+    all: datedRows.length,
+    reg: datedRows.filter(p => p.registered === true).length,
+    unreg: datedRows.filter(p => p.registered === false).length,
+    unmarked: datedRows.filter(p => p.registered == null).length,
   };
-  const shownRows = rows.filter(p =>
+  const shownRows = datedRows.filter(p =>
     taxFilter === "all" ? true
     : taxFilter === "reg" ? p.registered === true
     : taxFilter === "unreg" ? p.registered === false
@@ -235,27 +237,6 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     return hay.includes(qs);
   });
 
-  // Export the registered & unregistered PO lists as an Excel workbook.
-  function exportPos() {
-    const statusText = (s: string) => ({ open: "Open", partial: "Partially Received", received: "Received", closed: "Closed" }[s] || s);
-    const sheet = (name: string, list: Po[]) => ({
-      sheetName: name, title: `${name} Purchase Orders`,
-      headers: ["PO #", "Demand #", "Date", "Supplier", "Delivery", "Items", "Total (Rs)", "Status", "Order placed by"],
-      freezeCols: 1, colWidths: [8, 10, 13, 30, 13, 7, 14, 16, 20],
-      rows: list.map(p => [
-        docNoLabel(p.poNo, p.registered), p.demandNo ?? "", fmtDate(p.date), p.supplierName || "", fmtDate(p.expectedDate),
-        parseItems<PoItem>(p.items).length, poGrandTotal(parseItems<PoItem>(p.items), p.discount),
-        statusText(p.status), p.orderPlacedBy || "",
-      ]),
-    });
-    downloadWorkbookXlsx({
-      filename: `purchase-orders_${new Date().toISOString().slice(0, 10)}`,
-      sheets: [
-        sheet("Registered", rows.filter(p => p.registered === true)),
-        sheet("Unregistered", rows.filter(p => p.registered === false)),
-      ],
-    });
-  }
 
   return (
     <div className="fade-up">
@@ -438,13 +419,13 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
         {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
         <div style={{ flex: 1 }} />
-        <button onClick={exportPos} className="btn btn-sm">⬇ Excel (both lists)</button>
       </div>
 
       {taxFilter === "unreg" && (
         <UnregLimitChecker rows={rows} suppliers={supplierList} />
       )}
 
+      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} />
       <div style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search POs — number, supplier, or item description…"

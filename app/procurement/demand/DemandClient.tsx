@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
@@ -16,6 +17,8 @@ const blankItem = (n: number): DemandItem => ({ srNo: n, material: "", requiredF
 
 export default function DemandClient({ rows }: { rows: Demand[] }) {
   const router = useRouter();
+  const reportRange = useReportRange(rows);
+  const datedRows = reportRange.rows;
   const canEdit = useCanEdit("demand");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -83,8 +86,8 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   // required-for, remarks).
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter(d => {
+    if (!s) return datedRows;
+    return datedRows.filter(d => {
       const items = parseItems<DemandItem>(d.items);
       const hay = [
         `#${d.demandNo}`, String(d.demandNo), d.demandBy, d.department, d.preparedBy, d.approvedBy,
@@ -92,7 +95,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
       ].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(s);
     });
-  }, [rows, q]);
+  }, [datedRows, q]);
 
   return (
     <div className="fade-up">
@@ -140,6 +143,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
         </div>
       )}
 
+      <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} />
       <div style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search demands — number, person, department, or item description…"
