@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import PrintHeader from "@/components/PrintHeader";
+import { reportLetterhead } from "@/lib/report-export";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { useCanEdit } from "@/components/MeProvider";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
@@ -276,7 +276,12 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
     } catch (e: any) { setError(e.message); }
   };
 
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const letterhead = { ...reportLetterhead(fromDate, toDate), code: "PUR/QR/009", issue: "01" };
   const exportXlsx = async () => {
+    setExporting(true); setExportError("");
+    try {
     const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "PO No", "Remarks"];
     // One spreadsheet line per item so multi-item PRs expand out fully.
     const data = filtered.flatMap(r => {
@@ -292,9 +297,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
     await downloadRegisterXlsx({
       filename: "purchase-requisition-register",
       sheetName: "PR Register",
-      title: "Supreme Art (Pvt) Ltd — Purchase Requisition Register",
+      title: "PURCHASE REQUISITION REGISTER",
+      letterhead,
+      colWidths: [34,12,22,24,22,38,12,12,16,16,18,18,14,16,22,14,32],
       headers, rows: data,
     });
+    } catch (error) { setExportError(error instanceof Error ? error.message : "Export failed. Please retry."); }
+    finally { setExporting(false); }
   };
 
   const approvalStyle = (v: string | null, good: string, bad: string) =>
@@ -303,7 +312,17 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   return (
     <div className="fade-up">
       <PrintLandscape />
-      <PrintHeader title="Purchase Requisition Register" subtitle={`${filtered.length} requisitions`} />
+      <div className="purchase-letterhead">
+        <div className="purchase-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-urdu.png" alt="Supreme Art" width={135} height={66} />
+          <div>{letterhead.company.name}</div>
+        </div>
+        <div className="purchase-heading"><h2>PURCHASE REQUISITION REGISTER</h2>
+          <div className="purchase-control"><span>{letterhead.code}</span><span>Date: {letterhead.date}</span><span>Issue Status: {letterhead.issue}</span></div>
+        </div>
+      </div>
+      {exportError && <p className="no-print" role="alert">{exportError}</p>}
 
       {/* Header */}
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 14, flexWrap: "wrap" }}>
@@ -315,7 +334,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
-          <button onClick={exportXlsx} className="btn">⬇ Excel</button>
+          <button onClick={exportXlsx} disabled={exporting} className="btn">{exporting ? "Exporting…" : "⬇ Excel"}</button>
           {canRaise && <button onClick={openNew} className="btn btn-primary">＋ New Requisition</button>}
         </div>
       </div>
@@ -619,7 +638,18 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         .pr-val-empty { border-style: dashed; background: transparent; color: var(--text3); border-color: var(--border); }
         .pr-val-empty:hover { background: var(--bg2); color: var(--text); }
         .only-print { display: none; }
+        .purchase-letterhead { display: none; }
         @media print {
+          .purchase-letterhead { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; background: #f5f5f5 !important; break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          .purchase-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font: bold 9pt Arial, sans-serif; }
+          .purchase-logo img { display: block; object-fit: contain; margin: 0 auto 4px; }
+          .purchase-heading { flex: 1; text-align: center; font-family: "Times New Roman", serif; }
+          .purchase-heading h2 { color: #a32d2d; font-size: 17pt; margin: 6px 0 10px; }
+          .purchase-control { display: grid; grid-template-columns: 1fr 2fr 1fr; font-size: 9pt; }
+          .purchase-control span { padding: 4px; }
+          .pr-table thead { display: table-header-group; }
+          .pr-table tbody tr { break-inside: avoid; position: static !important; }
+          .pr-table td { border: none !important; box-shadow: none !important; }
           @page { size: A4 landscape; margin: 6mm; }
           .pr-table { font-size: 8.5px; }
           .pr-table th, .pr-table td { padding: 2px 4px; }
