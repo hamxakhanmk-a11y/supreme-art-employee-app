@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { COMPANY, FORM_META, fmtDate } from "@/lib/procurement";
+import { fmtDate } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 
 import PrintLandscape from "@/components/PrintLandscape";
@@ -58,8 +58,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
-  const meta = FORM_META.demand;
-  const subtitle = [fmtDate(from) + " to " + fmtDate(to), filter === "all" ? "All statuses" : STATUS_META[filter].label, supplierFilter || "All suppliers", q.trim() ? "Search: " + q.trim() : "", shown.length + " items"].filter(Boolean).join(" | ");
+  const meta = { code: "PUR/QR/008", issue: "01", date: from === to ? fmtDate(from) : fmtDate(from) + " to " + fmtDate(to) };
+  const company = { name: "SUPREME ART PRIVATE LIMITED" };
   async function exportXlsx() {
     setExporting(true); setExportError("");
     try {
@@ -68,7 +68,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       sheets: [{
         sheetName: "Master Report",
         title: "PROCUREMENT MASTER REPORT",
-        letterhead: { ...meta, company: COMPANY, subtitle, logoUrl: "/logo.png" },
+        letterhead: { ...meta, company, logoUrl: "/logo.png" },
         headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Invoice No", "Received"],
         rows: shown.map(r => [
           r.description, r.supplier, fmtDate(r.date), r.demandNo, r.poNo,
@@ -96,13 +96,12 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     <div className="fade-up procurement-master">
       <PrintLandscape />
       <div className="master-letterhead">
-        <div className="master-control"><span>Doc No. {meta.code}</span><span>Issue Status: {meta.issue}</span><span>Issue date {meta.issueDate}</span></div>
+        <div className="master-control"><span>Doc No. {meta.code}</span><span>Issue Status: {meta.issue}</span><span>Date: {meta.date}</span></div>
         <div className="master-company">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt={COMPANY.name} width={150} height={85} />
-          <div><strong>{COMPANY.name}</strong><div>Address: {COMPANY.address}</div><div>NTN: {COMPANY.ntn} &nbsp; STRN: {COMPANY.strn}</div><div>EMAIL: {COMPANY.email} &nbsp; Phone: {COMPANY.phone}</div></div>
+          <img src="/logo.png" alt={company.name} width={150} height={85} />
+          <div><strong>{company.name}</strong><h2>PROCUREMENT MASTER REPORT</h2></div>
         </div>
-        <h2>PROCUREMENT MASTER REPORT</h2><p>{subtitle}</p>
       </div>
       <div className="no-print" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Master Report</h1>

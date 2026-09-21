@@ -29,8 +29,8 @@ export interface SheetSpec {
   title: string;
   headers: string[];
   rows: Cell[][];
-  letterhead?: { code: string; issue: string; issueDate: string; subtitle: string; logoUrl: string;
-    company: { name: string; address: string; ntn: string; strn: string; email: string; phone: string } };
+  letterhead?: { code: string; issue: string; date: string; logoUrl: string;
+    company: { name: string } };
   dayRange?: [number, number]; // inclusive 0-based column indices to color by code
   freezeCols?: number;         // sticky leading columns (default 2)
   colWidths?: number[];        // explicit per-column widths (else sized for the register)
@@ -49,7 +49,7 @@ async function loadExcel() {
 
 async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   const nCols = spec.headers.length;
-  const headerRow = spec.letterhead ? 8 : 2;
+  const headerRow = spec.letterhead ? 4 : 2;
   const freeze = spec.freezeCols ?? 2;
   const ws = wb.addWorksheet(spec.sheetName.slice(0, 31), {
     views: [{ state: "frozen", xSplit: freeze, ySplit: headerRow }],
@@ -78,14 +78,14 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     };
     merge(1, 1, third, "Doc No. " + h.code);
     merge(1, third + 1, third * 2, "Issue Status: " + h.issue);
-    merge(1, third * 2 + 1, nCols, "Issue date " + h.issueDate);
+    merge(1, third * 2 + 1, nCols, "Date: " + h.date);
     ws.getRow(1).height = 25;
-    ws.mergeCells(2, 1, 5, 1);
-    merge(2, 2, nCols, h.company.name).font = { name: "Times New Roman", bold: true, size: 15 };
-    merge(3, 2, nCols, "Address: " + h.company.address);
-    merge(4, 2, nCols, "NTN: " + h.company.ntn + "     STRN: " + h.company.strn);
-    merge(5, 2, nCols, "EMAIL: " + h.company.email + "     Phone: " + h.company.phone);
-    for (let row = 2; row <= 5; row++) ws.getRow(row).height = 24;
+    ws.mergeCells(2, 1, 3, 1);
+    const company = merge(2, 2, nCols, h.company.name);
+    company.font = { name: "Times New Roman", bold: true, size: 15 };
+    company.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(2).height = 42;
+    ws.getRow(3).height = 42;
     const response = await fetch(h.logoUrl);
     if (!response.ok) throw new Error("Unable to load the company logo. Please retry the export.");
     const blob = await response.blob();
@@ -94,13 +94,11 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       reader.onerror = reject; reader.readAsDataURL(blob);
     });
     const imageId = wb.addImage({ base64, extension: "png" });
-    ws.addImage(imageId, { tl: { col: 0.2, row: 1.6 }, ext: { width: 150, height: 85 } });
-    const title = merge(6, 1, nCols, spec.title);
+    ws.addImage(imageId, { tl: { col: 0.2, row: 1.15 }, ext: { width: 150, height: 85 } });
+    const title = merge(3, 2, nCols, spec.title);
     title.font = { name: "Times New Roman", size: 16, bold: true };
     title.alignment = { horizontal: "center", vertical: "middle" };
-    ws.getRow(6).height = 32;
-    merge(7, 1, nCols, h.subtitle); ws.getRow(7).height = 32;
-    ws.pageSetup.paperSize = 9; ws.pageSetup.printTitlesRow = "1:8";
+    ws.pageSetup.paperSize = 9; ws.pageSetup.printTitlesRow = "1:4";
     ws.headerFooter.oddFooter = "&L" + h.company.name + "&RPage &P of &N";
   }
   const header = ws.getRow(headerRow);
