@@ -1176,11 +1176,9 @@ function openPrintModal(sec){
   if(sec!=='inventory'){
     const prefix={stockin:'in',stockout:'out',issuance:'iss'}[sec];
     const ids=new Set(Array.from(document.querySelectorAll('.txn-chk-'+prefix+':checked')).map(c=>parseInt(c.dataset.id)));
-    selected=data.filter(item=>ids.has(item.id));
-    if(!selected.length){
-      warnDialog('Nothing selected','Select one or more rows using the checkboxes in the history table, then press Print.');
-      return;
-    }
+    // Checked rows take priority. With no checks, print every row currently
+    // visible after the page's search and date filters.
+    if(ids.size) selected=data.filter(item=>ids.has(item.id));
   }
   if(!selected.length){warnDialog('Nothing to print','No entries match the current filters.');return;}
   doPrint(sec,selected);
