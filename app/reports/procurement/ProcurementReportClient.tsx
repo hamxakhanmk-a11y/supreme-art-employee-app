@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { fmtDate } from "@/lib/procurement";
+import { COMPANY, FORM_META, fmtDate } from "@/lib/procurement";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
+
+import PrintLandscape from "@/components/PrintLandscape";
 
 // A GRR that received a PO line — id (to open it), display number, gate pass.
 export interface GrrRef { id: number; label: string; gatePass: string; invNo: string }
@@ -54,12 +56,19 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${grrHay}`.toLowerCase().includes(s);
   }), [rows, filter, supplierFilter, q]);
 
-  function exportXlsx() {
-    downloadWorkbookXlsx({
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const meta = FORM_META.demand;
+  const subtitle = [fmtDate(from) + " to " + fmtDate(to), filter === "all" ? "All statuses" : STATUS_META[filter].label, supplierFilter || "All suppliers", q.trim() ? "Search: " + q.trim() : "", shown.length + " items"].filter(Boolean).join(" | ");
+  async function exportXlsx() {
+    setExporting(true); setExportError("");
+    try {
+    await downloadWorkbookXlsx({
       filename: `procurement-master_${from}_to_${to}`,
       sheets: [{
         sheetName: "Master Report",
-        title: `Supreme Art — Procurement Master Report   ${fmtDate(from)} → ${fmtDate(to)}`,
+        title: "PROCUREMENT MASTER REPORT",
+        letterhead: { ...meta, company: COMPANY, subtitle, logoUrl: "/logo.png" },
         headers: ["Description", "Supplier", "Date", "Demand No", "PO No", "GRR No", "Gate Pass No", "Invoice No", "Received"],
         rows: shown.map(r => [
           r.description, r.supplier, fmtDate(r.date), r.demandNo, r.poNo,
@@ -72,6 +81,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         freezeCols: 1,
       }],
     });
+    } catch (error) { setExportError(error instanceof Error ? error.message : "Export failed. Please try again."); }
+    finally { setExporting(false); }
   }
 
   const FILTERS: { key: Filter; label: string }[] = [
@@ -82,7 +93,17 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
   ];
 
   return (
-    <div className="fade-up">
+    <div className="fade-up procurement-master">
+      <PrintLandscape />
+      <div className="master-letterhead">
+        <div className="master-control"><span>Doc No. {meta.code}</span><span>Issue Status: {meta.issue}</span><span>Issue date {meta.issueDate}</span></div>
+        <div className="master-company">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt={COMPANY.name} width={150} height={85} />
+          <div><strong>{COMPANY.name}</strong><div>Address: {COMPANY.address}</div><div>NTN: {COMPANY.ntn} &nbsp; STRN: {COMPANY.strn}</div><div>EMAIL: {COMPANY.email} &nbsp; Phone: {COMPANY.phone}</div></div>
+        </div>
+        <h2>PROCUREMENT MASTER REPORT</h2><p>{subtitle}</p>
+      </div>
       <div className="no-print" style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Master Report</h1>
         <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
@@ -118,7 +139,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           placeholder="🔍 Description, supplier, demand / PO / GRR / gate pass…"
           style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 280 }} />
         <div style={{ flex: 1 }} />
-        <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0}>⬇ Export Excel</button>
+        <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0 || exporting}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
         <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
       </div>
 
@@ -126,7 +147,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         Showing <strong>{shown.length}</strong> of {rows.length} item{rows.length === 1 ? "" : "s"} in range.
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+      {exportError && <p className="no-print" role="alert">{exportError}</p>}
+      <div className="card master-table" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         <table>
           <thead>
             <tr>
@@ -183,6 +205,26 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
       </div>
 
       <style jsx>{`
+        .master-letterhead { display: none; }
+        @media print {
+          .master-letterhead { display: block; font-family: "Times New Roman", serif; color: #000; break-inside: avoid; }
+          .master-control { display: grid; grid-template-columns: 34% 28% 38%; border: 1px solid #000; background: #f0f0f0; }
+          .master-control span { padding: 7px; border-right: 1px solid #000; font-size: 10pt; }
+          .master-control span:last-child { border-right: 0; }
+          .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; border-top: 0; padding: 12px 20px; font-size: 11pt; line-height: 1.5; }
+          .master-company img { object-fit: contain; flex-shrink: 0; }
+          .master-company strong { font-size: 14pt; }
+          .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 16px 0 8px; }
+          .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
+          .master-table { overflow: visible !important; border-radius: 0; }
+          .master-table table { table-layout: fixed; }
+          .master-table thead { display: table-header-group; }
+          .master-table tr { break-inside: avoid; }
+          .master-table th, .master-table td { border: 1px solid #777; white-space: normal !important; }
+          .master-table th:first-child { width: 22%; }
+          .master-table th:nth-child(2) { width: 18%; }
+          .master-table td span { white-space: normal !important; }
+        }
         .doc-link { color: var(--brand); font-weight: 700; text-decoration: none; }
         .doc-link:hover { text-decoration: underline; }
       `}</style>

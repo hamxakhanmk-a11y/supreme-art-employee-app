@@ -29,6 +29,8 @@ export interface SheetSpec {
   title: string;
   headers: string[];
   rows: Cell[][];
+  letterhead?: { code: string; issue: string; issueDate: string; subtitle: string; logoUrl: string;
+    company: { name: string; address: string; ntn: string; strn: string; email: string; phone: string } };
   dayRange?: [number, number]; // inclusive 0-based column indices to color by code
   freezeCols?: number;         // sticky leading columns (default 2)
   colWidths?: number[];        // explicit per-column widths (else sized for the register)
@@ -45,14 +47,16 @@ async function loadExcel() {
   return { ExcelJS, wb };
 }
 
-function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
+async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   const nCols = spec.headers.length;
+  const headerRow = spec.letterhead ? 8 : 2;
   const freeze = spec.freezeCols ?? 2;
   const ws = wb.addWorksheet(spec.sheetName.slice(0, 31), {
-    views: [{ state: "frozen", xSplit: freeze, ySplit: 2 }],
+    views: [{ state: "frozen", xSplit: freeze, ySplit: headerRow }],
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
+  if (!spec.letterhead) {
   // Row 1 — merged title banner
   ws.mergeCells(1, 1, 1, nCols);
   const title = ws.getCell(1, 1);
@@ -62,8 +66,44 @@ function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   title.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(1).height = 22;
 
-  // Row 2 — headers
-  const header = ws.getRow(2);
+  } else {
+    const h = spec.letterhead;
+    const third = Math.floor(nCols / 3);
+    const merge = (row: number, start: number, end: number, value: string) => {
+      ws.mergeCells(row, start, row, end);
+      const c = ws.getCell(row, start);
+      c.value = value; c.font = { name: "Times New Roman", size: 11 };
+      c.alignment = { vertical: "middle", wrapText: true }; c.border = BORDER;
+      return c;
+    };
+    merge(1, 1, third, "Doc No. " + h.code);
+    merge(1, third + 1, third * 2, "Issue Status: " + h.issue);
+    merge(1, third * 2 + 1, nCols, "Issue date " + h.issueDate);
+    ws.getRow(1).height = 25;
+    ws.mergeCells(2, 1, 5, 1);
+    merge(2, 2, nCols, h.company.name).font = { name: "Times New Roman", bold: true, size: 15 };
+    merge(3, 2, nCols, "Address: " + h.company.address);
+    merge(4, 2, nCols, "NTN: " + h.company.ntn + "     STRN: " + h.company.strn);
+    merge(5, 2, nCols, "EMAIL: " + h.company.email + "     Phone: " + h.company.phone);
+    for (let row = 2; row <= 5; row++) ws.getRow(row).height = 24;
+    const response = await fetch(h.logoUrl);
+    if (!response.ok) throw new Error("Unable to load the company logo. Please retry the export.");
+    const blob = await response.blob();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader(); reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject; reader.readAsDataURL(blob);
+    });
+    const imageId = wb.addImage({ base64, extension: "png" });
+    ws.addImage(imageId, { tl: { col: 0.2, row: 1.6 }, ext: { width: 150, height: 85 } });
+    const title = merge(6, 1, nCols, spec.title);
+    title.font = { name: "Times New Roman", size: 16, bold: true };
+    title.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(6).height = 32;
+    merge(7, 1, nCols, h.subtitle); ws.getRow(7).height = 32;
+    ws.pageSetup.paperSize = 9; ws.pageSetup.printTitlesRow = "1:8";
+    ws.headerFooter.oddFooter = "&L" + h.company.name + "&RPage &P of &N";
+  }
+  const header = ws.getRow(headerRow);
   spec.headers.forEach((h, i) => {
     const c = header.getCell(i + 1);
     c.value = h;
@@ -104,12 +144,16 @@ function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     else col.width = 11;
   });
 
+  if (spec.letterhead) {
+    ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow + spec.rows.length, column: nCols } };
+    ws.pageSetup.printArea = "A1:" + ws.getColumn(nCols).letter + ws.rowCount;
+  }
   return ws;
 }
 
 export async function downloadRegisterXlsx(opts: SheetSpec & { filename: string }) {
   const { wb } = await loadExcel();
-  addStyledSheet(wb, opts);
+  await addStyledSheet(wb, opts);
   const buf = await wb.xlsx.writeBuffer();
   triggerDownload(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), opts.filename);
 }
@@ -121,7 +165,7 @@ export async function downloadWorkbookXlsx(opts: { filename: string; sheets: She
   const sheets = opts.sheets.length ? opts.sheets : [{
     sheetName: "Empty", title: "No data", headers: ["—"], rows: [],
   }];
-  for (const s of sheets) addStyledSheet(wb, s);
+  for (const s of sheets) await addStyledSheet(wb, s);
   const buf = await wb.xlsx.writeBuffer();
   triggerDownload(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), opts.filename);
 }
