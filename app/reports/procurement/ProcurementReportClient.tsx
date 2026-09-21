@@ -216,11 +216,19 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-heading { flex: 1; text-align: center; }
           .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 6px 0 10px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
-          .master-table { overflow: visible !important; border-radius: 0; }
+          .master-table { overflow: visible !important; border-radius: 0; border: none !important; box-shadow: none !important; }
           .master-table table { table-layout: fixed; }
           .master-table thead { display: table-header-group; }
           .master-table tr { break-inside: avoid; }
-          .master-table th, .master-table td { border: 1px solid #777; white-space: normal !important; }
+          .master-table th, .master-table td { white-space: normal !important; }
+          .master-table th { border: 1px solid #777; }
+          .master-table tbody tr, .master-table tbody tr:hover {
+            position: static !important; z-index: auto !important;
+            border: none !important; outline: none !important; box-shadow: none !important;
+          }
+          .master-table tbody td {
+            border: none !important; outline: none !important; box-shadow: none !important;
+          }
           .master-table th:first-child { width: 22%; }
           .master-table th:nth-child(2) { width: 18%; }
           .master-table td span { white-space: normal !important; }
