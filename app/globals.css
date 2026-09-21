@@ -694,7 +694,14 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
   }
 
   table th { background: #f3f3f3 !important; color: #333 !important; }
-  tr:hover td { background: transparent !important; }
+  /* A hovered row must print exactly like every other row. */
+  tbody tr, tbody tr:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  tbody tr:hover td { background-image: none !important; }
 
   /* Tables in print: compact + flow within page width without right-edge crop */
   table { font-size: 8pt !important; border-collapse: collapse; width: 100% !important; }

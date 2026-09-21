@@ -209,7 +209,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-control { display: grid; grid-template-columns: 1fr 2fr 1fr; }
           .master-control span { padding: 4px; font-size: 9pt; }
           .master-control span:last-child { border-right: 0; }
-          .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; font-size: 11pt; line-height: 1.5; }
+          .master-company { background: #f5f5f5 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; font-size: 11pt; line-height: 1.5; }
           .master-company img { object-fit: contain; flex-shrink: 0; }
           .master-logo img { display: block; margin: 0 auto 4px; }
           .master-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
