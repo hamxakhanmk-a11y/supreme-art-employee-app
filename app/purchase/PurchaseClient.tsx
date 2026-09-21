@@ -17,7 +17,7 @@ type RawPr = {
   concernedPerson: string | null; items?: unknown; category?: string | null;
   itemName?: string | null; quantity?: number | null; uom?: string | null;
   receivedByAdmin: boolean; receivedDate?: string | null; value: number | null;
-  requiredDate: string | null; hodApproval: string | null; hrApproval: string | null;
+  requiredDate: string | null; hodApproval: string | null;
   status: string; poNo: string | null; remarks: string | null;
 };
 
@@ -33,7 +33,6 @@ export type PrRow = {
   value: number | null;          // total across items
   requiredDate: string | null;
   hodApproval: string | null;    // Approved | Not Approved | null
-  hrApproval: string | null;     // Approved | Rejected | null
   status: string;
   poNo: string | null;
   remarks: string | null;
@@ -53,7 +52,6 @@ function normalize(raw: RawPr): PrRow {
     value: prItemsTotal(items),
     requiredDate: raw.requiredDate ?? null,
     hodApproval: raw.hodApproval ?? null,
-    hrApproval: raw.hrApproval ?? null,
     status: raw.status ?? "PR Raised",
     poNo: raw.poNo ?? null,
     remarks: raw.remarks ?? null,
@@ -65,7 +63,7 @@ type Draft = {
   date: string; prNo: string; department: string; concernedPerson: string;
   items: ItemDraft[];
   receivedByAdmin: boolean; receivedDate: string;
-  requiredDate: string; hodApproval: string; hrApproval: string; status: string;
+  requiredDate: string; hodApproval: string; status: string;
   poNo: string; remarks: string;
 };
 
@@ -75,7 +73,7 @@ const emptyDraft = (): Draft => ({
   prNo: "", department: "", concernedPerson: "",
   items: [emptyItemDraft()],
   receivedByAdmin: false, receivedDate: "",
-  requiredDate: "", hodApproval: "", hrApproval: "", status: "PR Raised", poNo: "", remarks: "",
+  requiredDate: "", hodApproval: "", status: "PR Raised", poNo: "", remarks: "",
 });
 
 const fmtDate = (d: string | null) =>
@@ -86,7 +84,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const canEditPr     = useCanEdit("purchase.edit");
   const canReceive    = useCanEdit("purchase.receive");
   const canDeletePr   = useCanEdit("purchase.delete");
-  const canHrApprove  = useCanEdit("purchase.hr-approve");
+  const canHodApprove  = useCanEdit("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");
@@ -142,7 +140,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         value: i.value === null ? "" : String(i.value),
       })),
       receivedByAdmin: r.receivedByAdmin, receivedDate: r.receivedDate ?? "",
-      requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "", hrApproval: r.hrApproval ?? "",
+      requiredDate: r.requiredDate ?? "", hodApproval: r.hodApproval ?? "",
       status: r.status, poNo: r.poNo ?? "", remarks: r.remarks ?? "",
     });
     setEditId(r.id); setShowForm(true); setError(null);
@@ -212,8 +210,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   type Action = "approve" | "reject" | "received";
   const act = async (r: PrRow, action: Action) => {
     const opt: PrRow = { ...r };
-    if (action === "approve") opt.hrApproval = r.hrApproval === "Approved" ? null : "Approved";
-    else if (action === "reject") opt.hrApproval = r.hrApproval === "Rejected" ? null : "Rejected";
+    if (action === "approve") opt.hodApproval = r.hodApproval === "Approved" ? null : "Approved";
+    else if (action === "reject") opt.hodApproval = r.hodApproval === "Not Approved" ? null : "Not Approved";
     else if (action === "received") {
       const on = r.status !== "Material Received";
       opt.status = on ? "Material Received" : "PR Raised";
@@ -282,7 +280,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const exportXlsx = async () => {
     setExporting(true); setExportError("");
     try {
-    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "HR Approval", "Received", "Received Date", "Status", "Remarks"];
+    const headers = ["Date", "PR No", "Department", "Concerned Person", "Category", "Item Name", "Quantity", "UoM", "Item Value", "Required Date", "HOD Approval", "Received", "Received Date", "Status", "Remarks"];
     // One spreadsheet line per item so multi-item PRs expand out fully.
     const data = filtered.flatMap(r => {
       const its = r.items.length ? r.items : [{ itemName: "", category: "", quantity: null, uom: "", value: null }];
@@ -290,7 +288,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         fmtDate(r.date), r.prNo ?? "", r.department ?? "", r.concernedPerson ?? "",
         i.category ?? "", i.itemName ?? "", i.quantity ?? "", i.uom ?? "", i.value ?? "",
         fmtDate(r.requiredDate) === "—" ? "" : fmtDate(r.requiredDate),
-        r.hodApproval ?? "", r.hrApproval ?? "", r.receivedByAdmin ? "Yes" : "No",
+        r.hodApproval ?? "", r.receivedByAdmin ? "Yes" : "No",
         r.receivedDate ? fmtDate(r.receivedDate) : "", r.status, r.remarks ?? "",
       ]);
     });
@@ -299,7 +297,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
       sheetName: "PR Register",
       title: "PURCHASE REQUISITION REGISTER",
       letterhead,
-      colWidths: [34,12,22,24,22,38,12,12,16,16,18,18,14,16,22,32],
+      colWidths: [34,12,22,24,22,38,12,12,16,16,18,14,16,22,32],
       headers, rows: data,
     });
     } catch (error) { setExportError(error instanceof Error ? error.message : "Export failed. Please retry."); }
@@ -402,7 +400,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
           {/* ② Items — value is added from the register after receipt */}
           <div className="pr-section" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>② Items</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text3)" }}>Value, HOD/HR approvals and remarks are set from the register.</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text3)" }}>Value, HOD approval and remarks are set from the register.</span>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table className="pr-item-form">
@@ -445,8 +443,8 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
           </div>
           <button type="button" onClick={addItem} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add item</button>
 
-          {/* ③ Receipt & PO tracking */}
-          <div className="pr-section" style={{ marginTop: 16 }}>③ Approval, receipt &amp; PO</div>
+          {/* ③ Approval and receipt */}
+          <div className="pr-section" style={{ marginTop: 16 }}>③ Approval &amp; receipt</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
             <div><label className="form-label">HOD Approval <span style={{ color: "var(--text3)", fontWeight: 400 }}>(by requester)</span></label>
               <select value={draft.hodApproval} onChange={e => set({ hodApproval: e.target.value })}>
@@ -488,13 +486,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
             <tr>
               <th>Date</th><th>PR#</th><th>Department</th><th>Requested by</th>
               <th style={{ minWidth: 220 }}>Items</th>
-              <th className="num">Value</th><th>Required</th><th>HOD</th><th>HR</th><th title="Material received by Admin">Received</th><th>Status</th><th>Remarks</th>
+              <th className="num">Value</th><th>Required</th><th>HOD</th><th title="Material received by Admin">Received</th><th>Status</th><th>Remarks</th>
               <th className="no-print pr-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={13} className="empty">
+              <tr><td colSpan={12} className="empty">
                 {rows.length === 0 ? "No requisitions yet — raise the first one." : "Nothing matches the filters."}
               </td></tr>
             )}
@@ -541,9 +539,6 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                   <td style={{ fontSize: 11.5, fontWeight: 700, color: approvalStyle(r.hodApproval, "Approved", "Not Approved") }}>
                     {r.hodApproval || "Pending"}
                   </td>
-                  <td style={{ fontSize: 11.5, fontWeight: 700, color: approvalStyle(r.hrApproval, "Approved", "Rejected") }}>
-                    {r.hrApproval || "Pending"}
-                  </td>
                   <td style={{ fontSize: 11.5, textAlign: "center", whiteSpace: "nowrap" }}>
                     {r.receivedByAdmin
                       ? <span style={{ color: "#15803D", fontWeight: 700 }}>✓ {r.receivedDate ? fmtDate(r.receivedDate) : ""}</span>
@@ -555,17 +550,17 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                     </span>
                   </td>
                   <td style={{ fontSize: 11.5, color: "var(--text2)", maxWidth: 180 }}>{r.remarks || ""}</td>
-                  {/* Actions stack in three rows: the HR decision pair, then
+                  {/* Actions stack in three rows: the HOD decision pair, then
                       Mark Received, then the edit/delete group — so related
                       buttons sit side by side instead of one per line. */}
                   <td className="no-print pr-actions">
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                      {canHrApprove && (
+                      {canHodApprove && (
                         <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => act(r, "approve")} title="HR approve this requisition"
-                            style={pillBtn("#15803D", r.hrApproval === "Approved")}>HR Approve</button>
-                          <button onClick={() => act(r, "reject")} title="HR reject this requisition"
-                            style={pillBtn("#DC2626", r.hrApproval === "Rejected")}>HR Reject</button>
+                          <button onClick={() => act(r, "approve")} title="HOD approve this requisition"
+                            style={pillBtn("#15803D", r.hodApproval === "Approved")}>HOD Approve</button>
+                          <button onClick={() => act(r, "reject")} title="HOD reject this requisition"
+                            style={pillBtn("#DC2626", r.hodApproval === "Not Approved")}>HOD Reject</button>
                         </div>
                       )}
                       {canReceive && (

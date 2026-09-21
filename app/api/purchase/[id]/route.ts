@@ -12,15 +12,15 @@ import { parsePrItems, prItemsTotal } from "@/lib/purchase";
 //   { action: "hod-approve" | "hod-reject" | "approve" | "reject" | "received" }
 //   { action: "set-item-value", itemIndex, value }   // per-item cost, after receipt
 //   { action: "set-remarks", remarks }
-// hod-* is the requester's record of the HOD's decision; approve/reject is HR's;
+// Both approval action names record the HOD decision;
 // received is the Admin's. Toggle actions clear when the state already matches.
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  // HR approve/reject uses its own permission; every other action is a plain
+  // HOD approve/reject uses its own permission; every other action is a plain
   // edit of an existing PR. Peek at the body to pick the right key so a role
   // with only purchase.hr-approve can't sneak in a value/remarks edit.
   const body = await req.json();
   const action = body?.action;
-  // Each action carries its own permission: HR approval, receiving material, and
+  // Each action carries its own permission: HOD approval, receiving material, and
   // everything else (value / remarks / HOD) which is a plain edit.
   const guard = await guardWrite(
     action === "approve" || action === "reject" ? "purchase.hr-approve"
@@ -83,8 +83,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const patch =
       action === "hod-approve" ? { hodApproval: sql`CASE WHEN ${col.hodApproval} = 'Approved' THEN NULL ELSE 'Approved' END` } :
       action === "hod-reject"  ? { hodApproval: sql`CASE WHEN ${col.hodApproval} = 'Not Approved' THEN NULL ELSE 'Not Approved' END` } :
-      action === "approve" ? { hrApproval: sql`CASE WHEN ${col.hrApproval} = 'Approved' THEN NULL ELSE 'Approved' END` } :
-      action === "reject"  ? { hrApproval: sql`CASE WHEN ${col.hrApproval} = 'Rejected' THEN NULL ELSE 'Rejected' END` } :
+      action === "approve" ? { hodApproval: sql`CASE WHEN ${col.hodApproval} = 'Approved' THEN NULL ELSE 'Approved' END` } :
+      action === "reject"  ? { hodApproval: sql`CASE WHEN ${col.hodApproval} = 'Not Approved' THEN NULL ELSE 'Not Approved' END` } :
       action === "received" ? {
         status: sql`CASE WHEN ${col.status} = 'Material Received' THEN 'PR Raised' ELSE 'Material Received' END`,
         receivedByAdmin: sql`CASE WHEN ${col.status} = 'Material Received' THEN false ELSE true END`,
@@ -100,8 +100,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const verb =
       action === "hod-approve" ? (updated.hodApproval === "Approved" ? "HOD-approved" : "cleared HOD approval on") :
       action === "hod-reject"  ? (updated.hodApproval === "Not Approved" ? "marked HOD not-approved" : "cleared HOD decision on") :
-      action === "approve" ? (updated.hrApproval === "Approved" ? "HR-approved" : "cleared HR approval on") :
-      action === "reject"  ? (updated.hrApproval === "Rejected" ? "HR-rejected" : "cleared HR rejection on") :
+      action === "approve" ? (updated.hodApproval === "Approved" ? "HOD-approved" : "cleared HOD approval on") :
+      action === "reject"  ? (updated.hodApproval === "Not Approved" ? "HOD-rejected" : "cleared HOD rejection on") :
       (updated.status === "Material Received" ? "marked received" : "un-marked received on");
     await logActivity({
       user: guard, action: `purchase.${action}`,
@@ -137,7 +137,6 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       ...fields,
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
-      hrApproval: b.hrApproval || null,
       status: b.status || "PR Raised",
       poNo: b.poNo?.trim() || null,
       remarks: b.remarks?.trim() || null,

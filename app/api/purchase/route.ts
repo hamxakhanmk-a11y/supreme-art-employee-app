@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
       receivedDate: canReceive && b.receivedByAdmin ? (b.receivedDate || null) : null,
       requiredDate: b.requiredDate || null,
       hodApproval: b.hodApproval || null,
-      hrApproval: b.hrApproval || null,
       status: b.status || "PR Raised",
       poNo: b.poNo?.trim() || null,
       remarks: b.remarks?.trim() || null,

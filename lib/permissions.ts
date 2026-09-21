@@ -62,7 +62,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "purchase.edit",       label: "Purchase · Edit",        hint: "Edit an existing PR — value, remarks, HOD approval" },
   { key: "purchase.receive",    label: "Purchase · Receive",     hint: "Mark material received (Admin)" },
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
-  { key: "purchase.hr-approve", label: "Purchase · HR Approval", hint: "HR-approve or HR-reject a raised PR" },
+  { key: "purchase.hr-approve", label: "Purchase · HOD Approval", hint: "HOD-approve or HOD-reject a raised PR" },
   { key: "station",        label: "Station",          hint: "Station terminal & hourly-leave report — punch, edit times" },
   { key: "station.delete", label: "Station · Delete", hint: "Delete an hourly-leave trip from the Station report" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
