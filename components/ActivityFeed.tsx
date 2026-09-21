@@ -19,6 +19,7 @@ const FAMILY: Record<string, { label: string; color: string; bg: string }> = {
   purchase:   { label: "Purchase",   color: "#0E7490", bg: "#cffafe" },
   station:    { label: "Station",    color: "#9333EA", bg: "#f3e8ff" },
   store:      { label: "Store",      color: "#4F46E5", bg: "#e0e7ff" },
+  suppliers:  { label: "Supplier Directory", color: "#0F766E", bg: "#ccfbf1" },
 };
 
 const STORE_MODULE_LABEL: Record<string, string> = {

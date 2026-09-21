@@ -391,6 +391,21 @@ DO $$ BEGIN
     contact varchar(160),
     created_at timestamp NOT NULL DEFAULT now()
   );
+  -- Reference rates noted by hand in the Supplier Directory, per product +
+  -- supplier. Deliberately separate from the POs: the directory shows the
+  -- rate off the latest PO until someone notes one here, and what's noted
+  -- here never flows back into any purchase order.
+  CREATE TABLE IF NOT EXISTS supplier_product_rates (
+    id serial PRIMARY KEY,
+    product text NOT NULL,
+    supplier text NOT NULL,
+    rate double precision,
+    tax_pct double precision,
+    updated_by varchar(120),
+    updated_at timestamp NOT NULL DEFAULT now()
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS supplier_product_rates_key
+    ON supplier_product_rates (product, supplier);
   -- Columns added after their tables already existed.
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160);

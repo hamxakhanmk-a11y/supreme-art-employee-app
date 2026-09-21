@@ -565,6 +565,21 @@ export const suppliers = pgTable("suppliers", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Reference rate / tax % noted by hand against a product + supplier in the
+// Supplier Directory. Purely a note to look at: the directory falls back to
+// the rate on that product's latest PO when there's no row here, and nothing
+// stored here is ever written back to a purchase order. Keyed on the same
+// free-text product description + supplier name the By-product view groups on.
+export const supplierProductRates = pgTable("supplier_product_rates", {
+  id: serial("id").primaryKey(),
+  product: text("product").notNull(),
+  supplier: text("supplier").notNull(),
+  rate: doublePrecision("rate"),
+  taxPct: doublePrecision("tax_pct"),
+  updatedBy: varchar("updated_by", { length: 120 }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const grns = pgTable("grns", {
   id: serial("id").primaryKey(),
   grnNo: integer("grn_no").notNull(),                // auto running serial (internal doc no)

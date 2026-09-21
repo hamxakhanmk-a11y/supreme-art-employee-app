@@ -1,6 +1,9 @@
 // Product / Supplier directory. Answers "who did we order this product from,
-// and at what rate". Reads over existing purchase_orders rows; the only write
-// is correcting a line's rate / tax %, which goes back to that PO.
+// and at what rate". Reads over existing purchase_orders rows; purchase
+// orders are never written to from here. Rates shown come off each product's
+// most recent PO unless someone has noted their own figure against that
+// product + supplier, which is kept separately (supplier_product_rates) as
+// reference only.
 //
 // Two levels of access:
 //   • Super Admin          — the whole report, including the per-order view
@@ -13,7 +16,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { purchaseOrders } from "@/lib/schema";
+import { purchaseOrders, supplierProductRates } from "@/lib/schema";
 import { ensureProcurementTables, parseItems, qtyToNum, type PoItem } from "@/lib/procurement";
 import SupplierDirectoryClient, { type DirectoryRow } from "./SupplierDirectoryClient";
 
@@ -49,8 +52,7 @@ export default async function SupplierDirectoryPage() {
   const rows: DirectoryRow[] = [];
   for (const po of pos) {
     const items = parseItems<PoItem>(po.items);
-    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-      const it = items[itemIndex];
+    for (const it of items) {
       const desc = (it.description || it.item || "").trim();
       if (!desc) continue;
 
@@ -86,7 +88,6 @@ export default async function SupplierDirectoryPage() {
         supplierStrn: (po.supplierStrn || "").trim(),
         poId: po.id,
         poNo: po.poNo,
-        itemIndex,      // which line of that PO this row came from — the By-product view edits it in place
         date: po.date || "",  // ISO yyyy-mm-dd, formatted for display client-side
         rate,
         uom: (it.uom || "").trim(),
@@ -98,5 +99,19 @@ export default async function SupplierDirectoryPage() {
     }
   }
 
-  return <SupplierDirectoryClient rows={rows} byProductOnly={!isOwner} canEditRates={canEditRates} />;
+  // Hand-noted reference rates, keyed the same way the By-product view groups
+  // (exact product description + supplier name). Where one exists it's shown
+  // instead of the PO's rate; the PO itself is never changed by it.
+  const noted = await db.select().from(supplierProductRates);
+  const rateNotes: Record<string, { rate: number | null; taxPct: number | null }> = {};
+  for (const n of noted) rateNotes[JSON.stringify([n.product, n.supplier])] = { rate: n.rate, taxPct: n.taxPct };
+
+  return (
+    <SupplierDirectoryClient
+      rows={rows}
+      rateNotes={rateNotes}
+      byProductOnly={!isOwner}
+      canEditRates={canEditRates}
+    />
+  );
 }
