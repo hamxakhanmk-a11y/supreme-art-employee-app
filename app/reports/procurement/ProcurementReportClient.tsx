@@ -96,11 +96,10 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     <div className="fade-up procurement-master">
       <PrintLandscape />
       <div className="master-letterhead">
-        <div className="master-control"><span>Doc No. {meta.code}</span><span>Issue Status: {meta.issue}</span><span>Date: {meta.date}</span></div>
         <div className="master-company">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <div className="master-logo"><img src="/logo-urdu.png" alt="Supreme Art" width={210} height={105} /><div>{company.name}</div></div>
-          <h2>PROCUREMENT MASTER REPORT</h2>
+          <div className="master-logo"><img src="/logo-urdu.png" alt="Supreme Art" width={150} height={73} /><div>{company.name}</div></div>
+          <div className="master-heading"><h2>PROCUREMENT MASTER REPORT</h2><div className="master-control"><span>{meta.code}</span><span>Date: {meta.date}</span><span>Issue Status: {meta.issue}</span></div></div>
         </div>
       </div>
       <div className="no-print" style={{ marginBottom: 16 }}>
@@ -207,14 +206,14 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         .master-letterhead { display: none; }
         @media print {
           .master-letterhead { display: block; font-family: "Times New Roman", serif; color: #000; break-inside: avoid; }
-          .master-control { display: grid; grid-template-columns: 34% 28% 38%; border: 1px solid #000; background: #f0f0f0; }
-          .master-control span { padding: 7px; border-right: 1px solid #000; font-size: 10pt; }
+          .master-control { display: grid; grid-template-columns: 1fr 2fr 1fr; }
+          .master-control span { padding: 4px; font-size: 9pt; }
           .master-control span:last-child { border-right: 0; }
-          .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; border-top: 0; padding: 12px 20px; font-size: 11pt; line-height: 1.5; }
+          .master-company { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; font-size: 11pt; line-height: 1.5; }
           .master-company img { object-fit: contain; flex-shrink: 0; }
-          .master-logo { width: 230px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
-          .master-company h2 { flex: 1; }
-          .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 16px 0 8px; }
+          .master-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font-family: Arial, sans-serif; font-size: 9pt; font-weight: 700; }
+          .master-heading { flex: 1; text-align: center; }
+          .master-letterhead h2 { text-align: center; font-size: 17pt; margin: 6px 0 10px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
           .master-table { overflow: visible !important; border-radius: 0; }
           .master-table table { table-layout: fixed; }

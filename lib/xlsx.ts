@@ -68,7 +68,6 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
 
   } else {
     const h = spec.letterhead;
-    const third = Math.floor(nCols / 3);
     const merge = (row: number, start: number, end: number, value: string) => {
       ws.mergeCells(row, start, row, end);
       const c = ws.getCell(row, start);
@@ -76,16 +75,16 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       c.alignment = { vertical: "middle", wrapText: true }; c.border = BORDER;
       return c;
     };
-    merge(1, 1, third, "Doc No. " + h.code);
-    merge(1, third + 1, third * 2, "Issue Status: " + h.issue);
-    merge(1, third * 2 + 1, nCols, "Date: " + h.date);
-    ws.getRow(1).height = 25;
+    ws.mergeCells(1, 1, 2, 1);
+    const control = merge(3, 2, nCols, h.code + "     |     Date: " + h.date + "     |     Issue Status: " + h.issue);
+    control.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    ws.getRow(1).height = 29;
     const logoName = ws.getCell(3, 1);
     logoName.value = h.company.name;
     logoName.font = { name: "Arial", size: 9, bold: true, color: { argb: "FFA32D2D" } };
     logoName.alignment = { horizontal: "center", vertical: "middle", shrinkToFit: true };
-    ws.getRow(2).height = 78;
-    ws.getRow(3).height = 22;
+    ws.getRow(2).height = 29;
+    ws.getRow(3).height = 20;
     const response = await fetch(h.logoUrl);
     if (!response.ok) throw new Error("Unable to load the company logo. Please retry the export.");
     const blob = await response.blob();
@@ -94,9 +93,9 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
       reader.onerror = reject; reader.readAsDataURL(blob);
     });
     const imageId = wb.addImage({ base64, extension: "png" });
-    ws.addImage(imageId, { tl: { col: 0.25, row: 1.05 }, ext: { width: 190, height: 95 } });
-    ws.mergeCells(2, 2, 3, nCols);
-    const title = ws.getCell(2, 2);
+    ws.addImage(imageId, { tl: { col: 0.45, row: 0.05 }, ext: { width: 150, height: 73 } });
+    ws.mergeCells(1, 2, 2, nCols);
+    const title = ws.getCell(1, 2);
     title.value = spec.title;
     title.font = { name: "Times New Roman", size: 16, bold: true };
     title.alignment = { horizontal: "center", vertical: "middle" };
