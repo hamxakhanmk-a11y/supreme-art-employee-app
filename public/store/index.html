@@ -215,13 +215,6 @@ body:not(.role-admin) .admin-only{display:none!important}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#d6cdb9;border-radius:3px}
-/* ===== Brand header (top strip across main) ===== */
-.brand-header{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:14px 0 12px;margin:0 0 1.1rem;border-bottom:1px solid var(--border);background:transparent;flex-wrap:wrap}
-.brand-name{font-size:15px;font-weight:700;color:var(--primary);letter-spacing:0.2px}
-.brand-sub{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;margin-top:3px}
-.brand-date{text-align:right;line-height:1.25;color:var(--muted)}
-.brand-date-day{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--primary)}
-.brand-date-full{font-size:13px;font-weight:600;color:var(--text);margin-top:2px}
 /* ===== Hero banner (matches HR Portal slim banner) ===== */
 .hero{position:relative;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;border-radius:16px;padding:18px 26px;margin-bottom:1.25rem;overflow:hidden;box-shadow:0 10px 28px rgba(140,35,38,0.20);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;min-height:130px}
 .hero::before{content:"";position:absolute;right:-50px;top:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none}
@@ -262,10 +255,10 @@ body:not(.role-admin) .admin-only{display:none!important}
 .btn-primary:hover{background:linear-gradient(135deg,var(--primary-dark) 0%,#530F11 100%);box-shadow:0 6px 16px rgba(140,35,38,0.32)}
 /* ===== Module pill switcher tweak ===== */
 .mod-pill.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;box-shadow:0 3px 10px rgba(140,35,38,0.25)}
-/* ===== Top bar spacing now that brand-header sits above ===== */
+/* ===== Top bar spacing ===== */
 .top-bar{margin-top:0}
 @media print{
-  .brand-header,.hero{display:none!important}
+  .hero{display:none!important}
 }
 @media print{
   body{background:#fff;overflow:auto;height:auto}
@@ -341,14 +334,6 @@ body:not(.role-admin) .admin-only{display:none!important}
   </div>
 
   <div class="main">
-
-    <!-- BRAND HEADER (date strip; sidebar already shows the logo + name) -->
-    <div class="brand-header no-print">
-      <div class="brand-date">
-        <div class="brand-date-day" id="brand-date-day">—</div>
-        <div class="brand-date-full" id="brand-date-full">—</div>
-      </div>
-    </div>
 
     <!-- TOP BAR: module switcher + user info -->
     <!-- Module switcher moved into the employee-app top nav; nothing here now. -->
@@ -1897,11 +1882,6 @@ function renderDashboard(){
   const now=new Date();
   const d=document.getElementById('dash-date');
   if(d)d.textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  // Brand-header date strip
-  const bdDay=document.getElementById('brand-date-day');
-  const bdFull=document.getElementById('brand-date-full');
-  if(bdDay)bdDay.textContent=now.toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase();
-  if(bdFull)bdFull.textContent=now.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
   // Hero greeting (time-of-day aware + user name)
   const h=now.getHours();
   const greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
