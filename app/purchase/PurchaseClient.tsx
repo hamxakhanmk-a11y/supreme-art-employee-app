@@ -593,6 +593,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
 
       <style jsx global>{`
         .pr-table { font-size: 12.5px; }
+        .pr-table thead th { background: #f3eee4; color: #111; }
         .pr-table th, .pr-table td { padding: 7px 10px; vertical-align: top; }
         /* The register is wider than the screen, so pin the actions column to
            the right edge — the rest of the row scrolls underneath it and the
@@ -632,19 +633,20 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
         .only-print { display: none; }
         .purchase-letterhead { display: none; }
         @media print {
-          .purchase-letterhead { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; background: #f5f5f5 !important; break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          .purchase-letterhead { display: flex; align-items: center; gap: 24px; border: 1px solid #000; padding: 5px 10px; background: #f3eee4 !important; break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .purchase-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font: bold 9pt Arial, sans-serif; }
           .purchase-logo img { display: block; object-fit: contain; margin: 0 auto 4px; }
           .purchase-heading { flex: 1; text-align: center; font-family: "Times New Roman", serif; }
-          .purchase-heading h2 { color: #a32d2d; font-size: 17pt; margin: 6px 0 10px; }
-          .purchase-control { display: grid; grid-template-columns: 1fr 2fr 1fr; font-size: 9pt; }
-          .purchase-control span { padding: 4px; }
+          .purchase-heading h2 { color: #a32d2d; font-size: 17pt; margin: 6px 0 7px; }
+          .purchase-control { display: grid; grid-template-columns: 1fr 2fr 1fr; font-size: 10.5pt; line-height: 1.1; }
+          .purchase-control span { padding: 2px; }
           .pr-table thead { display: table-header-group; }
           .pr-table tbody tr { break-inside: avoid; position: static !important; }
           .pr-table td { border: none !important; box-shadow: none !important; }
           @page { size: A4 landscape; margin: 6mm; }
           .pr-table { font-size: 8.5px; }
           .pr-table th, .pr-table td { padding: 2px 4px; }
+          .pr-table thead th { background: #f3eee4 !important; color: #111 !important; font-size: 10pt !important; line-height: 1.1; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .pr-cat { display: none; }
           .only-print { display: inline; }
         }

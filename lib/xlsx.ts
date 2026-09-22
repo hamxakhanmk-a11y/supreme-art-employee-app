@@ -73,13 +73,25 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     const merge = (row: number, start: number, end: number, value: string) => {
       ws.mergeCells(row, start, row, end);
       const c = ws.getCell(row, start);
-      c.value = value; c.font = { name: "Times New Roman", size: 11 };
+      c.value = value; c.font = { name: "Times New Roman", size: 12 };
       c.alignment = { vertical: "middle", wrapText: true }; c.border = BORDER;
       return c;
     };
     ws.mergeCells(1, 1, 2, 1);
-    const control = merge(3, 2, nCols, [h.code, "Date: " + h.date, h.issue ? "Issue Status: " + h.issue : ""].filter(Boolean).join("     |     "));
-    control.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    if (nCols >= 5) {
+      const sideWidth = Math.max(1, Math.floor((nCols - 1) / 4));
+      const leftEnd = 1 + sideWidth;
+      const rightStart = nCols - sideWidth + 1;
+      const controls = [
+        merge(3, 2, leftEnd, h.code || ""),
+        merge(3, leftEnd + 1, rightStart - 1, "Date: " + h.date),
+        merge(3, rightStart, nCols, h.issue ? "Issue Status: " + h.issue : ""),
+      ];
+      controls.forEach(c => { c.alignment = { horizontal: "center", vertical: "middle", shrinkToFit: true }; });
+    } else {
+      const control = merge(3, 2, nCols, [h.code, "Date: " + h.date, h.issue ? "Issue Status: " + h.issue : ""].filter(Boolean).join("  |  "));
+      control.alignment = { horizontal: "center", vertical: "middle", shrinkToFit: true };
+    }
     ws.getRow(1).height = 29;
     const logoName = ws.getCell(3, 1);
     logoName.value = h.company.name;
@@ -107,7 +119,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     title.font = { name: "Times New Roman", size: 16, bold: true, color: { argb: "FFA32D2D" } };
     title.alignment = { horizontal: "center", vertical: "middle" };
     for (let row = 1; row <= 3; row++) for (let col = 1; col <= nCols; col++) {
-      ws.getCell(row,col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+      ws.getCell(row,col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3EEE4" } };
     }
     ws.pageSetup.paperSize = 9; ws.pageSetup.printTitlesRow = "1:4";
     ws.headerFooter.oddFooter = "&L" + h.company.name + "&RPage &P of &N";
@@ -116,7 +128,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
   spec.headers.forEach((h, i) => {
     const c = header.getCell(i + 1);
     c.value = h;
-    c.font = { bold: true, size: 10 };
+    c.font = { bold: true, size: 11 };
     c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3EEE4" } };
     c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     c.border = BORDER;

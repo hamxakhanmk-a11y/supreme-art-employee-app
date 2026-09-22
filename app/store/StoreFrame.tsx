@@ -22,7 +22,7 @@ export default function StoreFrame({ module }: { module: "machinery" | "consumab
         await downloadWorkbookXlsx({ filename, sheets: [{
           sheetName: String(title).slice(0, 31), title, headers, rows, freezeCols: headerGroups ? 3 : 1,
           headerGroups, colWidths,
-          letterhead: { ...reportLetterhead(from || "", to || ""), code },
+          letterhead: { ...reportLetterhead(from || "", to || ""), code, issue: headerGroups ? "01" : undefined },
         }] });
         frameRef.current?.contentWindow?.postMessage({ type: "store-excel-result", ok: true }, event.origin);
       } catch (error) {
