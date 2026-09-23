@@ -587,7 +587,7 @@ body:not(.role-admin) .admin-only{display:none!important}
     </div>
     <div class="form-group consumables-only" id="g-part-rack"><label class="form-label">Rack No.</label><input id="f-part-rack" placeholder="e.g. R-12 / A3"></div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">Opening Qty</label><input id="f-part-qty" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Opening Qty</label><input id="f-part-qty" type="number" min="0" step="any" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Min Qty (alert)</label><input id="f-part-min" type="number" min="0" placeholder="5"></div>
     </div>
     <div class="form-group"><label class="form-label">Description / Notes</label><input id="f-part-desc" placeholder="Optional description"></div>
@@ -613,7 +613,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       </div>
     </div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">Quantity *</label><input id="f-in-qty" type="number" min="1" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Quantity *</label><input id="f-in-qty" type="number" min="0" step="any" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-in-date" type="date"></div>
     </div>
     <div class="form-group"><label class="form-label">Supplier / Reference No.</label><input id="f-in-supplier" placeholder="Supplier name or PO number"></div>
@@ -640,7 +640,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       </div>
     </div>
     <div class="two-col">
-      <div class="form-group"><label class="form-group"><label class="form-label">Quantity *</label><input id="f-out-qty" type="number" min="1" placeholder="0"></div>
+      <div class="form-group"><label class="form-group"><label class="form-label">Quantity *</label><input id="f-out-qty" type="number" min="0" step="any" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-out-date" type="date"></div>
     </div>
     <div class="form-group"><label class="form-label">Issued To *</label><input id="f-out-issued" placeholder="Person / Department / Machine"></div>
@@ -747,7 +747,7 @@ body:not(.role-admin) .admin-only{display:none!important}
     </div>
     <div class="form-group consumables-only" id="g-edit-rack"><label class="form-label">Rack No.</label><input id="f-edit-rack" placeholder="e.g. R-12 / A3"></div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">Qty on Hand</label><input id="f-edit-qty" type="number" min="0"></div>
+      <div class="form-group"><label class="form-label">Qty on Hand</label><input id="f-edit-qty" type="number" min="0" step="any"></div>
       <div class="form-group"><label class="form-label">Min Qty (alert threshold)</label><input id="f-edit-min" type="number" min="0"></div>
     </div>
     <div class="form-group"><label class="form-label">Description / Notes</label><input id="f-edit-desc"></div>
@@ -999,7 +999,7 @@ function renderComboList(prefix,query){
         <div class="combo-name">${p.sku?'<span class="combo-sku">'+p.sku+'</span>':''}${p.name}</div>
         <div class="combo-sub">${subParts.filter(Boolean).join(' · ')||'—'}</div>
       </div>
-      <div class="combo-qty ${cls}">${p.qty} ${p.unit}</div>
+      <div class="combo-qty ${cls}">${fmtQty(p.qty)} ${p.unit}</div>
     </div>`;
   }).join('');
 }
@@ -1147,12 +1147,12 @@ function rowCells(sec,item,i){
     const mid=isInks()
       ? [item.brand||'—',item.supplier||'—',item.rackNo||'—']
       : [parseMachines(item.machine).join(', ')||'—'];
-    return[...head,...mid,item.unit,item.qty,item.minQty,s.label];
+    return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'+'+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.ref||'—',item.notes||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'-'+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.issuedTo||'—',item.purpose||'—'];
-  if(sec==='issuance') return[i+1,fmtDate(item.date),getPartName(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+item.qty+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.ref||'—',item.notes||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date),getPartName(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.issuedTo||'—',item.purpose||'—'];
+  if(sec==='issuance') return[i+1,fmtDate(item.date),getPartName(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
   return[];
 }
 
@@ -1525,7 +1525,7 @@ async function savePart(){
   const sku=document.getElementById('f-part-sku').value.trim();
   const name=document.getElementById('f-part-name').value.trim();
   if(!name){await warnDialog('Part name required','Enter a name for this part.');return;}
-  const qty=parseInt(document.getElementById('f-part-qty').value)||0;
+  const qty=parseFloat(document.getElementById('f-part-qty').value)||0;
   const fields=['f-part-sku','f-part-name','f-part-qty','f-part-min','f-part-desc','f-part-brand','f-part-supplier','f-part-rack'];
 
   async function mergeIntoExisting(existing){
@@ -1603,10 +1603,10 @@ async function savePart(){
 
 async function saveStockIn(){
   const partId=parseInt(document.getElementById('f-in-part').value);
-  const qty=parseInt(document.getElementById('f-in-qty').value);
+  const qty=parseFloat(document.getElementById('f-in-qty').value);
   const date=document.getElementById('f-in-date').value;
   if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
-  if(!qty||qty<1){await warnDialog('Quantity required','Enter a valid quantity (1 or more).');return;}
+  if(!(qty>0)){await warnDialog('Quantity required','Enter a quantity greater than zero (decimals like 2.5 are fine).');return;}
   if(!date){await warnDialog('Date required','Please choose a date.');return;}
   try{
     const txn=await apiFetch('/api/store/transactions','POST',{
@@ -1625,11 +1625,11 @@ async function saveStockIn(){
 
 async function saveStockOut(){
   const partId=parseInt(document.getElementById('f-out-part').value);
-  const qty=parseInt(document.getElementById('f-out-qty').value);
+  const qty=parseFloat(document.getElementById('f-out-qty').value);
   const date=document.getElementById('f-out-date').value;
   const issuedTo=document.getElementById('f-out-issued').value.trim();
   if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
-  if(!qty||qty<1){await warnDialog('Quantity required','Enter a valid quantity (1 or more).');return;}
+  if(!(qty>0)){await warnDialog('Quantity required','Enter a quantity greater than zero (decimals like 2.5 are fine).');return;}
   if(!date){await warnDialog('Date required','Please choose a date.');return;}
   if(!issuedTo){await warnDialog('Issued To required','Enter the person, department, or machine receiving the item.');return;}
   try{
@@ -1724,7 +1724,7 @@ async function updatePart(){
 
   try{
     const qtyRaw=document.getElementById('f-edit-qty').value;
-    const qty=qtyRaw===''?undefined:Math.max(0,parseInt(qtyRaw)||0);
+    const qty=qtyRaw===''?undefined:Math.max(0,parseFloat(qtyRaw)||0);
     const payload={
       id,sku,name,
       category:document.getElementById('f-edit-cat').value,
@@ -1893,7 +1893,7 @@ function renderDashboard(){
   if(sml)sml.textContent=modLabel;
   const sg=document.getElementById('stats-grid');
   const totalParts=state.parts.length;
-  const totalQty=state.parts.reduce((a,p)=>a+p.qty,0);
+  const totalQty=fmtQty(state.parts.reduce((a,p)=>a+p.qty,0));
   const lowStock=state.parts.filter(p=>p.qty>0&&p.qty<=p.minQty).length;
   const outOfStock=state.parts.filter(p=>p.qty===0).length;
   if(sg)sg.innerHTML=`
@@ -1915,7 +1915,7 @@ function renderDashboard(){
     </div>`;
   const lsl=document.getElementById('low-stock-list');
   const lp=state.parts.filter(p=>p.qty<=p.minQty);
-  if(lsl)lsl.innerHTML=lp.length?`<table><thead><tr><th>Part</th><th>Category</th><th>Current Qty</th><th>Min Qty</th><th>Status</th></tr></thead><tbody>${lp.map(p=>{const s=stockStatus(p);return`<tr><td style="font-weight:600">${p.sku?`<span class="part-sku">[${p.sku}]</span>`:''}${p.name}</td><td>${p.category}</td><td>${p.qty} ${p.unit}</td><td>${p.minQty}</td><td><span class="badge ${s.cls}">${s.label}</span></td></tr>`}).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-circle-check" style="color:#2d6a10;font-size:28px"></i>All stock levels are healthy</div>';
+  if(lsl)lsl.innerHTML=lp.length?`<table><thead><tr><th>Part</th><th>Category</th><th>Current Qty</th><th>Min Qty</th><th>Status</th></tr></thead><tbody>${lp.map(p=>{const s=stockStatus(p);return`<tr><td style="font-weight:600">${p.sku?`<span class="part-sku">[${p.sku}]</span>`:''}${p.name}</td><td>${p.category}</td><td>${fmtQty(p.qty)} ${p.unit}</td><td>${p.minQty}</td><td><span class="badge ${s.cls}">${s.label}</span></td></tr>`}).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-circle-check" style="color:#2d6a10;font-size:28px"></i>All stock levels are healthy</div>';
   const rt=document.getElementById('recent-txns');
   const recent=[...state.transactions].sort((a,b)=>b.id-a.id).slice(0,6);
   if(rt)rt.innerHTML=recent.length?`<table><thead><tr><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Details</th></tr></thead><tbody>${recent.map(t=>`<tr><td>${fmtDate(t.date)}</td><td style="font-weight:600">${getPartLabel(t.partId)}</td><td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td><td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${t.qty} ${getPartUnit(t.partId)}</td><td style="color:#888">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-file-off"></i>No transactions yet</div>';
@@ -1994,7 +1994,7 @@ function renderInventory(){
       <td>${p.category}</td>
       ${mid}
       <td style="color:#888">${p.unit}</td>
-      <td style="font-weight:700;font-size:15px">${p.qty}</td>
+      <td style="font-weight:700;font-size:15px">${fmtQty(p.qty)}</td>
       <td style="color:#888">${p.minQty}</td>
       <td><span class="badge ${s.cls}">${s.label}</span></td>
       <td class="no-print write-only">
@@ -2021,6 +2021,16 @@ function renderInventory(){
 // the real stock on hand, and each earlier row is that balance with the later
 // movements undone. Any unexplained historical gap lands on the oldest entries
 // — where the untracked change actually happened — instead of on today's.
+// Quantities can be fractional (2.5 kg of ink), and repeatedly adding or
+// subtracting values like 1.3 in binary floating point drifts into things
+// like 4.699999999999999. Trim that noise for display; whole numbers still
+// render plainly as "3", not "3.000".
+function fmtQty(n){
+  if(n===null||n===undefined||n==='')return n;
+  const v=Math.round(Number(n)*1000)/1000;
+  return isFinite(v)?String(v):n;
+}
+
 function computeBalances(){
   const byPart={};
   state.transactions.forEach(t=>{(byPart[t.partId]=byPart[t.partId]||[]).push(t)});
@@ -2033,7 +2043,7 @@ function computeBalances(){
     // back to the old sum-from-zero so the column still shows something.
     let bal=part?part.qty:list.reduce((s,t)=>s+delta(t),0);
     for(let i=list.length-1;i>=0;i--){
-      out[list[i].id]=bal;
+      out[list[i].id]=Math.round(bal*1000)/1000;
       bal-=delta(list[i]);
     }
   });
@@ -2207,7 +2217,7 @@ function renderTrash(){
     <td style="font-family:monospace;font-weight:600;color:#8C2326">${p.sku||'—'}</td>
     <td style="font-weight:600">${p.name}</td>
     <td>${p.category}</td>
-    <td>${p.qty} ${p.unit}</td>
+    <td>${fmtQty(p.qty)} ${p.unit}</td>
     <td style="color:#888;font-size:12px">${fmtTs(p.deletedAt)}</td>
     <td style="color:#854F0B;font-size:12px">${fmtTs(p.purgeAt)}<br><span style="color:#aaa">${daysLeft(p.purgeAt)}</span></td>
     <td>

@@ -4,6 +4,7 @@ import { storeParts, storeTransactions } from "@/lib/schema";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { ensureStoreQtyPrecision, roundQty } from "@/lib/store";
 
 // GET — only returns transactions whose part isn't in the trash.
 export async function GET() {
@@ -35,13 +36,18 @@ export async function POST(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
   try {
+    await ensureStoreQtyPrecision();
     const b = await req.json().catch(() => ({}));
     const type = String(b?.type || "");
     const partId = parseInt(b?.partId);
-    const qty = parseInt(b?.qty);
+    // Fractional: ink is issued by weight, so 2.5 kg has to go through.
+    const qty = roundQty(Number(b?.qty));
     const date = String(b?.date || "");
-    if (!type || !partId || !qty || !date) {
+    if (!type || !partId || !date) {
       return NextResponse.json({ error: "type, partId, qty and date are required" }, { status: 400 });
+    }
+    if (!isFinite(qty) || qty <= 0) {
+      return NextResponse.json({ error: "Quantity must be greater than zero" }, { status: 400 });
     }
     if (type !== "in" && type !== "out") {
       return NextResponse.json({ error: "type must be 'in' or 'out'" }, { status: 400 });
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Not enough stock! Available: ${p.qty}` }, { status: 400 });
     }
     await db.update(storeParts)
-      .set({ qty: type === "in" ? p.qty + qty : p.qty - qty })
+      .set({ qty: roundQty(type === "in" ? p.qty + qty : p.qty - qty) })
       .where(eq(storeParts.id, partId));
 
     const [row] = await db.insert(storeTransactions).values({
@@ -125,7 +131,7 @@ export async function DELETE(req: NextRequest) {
         if (!d) continue;
         const p = partsMap.get(pid);
         if (!p) continue;
-        await db.update(storeParts).set({ qty: p.qty + d }).where(eq(storeParts.id, pid));
+        await db.update(storeParts).set({ qty: roundQty(p.qty + d) }).where(eq(storeParts.id, pid));
       }
     }
     await db.delete(storeTransactions).where(inArray(storeTransactions.id, ids));

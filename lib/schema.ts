@@ -635,7 +635,9 @@ export const storeParts = pgTable("parts", {
   supplier: text("supplier").default(""),
   rackNo: text("rack_no").default(""),
   unit: text("unit").notNull().default("pcs"),
-  qty: integer("qty").notNull().default(0),
+  // Fractional: consumables are weighed out (2.5 kg of ink), while parts
+  // counted in pcs simply stay whole. See ensureStoreQtyPrecision().
+  qty: doublePrecision("qty").notNull().default(0),
   minQty: integer("min_qty").notNull().default(0),
   description: text("description").default(""),
   imageUrl: text("image_url"),                  // Vercel Blob URL
@@ -646,7 +648,7 @@ export const storeTransactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   type: varchar("type", { length: 4 }).notNull(),      // 'in' | 'out'
   partId: integer("part_id").notNull().references(() => storeParts.id, { onDelete: "cascade" }),
-  qty: integer("qty").notNull(),
+  qty: doublePrecision("qty").notNull(),
   date: date("date").notNull(),
   ref: text("ref").default(""),
   notes: text("notes").default(""),

@@ -4,6 +4,7 @@ import { storeParts, storeTransactions } from "@/lib/schema";
 import { and, asc, eq, isNull, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { ensureStoreQtyPrecision, roundQty } from "@/lib/store";
 
 const MODULES = new Set(["machinery", "consumables"]);
 function normalizeModule(m: string | null | undefined): "machinery" | "consumables" {
@@ -116,6 +117,7 @@ export async function PUT(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
   try {
+    await ensureStoreQtyPrecision();
     const b = await req.json().catch(() => ({}));
     const id = Number(b?.id);
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
@@ -127,9 +129,10 @@ export async function PUT(req: NextRequest) {
     const imageProvided = Object.prototype.hasOwnProperty.call(b, "imageUrl");
     const imageVal = b?.imageUrl || null;
     const qtyRaw = b?.qty;
+    // Fractional, so a stock count of 2.5 kg can be recorded as typed.
     const qtyVal = qtyRaw === undefined || qtyRaw === null || qtyRaw === ""
       ? null
-      : Math.max(0, parseInt(qtyRaw) || 0);
+      : roundQty(Math.max(0, Number(qtyRaw) || 0));
 
     let beforeQty: number | null = null;
     let partInfo: any = null;
@@ -167,7 +170,7 @@ export async function PUT(req: NextRequest) {
 
     let adjustmentTxn: unknown = null;
     if (partInfo && qtyVal !== null && beforeQty !== qtyVal) {
-      const diff = qtyVal - (beforeQty ?? 0);
+      const diff = roundQty(qtyVal - (beforeQty ?? 0));
       const sign = diff > 0 ? "+" : "";
       // Adjustment transaction so the Stock In/Out log — and its computed
       // running balance — stays truthful, instead of only the part's own
