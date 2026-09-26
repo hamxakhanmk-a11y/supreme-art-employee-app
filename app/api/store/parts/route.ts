@@ -4,7 +4,7 @@ import { storeParts, storeTransactions } from "@/lib/schema";
 import { and, asc, eq, isNull, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureStoreQtyPrecision, roundQty } from "@/lib/store";
+import { ensureStoreSchema, roundQty } from "@/lib/store";
 
 const MODULES = new Set(["machinery", "consumables"]);
 function normalizeModule(m: string | null | undefined): "machinery" | "consumables" {
@@ -117,7 +117,7 @@ export async function PUT(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
   try {
-    await ensureStoreQtyPrecision();
+    await ensureStoreSchema();
     const b = await req.json().catch(() => ({}));
     const id = Number(b?.id);
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
@@ -200,6 +200,7 @@ export async function PUT(req: NextRequest) {
         qty: storeTransactions.qty, date: sql<string>`${storeTransactions.date}::text`.as("date"),
         ref: storeTransactions.ref, notes: storeTransactions.notes,
         issuedTo: storeTransactions.issuedTo, purpose: storeTransactions.purpose,
+        challanNo: storeTransactions.challanNo,
       });
       adjustmentTxn = txn;
       await logActivity({

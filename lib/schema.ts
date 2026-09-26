@@ -636,7 +636,7 @@ export const storeParts = pgTable("parts", {
   rackNo: text("rack_no").default(""),
   unit: text("unit").notNull().default("pcs"),
   // Fractional: consumables are weighed out (2.5 kg of ink), while parts
-  // counted in pcs simply stay whole. See ensureStoreQtyPrecision().
+  // counted in pcs simply stay whole. See ensureStoreSchema().
   qty: doublePrecision("qty").notNull().default(0),
   minQty: integer("min_qty").notNull().default(0),
   description: text("description").default(""),
@@ -654,6 +654,9 @@ export const storeTransactions = pgTable("transactions", {
   notes: text("notes").default(""),
   issuedTo: text("issued_to").default(""),
   purpose: text("purpose").default(""),
+  // Delivery / gate-pass challan number. One challan covers a whole bulk
+  // entry, so every row saved together carries the same value.
+  challanNo: text("challan_no").default(""),
 });
 
 // =====================

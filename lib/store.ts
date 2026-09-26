@@ -15,10 +15,14 @@ import { db } from "./db";
 // and is a no-op afterwards, and by an in-memory flag so it's at most one
 // round-trip per server instance.
 let ensured = false;
-export async function ensureStoreQtyPrecision() {
+export async function ensureStoreSchema() {
   if (ensured) return;
   await db.execute(sql`
 DO $$ BEGIN
+  -- Delivery / gate-pass challan number against a stock movement. Optional,
+  -- and shared across every row of a bulk entry (one challan, many parts).
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS challan_no TEXT;
+
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'parts' AND column_name = 'qty' AND data_type = 'integer'

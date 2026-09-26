@@ -4,7 +4,7 @@ import { storeParts, storeTransactions } from "@/lib/schema";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureStoreQtyPrecision, roundQty } from "@/lib/store";
+import { ensureStoreSchema, roundQty } from "@/lib/store";
 
 // GET — only returns transactions whose part isn't in the trash.
 export async function GET() {
@@ -18,7 +18,8 @@ export async function GET() {
              t.date::text AS date,
              t.ref, t.notes,
              t.issued_to AS "issuedTo",
-             t.purpose
+             t.purpose,
+             t.challan_no AS "challanNo"
       FROM transactions t
       JOIN parts p ON p.id = t.part_id
       WHERE p.deleted_at IS NULL
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
   try {
-    await ensureStoreQtyPrecision();
+    await ensureStoreSchema();
     const b = await req.json().catch(() => ({}));
     const type = String(b?.type || "");
     const partId = parseInt(b?.partId);
@@ -68,16 +69,18 @@ export async function POST(req: NextRequest) {
       notes: (b?.notes || "").toString(),
       issuedTo: (b?.issuedTo || "").toString(),
       purpose: (b?.purpose || "").toString(),
+      challanNo: (b?.challanNo || "").toString(),
     }).returning({
       id: storeTransactions.id, type: storeTransactions.type, partId: storeTransactions.partId,
       qty: storeTransactions.qty, date: sql<string>`${storeTransactions.date}::text`.as("date"),
       ref: storeTransactions.ref, notes: storeTransactions.notes,
       issuedTo: storeTransactions.issuedTo, purpose: storeTransactions.purpose,
+      challanNo: storeTransactions.challanNo,
     });
     const label = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
     await logActivity({
       user: guard, action: `store.${p.module}.txn.${type}`,
-      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${label}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}`.trim(),
+      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${label}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
     });
     return NextResponse.json(row);
   } catch (e: any) {
