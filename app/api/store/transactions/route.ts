@@ -11,6 +11,11 @@ export async function GET() {
   const guard = await guardAuth();
   if (guard instanceof NextResponse) return guard;
   try {
+    // This SELECT names challan_no, so the column has to exist before the very
+    // first READ, not just before the first write. Without this the query
+    // throws, loadAll()'s Promise.all rejects, and the whole store — parts,
+    // categories, dashboard totals — renders empty as though the data were gone.
+    await ensureStoreSchema();
     const rows = await db.execute(sql`
       SELECT t.id, t.type,
              t.part_id   AS "partId",

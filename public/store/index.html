@@ -938,7 +938,14 @@ async function loadAll(){
     // Only transactions for parts in this module
     const partIds=new Set(parts.map(p=>p.id));
     state.transactions=transactions.filter(t=>partIds.has(t.partId));
-  }catch(e){console.error('Failed to load data:',e);}
+  }catch(e){
+    console.error('Failed to load data:',e);
+    // One failed request rejects the whole Promise.all, which used to leave the
+    // store rendering zeros everywhere — indistinguishable from the data having
+    // been wiped. Say plainly that the load failed instead of quietly showing
+    // an empty shop floor.
+    await errorDialog('Could not load the store',(e&&e.message?e.message+'. ':'')+'Nothing has been changed — reload the page to try again.');
+  }
   if(state.user && state.user.role==='admin'){
     try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
   } else {
