@@ -661,7 +661,16 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div class="form-group"><label class="form-label">Date *</label><input id="f-out-date" type="date"></div>
     </div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">Issued To *</label><input id="f-out-issued" placeholder="Person / Department / Machine"></div>
+      <div class="form-group">
+        <label class="form-label">Issued To *</label>
+        <div class="combo" id="f-out-issued-combo">
+          <div class="combo-input-wrap">
+            <input type="text" id="f-out-issued" placeholder="Search employee, or type a department / machine" autocomplete="off">
+            <i class="ti ti-chevron-down combo-icon"></i>
+          </div>
+          <div class="combo-dropdown" id="f-out-issued-dropdown"></div>
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-out-challan" placeholder="e.g. GP-2026-018"></div>
     </div>
     <div class="form-group"><label class="form-label">Purpose</label><input id="f-out-purpose" placeholder="Repair, maintenance, production..."></div>
@@ -704,7 +713,16 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="three-col">
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-bulkout-challan" placeholder="e.g. GP-2026-018"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-bulkout-date" type="date"></div>
-      <div class="form-group"><label class="form-label">Issued To *</label><input id="f-bulkout-issued" placeholder="Person / Department / Machine"></div>
+      <div class="form-group">
+        <label class="form-label">Issued To *</label>
+        <div class="combo" id="f-bulkout-issued-combo">
+          <div class="combo-input-wrap">
+            <input type="text" id="f-bulkout-issued" placeholder="Search employee, or type a department / machine" autocomplete="off">
+            <i class="ti ti-chevron-down combo-icon"></i>
+          </div>
+          <div class="combo-dropdown" id="f-bulkout-issued-dropdown"></div>
+        </div>
+      </div>
     </div>
     <div class="form-group"><label class="form-label">Purpose</label><input id="f-bulkout-purpose" placeholder="Repair, maintenance, production..."></div>
     <table class="bulk-table">
@@ -874,6 +892,7 @@ let state = {
   categories: [],
   machines: [],
   parts: [],
+  employees: [],
   transactions: [],
   trash: [],
   activity: []
@@ -946,6 +965,12 @@ async function loadAll(){
     // an empty shop floor.
     await errorDialog('Could not load the store',(e&&e.message?e.message+'. ':'')+'Nothing has been changed — reload the page to try again.');
   }
+  // Fetched on its own, not alongside the six above: the "Issued To" roster
+  // is a convenience, and one unavailable list must never take the whole
+  // store down with it — issuing to a typed name still works without it.
+  try{
+    state.employees=await apiFetch('/api/store/employees');
+  }catch(e){state.employees=[];console.warn('Employee list unavailable:',e.message);}
   if(state.user && state.user.role==='admin'){
     try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
   } else {
@@ -967,7 +992,7 @@ function showPage(id,el){
 
 function openModal(id){
   if(id==='addIn'){document.getElementById('f-in-date').value=today();resetPartCombo('f-in-part')}
-  if(id==='addOut'){document.getElementById('f-out-date').value=today();resetPartCombo('f-out-part')}
+  if(id==='addOut'){document.getElementById('f-out-date').value=today();resetPartCombo('f-out-part');resetEmpCombo('f-out-issued')}
   if(id==='bulkIn')resetBulkModal('bulkin');
   if(id==='bulkOut')resetBulkModal('bulkout');
   if(id==='addPart'){populateCatSelect('f-part-cat');populateMachineSelect('f-part-machine','');resetImagePick('add')}
@@ -1140,6 +1165,84 @@ function setupPartCombo(prefix){
   });
 }
 
+// ---- "Issued To" employee picker ----
+// The list comes from the app's own Employees module (active staff only), so it
+// follows hiring and exits on its own. Free text still wins: stock also goes to
+// a department or a machine, and anyone off the list can simply be typed. What
+// the picker buys is consistency — choosing a person always writes
+// "SAPL-6 — Aamir Khan", so one person is never recorded three different ways.
+const EMP_SEP=' — ';
+const _empComboInited=new Set();
+
+function empLabel(e){return e.code?e.code+EMP_SEP+e.name:e.name;}
+
+function renderEmpList(inputId,query){
+  const dd=document.getElementById(inputId+'-dropdown');
+  if(!dd)return;
+  const q=(query||'').trim().toLowerCase();
+  const all=state.employees||[];
+  const items=all.filter(e=>!q||(e.code+' '+e.name+' '+(e.department||'')).toLowerCase().includes(q)).slice(0,80);
+  if(!items.length){
+    const msg=all.length
+      ? 'No matching employee — whatever you type is kept as is'
+      : 'Employee list unavailable — type the name';
+    dd.innerHTML='<div class="combo-empty"><i class="ti ti-user-search"></i> '+msg+'</div>';
+    return;
+  }
+  dd.innerHTML=items.map(e=>`<div class="combo-item" data-label="${empLabel(e).replace(/"/g,'&quot;')}">
+    <div class="combo-main">
+      <div class="combo-name"><span class="combo-sku">${e.code}</span>${e.name}</div>
+      ${e.department?`<div class="combo-sub">${e.department}</div>`:''}
+    </div>
+  </div>`).join('');
+}
+
+function pickEmpItem(inputId,item){
+  if(!item)return;
+  document.getElementById(inputId).value=item.dataset.label;
+  document.getElementById(inputId+'-dropdown').classList.remove('open');
+}
+
+function setupEmpCombo(inputId){
+  if(_empComboInited.has(inputId))return;
+  const input=document.getElementById(inputId);
+  const dd=document.getElementById(inputId+'-dropdown');
+  if(!input||!dd)return;
+  _empComboInited.add(inputId);
+
+  // Note: no item is highlighted when the list opens, unlike the part picker.
+  // There, Enter has to resolve to a part; here the typed text is a valid
+  // answer in its own right, and pre-highlighting a row would let Enter quietly
+  // overwrite a hand-typed name with whoever happened to be at the top.
+  const open=()=>{renderEmpList(inputId,input.value);dd.classList.add('open');};
+  input.addEventListener('focus',open);
+  input.addEventListener('click',()=>dd.classList.add('open'));
+  input.addEventListener('input',open);
+  input.addEventListener('keydown',e=>{
+    if(!dd.classList.contains('open'))return;
+    const items=dd.querySelectorAll('.combo-item');
+    if(!items.length)return;
+    const cur=getActiveComboIndex(dd);
+    if(e.key==='ArrowDown'){e.preventDefault();setActiveComboItem(dd,Math.min(cur+1,items.length-1));}
+    else if(e.key==='ArrowUp'){e.preventDefault();setActiveComboItem(dd,Math.max(cur-1,0));}
+    else if(e.key==='Enter'){if(cur>=0){e.preventDefault();pickEmpItem(inputId,items[cur]);}else dd.classList.remove('open');}
+    else if(e.key==='Escape'){dd.classList.remove('open');}
+  });
+  // mousedown so it fires before the input's blur closes the dropdown
+  dd.addEventListener('mousedown',e=>{
+    const item=e.target.closest('.combo-item');
+    if(!item)return;
+    e.preventDefault();
+    pickEmpItem(inputId,item);
+  });
+}
+
+function resetEmpCombo(inputId){
+  setupEmpCombo(inputId);
+  const dd=document.getElementById(inputId+'-dropdown');
+  if(dd)dd.classList.remove('open');
+}
+
 // ---- Bulk stock in / out ----
 // A bulk entry is one challan covering many parts, so the shared fields (challan
 // no., date, supplier / issued-to, notes / purpose) live on the modal and a row
@@ -1202,6 +1305,7 @@ function resetBulkModal(kind){
     ? ['f-bulkin-challan','f-bulkin-supplier','f-bulkin-notes']
     : ['f-bulkout-challan','f-bulkout-issued','f-bulkout-purpose'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  if(kind==='bulkout')resetEmpCombo('f-bulkout-issued');
   const dt=document.getElementById('f-'+kind+'-date');
   if(dt)dt.value=today();
   const tb=document.getElementById(kind+'-rows');
