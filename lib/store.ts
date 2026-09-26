@@ -1,19 +1,20 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 
-// Quantities started out as INTEGER, which is fine for parts counted in pcs
-// but not for consumables weighed out in kg or litres — 2.5 kg of ink has to
-// be issuable. Widen both qty columns to double precision.
+// Schema the store needs that the original tables didn't have. Same
+// self-migrating approach the procurement tables use: production's DB URL isn't
+// available locally, so changes have to apply themselves on first use rather
+// than through a manual migration step. The /api/store/init route creates the
+// base tables but is superadmin-only and hit by hand, so it can't be relied on
+// to carry these.
 //
-// Same self-migrating approach the procurement tables use: production's DB
-// URL isn't available locally, so the change has to apply itself on first
-// use rather than through a manual migration step. The /api/store/init route
-// creates these tables but is superadmin-only and hit by hand, so it can't be
-// relied on to carry this.
-//
-// Guarded on the current column type so the (table-rewriting) ALTER runs once
-// and is a no-op afterwards, and by an in-memory flag so it's at most one
+// Everything lives in ONE statement — a single DO block — because the Neon HTTP
+// driver refuses a query carrying several commands. Each step is written to be
+// a no-op the second time, and an in-memory flag keeps it to at most one
 // round-trip per server instance.
+//
+// Call this from reads as well as writes: a read naming a column this creates
+// will throw on a database that hasn't had it added yet.
 let ensured = false;
 export async function ensureStoreSchema() {
   if (ensured) return;
@@ -22,6 +23,17 @@ DO $$ BEGIN
   -- Delivery / gate-pass challan number against a stock movement. Optional,
   -- and shared across every row of a bulk entry (one challan, many parts).
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS challan_no TEXT;
+
+  -- Stock recipients who aren't on the payroll (contractors, outside workshops),
+  -- added from the store's own "Issued To" picker.
+  CREATE TABLE IF NOT EXISTS store_recipients (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  -- On LOWER(name), so "Ali Traders" can't come back as "ali traders".
+  CREATE UNIQUE INDEX IF NOT EXISTS store_recipients_name_key
+    ON store_recipients (LOWER(name));
 
   IF EXISTS (
     SELECT 1 FROM information_schema.columns

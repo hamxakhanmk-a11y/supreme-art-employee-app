@@ -123,6 +123,10 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .combo-qty{font-size:12px;color:#2d6a10;font-weight:600;white-space:nowrap;flex-shrink:0}
 .combo-qty.low{color:#854F0B}.combo-qty.out{color:#A32D2D}
 .combo-empty{padding:18px;text-align:center;color:#aaa;font-size:12px}
+.combo-item.combo-add{background:#fdfaf5;position:sticky;top:0;z-index:2;border-bottom:1px solid #f1ead9}
+.combo-item.combo-add .combo-name{color:#8C2326;display:flex;align-items:center;gap:6px}
+.emp-del{border:none;background:transparent;color:#ccc;font-size:16px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px;flex-shrink:0}
+.emp-del:hover{background:#fbefef;color:#A32D2D}
 .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .bulk-table{width:100%;border-collapse:collapse;font-size:13px}
 .bulk-table th{background:#fbf6ee;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#888;padding:6px 8px;text-align:left;font-weight:600}
@@ -893,6 +897,7 @@ let state = {
   machines: [],
   parts: [],
   employees: [],
+  recipients: [],
   transactions: [],
   trash: [],
   activity: []
@@ -969,8 +974,12 @@ async function loadAll(){
   // is a convenience, and one unavailable list must never take the whole
   // store down with it — issuing to a typed name still works without it.
   try{
-    state.employees=await apiFetch('/api/store/employees');
-  }catch(e){state.employees=[];console.warn('Employee list unavailable:',e.message);}
+    const [emps,recips]=await Promise.all([
+      apiFetch('/api/store/employees'),
+      apiFetch('/api/store/recipients')
+    ]);
+    state.employees=emps;state.recipients=recips;
+  }catch(e){state.employees=[];state.recipients=[];console.warn('Issued-to list unavailable:',e.message);}
   if(state.user && state.user.role==='admin'){
     try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
   } else {
@@ -1166,41 +1175,100 @@ function setupPartCombo(prefix){
 }
 
 // ---- "Issued To" employee picker ----
-// The list comes from the app's own Employees module (active staff only), so it
-// follows hiring and exits on its own. Free text still wins: stock also goes to
-// a department or a machine, and anyone off the list can simply be typed. What
-// the picker buys is consistency — choosing a person always writes
-// "SAPL-6 — Aamir Khan", so one person is never recorded three different ways.
+// The staff list comes from the app's own Employees module (active staff only),
+// so it follows hiring and exits on its own. Alongside it sits a short list the
+// store keeps for itself — contractors, outside workshops, anyone stock goes to
+// who isn't on the payroll — added right here through "+ New employee".
+//
+// Free text still wins: stock also goes to a department or a machine, and
+// anything typed is kept as is. What the picker buys is consistency — picking a
+// person always writes "SAPL-6 — Aamir Khan", so one person is never recorded
+// three different ways.
 const EMP_SEP=' — ';
 const _empComboInited=new Set();
 
 function empLabel(e){return e.code?e.code+EMP_SEP+e.name:e.name;}
 
+// Staff first, then the store's own additions.
+function empPool(){
+  const staff=(state.employees||[]).map(e=>({code:e.code||'',name:e.name,sub:e.department||''}));
+  const extra=(state.recipients||[]).map(r=>({code:'',name:r.name,sub:'Added here',rid:r.id}));
+  return staff.concat(extra);
+}
+
 function renderEmpList(inputId,query){
   const dd=document.getElementById(inputId+'-dropdown');
   if(!dd)return;
-  const q=(query||'').trim().toLowerCase();
-  const all=state.employees||[];
-  const items=all.filter(e=>!q||(e.code+' '+e.name+' '+(e.department||'')).toLowerCase().includes(q)).slice(0,80);
-  if(!items.length){
-    const msg=all.length
-      ? 'No matching employee — whatever you type is kept as is'
-      : 'Employee list unavailable — type the name';
-    dd.innerHTML='<div class="combo-empty"><i class="ti ti-user-search"></i> '+msg+'</div>';
-    return;
-  }
-  dd.innerHTML=items.map(e=>`<div class="combo-item" data-label="${empLabel(e).replace(/"/g,'&quot;')}">
+  const q=(query||'').trim();
+  const ql=q.toLowerCase();
+  const pool=empPool();
+  const items=pool.filter(e=>!ql||(e.code+' '+e.name+' '+e.sub).toLowerCase().includes(ql)).slice(0,80);
+  const rows=items.map(e=>`<div class="combo-item" data-label="${empLabel(e).replace(/"/g,'&quot;')}">
     <div class="combo-main">
-      <div class="combo-name"><span class="combo-sku">${e.code}</span>${e.name}</div>
-      ${e.department?`<div class="combo-sub">${e.department}</div>`:''}
+      <div class="combo-name">${e.code?'<span class="combo-sku">'+e.code+'</span>':''}${e.name}</div>
+      ${e.sub?`<div class="combo-sub">${e.sub}</div>`:''}
     </div>
-  </div>`).join('');
+    ${e.rid?`<button type="button" class="emp-del" data-rid="${e.rid}" title="Remove from this list">&times;</button>`:''}
+  </div>`);
+  // First, and pinned there while the list scrolls. The dropdown hangs inside a
+  // modal that clips it, so anything below the first few names needs scrolling
+  // to reach — at the bottom this row would simply go unseen. It also means
+  // searching for someone who isn't listed ends on the way to adding them
+  // rather than on a dead end.
+  const typed=q&&!pool.some(e=>empLabel(e).toLowerCase()===ql||e.name.toLowerCase()===ql);
+  rows.unshift(`<div class="combo-item combo-add" data-add="1">
+    <div class="combo-main">
+      <div class="combo-name"><i class="ti ti-plus"></i> ${typed?'Add "'+q.replace(/</g,'&lt;').replace(/"/g,'&quot;')+'"':'New employee…'}</div>
+      <div class="combo-sub">${items.length?'Someone not on the staff list':'Nobody matches — add them to the list'}</div>
+    </div>
+  </div>`);
+  dd.innerHTML=rows.join('');
 }
 
 function pickEmpItem(inputId,item){
   if(!item)return;
   document.getElementById(inputId).value=item.dataset.label;
   document.getElementById(inputId+'-dropdown').classList.remove('open');
+}
+
+// Adds a name the store will remember, and fills it into the field being used.
+async function addEmpInline(inputId,typed){
+  const name=((await promptDialog({
+    title:'Add to the Issued To list',
+    message:'For someone not on the staff list — a contractor, an outside workshop, a visitor. Staff themselves come from the Employees tab automatically.',
+    placeholder:'e.g. Rashid (contractor)',
+    defaultValue:typed||'',
+    confirmText:'Add'
+  }))||'').trim();
+  if(!name)return;
+  const input=document.getElementById(inputId);
+  try{
+    const row=await apiFetch('/api/store/recipients','POST',{name});
+    state.recipients=(state.recipients||[]).filter(r=>r.id!==row.id).concat([row])
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    if(input){input.value=row.name;input.focus();}
+    const dd=document.getElementById(inputId+'-dropdown');
+    if(dd)dd.classList.remove('open');
+  }catch(e){await errorDialog('Could not add to the list',e.message);}
+}
+
+// Only takes the name off the picker — issuances already recorded against it
+// keep their text, since "Issued To" is stored on the transaction itself.
+async function removeRecipient(inputId,rid){
+  const r=(state.recipients||[]).find(x=>x.id===rid);
+  if(!r)return;
+  const ok=await confirmDialog({
+    title:`Remove "${r.name}" from the list?`,
+    message:'It stops being offered here. Stock already issued to this name keeps it in the records.',
+    variant:'warn',confirmText:'Remove'
+  });
+  if(!ok)return;
+  try{
+    await apiFetch('/api/store/recipients?id='+rid,'DELETE');
+    state.recipients=(state.recipients||[]).filter(x=>x.id!==rid);
+    const input=document.getElementById(inputId);
+    renderEmpList(inputId,input?input.value:'');
+  }catch(e){await errorDialog('Could not remove',e.message);}
 }
 
 function setupEmpCombo(inputId){
@@ -1210,7 +1278,7 @@ function setupEmpCombo(inputId){
   if(!input||!dd)return;
   _empComboInited.add(inputId);
 
-  // Note: no item is highlighted when the list opens, unlike the part picker.
+  // Note: no row is highlighted when the list opens, unlike the part picker.
   // There, Enter has to resolve to a part; here the typed text is a valid
   // answer in its own right, and pre-highlighting a row would let Enter quietly
   // overwrite a hand-typed name with whoever happened to be at the top.
@@ -1225,15 +1293,24 @@ function setupEmpCombo(inputId){
     const cur=getActiveComboIndex(dd);
     if(e.key==='ArrowDown'){e.preventDefault();setActiveComboItem(dd,Math.min(cur+1,items.length-1));}
     else if(e.key==='ArrowUp'){e.preventDefault();setActiveComboItem(dd,Math.max(cur-1,0));}
-    else if(e.key==='Enter'){if(cur>=0){e.preventDefault();pickEmpItem(inputId,items[cur]);}else dd.classList.remove('open');}
+    else if(e.key==='Enter'){
+      if(cur<0){dd.classList.remove('open');return;}
+      e.preventDefault();
+      const item=items[cur];
+      if(item.dataset.add)addEmpInline(inputId,input.value.trim());
+      else pickEmpItem(inputId,item);
+    }
     else if(e.key==='Escape'){dd.classList.remove('open');}
   });
   // mousedown so it fires before the input's blur closes the dropdown
   dd.addEventListener('mousedown',e=>{
+    const del=e.target.closest('.emp-del');
+    if(del){e.preventDefault();removeRecipient(inputId,parseInt(del.dataset.rid));return;}
     const item=e.target.closest('.combo-item');
     if(!item)return;
     e.preventDefault();
-    pickEmpItem(inputId,item);
+    if(item.dataset.add)addEmpInline(inputId,input.value.trim());
+    else pickEmpItem(inputId,item);
   });
 }
 

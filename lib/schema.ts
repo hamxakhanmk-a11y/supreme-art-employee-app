@@ -622,6 +622,17 @@ export const storeMachines = pgTable("machines", {
   moduleName: uniqueIndex("machines_module_name_key").on(t.module, t.name),
 }));
 
+// People stock gets issued to who aren't on the payroll — a contractor, an
+// outside workshop, a visiting engineer. Added from the store's "Issued To"
+// picker itself: opening an HR record for someone who will never be an employee
+// isn't the point, but the name still has to be spelled the same way every
+// time. Shared by both store modules, since a person isn't module-specific.
+export const storeRecipients = pgTable("store_recipients", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const storeParts = pgTable("parts", {
   id: serial("id").primaryKey(),
   sku: text("sku"),
