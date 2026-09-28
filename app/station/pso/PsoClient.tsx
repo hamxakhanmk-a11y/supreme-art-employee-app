@@ -56,7 +56,22 @@ export default function PsoClient({
       submittedDate: r.submittedDate ?? "", submittedTime: r.submittedTime,
       amount: r.amount === null ? "" : String(r.amount),
       litres: r.litres === null ? "" : String(r.litres),
+      rate: r.rate === null ? "" : String(r.rate),
+      slipNo: r.slipNo,
       notes: r.notes,
+    });
+  };
+
+  // Litres × rate is what the slip adds up to, so typing those fills the
+  // amount. It stays editable: slips round, and the printed total wins.
+  const setFuel = (key: "litres" | "rate" | "amount", value: string) => {
+    setDraft(d => {
+      const next = { ...d, [key]: value };
+      if (key !== "amount") {
+        const l = parseFloat(next.litres), r = parseFloat(next.rate);
+        if (isFinite(l) && isFinite(r) && l > 0 && r > 0) next.amount = String(Math.round(l * r * 100) / 100);
+      }
+      return next;
     });
   };
 
@@ -92,11 +107,11 @@ export default function PsoClient({
       filename: `pso-card-register-${from}-to-${to}.xlsx`,
       sheetName: "PSO Cards",
       title: `PSO Card Register — ${fmt(from)} to ${fmt(to)}`,
-      headers: ["Sr No", "Driver Name", "Veh No.", "Collection Date", "Collection Time", "Date submitted", "Time submitted", "SN", "Fuel (PKR)", "Litres", "Notes"],
-      colWidths: [7, 24, 12, 15, 14, 15, 14, 16, 13, 10, 26],
+      headers: ["Sr No", "Driver Name", "Veh No.", "Collection Date", "Collection Time", "Date submitted", "Time submitted", "Card SN", "Slip No.", "Litres", "Rate", "Fuel (PKR)", "Notes"],
+      colWidths: [7, 24, 12, 15, 14, 15, 14, 16, 14, 10, 10, 13, 26],
       rows: shown.map((r, i) => [
         i + 1, r.driver, r.vehicleNo, fmt(r.collectedDate), r.collectedTime,
-        fmt(r.submittedDate), r.submittedTime, r.sn, r.amount ?? "", r.litres ?? "", r.notes,
+        fmt(r.submittedDate), r.submittedTime, r.sn, r.slipNo, r.litres ?? "", r.rate ?? "", r.amount ?? "", r.notes,
       ]),
     });
   };
@@ -112,8 +127,8 @@ export default function PsoClient({
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 PSO Card Register</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Cards out with drivers and back again. A submitted card with an amount writes the month&apos;s
-            fuel entry for that vehicle, so the Log Book average counts it.
+            Cards out with drivers and back again. Submit the card with the slip&apos;s number, litres and rate —
+            that writes the month&apos;s fuel entry for that vehicle, so the Log Book&apos;s average counts it.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -162,7 +177,7 @@ export default function PsoClient({
               <th>Sr</th><th>Driver Name</th><th>Veh No.</th>
               <th>Collection Date</th><th>Time</th>
               <th>Date submitted</th><th>Time</th>
-              <th>SN</th><th className="num">Fuel (PKR)</th><th>Notes</th>
+              <th>Card / Slip</th><th className="num">Fuel (PKR)</th><th>Notes</th>
               {!readOnly && <th className="no-print" style={{ width: 120 }}>Actions</th>}
             </tr>
           </thead>
@@ -194,10 +209,21 @@ export default function PsoClient({
                 <td><input type="time" value={draft.collectedTime} onChange={e => setDraft({ ...draft, collectedTime: e.target.value })} /></td>
                 <td><input type="date" value={draft.submittedDate} onChange={e => setDraft({ ...draft, submittedDate: e.target.value })} /></td>
                 <td><input type="time" value={draft.submittedTime} onChange={e => setDraft({ ...draft, submittedTime: e.target.value })} /></td>
-                <td style={{ fontFamily: "monospace" }}>{r.sn}</td>
+                <td style={{ fontFamily: "monospace" }}>
+                  {r.sn}
+                  <input value={draft.slipNo} onChange={e => setDraft({ ...draft, slipNo: e.target.value })} placeholder="slip no." style={{ marginTop: 4 }} />
+                </td>
                 <td>
-                  <input type="number" step="any" value={draft.amount} onChange={e => setDraft({ ...draft, amount: e.target.value })} placeholder="PKR" />
-                  <input type="number" step="any" value={draft.litres} onChange={e => setDraft({ ...draft, litres: e.target.value })} placeholder="litres" style={{ marginTop: 4 }} />
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <input type="number" step="any" value={draft.litres} onChange={e => setFuel("litres", e.target.value)} placeholder="litres" style={{ width: 72 }} />
+                    <input type="number" step="any" value={draft.rate} onChange={e => setFuel("rate", e.target.value)} placeholder="rate" style={{ width: 72 }} />
+                  </div>
+                  <input type="number" step="any" value={draft.amount} onChange={e => setFuel("amount", e.target.value)} placeholder="PKR" style={{ marginTop: 4, fontWeight: 700 }} />
+                  {draft.submittedDate && !draft.litres && (
+                    <div style={{ fontSize: 10.5, color: "#B45309", marginTop: 3, lineHeight: 1.35 }}>
+                      Without litres this fuel has no km/litre average and the log book&apos;s P.O.L. column stays blank.
+                    </div>
+                  )}
                 </td>
                 <td><input value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} /></td>
                 <td className="no-print">
@@ -218,10 +244,17 @@ export default function PsoClient({
                   {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }}>still out</span>}
                 </td>
                 <td>{r.submittedTime}</td>
-                <td style={{ fontFamily: "monospace" }}>{r.sn}</td>
+                <td style={{ fontFamily: "monospace" }}>
+                  {r.sn}
+                  {r.slipNo && <div style={{ fontSize: 11, color: "var(--text3)" }}>slip {r.slipNo}</div>}
+                </td>
                 <td className="num" style={{ fontWeight: 700 }}>
                   {r.amount === null ? "" : r.amount.toLocaleString("en-PK")}
-                  {r.litres ? <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)" }}>{r.litres} L</div> : null}
+                  {r.litres
+                    ? <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)" }}>{r.litres} L{r.rate ? ` @ ${r.rate}` : ""}</div>
+                    : r.submittedDate && r.amount
+                      ? <div style={{ fontSize: 10.5, fontWeight: 400, color: "#B45309" }}>no litres</div>
+                      : null}
                 </td>
                 <td style={{ color: "var(--text2)" }}>{r.notes}</td>
                 {!readOnly && (

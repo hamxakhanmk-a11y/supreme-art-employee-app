@@ -44,13 +44,14 @@ async function syncFuelEntry(issueId: number) {
     vehicleId: i.vehicleId!,
     date: i.submittedDate!,
     litres,
-    // Only a real division: rupees with no litres still record the cost, and
-    // the month's km/litre average simply doesn't count them.
-    rate: litres > 0 ? Math.round((i.amount! / litres) * 100) / 100 : 0,
+    // The slip states the rate; deriving it is only a fallback, and rupees
+    // with no litres still record the cost — that month's km/litre average
+    // simply doesn't count them.
+    rate: i.rate ?? (litres > 0 ? Math.round((i.amount! / litres) * 100) / 100 : 0),
     amount: i.amount!,
     drawnById: i.driverId,
     vendor: `PSO card ${card?.sn ?? ""}`.trim(),
-    notes: i.notes || "",
+    notes: [i.slipNo ? `Slip ${i.slipNo}` : "", i.notes || ""].filter(Boolean).join(" · "),
     cardIssueId: issueId,
   };
   if (existing) await db.update(fuelEntries).set(values).where(eq(fuelEntries.id, existing.id));
@@ -160,6 +161,8 @@ export async function PUT(req: NextRequest) {
       submittedDate, submittedTime: submittedDate ? submittedTime : null,
       amount: b?.amount !== undefined ? num(b.amount) : before.amount,
       litres: b?.litres !== undefined ? num(b.litres) : before.litres,
+      rate: b?.rate !== undefined ? num(b.rate) : before.rate,
+      slipNo: b?.slipNo !== undefined ? String(b.slipNo).trim().slice(0, 40) : before.slipNo,
       notes: b?.notes !== undefined ? String(b.notes).trim() : before.notes,
     }).where(eq(psoCardIssues.id, id));
 

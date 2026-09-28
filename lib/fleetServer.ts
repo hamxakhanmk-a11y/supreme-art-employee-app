@@ -253,6 +253,8 @@ export type PsoRow = {
   submittedTime: string;
   amount: number | null;
   litres: number | null;
+  rate: number | null;
+  slipNo: string;
   notes: string;
 };
 
@@ -269,7 +271,8 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
            COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(i.driver_name), ''), '—') AS driver,
            i.collected_date::text AS "collectedDate", COALESCE(i.collected_time, '') AS "collectedTime",
            i.submitted_date::text AS "submittedDate", COALESCE(i.submitted_time, '') AS "submittedTime",
-           i.amount, i.litres, COALESCE(i.notes, '') AS notes
+           i.amount, i.litres, i.rate, COALESCE(i.slip_no, '') AS "slipNo",
+           COALESCE(i.notes, '') AS notes
     FROM pso_card_issues i
     JOIN pso_cards c ON c.id = i.card_id
     LEFT JOIN vehicles v ON v.id = i.vehicle_id
@@ -283,5 +286,6 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
     ...r,
     amount: r.amount === null ? null : Number(r.amount),
     litres: r.litres === null ? null : Number(r.litres),
+    rate: r.rate === null ? null : Number(r.rate),
   }));
 }

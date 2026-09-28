@@ -139,6 +139,8 @@ DO $$ BEGIN
     submitted_time varchar(5),
     amount double precision,
     litres double precision,
+    rate double precision,
+    slip_no varchar(40),
     notes text DEFAULT '',
     created_at timestamptz NOT NULL DEFAULT now()
   );

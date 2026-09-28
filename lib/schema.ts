@@ -807,7 +807,11 @@ export const psoCardIssues = pgTable("pso_card_issues", {
   submittedDate: date("submitted_date"),                      // null = still out
   submittedTime: varchar("submitted_time", { length: 5 }),
   amount: doublePrecision("amount"),                          // Fuel (PKR)
-  litres: doublePrecision("litres"),                          // optional; the km/litre average needs it
+  litres: doublePrecision("litres"),                          // from the slip; the km/litre average needs it
+  rate: doublePrecision("rate"),                              // from the slip, rather than derived from amount ÷ litres
+  // The bill slip's own number. Distinct from the card's number, which PSO
+  // also prints on the slip — hence the same SN recurring in the old sheet.
+  slipNo: varchar("slip_no", { length: 40 }),
   notes: text("notes").default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
