@@ -140,8 +140,6 @@ function FuelRecordForm({
 }) {
   const [collectedDate, setCollectedDate] = useState(today());
   const [collectedTime, setCollectedTime] = useState("");
-  const [submittedDate, setSubmittedDate] = useState(today());
-  const [submittedTime, setSubmittedTime] = useState("");
   const [slipNo, setSlipNo] = useState("");
   const [amount, setAmount] = useState("");
   const [driverId, setDriverId] = useState<number | "">("");
@@ -159,7 +157,7 @@ function FuelRecordForm({
           vehicleId: vehicleId || null,
           // Blank means whoever is holding the card, which is the usual case.
           driverId: driverId || null,
-          collectedDate, collectedTime, submittedDate, submittedTime,
+          collectedDate, collectedTime,
           slipNo, amount, notes,
         }),
       });
@@ -175,8 +173,7 @@ function FuelRecordForm({
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
         <Field label="Collection date *"><input type="date" value={collectedDate} onChange={e => setCollectedDate(e.target.value)} /></Field>
         <Field label="Collection time"><input type="time" value={collectedTime} onChange={e => setCollectedTime(e.target.value)} /></Field>
-        <Field label="Date submitted"><input type="date" value={submittedDate} onChange={e => setSubmittedDate(e.target.value)} /></Field>
-        <Field label="Time submitted"><input type="time" value={submittedTime} onChange={e => setSubmittedTime(e.target.value)} /></Field>
+
         <Field label="Slip no."><input value={slipNo} onChange={e => setSlipNo(e.target.value)} placeholder="from the bill slip" /></Field>
         <Field label="Fuel (PKR) *"><input type="number" step="any" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" /></Field>
         <Field label="Drawn by">
@@ -198,7 +195,9 @@ function FuelRecordForm({
           {busy ? "Saving…" : "Save record"}
         </button>
         <button className="btn" onClick={onCancel} disabled={busy}>Cancel</button>
-        <span style={{ fontSize: 11.5, color: "var(--text3)" }}>The card stays with {card.out?.driver}.</span>
+        <span style={{ fontSize: 11.5, color: "var(--text3)" }}>
+          The card stays with {card.out?.driver}, so this stays pending until it comes back.
+        </span>
       </div>
     </div>
   );

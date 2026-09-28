@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, psoCards } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { employees, psoCardIssues, psoCards } from "@/lib/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
@@ -29,9 +29,19 @@ export async function POST(req: NextRequest) {
       await db.update(psoCards)
         .set({ heldById: null, heldByName: null, heldSince: null })
         .where(eq(psoCards.id, cardId));
+
+      // Every fill drawn while the card was out is submitted the moment it
+      // comes back — that is when the slips are handed over, so a record
+      // cannot be "submitted" while the card is still in a pocket.
+      const now = new Date();
+      const stamped = await db.update(psoCardIssues).set({
+        submittedDate: now.toISOString().slice(0, 10),
+        submittedTime: now.toTimeString().slice(0, 5),
+      }).where(and(eq(psoCardIssues.cardId, cardId), isNull(psoCardIssues.submittedDate))).returning({ id: psoCardIssues.id });
       await logActivity({
         user: guard, action: "station.card.in",
-        summary: `took PSO card ${card.sn} back from ${card.heldByName}`,
+        summary: `took PSO card ${card.sn} back from ${card.heldByName}`
+          + (stamped.length ? ` — ${stamped.length} fuel record${stamped.length === 1 ? "" : "s"} submitted` : ""),
       });
       return NextResponse.json({ ok: true, action });
     }

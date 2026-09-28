@@ -200,7 +200,7 @@ export default function RegisterClient({
                 <td style={{ whiteSpace: "nowrap" }}>{fmt(r.collectedDate)}</td>
                 <td>{r.collectedTime}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
-                  {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }}>slip pending</span>}
+                  {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }} title="The card is still out — records are submitted when it comes back">pending</span>}
                 </td>
                 <td>{r.submittedTime}</td>
                 <td style={{ fontFamily: "monospace" }}>

@@ -67,7 +67,11 @@ export async function POST(req: NextRequest) {
       vehicleId: b?.vehicleId ? Number(b.vehicleId) : card.vehicleId,
       driverId, driverName,
       collectedDate, collectedTime,
-      submittedDate, submittedTime: submittedDate ? submittedTime : null,
+      // Left open while the card is still out: it is submitted when the card
+      // comes back. A record entered after the card is already in is a slip
+      // arriving now.
+      submittedDate: submittedDate ?? (card.heldByName ? null : collectedDate),
+      submittedTime: submittedDate ? submittedTime : null,
       slipNo: String(b?.slipNo || "").trim().slice(0, 40),
       amount: money(b?.amount),
       notes: String(b?.notes || "").trim(),
