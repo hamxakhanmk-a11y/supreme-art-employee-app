@@ -719,7 +719,10 @@ export const vehicles = pgTable("vehicles", {
 export const vehicleDrivers = pgTable("vehicle_drivers", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
-  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  // Null for a driver who isn't on the payroll — a hired driver, a
+  // contractor's man. `name` is filled either way.
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 160 }),
 });
 
 export const fleetTrips = pgTable("fleet_trips", {
@@ -729,6 +732,9 @@ export const fleetTrips = pgTable("fleet_trips", {
   outAt: timestamp("out_at", { withTimezone: true }).notNull(),
   inAt: timestamp("in_at", { withTimezone: true }),
   driverId: integer("driver_id").references(() => employees.id, { onDelete: "set null" }),
+  // The name as it stood on the day: so a page still reads after a driver
+  // leaves, and so one who was never an employee reads at all.
+  driverName: varchar("driver_name", { length: 160 }),
   destination: text("destination").default(""), // "Details of Journey"
   purpose: text("purpose").default(""),
   meterOut: integer("meter_out").notNull(),

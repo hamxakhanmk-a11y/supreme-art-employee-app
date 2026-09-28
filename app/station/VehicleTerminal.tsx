@@ -10,7 +10,7 @@ import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Offi
 
 const PIN_LEN = 3;
 
-export type Driver = { id: number; code: string; name: string };
+export type Driver = { rowId: number; employeeId: number | null; code: string; name: string };
 type Found = {
   vehicle: { id: number; vehicleNo: string; name: string | null; type: string; defaultDriverId: number | null };
   drivers: Driver[];
@@ -46,7 +46,7 @@ export default function VehicleTerminal({
     finally { setBusy(false); }
   }, []);
 
-  const takeOut = async (body: { driverId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => {
+  const takeOut = async (body: { driverRowId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => {
     if (!data) return;
     setBusy(true); setError(null);
     try {

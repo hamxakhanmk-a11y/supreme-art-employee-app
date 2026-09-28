@@ -6,15 +6,18 @@ import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL } from "@/lib/fleet";
 type Driver = { id: number; employeeId: string; firstName: string; lastName: string };
 
 type OpenTrip = { id: number; outAt: string; destination: string; meterOut: number; driver: string };
+
+// Either an employee, or a plain name for a driver who isn't on the payroll.
+type DriverEntry = { employeeId: number | null; name: string };
 type Vehicle = {
   id: number; vehicleNo: string; pin: string | null; name: string; type: string;
-  defaultDriverId: number | null; driverIds: number[]; active: boolean; notes: string;
+  defaultDriverId: number | null; drivers: DriverEntry[]; active: boolean; notes: string;
   openTrip: OpenTrip | null;
 };
 
 const BLANK = {
   id: 0, vehicleNo: "", pin: "", name: "", type: "car",
-  defaultDriverId: "" as number | "", driverIds: [] as number[], notes: "", active: true,
+  defaultDriverId: "" as number | "", drivers: [] as DriverEntry[], notes: "", active: true,
 };
 
 export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[]; readOnly: boolean }) {
@@ -24,6 +27,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   const [form, setForm] = useState({ ...BLANK });
   const [busy, setBusy] = useState(false);
   const [showRetired, setShowRetired] = useState(false);
+  const [manual, setManual] = useState("");
 
   const driverName = (id: number | null) => {
     const d = drivers.find(x => x.id === id);
@@ -43,16 +47,30 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const hasEmployee = (id: number) => form.drivers.some(d => d.employeeId === id);
+
   const toggleDriver = (id: number) => {
     setForm(f => {
-      const has = f.driverIds.includes(id);
-      const driverIds = has ? f.driverIds.filter(x => x !== id) : [...f.driverIds, id];
+      const has = f.drivers.some(d => d.employeeId === id);
+      const drivers = has ? f.drivers.filter(d => d.employeeId !== id) : [...f.drivers, { employeeId: id, name: "" }];
       // Dropping the usual driver from the list clears them, rather than
       // leaving the gate preselecting someone who may not drive it.
       const defaultDriverId = has && f.defaultDriverId === id ? "" as number | "" : f.defaultDriverId;
-      return { ...f, driverIds, defaultDriverId };
+      return { ...f, drivers, defaultDriverId };
     });
   };
+
+  // Someone who isn't on the payroll — a hired driver, a contractor's man.
+  const addManualDriver = () => {
+    const name = manual.trim();
+    if (!name) return;
+    if (form.drivers.some(d => !d.employeeId && d.name.toLowerCase() === name.toLowerCase())) { setManual(""); return; }
+    setForm(f => ({ ...f, drivers: [...f.drivers, { employeeId: null, name }] }));
+    setManual("");
+  };
+
+  const removeManualDriver = (name: string) =>
+    setForm(f => ({ ...f, drivers: f.drivers.filter(d => d.employeeId !== null || d.name !== name) }));
 
   const save = async () => {
     if (!form.vehicleNo.trim()) { setErr("Vehicle number is required"); return; }
@@ -76,10 +94,29 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
     setErr("");
     setForm({
       id: v.id, vehicleNo: v.vehicleNo, pin: v.pin || "", name: v.name || "", type: v.type,
-      defaultDriverId: v.defaultDriverId ?? "", driverIds: v.driverIds ?? [],
+      defaultDriverId: v.defaultDriverId ?? "", drivers: v.drivers ?? [],
       notes: v.notes || "", active: v.active,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Set straight from the list: PINs are handed out a row at a time, and
+  // opening the whole form for three digits is three clicks too many.
+  const savePin = async (v: Vehicle, pin: string) => {
+    if (pin && !/^\d{3}$/.test(pin)) { setErr("The vehicle PIN must be 3 digits"); return false; }
+    if ((v.pin || "") === pin) return true;   // nothing typed, nothing to save
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/fleet/vehicles", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...v, pin }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not save the PIN");
+      await load();
+      return true;
+    } catch (e: any) { setErr(e.message); return false; }
+    finally { setBusy(false); }
   };
 
   const setActive = async (v: Vehicle, active: boolean) => {
@@ -148,7 +185,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
               Usual driver
               <select value={form.defaultDriverId} onChange={e => setForm({ ...form, defaultDriverId: e.target.value ? Number(e.target.value) : "" })}>
                 <option value="">— none —</option>
-                {drivers.filter(d => form.driverIds.includes(d.id)).map(d => (
+                {drivers.filter(d => hasEmployee(d.id)).map(d => (
                   <option key={d.id} value={d.id}>{d.employeeId} — {d.firstName} {d.lastName}</option>
                 ))}
               </select>
@@ -159,14 +196,14 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             <div style={{ gridColumn: "1 / -1" }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>Who may drive it</span>
               <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", margin: "2px 0 6px" }}>
-                Only these names are offered at the gate — not the whole payroll.
+                Only these names are offered at the gate. Anyone not on the staff list can be added by hand below.
               </span>
               <div style={{
                 display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 168, overflowY: "auto",
                 border: "1px solid var(--border)", borderRadius: 8, padding: 8,
               }}>
                 {drivers.map(d => {
-                  const on = form.driverIds.includes(d.id);
+                  const on = hasEmployee(d.id);
                   return (
                     <button key={d.id} type="button" onClick={() => toggleDriver(d.id)}
                       style={{
@@ -179,6 +216,34 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
                     </button>
                   );
                 })}
+              </div>
+
+              {form.drivers.filter(d => !d.employeeId).length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {form.drivers.filter(d => !d.employeeId).map(d => (
+                    <span key={d.name} style={{
+                      display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700,
+                      background: "#FEF3C7", border: "1px solid #FDE68A", color: "#92400E",
+                      borderRadius: 999, padding: "5px 6px 5px 11px",
+                    }}>
+                      {d.name}
+                      <button type="button" onClick={() => removeManualDriver(d.name)}
+                        style={{ border: "none", background: "transparent", color: "#A32D2D", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 3px" }}
+                        title="Remove">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input
+                  value={manual}
+                  onChange={e => setManual(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addManualDriver(); } }}
+                  placeholder="Someone not on the staff list — e.g. Rashid (hired driver)"
+                  style={{ flex: 1 }}
+                />
+                <button type="button" className="btn" onClick={addManualDriver} disabled={!manual.trim()}>+ Add</button>
               </div>
             </div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", gridColumn: "1 / -1" }}>
@@ -225,14 +290,20 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
                   {v.vehicleNo}
                   <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", fontFamily: "var(--font)" }}>{VEHICLE_TYPE_LABEL[v.type] || v.type}</div>
                 </td>
-                <td style={{ textAlign: "center", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: v.pin ? "var(--brand)" : "var(--text3)" }}>
-                  {v.pin || "not set"}
+                <td style={{ textAlign: "center" }}>
+                  {readOnly ? (
+                    <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: v.pin ? "var(--brand)" : "var(--text3)" }}>
+                      {v.pin || "not set"}
+                    </span>
+                  ) : (
+                    <PinCell vehicle={v} busy={busy} onSave={savePin} />
+                  )}
                 </td>
                 <td>{v.name || "—"}</td>
                 <td style={{ fontSize: 12 }}>
-                  {v.driverIds.length === 0
+                  {(v.drivers?.length ?? 0) === 0
                     ? <span style={{ color: "#B45309", fontWeight: 600 }}>none set</span>
-                    : <>{v.driverIds.length} · <span style={{ color: "var(--text3)" }}>{driverName(v.defaultDriverId)}</span></>}
+                    : <>{v.drivers.length} · <span style={{ color: "var(--text3)" }}>{driverName(v.defaultDriverId)}</span></>}
                 </td>
                 <td style={{ fontSize: 12 }}>
                   {!v.active ? <span style={{ color: "var(--text3)" }}>Retired</span>
@@ -256,5 +327,49 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
         </table>
       </div>
     </div>
+  );
+}
+
+// The PIN column, editable where it stands. Saves when you leave the box or
+// press Enter; Escape puts back what was there. Kept local so typing doesn't
+// re-render the whole table on every keystroke.
+function PinCell({ vehicle, busy, onSave }: {
+  vehicle: { id: number; pin: string | null };
+  busy: boolean;
+  onSave: (v: any, pin: string) => Promise<boolean>;
+}) {
+  const [value, setValue] = useState(vehicle.pin || "");
+  const [dirty, setDirty] = useState(false);
+
+  // A save elsewhere (or a reload) wins over an untouched box.
+  useEffect(() => { if (!dirty) setValue(vehicle.pin || ""); }, [vehicle.pin, dirty]);
+
+  const commit = async () => {
+    if (!dirty) return;
+    const ok = await onSave(vehicle, value);
+    setDirty(false);
+    if (!ok) setValue(vehicle.pin || "");
+  };
+
+  return (
+    <input
+      value={value}
+      inputMode="numeric"
+      maxLength={3}
+      disabled={busy}
+      placeholder="—"
+      onChange={e => { setValue(e.target.value.replace(/\D/g, "").slice(0, 3)); setDirty(true); }}
+      onBlur={commit}
+      onKeyDown={e => {
+        if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+        else if (e.key === "Escape") { setValue(vehicle.pin || ""); setDirty(false); }
+      }}
+      title="3-digit PIN typed at the gate"
+      style={{
+        width: 62, textAlign: "center", padding: "6px 4px",
+        fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: 1,
+        color: value ? "var(--brand)" : "var(--text3)",
+      }}
+    />
   );
 }

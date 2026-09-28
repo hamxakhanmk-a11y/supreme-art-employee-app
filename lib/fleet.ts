@@ -48,6 +48,21 @@ DO $$ BEGIN
   );
   CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_key ON vehicle_drivers (vehicle_id, employee_id);
 
+  -- Not every driver is on the payroll — a hired driver, a contractor's man.
+  -- Such a row carries a plain name and no employee link, so employee_id stops
+  -- being mandatory and a name column joins it.
+  ALTER TABLE vehicle_drivers ALTER COLUMN employee_id DROP NOT NULL;
+  ALTER TABLE vehicle_drivers ADD COLUMN IF NOT EXISTS name varchar(160);
+  -- The index above can't stop a name being added twice, since two NULL
+  -- employee_ids never collide. This one does.
+  CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_name_key
+    ON vehicle_drivers (vehicle_id, LOWER(name)) WHERE employee_id IS NULL;
+
+  -- The driver's name as it stood on the day. Always written, so a trip driven
+  -- by someone off the payroll still prints, and so does one driven by an
+  -- employee who has since left.
+  ALTER TABLE fleet_trips ADD COLUMN IF NOT EXISTS driver_name varchar(160);
+
   CREATE TABLE IF NOT EXISTS fleet_trips (
     id serial PRIMARY KEY,
     vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,

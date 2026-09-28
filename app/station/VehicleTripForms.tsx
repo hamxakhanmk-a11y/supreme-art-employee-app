@@ -75,22 +75,28 @@ function OfficerPicker({ people, value, onChange, disabled }: {
   );
 }
 
+// A manually-added driver has no staff code, so the dash would dangle.
+function driverLabel(d: { code: string; name: string }) {
+  return d.code ? `${d.code} — ${d.name}` : d.name;
+}
+
 // --- Taking a vehicle out ---------------------------------------------------
 // The vehicle is already known — its PIN is how we got here — so this asks who
 // is driving it, from the people set on that vehicle and nobody else.
 export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, busy, onCancel, onSubmit }: {
-  drivers: { id: number; code: string; name: string }[];
+  drivers: { rowId: number; employeeId: number | null; code: string; name: string }[];
   defaultDriverId: number | null;
   lastMeter: number | null;
   people: Person[];
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (body: { driverId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => void;
+  onSubmit: (body: { driverRowId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => void;
 }) {
   // The usual driver, when they're on the list; otherwise the only name there,
   // and failing that nothing preselected.
-  const [driverId, setDriverId] = useState<number | "">(() =>
-    drivers.find(d => d.id === defaultDriverId)?.id ?? (drivers.length === 1 ? drivers[0].id : "")
+  const [driverRowId, setDriverRowId] = useState<number | "">(() =>
+    drivers.find(d => d.employeeId !== null && d.employeeId === defaultDriverId)?.rowId
+    ?? (drivers.length === 1 ? drivers[0].rowId : "")
   );
   const [meter, setMeter] = useState("");
   const [destination, setDestination] = useState("");
@@ -100,17 +106,17 @@ export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, bu
   const typed = meter.trim() === "" ? null : Math.round(Number(meter));
   // Warned about here, and refused by the server either way.
   const backwards = typed !== null && lastMeter !== null && isFinite(typed) && typed < lastMeter;
-  const ready = driverId !== "" && typed !== null && isFinite(typed) && !backwards;
+  const ready = driverRowId !== "" && typed !== null && isFinite(typed) && !backwards;
 
   return (
     <div style={{ marginTop: 8 }}>
       <span style={labelStyle}>Driver</span>
       {drivers.length === 1 ? (
-        <div style={{ ...field, fontWeight: 700, textAlign: "left" }}>{drivers[0].code} — {drivers[0].name}</div>
+        <div style={{ ...field, fontWeight: 700, textAlign: "left" }}>{driverLabel(drivers[0])}</div>
       ) : (
-        <select value={driverId} disabled={busy} onChange={e => setDriverId(Number(e.target.value))} style={field}>
+        <select value={driverRowId} disabled={busy} onChange={e => setDriverRowId(Number(e.target.value))} style={field}>
           <option value="">— choose the driver —</option>
-          {drivers.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+          {drivers.map(d => <option key={d.rowId} value={d.rowId}>{driverLabel(d)}</option>)}
         </select>
       )}
 
@@ -139,7 +145,7 @@ export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, bu
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
-          onClick={() => onSubmit({ driverId: Number(driverId), meterOut: typed ?? NaN, destination, purpose, officers })}
+          onClick={() => onSubmit({ driverRowId: Number(driverRowId), meterOut: typed ?? NaN, destination, purpose, officers })}
           disabled={busy || !ready}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,

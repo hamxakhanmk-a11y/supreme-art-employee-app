@@ -63,7 +63,7 @@ export async function openTripForVehicle(vehicleId: number): Promise<OpenTripInf
            COALESCE(v.name, '') AS "vehicleName",
            t.out_at AS "outAt", COALESCE(t.destination, '') AS destination,
            COALESCE(t.purpose, '') AS purpose, t.meter_out AS "meterOut",
-           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), '—') AS driver,
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(t.driver_name), ''), '—') AS driver,
            COALESCE(
              (SELECT json_agg(o.name ORDER BY o.id) FROM fleet_trip_officers o WHERE o.trip_id = t.id),
              '[]'::json
@@ -117,7 +117,7 @@ export async function vehiclesOut() {
     SELECT t.id, t.out_at AS "outAt", t.meter_out AS "meterOut",
            COALESCE(t.destination, '') AS destination, COALESCE(t.purpose, '') AS purpose,
            v.vehicle_no AS "vehicleNo", COALESCE(v.name, '') AS "vehicleName",
-           COALESCE(TRIM(e.first_name || ' ' || e.last_name), '—') AS driver,
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(t.driver_name), ''), '—') AS driver,
            COALESCE(
              (SELECT json_agg(o.name ORDER BY o.id) FROM fleet_trip_officers o WHERE o.trip_id = t.id),
              '[]'::json
@@ -176,7 +176,7 @@ export async function logBookMonth(vehicleId: number, month: string) {
   const first = `${month}-01`;
   const tripsRes = await db.execute(sql`
     SELECT t.id, t.date::text AS date, t.out_at AS "outAt", t.in_at AS "inAt",
-           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), '—') AS driver,
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(t.driver_name), ''), '—') AS driver,
            COALESCE(t.destination, '') AS destination, COALESCE(t.purpose, '') AS purpose,
            t.meter_out AS "meterOut", t.meter_in AS "meterIn", t.km_covered AS "kmCovered",
            COALESCE(t.remarks, '') AS remarks,

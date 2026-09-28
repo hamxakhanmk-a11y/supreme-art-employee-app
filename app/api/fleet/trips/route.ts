@@ -35,10 +35,12 @@ export async function POST(req: NextRequest) {
     await ensureFleetSchema();
     const b = await req.json().catch(() => ({}));
     const vehicleId = Number(b?.vehicleId);
-    const driverId = Number(b?.driverId);
+    // The gate names a row from the vehicle's own driver list, which may or may
+    // not be an employee; the employee link and the name both come from it.
+    const driverRowId = Number(b?.driverRowId);
     const meterOut = Math.round(Number(b?.meterOut));
     if (!vehicleId) return NextResponse.json({ error: "Pick a vehicle" }, { status: 400 });
-    if (!driverId) return NextResponse.json({ error: "No driver on this trip" }, { status: 400 });
+    if (!driverRowId) return NextResponse.json({ error: "No driver on this trip" }, { status: 400 });
     if (!isFinite(meterOut) || meterOut < 0) {
       return NextResponse.json({ error: "Enter the meter reading" }, { status: 400 });
     }
@@ -53,18 +55,35 @@ export async function POST(req: NextRequest) {
       .where(and(eq(fleetTrips.vehicleId, vehicleId), isNull(fleetTrips.inAt))).limit(1);
     if (vehicleOut) return NextResponse.json({ error: `${v.vehicleNo} is already out` }, { status: 409 });
 
-    const [driverOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
-      .where(and(eq(fleetTrips.driverId, driverId), isNull(fleetTrips.inAt))).limit(1);
-    if (driverOut) return NextResponse.json({ error: "You're already out in another vehicle" }, { status: 409 });
-
     // The gate only offers this vehicle's own drivers, but the check belongs
     // here too: a terminal left open while the list was edited would otherwise
     // still be able to book a trip against someone taken off it.
-    const [allowed] = await db.select({ id: vehicleDrivers.id }).from(vehicleDrivers)
-      .where(and(eq(vehicleDrivers.vehicleId, vehicleId), eq(vehicleDrivers.employeeId, driverId))).limit(1);
+    const [allowed] = await db.select({
+      id: vehicleDrivers.id, employeeId: vehicleDrivers.employeeId, name: vehicleDrivers.name,
+    }).from(vehicleDrivers)
+      .where(and(eq(vehicleDrivers.id, driverRowId), eq(vehicleDrivers.vehicleId, vehicleId))).limit(1);
     if (!allowed) {
       return NextResponse.json({ error: `That driver isn't on ${v.vehicleNo}'s list` }, { status: 400 });
     }
+    const driverId = allowed.employeeId;
+
+    // Only employees can be "already out": a name with no employee behind it
+    // isn't one person the system can follow across vehicles.
+    if (driverId) {
+      const [driverOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
+        .where(and(eq(fleetTrips.driverId, driverId), isNull(fleetTrips.inAt))).limit(1);
+      if (driverOut) return NextResponse.json({ error: "That driver is already out in another vehicle" }, { status: 409 });
+    }
+
+    // Resolved now and stored on the trip, so the log book still reads after
+    // the driver leaves — or when they were never an employee at all.
+    let driverName = String(allowed.name || "").trim();
+    if (driverId) {
+      const [drv] = await db.select({ first: employees.firstName, last: employees.lastName })
+        .from(employees).where(eq(employees.id, driverId));
+      if (drv) driverName = `${drv.first} ${drv.last}`.trim();
+    }
+    if (!driverName) return NextResponse.json({ error: "That driver has no name recorded" }, { status: 400 });
 
     const meterErr = await checkMeterForward(vehicleId, meterOut);
     if (meterErr) return NextResponse.json({ error: meterErr }, { status: 400 });
@@ -83,6 +102,7 @@ export async function POST(req: NextRequest) {
       date: sql`(now() AT TIME ZONE 'Asia/Karachi')::date`,
       outAt: stamp,
       driverId,
+      driverName,
       destination: String(b?.destination || "").trim(),
       purpose: String(b?.purpose || "").trim(),
       meterOut,
@@ -94,11 +114,8 @@ export async function POST(req: NextRequest) {
       await db.insert(fleetTripOfficers).values(officers.map(o => ({ tripId: trip.id, ...o })));
     }
 
-    const [drv] = await db.select({ first: employees.firstName, last: employees.lastName })
-      .from(employees).where(eq(employees.id, driverId));
-    const who = drv ? `${drv.first} ${drv.last}` : `#${driverId}`;
     await logActivity({
-      user: guard, action: "station.vehicle.out", employeeId: driverId, employeeName: who,
+      user: guard, action: "station.vehicle.out", employeeId: driverId ?? undefined, employeeName: driverName,
       summary: `took ${v.vehicleNo} out at ${meterOut} km${trip.destination ? ` — ${trip.destination}` : ""}`,
     });
     return NextResponse.json({ action: "out", trip, officers: officers.map(o => o.name) });

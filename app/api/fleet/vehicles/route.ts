@@ -22,17 +22,29 @@ function pinError(pin: string | null): string | null {
   return /^\d{3}$/.test(pin) ? null : "The vehicle PIN must be 3 digits";
 }
 
+// Who may drive this vehicle. Each entry is either an employee or a plain
+// name for someone off the payroll — a hired driver, a contractor's man.
+//
 // Replaced wholesale on save: the list is a handful of names, and diffing
 // would buy nothing but a chance to get it wrong.
-async function setDrivers(vehicleId: number, ids: unknown) {
-  const wanted = Array.isArray(ids)
-    ? Array.from(new Set(ids.map((x: any) => Number(x)).filter(Boolean)))
-    : [];
-  await db.delete(vehicleDrivers).where(eq(vehicleDrivers.vehicleId, vehicleId));
-  if (wanted.length) {
-    await db.insert(vehicleDrivers).values(wanted.map(employeeId => ({ vehicleId, employeeId })));
+type DriverIn = { employeeId?: number | null; name?: string };
+
+async function setDrivers(vehicleId: number, raw: unknown) {
+  const rows: { employeeId: number | null; name: string }[] = [];
+  if (Array.isArray(raw)) {
+    for (const d of raw as DriverIn[]) {
+      const employeeId = d?.employeeId ? Number(d.employeeId) : null;
+      const name = String(d?.name || "").trim().slice(0, 160);
+      if (!employeeId && !name) continue;
+      // Same person twice — by link for employees, by name for the rest.
+      if (employeeId ? rows.some(r => r.employeeId === employeeId)
+                     : rows.some(r => !r.employeeId && r.name.toLowerCase() === name.toLowerCase())) continue;
+      rows.push({ employeeId, name });
+    }
   }
-  return wanted;
+  await db.delete(vehicleDrivers).where(eq(vehicleDrivers.vehicleId, vehicleId));
+  if (rows.length) await db.insert(vehicleDrivers).values(rows.map(r => ({ vehicleId, ...r })));
+  return rows;
 }
 
 function normalizeType(t: unknown): string {
@@ -78,13 +90,16 @@ export async function GET(req: NextRequest) {
     // Every vehicle's drivers in one query, not one query per vehicle.
     const ids = rows.map(r => r.id);
     const links = ids.length
-      ? await db.select({ vehicleId: vehicleDrivers.vehicleId, employeeId: vehicleDrivers.employeeId })
-          .from(vehicleDrivers).where(inArray(vehicleDrivers.vehicleId, ids))
+      ? await db.select({
+          id: vehicleDrivers.id, vehicleId: vehicleDrivers.vehicleId,
+          employeeId: vehicleDrivers.employeeId, name: vehicleDrivers.name,
+        }).from(vehicleDrivers).where(inArray(vehicleDrivers.vehicleId, ids))
       : [];
-    const driversBy = new Map<number, number[]>();
+    type DriverRow = { id: number; employeeId: number | null; name: string };
+    const driversBy = new Map<number, DriverRow[]>();
     for (const l of links) {
       const arr = driversBy.get(l.vehicleId) ?? [];
-      arr.push(l.employeeId);
+      arr.push({ id: l.id, employeeId: l.employeeId, name: l.name || "" });
       driversBy.set(l.vehicleId, arr);
     }
 
@@ -92,7 +107,7 @@ export async function GET(req: NextRequest) {
       const o = openBy.get(v.id);
       return {
         ...v,
-        driverIds: driversBy.get(v.id) ?? [],
+        drivers: driversBy.get(v.id) ?? [],
         openTrip: o ? {
           id: o.tripId, outAt: o.outAt, destination: o.destination, meterOut: o.meterOut,
           driver: `${o.driverFirst ?? ""} ${o.driverLast ?? ""}`.trim() || "—",
@@ -136,9 +151,9 @@ export async function POST(req: NextRequest) {
       defaultDriverId: b?.defaultDriverId ? Number(b.defaultDriverId) : null,
       notes: String(b?.notes || "").trim(),
     }).returning();
-    const driverIds = await setDrivers(row.id, b?.driverIds);
+    const drivers = await setDrivers(row.id, b?.drivers);
     await logActivity({ user: guard, action: "station.vehicle.add", summary: `added vehicle "${vehicleNo}"` });
-    return NextResponse.json({ ...row, driverIds });
+    return NextResponse.json({ ...row, drivers });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -196,7 +211,7 @@ export async function PUT(req: NextRequest) {
       notes: String(b?.notes || "").trim(),
     }).where(eq(vehicles.id, id));
 
-    if (Array.isArray(b?.driverIds)) await setDrivers(id, b.driverIds);
+    if (Array.isArray(b?.drivers)) await setDrivers(id, b.drivers);
 
     const what = before.active !== active ? (active ? "put back in service" : "retired") : "edited";
     await logActivity({ user: guard, action: "station.vehicle.edit", summary: `${what} vehicle "${vehicleNo}"` });

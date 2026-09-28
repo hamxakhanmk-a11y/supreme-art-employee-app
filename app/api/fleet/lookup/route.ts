@@ -26,14 +26,32 @@ export async function POST(req: NextRequest) {
     if (!v) return NextResponse.json({ error: "No vehicle found for that PIN" }, { status: 404 });
     if (!v.active) return NextResponse.json({ error: `${v.vehicleNo} has been retired` }, { status: 400 });
 
-    // Only the people set on this vehicle, and only those still employed.
-    const drivers = await db.select({
-      id: employees.id, code: employees.employeeId,
-      firstName: employees.firstName, lastName: employees.lastName,
+    // Only the people set on this vehicle. Employees who have left drop off
+    // the list; manually-added drivers have no employment to check.
+    const driverRows = await db.select({
+      rowId: vehicleDrivers.id,
+      employeeId: vehicleDrivers.employeeId,
+      manualName: vehicleDrivers.name,
+      code: employees.employeeId,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      status: employees.status,
     }).from(vehicleDrivers)
-      .innerJoin(employees, eq(employees.id, vehicleDrivers.employeeId))
-      .where(and(eq(vehicleDrivers.vehicleId, v.id), eq(employees.status, "active")))
-      .orderBy(asc(employees.firstName));
+      .leftJoin(employees, eq(employees.id, vehicleDrivers.employeeId))
+      .where(eq(vehicleDrivers.vehicleId, v.id))
+      .orderBy(asc(vehicleDrivers.id));
+
+    const drivers = driverRows
+      .filter(d => (d.employeeId === null ? true : d.status === "active"))
+      .map(d => ({
+        rowId: d.rowId,
+        employeeId: d.employeeId,
+        code: d.code || "",
+        name: d.employeeId
+          ? `${d.firstName ?? ""} ${d.lastName ?? ""}`.trim()
+          : (d.manualName || ""),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     const [openTrip, last] = await Promise.all([
       openTripForVehicle(v.id),
@@ -42,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       vehicle: v,
-      drivers: drivers.map(d => ({ id: d.id, code: d.code, name: `${d.firstName} ${d.lastName}`.trim() })),
+      drivers,
       openTrip,
       lastMeter: last?.km ?? null,
     });
