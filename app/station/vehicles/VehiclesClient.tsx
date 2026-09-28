@@ -9,6 +9,13 @@ type OpenTrip = { id: number; outAt: string; destination: string; meterOut: numb
 
 // Either an employee, or a plain name for a driver who isn't on the payroll.
 type DriverEntry = { employeeId: number | null; name: string };
+
+// A vehicle PIN is four digits; an employee's is three. They live in separate
+// spaces, but the extra digit means neither is ever typed at the wrong pad.
+const PIN_LEN = 4;
+const PIN_MSG = `The vehicle PIN must be ${PIN_LEN} digits`;
+const onlyDigits = (s: string) => s.replace(/[^0-9]/g, "").slice(0, PIN_LEN);
+const isPin = (s: string) => new RegExp(`^[0-9]{${PIN_LEN}}$`).test(s.trim());
 type Vehicle = {
   id: number; vehicleNo: string; pin: string | null; name: string; type: string;
   defaultDriverId: number | null; drivers: DriverEntry[]; active: boolean; notes: string;
@@ -78,7 +85,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
 
   const save = async () => {
     if (!form.vehicleNo.trim()) { setErr("Vehicle number is required"); return; }
-    if (form.pin.trim() && !/^\d{3}$/.test(form.pin.trim())) { setErr("The vehicle PIN must be 3 digits"); return; }
+    if (form.pin.trim() && !isPin(form.pin)) { setErr(PIN_MSG); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch("/api/fleet/vehicles", {
@@ -106,9 +113,9 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   };
 
   // Set straight from the list: PINs are handed out a row at a time, and
-  // opening the whole form for three digits is three clicks too many.
+  // opening the whole form for four digits is three clicks too many.
   const savePin = async (v: Vehicle, pin: string) => {
-    if (pin && !/^\d{3}$/.test(pin)) { setErr("The vehicle PIN must be 3 digits"); return false; }
+    if (pin && !isPin(pin)) { setErr(PIN_MSG); return false; }
     if ((v.pin || "") === pin) return true;   // nothing typed, nothing to save
     setBusy(true); setErr("");
     try {
@@ -174,9 +181,9 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             </label>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>
               Vehicle PIN
-              <input value={form.pin} inputMode="numeric" maxLength={3}
-                onChange={e => setForm({ ...form, pin: e.target.value.replace(/\D/g, "").slice(0, 3) })}
-                placeholder="3 digits" />
+              <input value={form.pin} inputMode="numeric" maxLength={PIN_LEN}
+                onChange={e => setForm({ ...form, pin: onlyDigits(e.target.value) })}
+                placeholder={`${PIN_LEN} digits`} />
               <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
                 Typed at the gate to take this vehicle out
               </span>
@@ -361,24 +368,32 @@ function PinCell({ vehicle, busy, onSave }: {
     if (!ok) setValue(vehicle.pin || "");
   };
 
+  const stale = !dirty && !!value && !isPin(value);
+
   return (
     <input
       value={value}
       inputMode="numeric"
-      maxLength={3}
+      maxLength={PIN_LEN}
       disabled={busy}
       placeholder="—"
-      onChange={e => { setValue(e.target.value.replace(/\D/g, "").slice(0, 3)); setDirty(true); }}
+      onChange={e => { setValue(onlyDigits(e.target.value)); setDirty(true); }}
       onBlur={commit}
       onKeyDown={e => {
         if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
         else if (e.key === "Escape") { setValue(vehicle.pin || ""); setDirty(false); }
       }}
-      title="3-digit PIN typed at the gate"
+      title={stale
+        ? `The gate now asks for ${PIN_LEN} digits — this one can no longer be typed in`
+        : `${PIN_LEN}-digit PIN typed at the gate`}
       style={{
-        width: 62, textAlign: "center", padding: "6px 4px",
+        width: 70, textAlign: "center", padding: "6px 4px",
         fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: 1,
-        color: value ? "var(--brand)" : "var(--text3)",
+        color: stale ? "#B45309" : value ? "var(--brand)" : "var(--text3)",
+        // A PIN left over from when three digits were enough can never be
+        // entered: the pad submits on the fourth. Flagged rather than padded,
+        // since inventing a digit would hand out a PIN nobody was told about.
+        borderColor: stale ? "#B45309" : undefined,
       }}
     />
   );

@@ -10,8 +10,11 @@ import { ensureFleetSchema, VEHICLE_TYPES } from "@/lib/fleet";
 // used by the same people at the same gate, so it gets no grant of its own.
 const MODULE = "station";
 
-// 3 digits, same keypad as an employee PIN. Blank means the vehicle simply
-// can't be taken out at the gate yet — not an error worth refusing a save for.
+// 4 digits — one more than an employee PIN, so the two are never mistaken for
+// each other at the pad. Blank means the vehicle simply can't be taken out at
+// the gate yet, which is not an error worth refusing a save for.
+export const VEHICLE_PIN_LEN = 4;
+
 function normalizePin(p: unknown): string | null {
   const s = String(p ?? "").trim();
   return s === "" ? null : s;
@@ -19,7 +22,8 @@ function normalizePin(p: unknown): string | null {
 
 function pinError(pin: string | null): string | null {
   if (pin === null) return null;
-  return /^\d{3}$/.test(pin) ? null : "The vehicle PIN must be 3 digits";
+  const digitsOnly = new RegExp(`^[0-9]{${VEHICLE_PIN_LEN}}$`);
+  return digitsOnly.test(pin) ? null : `The vehicle PIN must be ${VEHICLE_PIN_LEN} digits`;
 }
 
 // Who may drive this vehicle. Each entry is either an employee or a plain

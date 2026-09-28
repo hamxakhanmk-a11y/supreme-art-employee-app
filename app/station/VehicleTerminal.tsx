@@ -9,7 +9,7 @@ import { TakeCardOut, SubmitCard, type DrawerCard, type OpenCard } from "./CardF
 // so a trip is attributed without the driver carrying a second PIN, and the
 // list to choose from is three names rather than the whole payroll.
 
-const PIN_LEN = 3;
+const PIN_LEN = 4;
 
 export type Driver = { rowId: number; employeeId: number | null; code: string; name: string };
 type Found = {
