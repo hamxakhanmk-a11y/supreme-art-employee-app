@@ -10,7 +10,7 @@ type Emp = { id: number; employeeId: string; firstName: string; lastName: string
 type Leave = { id: number; outAt: string; inAt: string | null; type: string; minutes: number | null; reason: string | null };
 type Lookup = { employee: Emp; open: Leave | null; todays: Leave[]; openTrip: OpenTrip | null };
 
-const PIN_LEN = 3;
+
 
 export default function StationClient() {
   const [pin, setPin] = useState("");
@@ -121,9 +121,9 @@ export default function StationClient() {
       ) : view === "pin" && (
         <>
           <PinPad
-            pin={pin} length={PIN_LEN} busy={busy} active={terminalFor === "employee"}
-            prompt={`Enter your ${PIN_LEN}-digit PIN to begin`}
-            onChange={next => { setPin(next); if (next.length < PIN_LEN) setError(null); }}
+            pin={pin} busy={busy} active={terminalFor === "employee"}
+            prompt="Enter your PIN to begin"
+            onChange={next => { setPin(next); setError(null); }}
             onSubmit={lookup}
           />
         </>

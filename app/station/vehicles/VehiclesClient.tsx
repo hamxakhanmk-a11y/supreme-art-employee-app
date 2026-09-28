@@ -11,12 +11,14 @@ type OpenTrip = { id: number; outAt: string; destination: string; meterOut: numb
 // Either an employee, or a plain name for a driver who isn't on the payroll.
 type DriverEntry = { employeeId: number | null; name: string };
 
-// A vehicle PIN is four digits; an employee's is three. They live in separate
-// spaces, but the extra digit means neither is ever typed at the wrong pad.
-const PIN_LEN = 4;
-const PIN_MSG = `The vehicle PIN must be ${PIN_LEN} digits`;
-const onlyDigits = (s: string) => s.replace(/[^0-9]/g, "").slice(0, PIN_LEN);
-const isPin = (s: string) => new RegExp(`^[0-9]{${PIN_LEN}}$`).test(s.trim());
+// Whatever length it is. PINs are usually the vehicle's own number, because
+// that is what people remember, and those run from two digits to four — so
+// the gate pad waits for ↵ instead of submitting at a fixed count.
+const PIN_MIN = 2;
+const PIN_MAX = 6;
+const PIN_MSG = `The vehicle PIN must be ${PIN_MIN}–${PIN_MAX} digits`;
+const onlyDigits = (s: string) => s.replace(/[^0-9]/g, "").slice(0, PIN_MAX);
+const isPin = (s: string) => new RegExp(`^[0-9]{${PIN_MIN},${PIN_MAX}}$`).test(s.trim());
 type Vehicle = {
   id: number; vehicleNo: string; pin: string | null; name: string; type: string;
   defaultDriverId: number | null; drivers: DriverEntry[]; active: boolean; notes: string;
@@ -194,11 +196,11 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             </label>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>
               Vehicle PIN
-              <input value={form.pin} inputMode="numeric" maxLength={PIN_LEN}
+              <input value={form.pin} inputMode="numeric" maxLength={PIN_MAX}
                 onChange={e => setForm({ ...form, pin: onlyDigits(e.target.value) })}
-                placeholder={`${PIN_LEN} digits`} />
+                placeholder="e.g. 246" />
               <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
-                Typed at the gate to take this vehicle out
+                Typed at the gate. The vehicle&apos;s own number works well — it is what people remember.
               </span>
             </label>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>
@@ -387,7 +389,7 @@ function PinCell({ vehicle, busy, onSave }: {
     <input
       value={value}
       inputMode="numeric"
-      maxLength={PIN_LEN}
+      maxLength={PIN_MAX}
       disabled={busy}
       placeholder="—"
       onChange={e => { setValue(onlyDigits(e.target.value)); setDirty(true); }}
@@ -396,16 +398,11 @@ function PinCell({ vehicle, busy, onSave }: {
         if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
         else if (e.key === "Escape") { setValue(vehicle.pin || ""); setDirty(false); }
       }}
-      title={stale
-        ? `The gate now asks for ${PIN_LEN} digits — this one can no longer be typed in`
-        : `${PIN_LEN}-digit PIN typed at the gate`}
+      title={stale ? PIN_MSG : "PIN typed at the gate"}
       style={{
         width: 70, textAlign: "center", padding: "6px 4px",
         fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: 1,
         color: stale ? "#B45309" : value ? "var(--brand)" : "var(--text3)",
-        // A PIN left over from when three digits were enough can never be
-        // entered: the pad submits on the fourth. Flagged rather than padded,
-        // since inventing a digit would hand out a PIN nobody was told about.
         borderColor: stale ? "#B45309" : undefined,
       }}
     />

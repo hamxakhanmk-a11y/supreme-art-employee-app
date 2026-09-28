@@ -9,7 +9,6 @@ import { TakeCardOut, SubmitCard, type DrawerCard, type OpenCard } from "./CardF
 // so a trip is attributed without the driver carrying a second PIN, and the
 // list to choose from is three names rather than the whole payroll.
 
-const PIN_LEN = 4;
 
 export type Driver = { rowId: number; employeeId: number | null; code: string; name: string };
 type Found = {
@@ -133,7 +132,7 @@ export default function VehicleTerminal({
           </div>
         )}
         <PinPad
-          pin={pin} length={PIN_LEN} busy={busy} active prompt={`Enter the ${PIN_LEN}-digit vehicle PIN`}
+          pin={pin} busy={busy} active prompt="Enter the vehicle PIN"
           onChange={setPin} onSubmit={lookup}
         />
       </>
