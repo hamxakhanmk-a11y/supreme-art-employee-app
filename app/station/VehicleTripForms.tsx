@@ -6,6 +6,9 @@ import { useRef, useState } from "react";
 // on-foot punch it has always been about.
 
 export type Person = { id: number; code: string; name: string; department: string };
+
+// A name chosen for a trip: either off the drivers list (rowId) or typed.
+export type Picked = { rowId: number | null; name: string };
 export type OpenTrip = {
   id: number; vehicleId: number; vehicleNo: string; vehicleName: string;
   outAt: string; destination: string; purpose: string; meterOut: number; officers: string[]; driver?: string;
@@ -21,104 +24,118 @@ const labelStyle: React.CSSProperties = {
   color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.3, margin: "12px 0 4px",
 };
 
-// --- Who's travelling -------------------------------------------------------
-// Employees suggested as you type, but anything typed is kept: a customer's man
-// or a visitor rides along often enough that a closed list would be wrong.
-function OfficerPicker({ people, value, onChange, disabled }: {
-  people: Person[]; value: Officer[]; onChange: (o: Officer[]) => void; disabled: boolean;
+// --- Who is taking it -------------------------------------------------------
+// One field, not two. Whoever is taking the vehicle is either on the drivers
+// list or is somebody whose name gets typed — and asking for a driver and then
+// again for who is going meant naming the same person twice.
+//
+// The first name is the one that drives; anyone added after rides along.
+function PeoplePicker({ drivers, value, onChange, disabled }: {
+  drivers: { rowId: number; employeeId: number | null; code: string; name: string }[];
+  value: Picked[];
+  onChange: (v: Picked[]) => void;
+  disabled: boolean;
 }) {
   const [text, setText] = useState("");
-  const listId = useRef(`officers-${Math.random().toString(36).slice(2)}`).current;
-  const label = (p: Person) => `${p.code} — ${p.name}`;
 
-  const add = () => {
-    const typed = text.trim();
-    if (!typed) return;
-    const match = people.find(p => label(p).toLowerCase() === typed.toLowerCase() || p.name.toLowerCase() === typed.toLowerCase());
-    const entry: Officer = match ? { employeeId: match.id, name: label(match) } : { employeeId: null, name: typed };
-    if (!value.some(v => v.name.toLowerCase() === entry.name.toLowerCase())) onChange([...value, entry]);
+  const add = (p: Picked) => {
+    if (value.some(v => v.name.toLowerCase() === p.name.toLowerCase())) return;
+    onChange([...value, p]);
+  };
+  const addTyped = () => {
+    const name = text.trim();
+    if (!name) return;
+    add({ rowId: null, name });
     setText("");
   };
 
   return (
     <div>
-      <span style={labelStyle}>Who&apos;s going <span style={{ textTransform: "none", fontWeight: 400, color: "var(--text3)" }}>(optional)</span></span>
+      <span style={labelStyle}>Driver / who&apos;s going</span>
+
       {value.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-          {value.map(o => (
-            <span key={o.name} style={{
-              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
-              background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 999, padding: "5px 6px 5px 11px",
+          {value.map((p, i) => (
+            <span key={p.name} style={{
+              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700,
+              background: i === 0 ? "var(--brand)" : "var(--bg2)",
+              color: i === 0 ? "#fff" : "var(--text2)",
+              border: `1px solid ${i === 0 ? "var(--brand)" : "var(--border)"}`,
+              borderRadius: 999, padding: "6px 7px 6px 12px",
             }}>
-              {o.name}
-              <button type="button" disabled={disabled} onClick={() => onChange(value.filter(v => v.name !== o.name))}
-                style={{ border: "none", background: "transparent", color: "#A32D2D", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 3px" }}
+              {p.name}
+              {i === 0 && <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.85 }}>driving</span>}
+              <button type="button" disabled={disabled} onClick={() => onChange(value.filter(v => v.name !== p.name))}
+                style={{
+                  border: "none", background: "transparent", cursor: "pointer", fontSize: 15, lineHeight: 1,
+                  padding: "0 3px", color: i === 0 ? "#fff" : "#A32D2D",
+                }}
                 title="Remove">×</button>
             </span>
           ))}
         </div>
       )}
+
+      {drivers.length > 0 && (
+        <select
+          value=""
+          disabled={disabled}
+          onChange={e => {
+            const d = drivers.find(x => String(x.rowId) === e.target.value);
+            if (d) add({ rowId: d.rowId, name: d.code ? `${d.code} — ${d.name}` : d.name });
+          }}
+          style={{ ...field, marginBottom: 8 }}>
+          <option value="">— choose a driver —</option>
+          {drivers.filter(d => !value.some(v => v.rowId === d.rowId)).map(d => (
+            <option key={d.rowId} value={d.rowId}>{d.code ? `${d.code} — ${d.name}` : d.name}</option>
+          ))}
+        </select>
+      )}
+
       <div style={{ display: "flex", gap: 8 }}>
         <input
-          list={listId} value={text} disabled={disabled}
+          value={text} disabled={disabled}
           onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="Search a name, or type anyone"
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTyped(); } }}
+          placeholder="or type a name"
           style={{ ...field, flex: 1 }}
         />
-        <button type="button" className="btn" onClick={add} disabled={disabled || !text.trim()}>Add</button>
+        <button type="button" className="btn" onClick={addTyped} disabled={disabled || !text.trim()}>Add</button>
       </div>
-      <datalist id={listId}>
-        {people.map(p => <option key={p.id} value={label(p)}>{p.department}</option>)}
-      </datalist>
     </div>
   );
 }
 
-// A manually-added driver has no staff code, so the dash would dangle.
-function driverLabel(d: { code: string; name: string }) {
-  return d.code ? `${d.code} — ${d.name}` : d.name;
-}
-
 // --- Taking a vehicle out ---------------------------------------------------
-// The vehicle is already known — its PIN is how we got here — so this asks who
-// is driving it, from the people set on that vehicle and nobody else.
-export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, busy, onCancel, onSubmit }: {
+// The vehicle is already known — its PIN is how we got here.
+export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, busy, onCancel, onSubmit }: {
   drivers: { rowId: number; employeeId: number | null; code: string; name: string }[];
   defaultDriverId: number | null;
   lastMeter: number | null;
-  people: Person[];
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (body: { driverRowId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => void;
+  onSubmit: (body: {
+    driverRowId: number | null; driverName: string; meterOut: number;
+    destination: string; purpose: string; officers: Officer[];
+  }) => void;
 }) {
-  // The usual driver, when they're on the list; otherwise the only name there,
-  // and failing that nothing preselected.
-  const [driverRowId, setDriverRowId] = useState<number | "">(() =>
-    drivers.find(d => d.employeeId !== null && d.employeeId === defaultDriverId)?.rowId
-    ?? (drivers.length === 1 ? drivers[0].rowId : "")
-  );
+  // The usual driver, when the list has them — one fewer thing to pick.
+  const [people, setPeople] = useState<Picked[]>(() => {
+    const d = drivers.find(x => x.employeeId !== null && x.employeeId === defaultDriverId);
+    return d ? [{ rowId: d.rowId, name: d.code ? `${d.code} — ${d.name}` : d.name }] : [];
+  });
   const [meter, setMeter] = useState("");
   const [destination, setDestination] = useState("");
   const [purpose, setPurpose] = useState("");
-  const [officers, setOfficers] = useState<Officer[]>([]);
 
   const typed = meter.trim() === "" ? null : Math.round(Number(meter));
   // Warned about here, and refused by the server either way.
   const backwards = typed !== null && lastMeter !== null && isFinite(typed) && typed < lastMeter;
-  const ready = driverRowId !== "" && typed !== null && isFinite(typed) && !backwards;
+  const ready = people.length > 0 && typed !== null && isFinite(typed) && !backwards;
 
   return (
     <div style={{ marginTop: 8 }}>
-      <span style={labelStyle}>Driver</span>
-      {drivers.length === 1 ? (
-        <div style={{ ...field, fontWeight: 700, textAlign: "left" }}>{driverLabel(drivers[0])}</div>
-      ) : (
-        <select value={driverRowId} disabled={busy} onChange={e => setDriverRowId(Number(e.target.value))} style={field}>
-          <option value="">— choose the driver —</option>
-          {drivers.map(d => <option key={d.rowId} value={d.rowId}>{driverLabel(d)}</option>)}
-        </select>
-      )}
+      <PeoplePicker drivers={drivers} value={people} onChange={setPeople} disabled={busy} />
 
       <span style={labelStyle}>Meter reading now</span>
       <input
@@ -140,12 +157,17 @@ export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, bu
       <input value={purpose} disabled={busy} onChange={e => setPurpose(e.target.value)}
         placeholder="e.g. Delivery, pick-up, bank work" style={field} />
 
-      <OfficerPicker people={people} value={officers} onChange={setOfficers} disabled={busy} />
-
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
-          onClick={() => onSubmit({ driverRowId: Number(driverRowId), meterOut: typed ?? NaN, destination, purpose, officers })}
+          onClick={() => onSubmit({
+            // The first name drives; the rest ride along.
+            driverRowId: people[0]?.rowId ?? null,
+            driverName: people[0]?.name ?? "",
+            meterOut: typed ?? NaN,
+            destination, purpose,
+            officers: people.slice(1).map(p => ({ employeeId: null, name: p.name })),
+          })}
           disabled={busy || !ready}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,

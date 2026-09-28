@@ -49,7 +49,7 @@ export default function VehicleTerminal({
     finally { setBusy(false); }
   }, []);
 
-  const takeOut = async (body: { driverRowId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => {
+  const takeOut = async (body: { driverRowId: number | null; driverName: string; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => {
     if (!data) return;
     setBusy(true); setError(null);
     try {
@@ -195,7 +195,7 @@ export default function VehicleTerminal({
       ) : (
         <TakeVehicleOut
           drivers={data.drivers} defaultDriverId={v.defaultDriverId} lastMeter={data.lastMeter}
-          people={people} busy={busy} onCancel={() => setAction("pick")} onSubmit={takeOut}
+          busy={busy} onCancel={() => setAction("pick")} onSubmit={takeOut}
         />
       )}
 

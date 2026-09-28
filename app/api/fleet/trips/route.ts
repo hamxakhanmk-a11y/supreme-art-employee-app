@@ -37,10 +37,11 @@ export async function POST(req: NextRequest) {
     const vehicleId = Number(b?.vehicleId);
     // The gate names a row from the vehicle's own driver list, which may or may
     // not be an employee; the employee link and the name both come from it.
-    const driverRowId = Number(b?.driverRowId);
+    const driverRowId = b?.driverRowId ? Number(b.driverRowId) : null;
+    const typedName = String(b?.driverName || "").trim().slice(0, 160);
     const meterOut = Math.round(Number(b?.meterOut));
     if (!vehicleId) return NextResponse.json({ error: "Pick a vehicle" }, { status: 400 });
-    if (!driverRowId) return NextResponse.json({ error: "No driver on this trip" }, { status: 400 });
+    if (!driverRowId && !typedName) return NextResponse.json({ error: "Nobody is named on this trip" }, { status: 400 });
     if (!isFinite(meterOut) || meterOut < 0) {
       return NextResponse.json({ error: "Enter the meter reading" }, { status: 400 });
     }
@@ -55,21 +56,26 @@ export async function POST(req: NextRequest) {
       .where(and(eq(fleetTrips.vehicleId, vehicleId), isNull(fleetTrips.inAt))).limit(1);
     if (vehicleOut) return NextResponse.json({ error: `${v.vehicleNo} is already out` }, { status: 409 });
 
-    // The gate only offers this vehicle's own drivers, but the check belongs
-    // here too: a terminal left open while the list was edited would otherwise
-    // still be able to book a trip against someone taken off it.
-    const [allowed] = await db.select({
-      id: vehicleDrivers.id, employeeId: vehicleDrivers.employeeId, name: vehicleDrivers.name,
-    }).from(vehicleDrivers)
-      // Either in the pool, or named on this vehicle.
-      .where(and(
-        eq(vehicleDrivers.id, driverRowId),
-        or(isNull(vehicleDrivers.vehicleId), eq(vehicleDrivers.vehicleId, vehicleId)),
-      )).limit(1);
-    if (!allowed) {
-      return NextResponse.json({ error: `That driver isn't on ${v.vehicleNo}'s list` }, { status: 400 });
+    // A name chosen off the list is checked against it here too: a terminal
+    // left open while the list was edited could otherwise still book a trip
+    // against someone taken off it. A typed name has no list to be on.
+    let driverId: number | null = null;
+    let listedName = "";
+    if (driverRowId) {
+      const [allowed] = await db.select({
+        id: vehicleDrivers.id, employeeId: vehicleDrivers.employeeId, name: vehicleDrivers.name,
+      }).from(vehicleDrivers)
+        // Either in the pool, or named on this vehicle.
+        .where(and(
+          eq(vehicleDrivers.id, driverRowId),
+          or(isNull(vehicleDrivers.vehicleId), eq(vehicleDrivers.vehicleId, vehicleId)),
+        )).limit(1);
+      if (!allowed) {
+        return NextResponse.json({ error: `That driver isn't on ${v.vehicleNo}'s list` }, { status: 400 });
+      }
+      driverId = allowed.employeeId;
+      listedName = allowed.name || "";
     }
-    const driverId = allowed.employeeId;
 
     // Only employees can be "already out": a name with no employee behind it
     // isn't one person the system can follow across vehicles.
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     // Resolved now and stored on the trip, so the log book still reads after
     // the driver leaves — or when they were never an employee at all.
-    let driverName = String(allowed.name || "").trim();
+    let driverName = listedName.trim() || typedName;
     if (driverId) {
       const [drv] = await db.select({ first: employees.firstName, last: employees.lastName })
         .from(employees).where(eq(employees.id, driverId));
