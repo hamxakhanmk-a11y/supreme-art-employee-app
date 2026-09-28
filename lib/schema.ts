@@ -703,12 +703,23 @@ export const capaReports = pgTable("capa_reports", {
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
   vehicleNo: varchar("vehicle_no", { length: 30 }).notNull(),  // "APR-1234"
+  // Typed at the gate to start a trip. Its own space, so a vehicle and a
+  // person may share the same digits.
+  pin: varchar("pin", { length: 6 }),
   name: varchar("name", { length: 80 }).default(""),           // make / model
   type: varchar("type", { length: 20 }).notNull().default("car"), // car | van | bike | truck
   defaultDriverId: integer("default_driver_id").references(() => employees.id, { onDelete: "set null" }),
   active: boolean("active").notNull().default(true),           // retired keeps its history
   notes: text("notes").default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Who may drive which vehicle. The gate offers these names and no others — a
+// list of three is a tap, a list of ninety is a search.
+export const vehicleDrivers = pgTable("vehicle_drivers", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
 });
 
 export const fleetTrips = pgTable("fleet_trips", {

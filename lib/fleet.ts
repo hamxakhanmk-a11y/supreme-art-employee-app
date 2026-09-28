@@ -32,6 +32,22 @@ DO $$ BEGIN
   -- On LOWER(), so one vehicle can't be added twice as "apr-1234".
   CREATE UNIQUE INDEX IF NOT EXISTS vehicles_no_key ON vehicles (LOWER(vehicle_no));
 
+  -- The vehicle's own PIN, typed at the gate. A vehicle identifies itself and
+  -- the driver is then chosen from those allowed to drive it, so the trip is
+  -- attributed without the driver needing to remember a second PIN.
+  ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS pin varchar(6);
+  -- Partial, so the many vehicles without a PIN don't collide on null.
+  CREATE UNIQUE INDEX IF NOT EXISTS vehicles_pin_key ON vehicles (pin) WHERE pin IS NOT NULL;
+
+  -- Who may drive which vehicle. The gate offers only these names, not the
+  -- whole payroll: a list of three is a tap, a list of ninety is a search.
+  CREATE TABLE IF NOT EXISTS vehicle_drivers (
+    id serial PRIMARY KEY,
+    vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    employee_id integer NOT NULL REFERENCES employees(id) ON DELETE CASCADE
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_key ON vehicle_drivers (vehicle_id, employee_id);
+
   CREATE TABLE IF NOT EXISTS fleet_trips (
     id serial PRIMARY KEY,
     vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,

@@ -24,7 +24,9 @@ export async function GET() {
       }).from(employees).where(eq(employees.status, "active")).orderBy(employees.firstName),
     ]);
     return NextResponse.json({
-      vehicles,
+      // Only vehicles with a PIN: the terminal shows its Vehicle pad when this
+      // list is non-empty, and a pad no PIN opens would be a dead end.
+      vehicles: vehicles.filter(v => v.pin),
       people: people.map(p => ({
         id: p.id,
         code: p.code,

@@ -2,10 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
-import {
-  TakeVehicleOut, BringVehicleBack,
-  type VehicleOption, type Person, type OpenTrip, type Officer,
-} from "./VehicleTripForms";
+import { type Person, type OpenTrip } from "./VehicleTripForms";
+import PinPad from "./PinPad";
+import VehicleTerminal from "./VehicleTerminal";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string; designation: string | null; photoUrl: string | null };
 type Leave = { id: number; outAt: string; inAt: string | null; type: string; minutes: number | null; reason: string | null };
@@ -22,9 +21,10 @@ export default function StationClient() {
   const [reason, setReason] = useState("");
   const [time, setTime] = useState("");   // optional manual "HH:MM"; blank = now
   const [flash, setFlash] = useState<{ msg: string; color: string } | null>(null);
-  // "choose" until the person says whether they're walking or driving.
-  const [mode, setMode] = useState<"choose" | "vehicle">("choose");
-  const [fleet, setFleet] = useState<{ vehicles: VehicleOption[]; people: Person[] }>({ vehicles: [], people: [] });
+  // Which kind of PIN the pad is asking for. A person and a vehicle can
+  // share the same digits, so the terminal is told rather than guessing.
+  const [terminalFor, setTerminalFor] = useState<"employee" | "vehicle">("employee");
+  const [fleet, setFleet] = useState<{ vehicles: { id: number }[]; people: Person[] }>({ vehicles: [], people: [] });
 
   // Loaded once, on its own. If it fails the terminal simply doesn't offer
   // vehicles — punching out on foot is what this screen has always been for
@@ -37,7 +37,7 @@ export default function StationClient() {
   }, []);
   useEffect(() => { loadFleet(); }, [loadFleet]);
 
-  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); setReason(""); setTime(""); setMode("choose"); }, []);
+  const reset = useCallback(() => { setPin(""); setView("pin"); setData(null); setError(null); setReason(""); setTime(""); }, []);
 
   const lookup = useCallback(async (p: string) => {
     setBusy(true); setError(null);
@@ -52,27 +52,9 @@ export default function StationClient() {
     finally { setBusy(false); }
   }, []);
 
-  const press = (d: string) => {
-    if (view !== "pin" || busy) return;
-    setError(null);
-    setPin(prev => {
-      const next = (prev + d).slice(0, PIN_LEN);
-      if (next.length === PIN_LEN) lookup(next);
-      return next;
-    });
-  };
-  const backspace = () => setPin(prev => prev.slice(0, -1));
-
-  // Physical keyboard support (numpad kiosks).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (view !== "pin") return;
-      if (/^[0-9]$/.test(e.key)) press(e.key);
-      else if (e.key === "Backspace") backspace();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [view, busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Keypad entry — including the physical numpad on the kiosks — belongs to
+  // PinPad now, so that only one listener is ever bound and the visible pad is
+  // the one that receives the keystroke.
 
   const punch = async (type?: LeaveType) => {
     if (!data) return;
@@ -88,43 +70,6 @@ export default function StationClient() {
       setFlash(j.action === "out"
         ? { msg: `${nm} punched OUT · ${LEAVE_STYLE[(j.leave.type as LeaveType)].label} · ${hhmm(j.leave.outAt)}`, color: "#DC2626" }
         : { msg: `${nm} punched IN · ${formatMins(j.leave.minutes)} out · ${hhmm(j.leave.inAt)}`, color: "#15803D" });
-      reset();
-    } catch (e: any) { setError(e.message); }
-    finally { setBusy(false); }
-  };
-
-  // Taking a vehicle records a trip and NO hourly leave: the journey is the
-  // record, exactly as the paper log book has it.
-  const takeOut = async (body: { vehicleId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => {
-    if (!data) return;
-    setBusy(true); setError(null);
-    try {
-      const res = await fetch("/api/fleet/trips", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, driverId: data.employee.id, at: time || undefined }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Could not record the trip");
-      const v = fleet.vehicles.find(x => x.id === body.vehicleId);
-      setFlash({ msg: `${data.employee.firstName} took ${v?.vehicleNo ?? "a vehicle"} out · ${body.meterOut} km`, color: "#DC2626" });
-      await loadFleet();
-      reset();
-    } catch (e: any) { setError(e.message); }
-    finally { setBusy(false); }
-  };
-
-  const bringBack = async (body: { tripId: number; meterIn: number; remarks: string }) => {
-    if (!data) return;
-    setBusy(true); setError(null);
-    try {
-      const res = await fetch("/api/fleet/trips", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, at: time || undefined }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Could not close the trip");
-      setFlash({ msg: `${data.openTrip?.vehicleNo ?? "Vehicle"} back in · ${j.trip.kmCovered} km covered`, color: "#15803D" });
-      await loadFleet();
       reset();
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
@@ -155,26 +100,32 @@ export default function StationClient() {
         </div>
       )}
 
-      {view === "pin" && (
+      {view === "pin" && fleet.vehicles.length > 0 && (
+        <div style={{ display: "inline-flex", gap: 4, padding: 4, borderRadius: 999, background: "var(--bg2)", border: "1px solid var(--border)", margin: "4px 0 2px" }}>
+          {([["employee", "🚶 Employee"], ["vehicle", "🚐 Vehicle"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => { setTerminalFor(k); setPin(""); setError(null); }}
+              style={{
+                border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+                background: terminalFor === k ? "var(--brand)" : "transparent",
+                color: terminalFor === k ? "#fff" : "var(--text2)",
+              }}>{label}</button>
+          ))}
+        </div>
+      )}
+
+      {view === "pin" && terminalFor === "vehicle" ? (
+        <VehicleTerminal
+          people={fleet.people} time={time}
+          onDone={(msg, color) => { setFlash({ msg, color }); loadFleet(); }}
+        />
+      ) : view === "pin" && (
         <>
-          <p style={{ color: "var(--text2)", fontSize: 15, margin: "6px 0 16px" }}>Enter your {PIN_LEN}-digit PIN to begin</p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 22 }}>
-            {Array.from({ length: PIN_LEN }).map((_, i) => (
-              <span key={i} style={{
-                width: 18, height: 18, borderRadius: "50%",
-                border: `2px solid ${i < pin.length ? "var(--brand)" : "var(--border2)"}`,
-                background: i < pin.length ? "var(--brand)" : "transparent",
-              }} />
-            ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 320, margin: "0 auto" }}>
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(d => (
-              <button key={d} onClick={() => press(d)} disabled={busy} style={keyStyle(false)}>{d}</button>
-            ))}
-            <button onClick={backspace} disabled={busy} style={keyStyle(true)}>⌫</button>
-            <button onClick={() => press("0")} disabled={busy} style={keyStyle(false)}>0</button>
-            <button onClick={() => pin.length === PIN_LEN && lookup(pin)} disabled={busy || pin.length !== PIN_LEN} style={keyStyle(true)}>↵</button>
-          </div>
+          <PinPad
+            pin={pin} length={PIN_LEN} busy={busy} active={terminalFor === "employee"}
+            prompt={`Enter your ${PIN_LEN}-digit PIN to begin`}
+            onChange={next => { setPin(next); if (next.length < PIN_LEN) setError(null); }}
+            onSubmit={lookup}
+          />
         </>
       )}
 
@@ -206,15 +157,7 @@ export default function StationClient() {
               : <span style={{ fontSize: 11.5, color: "var(--text3)" }}>blank = right now</span>}
           </div>
 
-          {data.openTrip ? (
-            <BringVehicleBack trip={data.openTrip} busy={busy} onSubmit={bringBack} />
-          ) : mode === "vehicle" ? (
-            <TakeVehicleOut
-              vehicles={fleet.vehicles} people={fleet.people}
-              driverId={emp.id} busy={busy}
-              onCancel={() => setMode("choose")} onSubmit={takeOut}
-            />
-          ) : open ? (
+          {open ? (
             <>
               <div style={{ margin: "16px 0 6px", fontSize: 15 }}>
                 Currently <strong style={{ color: "#DC2626" }}>OUT</strong> since <strong>{hhmm(open.outAt)}</strong>
@@ -246,22 +189,16 @@ export default function StationClient() {
               </div>
               <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>Personal time is deducted from working hours · Official is excused.</div>
 
-              {fleet.vehicles.length > 0 && (
-                <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 12px" }}>
-                    <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                    <span style={{ fontSize: 11, color: "var(--text3)", fontWeight: 700, letterSpacing: 0.4 }}>OR</span>
-                    <span style={{ flex: 1, height: 1, background: "var(--border)" }} />
-                  </div>
-                  <button onClick={() => { setError(null); setMode("vehicle"); }} disabled={busy} style={bigBtn("#B45309")}>
-                    🚐 Taking a vehicle
-                  </button>
-                  <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>
-                    A vehicle trip goes in the log book instead of the hourly-leave register.
-                  </div>
-                </>
-              )}
             </>
+          )}
+
+          {data.openTrip && (
+            <div className="card" style={{ marginTop: 14, textAlign: "left", padding: "10px 14px", borderLeft: "4px solid #B45309" }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>🚐 Out in {data.openTrip.vehicleNo} since {hhmm(data.openTrip.outAt)}</div>
+              <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 2 }}>
+                Bring it back on the Vehicle pad, with {data.openTrip.vehicleNo}&apos;s own PIN.
+              </div>
+            </div>
           )}
 
           {data.todays.length > 0 && (
@@ -294,13 +231,7 @@ export default function StationClient() {
   );
 }
 
-function keyStyle(muted: boolean): React.CSSProperties {
-  return {
-    height: 72, fontSize: 26, fontWeight: 700, borderRadius: 14, cursor: "pointer",
-    border: "1px solid var(--border)", background: muted ? "var(--bg2)" : "var(--bg)",
-    color: "var(--text)", boxShadow: "var(--shadow-sm)",
-  };
-}
+
 function bigBtn(color: string): React.CSSProperties {
   return {
     flex: 1, width: "100%", padding: "16px 18px", fontSize: 16, fontWeight: 800, borderRadius: 12,

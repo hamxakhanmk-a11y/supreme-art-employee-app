@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, fleetTripOfficers, fleetTrips, vehicles } from "@/lib/schema";
+import { employees, fleetTripOfficers, fleetTrips, vehicleDrivers, vehicles } from "@/lib/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
@@ -56,6 +56,15 @@ export async function POST(req: NextRequest) {
     const [driverOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
       .where(and(eq(fleetTrips.driverId, driverId), isNull(fleetTrips.inAt))).limit(1);
     if (driverOut) return NextResponse.json({ error: "You're already out in another vehicle" }, { status: 409 });
+
+    // The gate only offers this vehicle's own drivers, but the check belongs
+    // here too: a terminal left open while the list was edited would otherwise
+    // still be able to book a trip against someone taken off it.
+    const [allowed] = await db.select({ id: vehicleDrivers.id }).from(vehicleDrivers)
+      .where(and(eq(vehicleDrivers.vehicleId, vehicleId), eq(vehicleDrivers.employeeId, driverId))).limit(1);
+    if (!allowed) {
+      return NextResponse.json({ error: `That driver isn't on ${v.vehicleNo}'s list` }, { status: 400 });
+    }
 
     const meterErr = await checkMeterForward(vehicleId, meterOut);
     if (meterErr) return NextResponse.json({ error: meterErr }, { status: 400 });

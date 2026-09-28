@@ -1,18 +1,14 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 // The vehicle half of the Station terminal: taking one out, and bringing it
 // back. Kept in its own file so StationClient stays about the PIN and the
 // on-foot punch it has always been about.
 
-export type VehicleOption = {
-  id: number; vehicleNo: string; name: string; type: string;
-  defaultDriverId: number | null; out: boolean; lastMeter: number | null;
-};
 export type Person = { id: number; code: string; name: string; department: string };
 export type OpenTrip = {
   id: number; vehicleId: number; vehicleNo: string; vehicleName: string;
-  outAt: string; destination: string; purpose: string; meterOut: number; officers: string[];
+  outAt: string; destination: string; purpose: string; meterOut: number; officers: string[]; driver?: string;
 };
 export type Officer = { employeeId: number | null; name: string };
 
@@ -80,59 +76,53 @@ function OfficerPicker({ people, value, onChange, disabled }: {
 }
 
 // --- Taking a vehicle out ---------------------------------------------------
-export function TakeVehicleOut({ vehicles, people, driverId, busy, onCancel, onSubmit }: {
-  vehicles: VehicleOption[];
+// The vehicle is already known — its PIN is how we got here — so this asks who
+// is driving it, from the people set on that vehicle and nobody else.
+export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, people, busy, onCancel, onSubmit }: {
+  drivers: { id: number; code: string; name: string }[];
+  defaultDriverId: number | null;
+  lastMeter: number | null;
   people: Person[];
-  driverId: number;
   busy: boolean;
   onCancel: () => void;
-  onSubmit: (body: { vehicleId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => void;
+  onSubmit: (body: { driverId: number; meterOut: number; destination: string; purpose: string; officers: Officer[] }) => void;
 }) {
-  const available = useMemo(() => vehicles.filter(v => !v.out), [vehicles]);
-  // The one they usually drive, when it's free.
-  const [vehicleId, setVehicleId] = useState<number | "">(() => available.find(v => v.defaultDriverId === driverId)?.id ?? available[0]?.id ?? "");
+  // The usual driver, when they're on the list; otherwise the only name there,
+  // and failing that nothing preselected.
+  const [driverId, setDriverId] = useState<number | "">(() =>
+    drivers.find(d => d.id === defaultDriverId)?.id ?? (drivers.length === 1 ? drivers[0].id : "")
+  );
   const [meter, setMeter] = useState("");
   const [destination, setDestination] = useState("");
   const [purpose, setPurpose] = useState("");
   const [officers, setOfficers] = useState<Officer[]>([]);
 
-  const picked = available.find(v => v.id === vehicleId);
-  const last = picked?.lastMeter ?? null;
   const typed = meter.trim() === "" ? null : Math.round(Number(meter));
-  // Warned about before saving, and refused by the server either way.
-  const backwards = typed !== null && last !== null && isFinite(typed) && typed < last;
-
-  if (available.length === 0) {
-    return (
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 14, color: "var(--text2)" }}>
-          {vehicles.length === 0
-            ? "No vehicles on the list yet — add one under Station → Vehicles."
-            : "Every vehicle is already out."}
-        </div>
-        <button className="btn" style={{ marginTop: 12 }} onClick={onCancel}>← Back</button>
-      </div>
-    );
-  }
+  // Warned about here, and refused by the server either way.
+  const backwards = typed !== null && lastMeter !== null && isFinite(typed) && typed < lastMeter;
+  const ready = driverId !== "" && typed !== null && isFinite(typed) && !backwards;
 
   return (
     <div style={{ marginTop: 8 }}>
-      <span style={labelStyle}>Vehicle</span>
-      <select value={vehicleId} disabled={busy} onChange={e => setVehicleId(Number(e.target.value))} style={field}>
-        {available.map(v => (
-          <option key={v.id} value={v.id}>{v.vehicleNo}{v.name ? ` — ${v.name}` : ""}</option>
-        ))}
-      </select>
+      <span style={labelStyle}>Driver</span>
+      {drivers.length === 1 ? (
+        <div style={{ ...field, fontWeight: 700, textAlign: "left" }}>{drivers[0].code} — {drivers[0].name}</div>
+      ) : (
+        <select value={driverId} disabled={busy} onChange={e => setDriverId(Number(e.target.value))} style={field}>
+          <option value="">— choose the driver —</option>
+          {drivers.map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+        </select>
+      )}
 
       <span style={labelStyle}>Meter reading now</span>
       <input
         type="number" inputMode="numeric" value={meter} disabled={busy}
-        onChange={e => setMeter(e.target.value)} placeholder={last !== null ? `last seen on ${last} km` : "km on the dial"}
+        onChange={e => setMeter(e.target.value)} placeholder={lastMeter !== null ? `last seen on ${lastMeter} km` : "km on the dial"}
         style={{ ...field, borderColor: backwards ? "#DC2626" : "var(--border)" }}
       />
       {backwards && (
         <div style={{ textAlign: "left", fontSize: 12, color: "#DC2626", marginTop: 4, fontWeight: 600 }}>
-          This vehicle was last on {last} km. A meter can&apos;t go backwards — check the reading.
+          This vehicle was last on {lastMeter} km. A meter can&apos;t go backwards — check the reading.
         </div>
       )}
 
@@ -149,12 +139,12 @@ export function TakeVehicleOut({ vehicles, people, driverId, busy, onCancel, onS
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
-          onClick={() => onSubmit({ vehicleId: Number(vehicleId), meterOut: typed ?? NaN, destination, purpose, officers })}
-          disabled={busy || typed === null || !isFinite(typed) || backwards}
+          onClick={() => onSubmit({ driverId: Number(driverId), meterOut: typed ?? NaN, destination, purpose, officers })}
+          disabled={busy || !ready}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,
             border: "none", color: "#fff", background: "#DC2626",
-            cursor: busy ? "default" : "pointer", opacity: busy || typed === null || backwards ? 0.6 : 1,
+            cursor: busy ? "default" : "pointer", opacity: busy || !ready ? 0.6 : 1,
           }}>
           Take out →
         </button>
@@ -180,7 +170,7 @@ export function BringVehicleBack({ trip, busy, onSubmit }: {
           Out in <span style={{ fontFamily: "monospace" }}>{trip.vehicleNo}</span>
         </div>
         <div style={{ fontSize: 12.5, color: "var(--text2)", marginTop: 3 }}>
-          Left on {trip.meterOut} km{trip.destination ? ` · ${trip.destination}` : ""}
+          {trip.driver ? `${trip.driver} · ` : ""}left on {trip.meterOut} km{trip.destination ? ` · ${trip.destination}` : ""}
           {trip.officers.length > 0 && ` · with ${trip.officers.join(", ")}`}
         </div>
       </div>

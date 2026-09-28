@@ -16,11 +16,13 @@ export type OpenTripInfo = {
   purpose: string;
   meterOut: number;
   officers: string[];
+  driver?: string;
 };
 
 export type VehicleOption = {
   id: number;
   vehicleNo: string;
+  pin: string | null;
   name: string;
   type: string;
   defaultDriverId: number | null;
@@ -52,12 +54,38 @@ export async function openTripForDriver(driverId: number): Promise<OpenTripInfo 
   return { ...r, outAt: new Date(r.outAt).toISOString(), officers: r.officers ?? [] };
 }
 
+// The trip this vehicle is out on, or null. One row by construction — the open
+// trip per vehicle is a unique index.
+export async function openTripForVehicle(vehicleId: number): Promise<OpenTripInfo | null> {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT t.id, t.vehicle_id AS "vehicleId", v.vehicle_no AS "vehicleNo",
+           COALESCE(v.name, '') AS "vehicleName",
+           t.out_at AS "outAt", COALESCE(t.destination, '') AS destination,
+           COALESCE(t.purpose, '') AS purpose, t.meter_out AS "meterOut",
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), '—') AS driver,
+           COALESCE(
+             (SELECT json_agg(o.name ORDER BY o.id) FROM fleet_trip_officers o WHERE o.trip_id = t.id),
+             '[]'::json
+           ) AS officers
+    FROM fleet_trips t
+    JOIN vehicles v ON v.id = t.vehicle_id
+    LEFT JOIN employees e ON e.id = t.driver_id
+    WHERE t.vehicle_id = ${vehicleId} AND t.in_at IS NULL
+    LIMIT 1
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  if (!rows.length) return null;
+  const r = rows[0];
+  return { ...r, outAt: new Date(r.outAt).toISOString(), officers: r.officers ?? [] };
+}
+
 // Vehicles for the terminal's picker: active ones, each with whether it's out
 // and the reading it was last seen on, so the form can prefill and warn.
 export async function vehicleOptions(): Promise<VehicleOption[]> {
   await ensureFleetSchema();
   const res = await db.execute(sql`
-    SELECT v.id, v.vehicle_no AS "vehicleNo", COALESCE(v.name, '') AS name, v.type,
+    SELECT v.id, v.vehicle_no AS "vehicleNo", v.pin, COALESCE(v.name, '') AS name, v.type,
            v.default_driver_id AS "defaultDriverId",
            EXISTS (SELECT 1 FROM fleet_trips t WHERE t.vehicle_id = v.id AND t.in_at IS NULL) AS out,
            -- Two plain correlated subqueries rather than a MAX over a UNION:

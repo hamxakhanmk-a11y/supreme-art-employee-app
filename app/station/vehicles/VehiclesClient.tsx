@@ -7,12 +7,15 @@ type Driver = { id: number; employeeId: string; firstName: string; lastName: str
 
 type OpenTrip = { id: number; outAt: string; destination: string; meterOut: number; driver: string };
 type Vehicle = {
-  id: number; vehicleNo: string; name: string; type: string;
-  defaultDriverId: number | null; active: boolean; notes: string;
+  id: number; vehicleNo: string; pin: string | null; name: string; type: string;
+  defaultDriverId: number | null; driverIds: number[]; active: boolean; notes: string;
   openTrip: OpenTrip | null;
 };
 
-const BLANK = { id: 0, vehicleNo: "", name: "", type: "car", defaultDriverId: "" as number | "", notes: "", active: true };
+const BLANK = {
+  id: 0, vehicleNo: "", pin: "", name: "", type: "car",
+  defaultDriverId: "" as number | "", driverIds: [] as number[], notes: "", active: true,
+};
 
 export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[]; readOnly: boolean }) {
   const [list, setList] = useState<Vehicle[]>([]);
@@ -40,8 +43,20 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const toggleDriver = (id: number) => {
+    setForm(f => {
+      const has = f.driverIds.includes(id);
+      const driverIds = has ? f.driverIds.filter(x => x !== id) : [...f.driverIds, id];
+      // Dropping the usual driver from the list clears them, rather than
+      // leaving the gate preselecting someone who may not drive it.
+      const defaultDriverId = has && f.defaultDriverId === id ? "" as number | "" : f.defaultDriverId;
+      return { ...f, driverIds, defaultDriverId };
+    });
+  };
+
   const save = async () => {
     if (!form.vehicleNo.trim()) { setErr("Vehicle number is required"); return; }
+    if (form.pin.trim() && !/^\d{3}$/.test(form.pin.trim())) { setErr("The vehicle PIN must be 3 digits"); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch("/api/fleet/vehicles", {
@@ -60,8 +75,9 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   const edit = (v: Vehicle) => {
     setErr("");
     setForm({
-      id: v.id, vehicleNo: v.vehicleNo, name: v.name || "", type: v.type,
-      defaultDriverId: v.defaultDriverId ?? "", notes: v.notes || "", active: v.active,
+      id: v.id, vehicleNo: v.vehicleNo, pin: v.pin || "", name: v.name || "", type: v.type,
+      defaultDriverId: v.defaultDriverId ?? "", driverIds: v.driverIds ?? [],
+      notes: v.notes || "", active: v.active,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -89,7 +105,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚐 Vehicles</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Every vehicle that has a log book. Retiring one stops it being offered at the gate and keeps its journeys readable.
+            Every vehicle that has a log book. A vehicle needs a PIN and at least one driver before it can go out at the gate. Retiring one keeps its journeys readable.
           </p>
         </div>
         <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
@@ -110,6 +126,15 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
               <input value={form.vehicleNo} onChange={e => setForm({ ...form, vehicleNo: e.target.value })} placeholder="e.g. APR-1234" />
             </label>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>
+              Vehicle PIN
+              <input value={form.pin} inputMode="numeric" maxLength={3}
+                onChange={e => setForm({ ...form, pin: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                placeholder="3 digits" />
+              <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
+                Typed at the gate to take this vehicle out
+              </span>
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>
               Make / model
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Suzuki Bolan" />
             </label>
@@ -123,9 +148,39 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
               Usual driver
               <select value={form.defaultDriverId} onChange={e => setForm({ ...form, defaultDriverId: e.target.value ? Number(e.target.value) : "" })}>
                 <option value="">— none —</option>
-                {drivers.map(d => <option key={d.id} value={d.id}>{d.employeeId} — {d.firstName} {d.lastName}</option>)}
+                {drivers.filter(d => form.driverIds.includes(d.id)).map(d => (
+                  <option key={d.id} value={d.id}>{d.employeeId} — {d.firstName} {d.lastName}</option>
+                ))}
               </select>
+              <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
+                Preselected at the gate. Chosen from the drivers below.
+              </span>
             </label>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>Who may drive it</span>
+              <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", margin: "2px 0 6px" }}>
+                Only these names are offered at the gate — not the whole payroll.
+              </span>
+              <div style={{
+                display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 168, overflowY: "auto",
+                border: "1px solid var(--border)", borderRadius: 8, padding: 8,
+              }}>
+                {drivers.map(d => {
+                  const on = form.driverIds.includes(d.id);
+                  return (
+                    <button key={d.id} type="button" onClick={() => toggleDriver(d.id)}
+                      style={{
+                        border: `1px solid ${on ? "var(--brand)" : "var(--border)"}`, borderRadius: 999,
+                        padding: "5px 12px", fontSize: 12.5, cursor: "pointer",
+                        background: on ? "var(--brand)" : "var(--bg)", color: on ? "#fff" : "var(--text2)",
+                        fontWeight: on ? 700 : 500,
+                      }}>
+                      {on ? "✓ " : ""}{d.employeeId} — {d.firstName} {d.lastName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)", gridColumn: "1 / -1" }}>
               Notes
               <input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Optional" />
@@ -153,8 +208,8 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
         <table>
           <thead>
             <tr>
-              <th>Vehicle No.</th><th>Make / model</th><th>Type</th><th>Usual driver</th>
-              <th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
+              <th>Vehicle No.</th><th style={{ textAlign: "center" }}>PIN</th><th>Make / model</th>
+              <th>Drivers</th><th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -166,10 +221,19 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             )}
             {shown.map(v => (
               <tr key={v.id} style={{ opacity: v.active ? 1 : 0.55 }}>
-                <td style={{ fontWeight: 700, fontFamily: "monospace" }}>{v.vehicleNo}</td>
+                <td style={{ fontWeight: 700, fontFamily: "monospace" }}>
+                  {v.vehicleNo}
+                  <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", fontFamily: "var(--font)" }}>{VEHICLE_TYPE_LABEL[v.type] || v.type}</div>
+                </td>
+                <td style={{ textAlign: "center", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: v.pin ? "var(--brand)" : "var(--text3)" }}>
+                  {v.pin || "not set"}
+                </td>
                 <td>{v.name || "—"}</td>
-                <td style={{ fontSize: 12, color: "var(--text2)" }}>{VEHICLE_TYPE_LABEL[v.type] || v.type}</td>
-                <td style={{ fontSize: 12 }}>{driverName(v.defaultDriverId)}</td>
+                <td style={{ fontSize: 12 }}>
+                  {v.driverIds.length === 0
+                    ? <span style={{ color: "#B45309", fontWeight: 600 }}>none set</span>
+                    : <>{v.driverIds.length} · <span style={{ color: "var(--text3)" }}>{driverName(v.defaultDriverId)}</span></>}
+                </td>
                 <td style={{ fontSize: 12 }}>
                   {!v.active ? <span style={{ color: "var(--text3)" }}>Retired</span>
                     : v.openTrip
