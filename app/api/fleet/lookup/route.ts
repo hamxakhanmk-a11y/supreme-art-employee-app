@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, vehicleDrivers, vehicles } from "@/lib/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { ensureFleetSchema, lastMeterReading } from "@/lib/fleet";
 import { openCardForVehicle, cardsInDrawer, openTripForVehicle } from "@/lib/fleetServer";
@@ -26,8 +26,9 @@ export async function POST(req: NextRequest) {
     if (!v) return NextResponse.json({ error: "No vehicle found for that PIN" }, { status: 404 });
     if (!v.active) return NextResponse.json({ error: `${v.vehicleNo} has been retired` }, { status: 400 });
 
-    // Only the people set on this vehicle. Employees who have left drop off
-    // the list; manually-added drivers have no employment to check.
+    // The drivers pool plus anyone named on this vehicle in particular.
+    // Employees who have left drop off the list; manually-added drivers have
+    // no employment to check.
     const driverRows = await db.select({
       rowId: vehicleDrivers.id,
       employeeId: vehicleDrivers.employeeId,
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       status: employees.status,
     }).from(vehicleDrivers)
       .leftJoin(employees, eq(employees.id, vehicleDrivers.employeeId))
-      .where(eq(vehicleDrivers.vehicleId, v.id))
+      .where(or(isNull(vehicleDrivers.vehicleId), eq(vehicleDrivers.vehicleId, v.id)))
       .orderBy(asc(vehicleDrivers.id));
 
     const drivers = driverRows

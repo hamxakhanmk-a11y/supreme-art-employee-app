@@ -163,6 +163,18 @@ DO $$ BEGIN
   -- Off the bill slip the driver brings back, alongside the card's own number.
   ALTER TABLE pso_card_issues ADD COLUMN IF NOT EXISTS rate double precision;
   ALTER TABLE pso_card_issues ADD COLUMN IF NOT EXISTS slip_no varchar(40);
+
+  -- A driver row with no vehicle drives everything. Most places run one pool of
+  -- drivers who take whatever is free, so the list is set once rather than
+  -- copied onto every vehicle; a row that does name a vehicle is an extra
+  -- allowed only there.
+  ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
+  -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
+  -- vehicle_ids never collide.
+  CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_pool_emp_key
+    ON vehicle_drivers (employee_id) WHERE vehicle_id IS NULL AND employee_id IS NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_pool_name_key
+    ON vehicle_drivers (LOWER(name)) WHERE vehicle_id IS NULL AND employee_id IS NULL;
 END $$;
   `);
   ensured = true;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, fleetTripOfficers, fleetTrips, vehicleDrivers, vehicles } from "@/lib/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema, kmBetween } from "@/lib/fleet";
@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
     const [allowed] = await db.select({
       id: vehicleDrivers.id, employeeId: vehicleDrivers.employeeId, name: vehicleDrivers.name,
     }).from(vehicleDrivers)
-      .where(and(eq(vehicleDrivers.id, driverRowId), eq(vehicleDrivers.vehicleId, vehicleId))).limit(1);
+      // Either in the pool, or named on this vehicle.
+      .where(and(
+        eq(vehicleDrivers.id, driverRowId),
+        or(isNull(vehicleDrivers.vehicleId), eq(vehicleDrivers.vehicleId, vehicleId)),
+      )).limit(1);
     if (!allowed) {
       return NextResponse.json({ error: `That driver isn't on ${v.vehicleNo}'s list` }, { status: 400 });
     }

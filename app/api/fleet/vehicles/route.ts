@@ -46,6 +46,7 @@ async function setDrivers(vehicleId: number, raw: unknown) {
       rows.push({ employeeId, name });
     }
   }
+  // Scoped to this vehicle: the pool rows (vehicle_id null) are not ours to clear.
   await db.delete(vehicleDrivers).where(eq(vehicleDrivers.vehicleId, vehicleId));
   if (rows.length) await db.insert(vehicleDrivers).values(rows.map(r => ({ vehicleId, ...r })));
   return rows;
@@ -102,6 +103,9 @@ export async function GET(req: NextRequest) {
     type DriverRow = { id: number; employeeId: number | null; name: string };
     const driversBy = new Map<number, DriverRow[]>();
     for (const l of links) {
+      // vehicleId is nullable now — a null row belongs to the pool, not to any
+      // vehicle, and the inArray above can't return one anyway.
+      if (l.vehicleId === null) continue;
       const arr = driversBy.get(l.vehicleId) ?? [];
       arr.push({ id: l.id, employeeId: l.employeeId, name: l.name || "" });
       driversBy.set(l.vehicleId, arr);

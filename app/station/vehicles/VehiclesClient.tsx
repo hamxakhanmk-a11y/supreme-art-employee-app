@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import DriverPoolPanel from "./DriverPoolPanel";
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL } from "@/lib/fleet";
 
 type Driver = { id: number; employeeId: string; firstName: string; lastName: string };
@@ -36,6 +37,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   const [showRetired, setShowRetired] = useState(false);
   const [manual, setManual] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [poolOpen, setPoolOpen] = useState(false);
 
   const openAdd = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(true); };
   const closeForm = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(false); };
@@ -154,10 +156,13 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚐 Vehicles</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Every vehicle that has a log book. A vehicle needs a PIN and at least one driver before it can go out at the gate. Retiring one keeps its journeys readable.
+            Every vehicle that has a log book. A vehicle needs a PIN, and a driver from the pool or its own, before it can go out at the gate. Retiring one keeps its journeys readable.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {!readOnly && !poolOpen && (
+            <button className="btn btn-sm" onClick={() => { setPoolOpen(true); setErr(""); }}>🧍 Drivers</button>
+          )}
           {!readOnly && !formOpen && (
             <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add vehicle</button>
           )}
@@ -167,6 +172,14 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
 
       {err && (
         <div className="card" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>
+      )}
+
+      {!readOnly && poolOpen && (
+        <DriverPoolPanel
+          staff={drivers}
+          onClose={() => setPoolOpen(false)}
+          onSaved={() => { setPoolOpen(false); load(); }}
+        />
       )}
 
       {!readOnly && formOpen && (
@@ -211,9 +224,9 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
               </span>
             </label>
             <div style={{ gridColumn: "1 / -1" }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>Who may drive it</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}>Drivers just for this vehicle</span>
               <span style={{ display: "block", fontWeight: 400, fontSize: 11, color: "var(--text3)", margin: "2px 0 6px" }}>
-                Only these names are offered at the gate. Anyone not on the staff list can be added by hand below.
+                Extra drivers for this vehicle only — everyone in <strong>Drivers</strong> above is already offered on every vehicle.
               </span>
               <div style={{
                 display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 168, overflowY: "auto",
@@ -291,7 +304,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
           <thead>
             <tr>
               <th>Vehicle No.</th><th style={{ textAlign: "center" }}>PIN</th><th>Make / model</th>
-              <th>Drivers</th><th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
+              <th>Own drivers</th><th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -319,7 +332,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
                 <td>{v.name || "—"}</td>
                 <td style={{ fontSize: 12 }}>
                   {(v.drivers?.length ?? 0) === 0
-                    ? <span style={{ color: "#B45309", fontWeight: 600 }}>none set</span>
+                    ? <span style={{ color: "var(--text3)" }}>pool only</span>
                     : <>{v.drivers.length} · <span style={{ color: "var(--text3)" }}>{driverName(v.defaultDriverId)}</span></>}
                 </td>
                 <td style={{ fontSize: 12 }}>

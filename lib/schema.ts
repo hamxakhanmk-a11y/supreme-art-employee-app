@@ -718,7 +718,9 @@ export const vehicles = pgTable("vehicles", {
 // list of three is a tap, a list of ninety is a search.
 export const vehicleDrivers = pgTable("vehicle_drivers", {
   id: serial("id").primaryKey(),
-  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  // Null means this driver drives every vehicle — the pool most yards run.
+  // A row that names a vehicle is an extra allowed only on that one.
+  vehicleId: integer("vehicle_id").references(() => vehicles.id, { onDelete: "cascade" }),
   // Null for a driver who isn't on the payroll — a hired driver, a
   // contractor's man. `name` is filled either way.
   employeeId: integer("employee_id").references(() => employees.id, { onDelete: "cascade" }),
