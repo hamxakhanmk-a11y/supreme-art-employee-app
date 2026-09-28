@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 
-// Card Maintenance: the cards themselves. What the PSO Cards register picks
-// from, and where a card is moved to another vehicle, blocked, or written off.
+// The cards themselves, above the register they appear in: what the terminal
+// hands out, and where a card is moved to another vehicle, blocked, or written
+// off. Lives on the PSO Cards tab rather than a tab of its own.
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 type Card = {
@@ -21,7 +21,7 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
 
 const BLANK = { id: 0, sn: "", vehicleId: "" as number | "", status: "in_use", notes: "" };
 
-export default function CardsClient({ vehicles, readOnly }: { vehicles: VehicleRow[]; readOnly: boolean }) {
+export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles: VehicleRow[]; readOnly: boolean; onChanged?: () => void }) {
   const [list, setList] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -57,6 +57,7 @@ export default function CardsClient({ vehicles, readOnly }: { vehicles: VehicleR
       if (!res.ok) throw new Error(j.error || "Could not save");
       closeForm();
       await load();
+      onChanged?.();
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   };
@@ -75,24 +76,21 @@ export default function CardsClient({ vehicles, readOnly }: { vehicles: VehicleR
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not delete");
       await load();
+      onChanged?.();
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   };
 
   return (
-    <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+    <div className="no-print" style={{ marginTop: 28 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 Card Maintenance</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            The PSO cards themselves — which vehicle each belongs to, and whether it&apos;s in use, blocked or lost.
-            Taking one out and submitting it happens on <Link href="/station/pso" style={{ color: "var(--brand)" }}>PSO Cards</Link>.
-          </p>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>💳 The cards</h2>
+          <div style={{ color: "#888", marginTop: 2, fontSize: 12 }}>
+            Which vehicle each belongs to, and whether it&apos;s in use, blocked or lost. Cards are handed out at the Station terminal.
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {!readOnly && !formOpen && <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add card</button>}
-          <Link href="/station/pso" className="btn btn-sm">💳 PSO Cards</Link>
-        </div>
+        {!readOnly && !formOpen && <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add card</button>}
       </div>
 
       {err && <div className="card" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}

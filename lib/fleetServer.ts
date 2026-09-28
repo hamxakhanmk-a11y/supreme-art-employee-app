@@ -289,3 +289,53 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
     rate: r.rate === null ? null : Number(r.rate),
   }));
 }
+
+export type OpenCard = {
+  issueId: number;
+  cardId: number;
+  sn: string;
+  takenBy: string;
+  collectedDate: string;
+  collectedTime: string;
+};
+
+export type DrawerCard = { id: number; sn: string; vehicleNo: string | null; own: boolean };
+
+// The card this vehicle has out right now, if any. Keyed on the issue's
+// vehicle rather than the card's, so a card lent to another vehicle comes back
+// through the vehicle it actually went out with.
+export async function openCardForVehicle(vehicleId: number): Promise<OpenCard | null> {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT i.id AS "issueId", i.card_id AS "cardId", c.sn,
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(i.driver_name), ''), '—') AS "takenBy",
+           i.collected_date::text AS "collectedDate", COALESCE(i.collected_time, '') AS "collectedTime"
+    FROM pso_card_issues i
+    JOIN pso_cards c ON c.id = i.card_id
+    LEFT JOIN employees e ON e.id = i.driver_id
+    WHERE i.vehicle_id = ${vehicleId} AND i.submitted_date IS NULL
+    ORDER BY i.id DESC
+    LIMIT 1
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  return rows.length ? rows[0] : null;
+}
+
+// Cards that can be handed out: in the drawer, not written off. This vehicle's
+// own card is flagged so the terminal can preselect it — which is the whole
+// point, since it is the one the driver will almost always be taking.
+export async function cardsInDrawer(vehicleId: number): Promise<DrawerCard[]> {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT c.id, c.sn, v.vehicle_no AS "vehicleNo", (c.vehicle_id = ${vehicleId}) AS own
+    FROM pso_cards c
+    LEFT JOIN vehicles v ON v.id = c.vehicle_id
+    WHERE c.status NOT IN ('blocked', 'lost')
+      AND NOT EXISTS (
+        SELECT 1 FROM pso_card_issues i WHERE i.card_id = c.id AND i.submitted_date IS NULL
+      )
+    ORDER BY (c.vehicle_id = ${vehicleId}) DESC, c.sn
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  return rows.map(r => ({ ...r, own: r.own === true || r.own === "t" }));
+}

@@ -4,7 +4,7 @@ import { employees, vehicleDrivers, vehicles } from "@/lib/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { ensureFleetSchema, lastMeterReading } from "@/lib/fleet";
-import { openTripForVehicle } from "@/lib/fleetServer";
+import { openCardForVehicle, cardsInDrawer, openTripForVehicle } from "@/lib/fleetServer";
 
 // POST /api/fleet/lookup { pin }
 // The vehicle half of the gate terminal: a vehicle identifies itself, and the
@@ -53,9 +53,13 @@ export async function POST(req: NextRequest) {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    const [openTrip, last] = await Promise.all([
+    const [openTrip, last, openCard, cards] = await Promise.all([
       openTripForVehicle(v.id),
       lastMeterReading(v.id),
+      // The card this vehicle has out right now, and what is in the drawer.
+      // Its own card comes first so the terminal can preselect it.
+      openCardForVehicle(v.id),
+      cardsInDrawer(v.id),
     ]);
 
     return NextResponse.json({
@@ -63,6 +67,8 @@ export async function POST(req: NextRequest) {
       drivers,
       openTrip,
       lastMeter: last?.km ?? null,
+      openCard,
+      cards,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

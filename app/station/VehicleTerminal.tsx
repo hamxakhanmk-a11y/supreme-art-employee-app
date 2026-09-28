@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PinPad from "./PinPad";
 import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Officer } from "./VehicleTripForms";
+import { TakeCardOut, SubmitCard, type DrawerCard, type OpenCard } from "./CardForms";
 
 // The vehicle half of the gate terminal. The vehicle identifies itself with
 // its own PIN and the driver is then chosen from those allowed to drive it —
@@ -16,6 +17,8 @@ type Found = {
   drivers: Driver[];
   openTrip: OpenTrip | null;
   lastMeter: number | null;
+  openCard: OpenCard | null;
+  cards: DrawerCard[];
 };
 
 export default function VehicleTerminal({
@@ -30,8 +33,9 @@ export default function VehicleTerminal({
   const [data, setData] = useState<Found | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [action, setAction] = useState<"pick" | "trip" | "card">("pick");
 
-  const reset = useCallback(() => { setPin(""); setData(null); setError(null); }, []);
+  const reset = useCallback(() => { setPin(""); setData(null); setError(null); setAction("pick"); }, []);
 
   const lookup = useCallback(async (p: string) => {
     setBusy(true); setError(null);
@@ -78,6 +82,44 @@ export default function VehicleTerminal({
     finally { setBusy(false); }
   };
 
+  const takeCard = async (body: { cardId: number; driverId: number | null; driverName: string }) => {
+    if (!data) return;
+    setBusy(true); setError(null);
+    const now = new Date();
+    try {
+      const res = await fetch("/api/fleet/card-issues", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...body, vehicleId: data.vehicle.id,
+          // Straight off the clock — nobody types a date at a gate.
+          collectedDate: now.toISOString().slice(0, 10),
+          collectedTime: now.toTimeString().slice(0, 5),
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not hand out the card");
+      const sn = data.cards.find(c => c.id === body.cardId)?.sn ?? "";
+      onDone(`Card ${sn} to ${body.driverName}`, "#4F46E5");
+      reset();
+    } catch (e: any) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const submitCard = async (body: Record<string, string | number>) => {
+    if (!data) return;
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch("/api/fleet/card-issues", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not submit the card");
+      onDone(`Card ${data.openCard?.sn ?? ""} back in · Rs ${body.amount}`, "#15803D");
+      reset();
+    } catch (e: any) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
   // A PIN typed against the wrong mode is the likeliest mistake here, so the
   // message says which kind of PIN this pad wants.
   useEffect(() => { setError(null); }, [pin]);
@@ -118,25 +160,58 @@ export default function VehicleTerminal({
         </div>
       </div>
 
-      {data.openTrip ? (
-        <BringVehicleBack trip={data.openTrip} busy={busy} onSubmit={bringBack} />
-      ) : data.drivers.length === 0 ? (
-        <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 14, color: "#B45309", fontWeight: 600 }}>
-            No drivers are set for {v.vehicleNo}.
-          </div>
-          <div style={{ fontSize: 12.5, color: "var(--text2)", marginTop: 6 }}>
-            Add them under Station → Vehicles, and this vehicle can go out.
-          </div>
+      {action === "pick" ? (
+        <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+          {data.openTrip ? (
+            <ActionButton color="#15803D" onClick={() => setAction("trip")}
+              title="← Bring the vehicle back"
+              hint={`Out since ${data.openTrip.outAt.slice(11, 16)} · left on ${data.openTrip.meterOut} km`} />
+          ) : data.drivers.length === 0 ? (
+            <div style={{ textAlign: "left", fontSize: 13, color: "#B45309", fontWeight: 600 }}>
+              No drivers are set for {v.vehicleNo} — add them under Station → Vehicles before it can go out.
+            </div>
+          ) : (
+            <ActionButton color="#DC2626" onClick={() => setAction("trip")}
+              title="Take the vehicle out →" hint="Log book entry" />
+          )}
+
+          {data.openCard ? (
+            <ActionButton color="#15803D" onClick={() => setAction("card")}
+              title="← Submit the fuel card"
+              hint={`${data.openCard.sn} · with ${data.openCard.takenBy} since ${data.openCard.collectedDate}`} />
+          ) : (
+            <ActionButton color="#4F46E5" onClick={() => setAction("card")}
+              title="Take the fuel card →"
+              hint={data.cards.find(c => c.own)?.sn ?? (data.cards.length ? "no card of its own — pick one" : "none free")} />
+          )}
         </div>
+      ) : action === "card" ? (
+        data.openCard
+          ? <SubmitCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onSubmit={submitCard} />
+          : <TakeCardOut cards={data.cards} drivers={data.drivers} people={people} busy={busy}
+              onCancel={() => setAction("pick")} onSubmit={takeCard} />
+      ) : data.openTrip ? (
+        <BringVehicleBack trip={data.openTrip} busy={busy} onSubmit={bringBack} />
       ) : (
         <TakeVehicleOut
           drivers={data.drivers} defaultDriverId={v.defaultDriverId} lastMeter={data.lastMeter}
-          people={people} busy={busy} onCancel={reset} onSubmit={takeOut}
+          people={people} busy={busy} onCancel={() => setAction("pick")} onSubmit={takeOut}
         />
       )}
 
       <button onClick={reset} className="btn" style={{ marginTop: 16 }}>← Different vehicle</button>
     </div>
+  );
+}
+
+function ActionButton({ title, hint, color, onClick }: { title: string; hint: string; color: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+      border: `1px solid ${color}`, background: color, color: "#fff", boxShadow: `0 2px 8px ${color}55`,
+    }}>
+      <div style={{ fontSize: 15.5, fontWeight: 800 }}>{title}</div>
+      <div style={{ fontSize: 11.5, opacity: 0.9, marginTop: 2 }}>{hint}</div>
+    </button>
   );
 }

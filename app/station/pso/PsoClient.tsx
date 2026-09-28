@@ -6,9 +6,9 @@ import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { PsoRow } from "@/lib/fleetServer";
-import IssueCardForm from "./IssueCardForm";
+import CardsPanel from "./CardsPanel";
 
-type VehicleRow = { id: number; vehicleNo: string; active: boolean };
+type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 export type Person = { id: number; code: string; name: string };
 
 function fmt(d: string | null) {
@@ -27,7 +27,7 @@ export default function PsoClient({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [issuing, setIssuing] = useState(false);
+
   const [editId, setEditId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -127,28 +127,20 @@ export default function PsoClient({
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 PSO Card Register</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Cards out with drivers and back again. Submit the card with the slip&apos;s number, litres and rate —
-            that writes the month&apos;s fuel entry for that vehicle, so the Log Book&apos;s average counts it.
+            Cards are handed out at the Station terminal, on the vehicle&apos;s PIN. Submit one here with the slip&apos;s
+            number, litres and rate — that writes the month&apos;s fuel entry, so the Log Book&apos;s average counts it.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {!readOnly && !issuing && <button className="btn btn-sm btn-primary" onClick={() => { setErr(""); setIssuing(true); }}>+ Issue a card</button>}
+
           <button className="btn btn-sm" onClick={() => window.print()}>🖨 Print</button>
           <button className="btn btn-sm" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>
-          <Link href="/station/cards" className="btn btn-sm">💳 Card Maintenance</Link>
+          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
         </div>
       </div>
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}
 
-      {issuing && !readOnly && (
-        <IssueCardForm
-          people={people}
-          onCancel={() => setIssuing(false)}
-          onSaved={() => { setIssuing(false); router.refresh(); }}
-          onError={setErr}
-        />
-      )}
 
       {out.length > 0 && (
         <div className="card no-print" style={{ marginBottom: 14, borderLeft: "4px solid #B45309", padding: "10px 14px" }}>
@@ -281,6 +273,8 @@ export default function PsoClient({
           )}
         </table>
       </div>
+
+      <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={() => router.refresh()} />
     </div>
   );
 }

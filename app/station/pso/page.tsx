@@ -23,7 +23,7 @@ export default async function PsoPage({ searchParams }: { searchParams: Promise<
 
   const [rows, vehicleList, people, user] = await Promise.all([
     psoRegister(from, to),
-    db.select({ id: vehicles.id, vehicleNo: vehicles.vehicleNo, active: vehicles.active })
+    db.select({ id: vehicles.id, vehicleNo: vehicles.vehicleNo, name: vehicles.name, active: vehicles.active })
       .from(vehicles).orderBy(asc(vehicles.vehicleNo)),
     db.select({
       id: employees.id, code: employees.employeeId,
