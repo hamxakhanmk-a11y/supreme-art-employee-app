@@ -771,6 +771,43 @@ export const fuelEntries = pgTable("fuel_entries", {
   meterReading: integer("meter_reading"),
   drawnById: integer("drawn_by_id").references(() => employees.id, { onDelete: "set null" }),
   vendor: varchar("vendor", { length: 120 }).default(""),
+  // Set when this entry came from a submitted PSO card rather than being typed
+  // in by hand. Cascades, so the two can never drift apart.
+  cardIssueId: integer("card_issue_id"),
+  notes: text("notes").default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =====================
+// PSO FUEL CARDS
+// =====================
+// The card is what persists: it moves between vehicles, gets blocked, gets
+// replaced, and its SN outlives all of it. Maintained on Station → Card
+// Maintenance; the register of who took it out lives in pso_card_issues.
+
+export const psoCards = pgTable("pso_cards", {
+  id: serial("id").primaryKey(),
+  sn: varchar("sn", { length: 40 }).notNull(),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
+  status: varchar("status", { length: 16 }).notNull().default("in_use"), // in_use | spare | blocked | lost
+  notes: text("notes").default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// One row per time a card went out with a driver and came back. Dates and
+// times are held apart because that is how the register is written and read.
+export const psoCardIssues = pgTable("pso_card_issues", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").notNull().references(() => psoCards.id, { onDelete: "cascade" }),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
+  driverId: integer("driver_id").references(() => employees.id, { onDelete: "set null" }),
+  driverName: varchar("driver_name", { length: 160 }),
+  collectedDate: date("collected_date").notNull(),
+  collectedTime: varchar("collected_time", { length: 5 }),   // "16:43"
+  submittedDate: date("submitted_date"),                      // null = still out
+  submittedTime: varchar("submitted_time", { length: 5 }),
+  amount: doublePrecision("amount"),                          // Fuel (PKR)
+  litres: doublePrecision("litres"),                          // optional; the km/litre average needs it
   notes: text("notes").default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

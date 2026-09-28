@@ -168,6 +168,8 @@ export type LogBookFuel = {
   drawnBy: string;
   vendor: string;
   notes: string;
+  // Written by a submitted PSO card rather than typed in here.
+  fromCard: boolean;
 };
 
 // One page of the book: a vehicle's month. `month` is "YYYY-MM".
@@ -195,7 +197,8 @@ export async function logBookMonth(vehicleId: number, month: string) {
     SELECT f.id, f.date::text AS date, f.litres, f.rate, f.amount,
            f.meter_reading AS "meterReading",
            COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), '—') AS "drawnBy",
-           COALESCE(f.vendor, '') AS vendor, COALESCE(f.notes, '') AS notes
+           COALESCE(f.vendor, '') AS vendor, COALESCE(f.notes, '') AS notes,
+           (f.card_issue_id IS NOT NULL) AS "fromCard"
     FROM fuel_entries f
     LEFT JOIN employees e ON e.id = f.drawn_by_id
     WHERE f.vehicle_id = ${vehicleId}
@@ -217,6 +220,7 @@ export async function logBookMonth(vehicleId: number, month: string) {
   const fuel: LogBookFuel[] = fuelRows.map(r => ({
     ...r,
     litres: Number(r.litres), rate: Number(r.rate), amount: Number(r.amount),
+    fromCard: r.fromCard === true || r.fromCard === "t",
     meterReading: r.meterReading === null ? null : Number(r.meterReading),
   }));
 
@@ -233,4 +237,51 @@ export async function logBookMonth(vehicleId: number, month: string) {
       openTrips: trips.filter(t => t.inAt === null).length,
     },
   };
+}
+
+export type PsoRow = {
+  id: number;
+  cardId: number;
+  sn: string;
+  vehicleId: number | null;
+  vehicleNo: string;
+  driverId: number | null;
+  driver: string;
+  collectedDate: string;
+  collectedTime: string;
+  submittedDate: string | null;
+  submittedTime: string;
+  amount: number | null;
+  litres: number | null;
+  notes: string;
+};
+
+// The PSO card register over a date range, read on the collection date — that
+// is the day the card left, and the day the register is written against.
+// Cards still out are included whatever the range's end, since an unsubmitted
+// card is the thing you most need to see.
+export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT i.id, i.card_id AS "cardId", c.sn,
+           i.vehicle_id AS "vehicleId", COALESCE(v.vehicle_no, '—') AS "vehicleNo",
+           i.driver_id AS "driverId",
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(i.driver_name), ''), '—') AS driver,
+           i.collected_date::text AS "collectedDate", COALESCE(i.collected_time, '') AS "collectedTime",
+           i.submitted_date::text AS "submittedDate", COALESCE(i.submitted_time, '') AS "submittedTime",
+           i.amount, i.litres, COALESCE(i.notes, '') AS notes
+    FROM pso_card_issues i
+    JOIN pso_cards c ON c.id = i.card_id
+    LEFT JOIN vehicles v ON v.id = i.vehicle_id
+    LEFT JOIN employees e ON e.id = i.driver_id
+    WHERE (i.collected_date BETWEEN ${from}::date AND ${to}::date)
+       OR i.submitted_date IS NULL
+    ORDER BY i.collected_date DESC, i.id DESC
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  return rows.map(r => ({
+    ...r,
+    amount: r.amount === null ? null : Number(r.amount),
+    litres: r.litres === null ? null : Number(r.litres),
+  }));
 }

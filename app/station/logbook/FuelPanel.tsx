@@ -123,13 +123,24 @@ export default function FuelPanel({
                 <td className="num">{f.amount ? `Rs ${f.amount.toLocaleString("en-PK")}` : "—"}</td>
                 <td className="num">{f.meterReading ?? "—"}</td>
                 <td>{f.drawnBy}</td>
-                <td style={{ color: "var(--text2)" }}>{f.vendor || "—"}</td>
+                <td style={{ color: "var(--text2)" }}>
+                  {f.vendor || "—"}
+                  {f.fromCard && (
+                    <span style={{ marginLeft: 6, padding: "1px 7px", borderRadius: 999, background: "#e0e7ff", color: "#4F46E5", fontSize: 10, fontWeight: 700 }}>PSO card</span>
+                  )}
+                </td>
                 {!readOnly && (
                   <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn btn-sm" disabled={busy} onClick={() => edit(f)}>Edit</button>
-                      {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(f)}>Delete</button>}
-                    </div>
+                    {f.fromCard ? (
+                      // Rebuilt from the card entry every time it changes, so
+                      // editing it here would be undone without warning.
+                      <a href="/station/pso" className="btn btn-sm" title="This entry comes from a submitted PSO card">On PSO Cards →</a>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button className="btn btn-sm" disabled={busy} onClick={() => edit(f)}>Edit</button>
+                        {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(f)}>Delete</button>}
+                      </div>
+                    )}
                   </td>
                 )}
               </tr>

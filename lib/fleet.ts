@@ -112,6 +112,48 @@ DO $$ BEGIN
   );
   CREATE INDEX IF NOT EXISTS fuel_entries_vehicle_date_idx
     ON fuel_entries (vehicle_id, date);
+
+  -- PSO fuel cards. The card is the thing that persists; it can move between
+  -- vehicles, be blocked, or be replaced, and its SN outlives all of that.
+  CREATE TABLE IF NOT EXISTS pso_cards (
+    id serial PRIMARY KEY,
+    sn varchar(40) NOT NULL,
+    vehicle_id integer REFERENCES vehicles(id) ON DELETE SET NULL,
+    status varchar(16) NOT NULL DEFAULT 'in_use',   -- in_use | spare | blocked | lost
+    notes text DEFAULT '',
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS pso_cards_sn_key ON pso_cards (LOWER(sn));
+
+  -- One row per time a card went out with a driver and came back. Dates and
+  -- times are kept apart, as the register writes them.
+  CREATE TABLE IF NOT EXISTS pso_card_issues (
+    id serial PRIMARY KEY,
+    card_id integer NOT NULL REFERENCES pso_cards(id) ON DELETE CASCADE,
+    vehicle_id integer REFERENCES vehicles(id) ON DELETE SET NULL,
+    driver_id integer REFERENCES employees(id) ON DELETE SET NULL,
+    driver_name varchar(160),
+    collected_date date NOT NULL,
+    collected_time varchar(5),
+    submitted_date date,
+    submitted_time varchar(5),
+    amount double precision,
+    litres double precision,
+    notes text DEFAULT '',
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  -- A card is either with a driver or in the drawer; it can't be both.
+  CREATE UNIQUE INDEX IF NOT EXISTS pso_card_issues_open_key
+    ON pso_card_issues (card_id) WHERE submitted_date IS NULL;
+  CREATE INDEX IF NOT EXISTS pso_card_issues_vehicle_idx
+    ON pso_card_issues (vehicle_id, collected_date);
+
+  -- Fuel drawn on a card is the same fuel the log book counts, so a submitted
+  -- card writes the P.O.L. entry rather than being tallied separately. The
+  -- cascade keeps the two from drifting: remove the card entry and its fuel
+  -- entry goes with it.
+  ALTER TABLE fuel_entries ADD COLUMN IF NOT EXISTS card_issue_id integer
+    REFERENCES pso_card_issues(id) ON DELETE CASCADE;
 END $$;
   `);
   ensured = true;
