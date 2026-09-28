@@ -22,6 +22,20 @@ function hm(iso: string | null) {
   if (!iso) return "";
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Karachi" });
 }
+// Officers other than the driver — the same person named twice in one cell
+// reads like a mistake rather than a fact.
+function ridingWith(t: { driver: string; officers: string[] }) {
+  const d = t.driver.trim().toLowerCase();
+  return t.officers.filter(o => {
+    const name = o.trim().toLowerCase();
+    // Officers picked from the staff list carry their code ("SAPL-65 — Fazal
+    // Rabi"), while the driver is stored as a bare name, so compare on the
+    // part after the dash as well.
+    const bare = name.includes("—") ? name.split("—").slice(1).join("—").trim() : name;
+    return name !== d && bare !== d;
+  });
+}
+
 function monthLabel(month: string) {
   const [y, m] = month.split("-");
   return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -105,11 +119,11 @@ export default function LogBookClient({
       filename: `log-book-${vehicle?.vehicleNo ?? "vehicle"}-${month}.xlsx`,
       sheetName: month,
       title: `Log Book — ${vehicle?.vehicleNo ?? ""} — ${monthLabel(month)}`,
-      headers: ["Date", "Time From", "Time To", "Details of Journey", "Purpose", "Officer / Official", "Meter From", "Meter To", "K.M. Covered", "P.O.L. Drawn", "Remarks"],
+      headers: ["Date", "Time From", "Time To", "Details of Journey", "Purpose", "Driver / Officer", "Meter From", "Meter To", "K.M. Covered", "P.O.L. Drawn", "Remarks"],
       colWidths: [11, 10, 10, 26, 22, 26, 11, 11, 12, 12, 22],
       rows: trips.map(t => [
         bookDate(t.date), hm(t.outAt), hm(t.inAt), t.destination, t.purpose,
-        t.officers.join(", "), t.meterOut, t.meterIn ?? "", t.kmCovered ?? "",
+        [t.driver, ...ridingWith(t)].join(", "), t.meterOut, t.meterIn ?? "", t.kmCovered ?? "",
         polOn(t.date), t.remarks,
       ]),
     });
@@ -179,7 +193,7 @@ export default function LogBookClient({
                   <th colSpan={2} style={{ textAlign: "center" }}>Time</th>
                   <th rowSpan={2}>Details of Journey</th>
                   <th rowSpan={2}>Purpose</th>
-                  <th rowSpan={2}>Officer / Official</th>
+                  <th rowSpan={2}>Driver / Officer</th>
                   <th colSpan={2} style={{ textAlign: "center" }}>Meter Reading</th>
                   <th rowSpan={2} className="num">K.M.</th>
                   <th rowSpan={2}>P.O.L.</th>
@@ -208,7 +222,10 @@ export default function LogBookClient({
                     <td><input type="time" value={draft.inTime} onChange={e => setDraft({ ...draft, inTime: e.target.value })} /></td>
                     <td><input value={draft.destination} onChange={e => setDraft({ ...draft, destination: e.target.value })} /></td>
                     <td><input value={draft.purpose} onChange={e => setDraft({ ...draft, purpose: e.target.value })} /></td>
-                    <td><input value={draft.officers} onChange={e => setDraft({ ...draft, officers: e.target.value })} placeholder="comma separated" /></td>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{t.driver}</div>
+                      <input value={draft.officers} onChange={e => setDraft({ ...draft, officers: e.target.value })} placeholder="officers, comma separated" />
+                    </td>
                     <td><input type="number" value={draft.meterOut} onChange={e => setDraft({ ...draft, meterOut: e.target.value })} /></td>
                     <td><input type="number" value={draft.meterIn} onChange={e => setDraft({ ...draft, meterIn: e.target.value })} placeholder="blank = still out" /></td>
                     <td className="num" style={{ color: "var(--text3)" }}>auto</td>
@@ -229,7 +246,12 @@ export default function LogBookClient({
                     <td>{t.inAt ? hm(t.inAt) : <span className="no-print" style={{ color: "#DC2626", fontWeight: 700 }}>out</span>}</td>
                     <td>{t.destination || "—"}</td>
                     <td>{t.purpose || "—"}</td>
-                    <td>{t.officers.length ? t.officers.join(", ") : <span style={{ color: "var(--text3)" }}>{t.driver}</span>}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{t.driver}</div>
+                      {ridingWith(t).length > 0 && (
+                        <div style={{ fontSize: 11.5, color: "var(--text2)", marginTop: 1 }}>with {ridingWith(t).join(", ")}</div>
+                      )}
+                    </td>
                     <td className="num">{t.meterOut}</td>
                     <td className="num">{t.meterIn ?? ""}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{t.kmCovered ?? ""}</td>
