@@ -691,3 +691,69 @@ export const capaReports = pgTable("capa_reports", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   closedAt: timestamp("closed_at"),
 });
+
+// =====================
+// FLEET (vehicle log book)
+// =====================
+// Replaces the paper log book kept per vehicle per month. A trip is one
+// journey: outAt when the vehicle leaves the gate, inAt when it returns
+// (null = still out, the same convention station_leaves uses for a person).
+// Created by ensureFleetSchema() in lib/fleet.ts rather than a migration.
+
+export const vehicles = pgTable("vehicles", {
+  id: serial("id").primaryKey(),
+  vehicleNo: varchar("vehicle_no", { length: 30 }).notNull(),  // "APR-1234"
+  name: varchar("name", { length: 80 }).default(""),           // make / model
+  type: varchar("type", { length: 20 }).notNull().default("car"), // car | van | bike | truck
+  defaultDriverId: integer("default_driver_id").references(() => employees.id, { onDelete: "set null" }),
+  active: boolean("active").notNull().default(true),           // retired keeps its history
+  notes: text("notes").default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const fleetTrips = pgTable("fleet_trips", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),                 // local day of the outward leg
+  outAt: timestamp("out_at", { withTimezone: true }).notNull(),
+  inAt: timestamp("in_at", { withTimezone: true }),
+  driverId: integer("driver_id").references(() => employees.id, { onDelete: "set null" }),
+  destination: text("destination").default(""), // "Details of Journey"
+  purpose: text("purpose").default(""),
+  meterOut: integer("meter_out").notNull(),
+  meterIn: integer("meter_in"),
+  // Stored, not derived at read time: when a reading is corrected later the row
+  // should say what it says rather than silently re-deriving and leaving the
+  // history disagreeing with itself. Recomputed on every write to either.
+  kmCovered: integer("km_covered"),
+  remarks: text("remarks").default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// The officers/officials travelling. Several per trip, so it's its own table.
+// employeeId is nullable for someone off the payroll (a customer's man, a
+// visitor); name is stored either way, so a page printed today still reads
+// correctly after that person leaves the company.
+export const fleetTripOfficers = pgTable("fleet_trip_officers", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => fleetTrips.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 160 }).notNull(),
+});
+
+// P.O.L. drawn. Its own record rather than a number on a trip row: fuel is
+// drawn at a pump, not on a journey, and the monthly km/litre average needs
+// the litres regardless of whether that day had a trip.
+export const fuelEntries = pgTable("fuel_entries", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").notNull().references(() => vehicles.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  litres: doublePrecision("litres").notNull().default(0),
+  rate: doublePrecision("rate").notNull().default(0),
+  amount: doublePrecision("amount").notNull().default(0),
+  meterReading: integer("meter_reading"),
+  drawnById: integer("drawn_by_id").references(() => employees.id, { onDelete: "set null" }),
+  vendor: varchar("vendor", { length: 120 }).default(""),
+  notes: text("notes").default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
