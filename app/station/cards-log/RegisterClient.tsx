@@ -6,7 +6,7 @@ import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { PsoRow } from "@/lib/fleetServer";
-import CardsPanel from "./CardsPanel";
+
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 export type Person = { id: number; code: string; name: string };
@@ -18,7 +18,7 @@ function fmt(d: string | null) {
 }
 const rupees = (n: number | null) => (n === null ? "" : `Rs ${n.toLocaleString("en-PK")}`);
 
-export default function PsoClient({
+export default function RegisterClient({
   rows, vehicles, people, from, to, readOnly, canDelete,
 }: {
   rows: PsoRow[]; vehicles: VehicleRow[]; people: Person[];
@@ -43,7 +43,6 @@ export default function PsoClient({
     return rows.filter(r => (r.sn + " " + r.driver + " " + r.vehicleNo + " " + r.notes).toLowerCase().includes(q));
   }, [rows, search]);
 
-  const out = rows.filter(r => !r.submittedDate);
   const totalAmount = shown.reduce((s, r) => s + (r.amount ?? 0), 0);
 
   const startEdit = (r: PsoRow) => {
@@ -55,25 +54,12 @@ export default function PsoClient({
       collectedDate: r.collectedDate, collectedTime: r.collectedTime,
       submittedDate: r.submittedDate ?? "", submittedTime: r.submittedTime,
       amount: r.amount === null ? "" : String(r.amount),
-      litres: r.litres === null ? "" : String(r.litres),
-      rate: r.rate === null ? "" : String(r.rate),
+
       slipNo: r.slipNo,
       notes: r.notes,
     });
   };
 
-  // Litres × rate is what the slip adds up to, so typing those fills the
-  // amount. It stays editable: slips round, and the printed total wins.
-  const setFuel = (key: "litres" | "rate" | "amount", value: string) => {
-    setDraft(d => {
-      const next = { ...d, [key]: value };
-      if (key !== "amount") {
-        const l = parseFloat(next.litres), r = parseFloat(next.rate);
-        if (isFinite(l) && isFinite(r) && l > 0 && r > 0) next.amount = String(Math.round(l * r * 100) / 100);
-      }
-      return next;
-    });
-  };
 
   const saveEdit = async (id: number) => {
     setBusy(true); setErr("");
@@ -107,11 +93,11 @@ export default function PsoClient({
       filename: `pso-card-register-${from}-to-${to}.xlsx`,
       sheetName: "PSO Cards",
       title: `PSO Card Register — ${fmt(from)} to ${fmt(to)}`,
-      headers: ["Sr No", "Driver Name", "Veh No.", "Collection Date", "Collection Time", "Date submitted", "Time submitted", "Card SN", "Slip No.", "Litres", "Rate", "Fuel (PKR)", "Notes"],
-      colWidths: [7, 24, 12, 15, 14, 15, 14, 16, 14, 10, 10, 13, 26],
+      headers: ["Sr No", "Driver Name", "Veh No.", "Collection Date", "Collection Time", "Date submitted", "Time submitted", "Card SN", "Slip No.", "Fuel (PKR)", "Notes"],
+      colWidths: [7, 24, 12, 15, 14, 15, 14, 16, 14, 13, 26],
       rows: shown.map((r, i) => [
         i + 1, r.driver, r.vehicleNo, fmt(r.collectedDate), r.collectedTime,
-        fmt(r.submittedDate), r.submittedTime, r.sn, r.slipNo, r.litres ?? "", r.rate ?? "", r.amount ?? "", r.notes,
+        fmt(r.submittedDate), r.submittedTime, r.sn, r.slipNo, r.amount ?? "", r.notes,
       ]),
     });
   };
@@ -121,14 +107,14 @@ export default function PsoClient({
   return (
     <div className="fade-up">
       <PrintLandscape />
-      <PrintHeader title="PSO Card Register" meta={`${fmt(from)} to ${fmt(to)} · ${shown.length} entries · ${rupees(totalAmount)}`} />
+      <PrintHeader title="PSO Cards — Fuel Logbook" meta={`${fmt(from)} to ${fmt(to)} · ${shown.length} entries · ${rupees(totalAmount)}`} />
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 PSO Card Register</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>📋 Cards Logbook</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Cards are handed out at the Station terminal, on the vehicle&apos;s PIN. Submit one here with the slip&apos;s
-            number, litres and rate — that writes the month&apos;s fuel entry, so the Log Book&apos;s average counts it.
+            Every fuel record drawn on a PSO card. Records are entered on <Link href="/station/pso" style={{ color: "var(--brand)" }}>PSO Cards</Link>,
+            against whoever is holding the card, and corrected here.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -142,16 +128,6 @@ export default function PsoClient({
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}
 
 
-      {out.length > 0 && (
-        <div className="card no-print" style={{ marginBottom: 14, borderLeft: "4px solid #B45309", padding: "10px 14px" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "#92400E" }}>
-            {out.length} card{out.length === 1 ? "" : "s"} still out
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>
-            {out.map(r => `${r.sn} · ${r.driver}`).join("  ·  ")}
-          </div>
-        </div>
-      )}
 
       <div className="no-print" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <input placeholder="Search SN, driver, vehicle…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: 230 }} />
@@ -206,16 +182,7 @@ export default function PsoClient({
                   <input value={draft.slipNo} onChange={e => setDraft({ ...draft, slipNo: e.target.value })} placeholder="slip no." style={{ marginTop: 4 }} />
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <input type="number" step="any" value={draft.litres} onChange={e => setFuel("litres", e.target.value)} placeholder="litres" style={{ width: 72 }} />
-                    <input type="number" step="any" value={draft.rate} onChange={e => setFuel("rate", e.target.value)} placeholder="rate" style={{ width: 72 }} />
-                  </div>
-                  <input type="number" step="any" value={draft.amount} onChange={e => setFuel("amount", e.target.value)} placeholder="PKR" style={{ marginTop: 4, fontWeight: 700 }} />
-                  {draft.submittedDate && !draft.litres && (
-                    <div style={{ fontSize: 10.5, color: "#B45309", marginTop: 3, lineHeight: 1.35 }}>
-                      Without litres this fuel has no km/litre average and the log book&apos;s P.O.L. column stays blank.
-                    </div>
-                  )}
+                  <input type="number" step="any" value={draft.amount} onChange={e => setDraft({ ...draft, amount: e.target.value })} placeholder="PKR" style={{ fontWeight: 700 }} />
                 </td>
                 <td><input value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} /></td>
                 <td className="no-print">
@@ -233,7 +200,7 @@ export default function PsoClient({
                 <td style={{ whiteSpace: "nowrap" }}>{fmt(r.collectedDate)}</td>
                 <td>{r.collectedTime}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
-                  {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }}>still out</span>}
+                  {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }}>slip pending</span>}
                 </td>
                 <td>{r.submittedTime}</td>
                 <td style={{ fontFamily: "monospace" }}>
@@ -242,19 +209,13 @@ export default function PsoClient({
                 </td>
                 <td className="num" style={{ fontWeight: 700 }}>
                   {r.amount === null ? "" : r.amount.toLocaleString("en-PK")}
-                  {r.litres
-                    ? <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)" }}>{r.litres} L{r.rate ? ` @ ${r.rate}` : ""}</div>
-                    : r.submittedDate && r.amount
-                      ? <div style={{ fontSize: 10.5, fontWeight: 400, color: "#B45309" }}>no litres</div>
-                      : null}
+
                 </td>
                 <td style={{ color: "var(--text2)" }}>{r.notes}</td>
                 {!readOnly && (
                   <td className="no-print">
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn btn-sm" disabled={busy} onClick={() => startEdit(r)}>
-                        {r.submittedDate ? "Edit" : "Submit"}
-                      </button>
+                      <button className="btn btn-sm" disabled={busy} onClick={() => startEdit(r)}>Edit</button>
                       {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(r)}>Delete</button>}
                     </div>
                   </td>
@@ -274,7 +235,6 @@ export default function PsoClient({
         </table>
       </div>
 
-      <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={() => router.refresh()} />
     </div>
   );
 }

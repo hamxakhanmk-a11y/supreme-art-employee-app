@@ -792,6 +792,12 @@ export const psoCards = pgTable("pso_cards", {
   sn: varchar("sn", { length: 40 }).notNull(),
   vehicleId: integer("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
   status: varchar("status", { length: 16 }).notNull().default("in_use"), // in_use | spare | blocked | lost
+  // Who is holding the card, and since when. Custody lives on the card: it
+  // changes hands independently of the fuel records, and a card stays out
+  // across many of them. Null means it is in the drawer.
+  heldById: integer("held_by_id").references(() => employees.id, { onDelete: "set null" }),
+  heldByName: varchar("held_by_name", { length: 160 }),
+  heldSince: date("held_since"),
   notes: text("notes").default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

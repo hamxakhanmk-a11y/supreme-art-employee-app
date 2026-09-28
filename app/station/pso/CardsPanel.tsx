@@ -9,7 +9,7 @@ type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: 
 type Card = {
   id: number; sn: string; vehicleId: number | null; vehicleNo: string | null;
   status: string; notes: string;
-  out: { driver: string; since: string } | null;
+  out: { driver: string; since: string | null } | null;
 };
 
 const STATUS: Record<string, { label: string; color: string; bg: string }> = {
@@ -85,7 +85,7 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
     <div className="no-print" style={{ marginTop: 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>💳 The cards</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>All cards</h2>
           <div style={{ color: "#888", marginTop: 2, fontSize: 12 }}>
             Which vehicle each belongs to, and whether it&apos;s in use, blocked or lost. Cards are handed out at the Station terminal.
           </div>

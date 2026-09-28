@@ -25,23 +25,15 @@ export async function GET() {
       id: psoCards.id, sn: psoCards.sn, vehicleId: psoCards.vehicleId,
       status: psoCards.status, notes: psoCards.notes,
       vehicleNo: vehicles.vehicleNo,
+      heldById: psoCards.heldById, heldByName: psoCards.heldByName, heldSince: psoCards.heldSince,
     }).from(psoCards)
       .leftJoin(vehicles, eq(vehicles.id, psoCards.vehicleId))
       .orderBy(asc(psoCards.sn));
 
-    const open = await db.select({
-      cardId: psoCardIssues.cardId,
-      driverName: psoCardIssues.driverName,
-      collectedDate: psoCardIssues.collectedDate,
-    }).from(psoCardIssues).where(isNull(psoCardIssues.submittedDate));
-    const openBy = new Map(open.map(o => [o.cardId, o]));
-
     return NextResponse.json(rows.map(r => ({
       ...r,
       vehicleNo: r.vehicleNo ?? null,
-      out: openBy.get(r.id)
-        ? { driver: openBy.get(r.id)!.driverName || "—", since: openBy.get(r.id)!.collectedDate }
-        : null,
+      out: r.heldByName ? { driver: r.heldByName, since: r.heldSince } : null,
     })));
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -99,14 +91,10 @@ export async function PUT(req: NextRequest) {
 
     // A card in someone's hands can't be moved or written off underneath them
     // — the open entry would end up pointing at the wrong vehicle.
-    if ((vehicleId !== before.vehicleId || status !== before.status)) {
-      const [out] = await db.select({ id: psoCardIssues.id }).from(psoCardIssues)
-        .where(sql`${psoCardIssues.cardId} = ${id} AND ${psoCardIssues.submittedDate} IS NULL`).limit(1);
-      if (out) {
-        return NextResponse.json({
-          error: "This card is out with a driver — take it back in on the PSO Cards tab first.",
-        }, { status: 400 });
-      }
+    if ((vehicleId !== before.vehicleId || status !== before.status) && before.heldByName) {
+      return NextResponse.json({
+        error: `This card is with ${before.heldByName} — take it back in first.`,
+      }, { status: 400 });
     }
 
     await db.update(psoCards).set({

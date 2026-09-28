@@ -277,8 +277,7 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
     JOIN pso_cards c ON c.id = i.card_id
     LEFT JOIN vehicles v ON v.id = i.vehicle_id
     LEFT JOIN employees e ON e.id = i.driver_id
-    WHERE (i.collected_date BETWEEN ${from}::date AND ${to}::date)
-       OR i.submitted_date IS NULL
+    WHERE i.collected_date BETWEEN ${from}::date AND ${to}::date
     ORDER BY i.collected_date DESC, i.id DESC
   `);
   const rows: any[] = (res as any).rows ?? (res as any);
@@ -291,7 +290,6 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
 }
 
 export type OpenCard = {
-  issueId: number;
   cardId: number;
   sn: string;
   takenBy: string;
@@ -301,26 +299,23 @@ export type OpenCard = {
 
 export type DrawerCard = { id: number; sn: string; vehicleNo: string | null; own: boolean };
 
-// The card this vehicle has out right now, if any. Keyed on the issue's
-// vehicle rather than the card's, so a card lent to another vehicle comes back
-// through the vehicle it actually went out with.
+// The card this vehicle is out with, read off the card itself: custody lives
+// there because a card stays with a driver across many fills.
 export async function openCardForVehicle(vehicleId: number): Promise<OpenCard | null> {
   await ensureFleetSchema();
   const res = await db.execute(sql`
-    SELECT i.id AS "issueId", i.card_id AS "cardId", c.sn,
-           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(i.driver_name), ''), '—') AS "takenBy",
-           i.collected_date::text AS "collectedDate", COALESCE(i.collected_time, '') AS "collectedTime"
-    FROM pso_card_issues i
-    JOIN pso_cards c ON c.id = i.card_id
-    LEFT JOIN employees e ON e.id = i.driver_id
-    WHERE i.vehicle_id = ${vehicleId} AND i.submitted_date IS NULL
-    ORDER BY i.id DESC
+    SELECT c.id AS "cardId", c.sn,
+           COALESCE(NULLIF(TRIM(c.held_by_name), ''), '—') AS "takenBy",
+           COALESCE(c.held_since::text, '') AS "collectedDate",
+           '' AS "collectedTime"
+    FROM pso_cards c
+    WHERE c.vehicle_id = ${vehicleId} AND c.held_by_name IS NOT NULL
+    ORDER BY c.id
     LIMIT 1
   `);
   const rows: any[] = (res as any).rows ?? (res as any);
   return rows.length ? rows[0] : null;
 }
-
 // Cards that can be handed out: in the drawer, not written off. This vehicle's
 // own card is flagged so the terminal can preselect it — which is the whole
 // point, since it is the one the driver will almost always be taking.
@@ -331,9 +326,7 @@ export async function cardsInDrawer(vehicleId: number): Promise<DrawerCard[]> {
     FROM pso_cards c
     LEFT JOIN vehicles v ON v.id = c.vehicle_id
     WHERE c.status NOT IN ('blocked', 'lost')
-      AND NOT EXISTS (
-        SELECT 1 FROM pso_card_issues i WHERE i.card_id = c.id AND i.submitted_date IS NULL
-      )
+      AND c.held_by_name IS NULL
     ORDER BY (c.vehicle_id = ${vehicleId}) DESC, c.sn
   `);
   const rows: any[] = (res as any).rows ?? (res as any);

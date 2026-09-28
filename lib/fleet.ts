@@ -139,11 +139,12 @@ DO $$ BEGIN
     notes text DEFAULT '',
     created_at timestamptz NOT NULL DEFAULT now()
   );
-  -- A card is either with a driver or in the drawer; it can't be both.
-  CREATE UNIQUE INDEX IF NOT EXISTS pso_card_issues_open_key
-    ON pso_card_issues (card_id) WHERE submitted_date IS NULL;
   CREATE INDEX IF NOT EXISTS pso_card_issues_vehicle_idx
     ON pso_card_issues (vehicle_id, collected_date);
+  -- Dropped on purpose: a row here is one fuel record, not a custody cycle, so
+  -- a card out with a driver for a month has as many rows as it had fills.
+  -- Who holds the card is on the card itself (held_by_* below).
+  DROP INDEX IF EXISTS pso_card_issues_open_key;
 
   -- Fuel drawn on a card is the same fuel the log book counts, so a submitted
   -- card writes the P.O.L. entry rather than being tallied separately. The
@@ -168,6 +169,13 @@ DO $$ BEGIN
   -- drivers who take whatever is free, so the list is set once rather than
   -- copied onto every vehicle; a row that does name a vehicle is an extra
   -- allowed only there.
+  -- Who is holding the card right now, and since when. On the card, because
+  -- that is where custody lives: it changes hands independently of the fuel
+  -- records, and a card stays out across many of them.
+  ALTER TABLE pso_cards ADD COLUMN IF NOT EXISTS held_by_id integer REFERENCES employees(id) ON DELETE SET NULL;
+  ALTER TABLE pso_cards ADD COLUMN IF NOT EXISTS held_by_name varchar(160);
+  ALTER TABLE pso_cards ADD COLUMN IF NOT EXISTS held_since date;
+
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
   -- vehicle_ids never collide.

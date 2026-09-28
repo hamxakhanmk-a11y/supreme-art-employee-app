@@ -7,7 +7,6 @@ import PrintHeader from "@/components/PrintHeader";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { LogBookTrip, LogBookFuel } from "@/lib/fleetServer";
 import type { Person } from "../VehicleTripForms";
-import FuelPanel from "./FuelPanel";
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 type Totals = { km: number; litres: number; cost: number; average: number | null; openTrips: number };
@@ -60,16 +59,6 @@ export default function LogBookClient({
     router.push(`/station/logbook?${p.toString()}`);
   };
 
-  // Litres drawn on a given day, printed in the book's P.O.L. column.
-  const polOn = (date: string) => {
-    const l = fuel.filter(f => f.date === date).reduce((s, f) => s + f.litres, 0);
-    return l > 0 ? `${Math.round(l * 100) / 100} L` : "";
-  };
-  // Fuel drawn on days with no journey still belongs on the page — the book has
-  // those rows too, written between the trips.
-  const fuelOnlyDays = Array.from(new Set(
-    fuel.map(f => f.date).filter(d => !trips.some(t => t.date === d))
-  )).sort();
 
   const startEdit = (t: LogBookTrip) => {
     setErr("");
@@ -119,17 +108,17 @@ export default function LogBookClient({
       filename: `log-book-${vehicle?.vehicleNo ?? "vehicle"}-${month}.xlsx`,
       sheetName: month,
       title: `Log Book — ${vehicle?.vehicleNo ?? ""} — ${monthLabel(month)}`,
-      headers: ["Date", "Time From", "Time To", "Details of Journey", "Purpose", "Driver / Officer", "Meter From", "Meter To", "K.M. Covered", "P.O.L. Drawn", "Remarks"],
-      colWidths: [11, 10, 10, 26, 22, 26, 11, 11, 12, 12, 22],
+      headers: ["Date", "Time From", "Time To", "Details of Journey", "Purpose", "Driver / Officer", "Meter From", "Meter To", "K.M. Covered", "Remarks"],
+      colWidths: [11, 10, 10, 26, 22, 26, 11, 11, 12, 22],
       rows: trips.map(t => [
         bookDate(t.date), hm(t.outAt), hm(t.inAt), t.destination, t.purpose,
         [t.driver, ...ridingWith(t)].join(", "), t.meterOut, t.meterIn ?? "", t.kmCovered ?? "",
-        polOn(t.date), t.remarks,
+        t.remarks,
       ]),
     });
   };
 
-  const colCount = readOnly ? 11 : 12;
+  const colCount = readOnly ? 10 : 11;
 
   return (
     <div className="fade-up">
@@ -137,7 +126,7 @@ export default function LogBookClient({
       <PrintHeader
         title="Vehicle Log Book"
         subtitle={`${vehicle?.vehicleNo ?? ""}${vehicle?.name ? ` — ${vehicle.name}` : ""}`}
-        meta={`${monthLabel(month)} · ${totals.km} km · ${totals.litres} L · Average ${totals.average ?? "—"} km/L`}
+        meta={`${monthLabel(month)} · ${totals.km} km`}
       />
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
@@ -179,9 +168,6 @@ export default function LogBookClient({
           {/* The figures written at the top of the paper page. */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
             <Stat label="K.M. covered" value={`${totals.km} km`} />
-            <Stat label="P.O.L. drawn" value={`${totals.litres} L`} />
-            <Stat label="Average to litre" value={totals.average === null ? "—" : `${totals.average} km/L`} hint={totals.average === null ? "no fuel recorded" : undefined} />
-            <Stat label="Fuel cost" value={totals.cost ? `Rs ${totals.cost.toLocaleString("en-PK")}` : "—"} />
             {totals.openTrips > 0 && <Stat label="Still out" value={String(totals.openTrips)} danger />}
           </div>
 
@@ -196,7 +182,6 @@ export default function LogBookClient({
                   <th rowSpan={2}>Driver / Officer</th>
                   <th colSpan={2} style={{ textAlign: "center" }}>Meter Reading</th>
                   <th rowSpan={2} className="num">K.M.</th>
-                  <th rowSpan={2}>P.O.L.</th>
                   <th rowSpan={2}>Signature</th>
                   <th rowSpan={2}>Remarks</th>
                   {!readOnly && <th rowSpan={2} className="no-print" style={{ width: 120 }}>Actions</th>}
@@ -209,7 +194,7 @@ export default function LogBookClient({
                 </tr>
               </thead>
               <tbody>
-                {trips.length === 0 && fuelOnlyDays.length === 0 && (
+                {trips.length === 0 && (
                   <tr><td colSpan={colCount + 1} style={{ color: "var(--text3)", padding: 22, textAlign: "center" }}>
                     Nothing recorded for {monthLabel(month)}.
                   </td></tr>
@@ -229,7 +214,6 @@ export default function LogBookClient({
                     <td><input type="number" value={draft.meterOut} onChange={e => setDraft({ ...draft, meterOut: e.target.value })} /></td>
                     <td><input type="number" value={draft.meterIn} onChange={e => setDraft({ ...draft, meterIn: e.target.value })} placeholder="blank = still out" /></td>
                     <td className="num" style={{ color: "var(--text3)" }}>auto</td>
-                    <td>{polOn(t.date)}</td>
                     <td />
                     <td><input value={draft.remarks} onChange={e => setDraft({ ...draft, remarks: e.target.value })} /></td>
                     <td className="no-print">
@@ -255,7 +239,6 @@ export default function LogBookClient({
                     <td className="num">{t.meterOut}</td>
                     <td className="num">{t.meterIn ?? ""}</td>
                     <td className="num" style={{ fontWeight: 700 }}>{t.kmCovered ?? ""}</td>
-                    <td>{polOn(t.date)}</td>
                     {/* Signed in ink once the page is printed and filed. */}
                     <td />
                     <td style={{ color: "var(--text2)" }}>{t.remarks}</td>
@@ -270,24 +253,12 @@ export default function LogBookClient({
                   </tr>
                 ))}
 
-                {fuelOnlyDays.map(d => (
-                  <tr key={`fuel-${d}`} style={{ background: "var(--bg2)" }}>
-                    <td style={{ whiteSpace: "nowrap" }}>{bookDate(d)}</td>
-                    <td colSpan={5} style={{ color: "var(--text2)", fontStyle: "italic" }}>P.O.L. drawn — no journey</td>
-                    <td className="num">{fuel.find(f => f.date === d)?.meterReading ?? ""}</td>
-                    <td /><td />
-                    <td style={{ fontWeight: 700 }}>{polOn(d)}</td>
-                    <td /><td />
-                    {!readOnly && <td className="no-print" />}
-                  </tr>
-                ))}
               </tbody>
               {trips.length > 0 && (
                 <tfoot>
                   <tr style={{ fontWeight: 700 }}>
                     <td colSpan={8} style={{ textAlign: "right" }}>Total</td>
                     <td className="num">{totals.km}</td>
-                    <td>{totals.litres ? `${totals.litres} L` : ""}</td>
                     <td colSpan={readOnly ? 2 : 3} />
                   </tr>
                 </tfoot>
@@ -295,10 +266,6 @@ export default function LogBookClient({
             </table>
           </div>
 
-          <FuelPanel
-            vehicleId={vehicleId} month={month} fuel={fuel} people={people}
-            readOnly={readOnly} canDelete={canDelete} onChanged={() => router.refresh()}
-          />
         </>
       )}
     </div>

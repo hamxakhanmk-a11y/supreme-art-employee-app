@@ -136,30 +136,13 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
   );
 }
 
-// --- Bringing a card back ---------------------------------------------------
-export function SubmitCard({ card, busy, onCancel, onSubmit }: {
-  card: OpenCard;
-  busy: boolean;
-  onCancel: () => void;
-  onSubmit: (body: { id: number; submittedDate: string; submittedTime: string; slipNo: string; litres: string; rate: string; amount: string }) => void;
+// --- Taking a card back ------------------------------------------------------
+// Custody only. What was drawn on the card is recorded on the PSO Cards tab,
+// because a card comes back having been filled several times, or not at all,
+// and the slips rarely arrive with it.
+export function ReturnCard({ card, busy, onCancel, onConfirm }: {
+  card: OpenCard; busy: boolean; onCancel: () => void; onConfirm: () => void;
 }) {
-  const [slipNo, setSlipNo] = useState("");
-  const [litres, setLitres] = useState("");
-  const [rate, setRate] = useState("");
-  const [amount, setAmount] = useState("");
-  const [touchedAmount, setTouchedAmount] = useState(false);
-
-  // Litres × rate is what the slip adds up to. Left editable, because slips
-  // round and the printed total is the one that counts.
-  const recalc = (l: string, r: string) => {
-    if (touchedAmount) return;
-    const L = parseFloat(l), R = parseFloat(r);
-    if (isFinite(L) && isFinite(R) && L > 0 && R > 0) setAmount(String(Math.round(L * R * 100) / 100));
-  };
-
-  const now = new Date();
-  const ready = amount.trim() !== "" && Number(amount) > 0;
-
   return (
     <div style={{ marginTop: 8 }}>
       <div className="card" style={{ textAlign: "left", padding: "12px 14px", marginTop: 12 }}>
@@ -171,47 +154,22 @@ export function SubmitCard({ card, busy, onCancel, onSubmit }: {
         </div>
       </div>
 
-      <span style={labelStyle}>Slip no.</span>
-      <input value={slipNo} disabled={busy} onChange={e => setSlipNo(e.target.value)} placeholder="the number on the bill slip" style={field} />
-
-      <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}>
-          <span style={labelStyle}>Litres</span>
-          <input type="number" inputMode="decimal" step="any" value={litres} disabled={busy}
-            onChange={e => { setLitres(e.target.value); recalc(e.target.value, rate); }} placeholder="0.0" style={field} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <span style={labelStyle}>Rate</span>
-          <input type="number" inputMode="decimal" step="any" value={rate} disabled={busy}
-            onChange={e => { setRate(e.target.value); recalc(litres, e.target.value); }} placeholder="per litre" style={field} />
-        </div>
+      <div style={{ fontSize: 12.5, color: "var(--text3)", textAlign: "left", marginTop: 12, lineHeight: 1.5 }}>
+        This puts the card back in the drawer. The fuel drawn on it is entered on
+        Station → PSO Cards, from the slips — not here.
       </div>
-
-      <span style={labelStyle}>Amount (PKR) *</span>
-      <input type="number" inputMode="decimal" step="any" value={amount} disabled={busy}
-        onChange={e => { setAmount(e.target.value); setTouchedAmount(true); }} placeholder="0" style={{ ...field, fontWeight: 700 }} />
-      {!litres && (
-        <div style={{ textAlign: "left", fontSize: 11.5, color: "#B45309", marginTop: 6 }}>
-          Without litres the log book&apos;s P.O.L. column stays blank and this fuel has no km/litre average.
-        </div>
-      )}
 
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
-          onClick={() => onSubmit({
-            id: card.issueId,
-            submittedDate: now.toISOString().slice(0, 10),
-            submittedTime: now.toTimeString().slice(0, 5),
-            slipNo, litres, rate, amount,
-          })}
-          disabled={busy || !ready}
+          onClick={onConfirm}
+          disabled={busy}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,
             border: "none", color: "#fff", background: "#15803D",
-            cursor: busy ? "default" : "pointer", opacity: busy || !ready ? 0.6 : 1,
+            cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
           }}>
-          ← Submit the card
+          ← Card is back in
         </button>
       </div>
     </div>

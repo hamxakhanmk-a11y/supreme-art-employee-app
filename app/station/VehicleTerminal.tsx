@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PinPad from "./PinPad";
 import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Officer } from "./VehicleTripForms";
-import { TakeCardOut, SubmitCard, type DrawerCard, type OpenCard } from "./CardForms";
+import { TakeCardOut, ReturnCard, type DrawerCard, type OpenCard } from "./CardForms";
 
 // The vehicle half of the gate terminal. The vehicle identifies itself with
 // its own PIN and the driver is then chosen from those allowed to drive it —
@@ -84,15 +84,12 @@ export default function VehicleTerminal({
   const takeCard = async (body: { cardId: number; driverId: number | null; driverName: string }) => {
     if (!data) return;
     setBusy(true); setError(null);
-    const now = new Date();
     try {
-      const res = await fetch("/api/fleet/card-issues", {
+      const res = await fetch("/api/fleet/cards/hand", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...body, vehicleId: data.vehicle.id,
-          // Straight off the clock — nobody types a date at a gate.
-          collectedDate: now.toISOString().slice(0, 10),
-          collectedTime: now.toTimeString().slice(0, 5),
+          cardId: body.cardId, action: "take",
+          holderId: body.driverId, holderName: body.driverName,
         }),
       });
       const j = await res.json();
@@ -104,16 +101,20 @@ export default function VehicleTerminal({
     finally { setBusy(false); }
   };
 
-  const submitCard = async (body: Record<string, string | number>) => {
-    if (!data) return;
+  // Taking the card back is custody and nothing else: the fuel drawn on it is
+  // recorded on the PSO Cards tab, and a card can come back having been
+  // filled several times or not at all.
+  const returnCard = async () => {
+    if (!data?.openCard) return;
     setBusy(true); setError(null);
     try {
-      const res = await fetch("/api/fleet/card-issues", {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      const res = await fetch("/api/fleet/cards/hand", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId: data.openCard.cardId, action: "return" }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Could not submit the card");
-      onDone(`Card ${data.openCard?.sn ?? ""} back in · Rs ${body.amount}`, "#15803D");
+      if (!res.ok) throw new Error(j.error || "Could not take the card back");
+      onDone(`Card ${data.openCard.sn} back in the drawer`, "#15803D");
       reset();
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
@@ -176,7 +177,7 @@ export default function VehicleTerminal({
 
           {data.openCard ? (
             <ActionButton color="#15803D" onClick={() => setAction("card")}
-              title="← Submit the fuel card"
+              title="← Take the fuel card back"
               hint={`${data.openCard.sn} · with ${data.openCard.takenBy} since ${data.openCard.collectedDate}`} />
           ) : (
             <ActionButton color="#4F46E5" onClick={() => setAction("card")}
@@ -186,7 +187,7 @@ export default function VehicleTerminal({
         </div>
       ) : action === "card" ? (
         data.openCard
-          ? <SubmitCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onSubmit={submitCard} />
+          ? <ReturnCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onConfirm={returnCard} />
           : <TakeCardOut cards={data.cards} drivers={data.drivers} people={people} busy={busy}
               onCancel={() => setAction("pick")} onSubmit={takeCard} />
       ) : data.openTrip ? (
