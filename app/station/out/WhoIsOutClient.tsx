@@ -9,8 +9,14 @@ function minsSince(iso: string, now: number): number {
   return Math.max(0, Math.round((now - new Date(iso).getTime()) / 60000));
 }
 
-export default function WhoIsOutClient({ initial }: { initial: OutNow[] }) {
+export type VehicleOut = {
+  id: number; outAt: string; meterOut: number; destination: string; purpose: string;
+  vehicleNo: string; vehicleName: string; driver: string; officers: string[];
+};
+
+export default function WhoIsOutClient({ initial, initialVehicles = [] }: { initial: OutNow[]; initialVehicles?: VehicleOut[] }) {
   const [out, setOut] = useState<OutNow[]>(initial);
+  const [vehicles, setVehicles] = useState<VehicleOut[]>(initialVehicles);
   const [now, setNow] = useState<number>(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
 
@@ -25,7 +31,7 @@ export default function WhoIsOutClient({ initial }: { initial: OutNow[] }) {
     setRefreshing(true);
     try {
       const res = await fetch("/api/station/out", { cache: "no-store" });
-      if (res.ok) { const j = await res.json(); setOut(j.out ?? []); setNow(Date.now()); }
+      if (res.ok) { const j = await res.json(); setOut(j.out ?? []); setVehicles(j.vehicles ?? []); setNow(Date.now()); }
     } finally { setRefreshing(false); }
   };
   useEffect(() => {
@@ -39,7 +45,7 @@ export default function WhoIsOutClient({ initial }: { initial: OutNow[] }) {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚶 Who&apos;s Out</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Employees currently outside the factory — reason and check-out time. Updates automatically.
+            Who and what is outside the factory right now. Updates automatically.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -49,6 +55,39 @@ export default function WhoIsOutClient({ initial }: { initial: OutNow[] }) {
           <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
         </div>
       </div>
+
+      {vehicles.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>
+            Vehicles out ({vehicles.length})
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {vehicles.map(v => (
+              <div key={v.id} className="card" style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "12px 16px", borderLeft: "4px solid #B45309" }}>
+                <div style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>🚐</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace" }}>{v.vehicleNo}</span>
+                    <span style={{ fontSize: 12, color: "var(--text3)" }}>{v.vehicleName || ""}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+                    Driven by <span style={{ color: "var(--text)", fontWeight: 600 }}>{v.driver}</span>
+                    {v.destination ? <> · to <span style={{ color: "var(--text)" }}>{v.destination}</span></> : null}
+                  </div>
+                  {v.officers.length > 0 && (
+                    <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>With {v.officers.join(", ")}</div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>Out since {hhmm(v.outAt)}</div>
+                  <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600 }}>{formatMins(minsSince(v.outAt, now))} ago</div>
+                  <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 2 }}>Left on {v.meterOut} km</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
         {out.length === 0

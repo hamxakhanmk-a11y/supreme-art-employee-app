@@ -4,6 +4,7 @@ import { employees, stationLeaves } from "@/lib/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { ensureStationReasonColumn } from "@/lib/stationServer";
+import { openTripForDriver, type OpenTripInfo } from "@/lib/fleetServer";
 
 // POST /api/station/lookup  { pin }
 // Identify the employee by PIN and return their current open leave (if any),
@@ -33,7 +34,22 @@ export async function POST(req: NextRequest) {
       .where(and(eq(stationLeaves.employeeId, emp.id), eq(stationLeaves.date, today)))
       .orderBy(stationLeaves.outAt);
 
-    return NextResponse.json({ employee: emp, open: open ?? null, todays });
+    // Is this person out in a vehicle right now? Fetched here so the terminal
+    // knows which form to show without a second round trip at the gate.
+    //
+    // In its own try/catch, and deliberately not in a Promise.all with the
+    // queries above: a fleet table missing or a slow query must not stop
+    // someone punching out on foot, which is what this screen has always been
+    // for. openTrip null simply means "no vehicle", and the terminal offers
+    // taking one out as usual.
+    let openTrip: OpenTripInfo | null = null;
+    try {
+      openTrip = await openTripForDriver(emp.id);
+    } catch (e: any) {
+      console.warn("Fleet lookup unavailable:", e?.message);
+    }
+
+    return NextResponse.json({ employee: emp, open: open ?? null, todays, openTrip });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

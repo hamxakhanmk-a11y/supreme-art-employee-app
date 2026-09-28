@@ -99,12 +99,14 @@ export const VEHICLE_TYPE_LABEL: Record<string, string> = {
 export async function lastMeterReading(vehicleId: number): Promise<{ km: number; from: string } | null> {
   const res = await db.execute(sql`
     SELECT km, src FROM (
-      SELECT GREATEST(COALESCE(meter_in, 0), meter_out) AS km,
-             CASE WHEN meter_in IS NOT NULL THEN 'a trip on ' || date ELSE 'a trip started on ' || date END AS src
-      FROM fleet_trips WHERE vehicle_id = ${vehicleId}
+      SELECT GREATEST(COALESCE(t.meter_in, 0), t.meter_out) AS km,
+             CASE WHEN t.meter_in IS NOT NULL
+                  THEN 'a trip on ' || t.date::text
+                  ELSE 'a trip started on ' || t.date::text END AS src
+      FROM fleet_trips t WHERE t.vehicle_id = ${vehicleId}
       UNION ALL
-      SELECT meter_reading AS km, 'fuel drawn on ' || date AS src
-      FROM fuel_entries WHERE vehicle_id = ${vehicleId} AND meter_reading IS NOT NULL
+      SELECT f.meter_reading AS km, 'fuel drawn on ' || f.date::text AS src
+      FROM fuel_entries f WHERE f.vehicle_id = ${vehicleId} AND f.meter_reading IS NOT NULL
     ) readings
     ORDER BY km DESC
     LIMIT 1
