@@ -58,11 +58,6 @@ DO $$ BEGIN
   CREATE UNIQUE INDEX IF NOT EXISTS vehicle_drivers_name_key
     ON vehicle_drivers (vehicle_id, LOWER(name)) WHERE employee_id IS NULL;
 
-  -- The driver's name as it stood on the day. Always written, so a trip driven
-  -- by someone off the payroll still prints, and so does one driven by an
-  -- employee who has since left.
-  ALTER TABLE fleet_trips ADD COLUMN IF NOT EXISTS driver_name varchar(160);
-
   CREATE TABLE IF NOT EXISTS fleet_trips (
     id serial PRIMARY KEY,
     vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
@@ -156,6 +151,18 @@ DO $$ BEGIN
   -- entry goes with it.
   ALTER TABLE fuel_entries ADD COLUMN IF NOT EXISTS card_issue_id integer
     REFERENCES pso_card_issues(id) ON DELETE CASCADE;
+
+  -- Columns added to a table that already exists somewhere. Putting them in the
+  -- CREATE above is not enough: IF NOT EXISTS makes that a no-op on any
+  -- database where the table is already there, so the column never arrives and
+  -- the first read naming it throws. Every later column belongs here.
+  --
+  -- The driver's name as it stood on the day, so a trip still prints after the
+  -- driver leaves — and prints at all for one who was never an employee.
+  ALTER TABLE fleet_trips ADD COLUMN IF NOT EXISTS driver_name varchar(160);
+  -- Off the bill slip the driver brings back, alongside the card's own number.
+  ALTER TABLE pso_card_issues ADD COLUMN IF NOT EXISTS rate double precision;
+  ALTER TABLE pso_card_issues ADD COLUMN IF NOT EXISTS slip_no varchar(40);
 END $$;
   `);
   ensured = true;
