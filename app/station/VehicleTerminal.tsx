@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PinPad from "./PinPad";
 import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Officer } from "./VehicleTripForms";
-import { TakeCardOut, ReturnCard, type DrawerCard, type OpenCard } from "./CardForms";
+import { TakeCardOut, ReturnCard, type DrawerCard, type OpenCard, type ReturnFuel } from "./CardForms";
 
 // The vehicle half of the gate terminal. The vehicle identifies itself with
 // its own PIN and the driver is then chosen from those allowed to drive it —
@@ -104,17 +104,32 @@ export default function VehicleTerminal({
   // Taking the card back is custody and nothing else: the fuel drawn on it is
   // recorded on the PSO Cards tab, and a card can come back having been
   // filled several times or not at all.
-  const returnCard = async () => {
+  const returnCard = async (fuel: ReturnFuel | null) => {
     if (!data?.openCard) return;
     setBusy(true); setError(null);
     try {
+      // The record goes in first, while the card is still out, so it is
+      // pending — then handing the card back submits it along with any
+      // other fills drawn on it.
+      if (fuel) {
+        const fr = await fetch("/api/fleet/card-issues", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cardId: data.openCard.cardId, vehicleId: data.vehicle.id,
+            collectedDate: fuel.collectedDate, collectedTime: fuel.collectedTime,
+            slipNo: fuel.slipNo, amount: fuel.amount, notes: fuel.notes,
+          }),
+        });
+        const fj = await fr.json();
+        if (!fr.ok) throw new Error(fj.error || "Could not save the fuel record");
+      }
       const res = await fetch("/api/fleet/cards/hand", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cardId: data.openCard.cardId, action: "return" }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not take the card back");
-      onDone(`Card ${data.openCard.sn} back in the drawer`, "#15803D");
+      onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded` : ""}`, "#15803D");
       reset();
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }

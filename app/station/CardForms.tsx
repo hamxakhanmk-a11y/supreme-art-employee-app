@@ -137,12 +137,28 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
 }
 
 // --- Taking a card back ------------------------------------------------------
-// Custody only. What was drawn on the card is recorded on the PSO Cards tab,
-// because a card comes back having been filled several times, or not at all,
-// and the slips rarely arrive with it.
+// The slip usually comes back with the card, so the fill can be written down
+// here rather than chased up later on the PSO Cards tab. It stays optional: a
+// card comes back having been filled several times, or not at all.
+export type ReturnFuel = { collectedDate: string; collectedTime: string; slipNo: string; amount: string; notes: string };
+
 export function ReturnCard({ card, busy, onCancel, onConfirm }: {
-  card: OpenCard; busy: boolean; onCancel: () => void; onConfirm: () => void;
+  card: OpenCard;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (fuel: ReturnFuel | null) => void;
 }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [collectedDate, setCollectedDate] = useState(today);
+  const [collectedTime, setCollectedTime] = useState("");
+  const [slipNo, setSlipNo] = useState("");
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const hasFuel = amount.trim() !== "" && Number(amount) > 0;
+  const amountTyped = amount.trim() !== "";
+  const amountBad = amountTyped && !(Number(amount) > 0);
+
   return (
     <div style={{ marginTop: 8 }}>
       <div className="card" style={{ textAlign: "left", padding: "12px 14px", marginTop: 12 }}>
@@ -154,20 +170,46 @@ export function ReturnCard({ card, busy, onCancel, onConfirm }: {
         </div>
       </div>
 
-      <div style={{ fontSize: 12.5, color: "var(--text3)", textAlign: "left", marginTop: 12, lineHeight: 1.5 }}>
-        This puts the card back in the drawer. The fuel drawn on it is entered on
-        Station → PSO Cards, from the slips — not here.
+      <span style={labelStyle}>Fuel drawn <span style={{ textTransform: "none", fontWeight: 400, color: "var(--text3)" }}>(from the slip, if there is one)</span></span>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <input type="date" value={collectedDate} disabled={busy}
+            onChange={e => setCollectedDate(e.target.value)} style={field} />
+          <div style={{ fontSize: 10.5, color: "var(--text3)", textAlign: "left", marginTop: 3 }}>date drawn</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <input type="time" value={collectedTime} disabled={busy}
+            onChange={e => setCollectedTime(e.target.value)} style={field} />
+          <div style={{ fontSize: 10.5, color: "var(--text3)", textAlign: "left", marginTop: 3 }}>time drawn</div>
+        </div>
+      </div>
+
+      <input value={slipNo} disabled={busy} onChange={e => setSlipNo(e.target.value)}
+        placeholder="Slip no." style={{ ...field, marginTop: 10 }} />
+
+      <input type="number" inputMode="decimal" step="any" value={amount} disabled={busy}
+        onChange={e => setAmount(e.target.value)} placeholder="Fuel (PKR)"
+        style={{ ...field, marginTop: 10, fontWeight: 700, borderColor: amountBad ? "#DC2626" : "var(--border)" }} />
+
+      <input value={notes} disabled={busy} onChange={e => setNotes(e.target.value)}
+        placeholder="Notes (optional)" style={{ ...field, marginTop: 10 }} />
+
+      <div style={{ fontSize: 11.5, color: "var(--text3)", textAlign: "left", marginTop: 10, lineHeight: 1.5 }}>
+        {hasFuel
+          ? "Saved as a fuel record against this card, and submitted as it comes in."
+          : "Leave the amount blank if there is no slip — the card still goes back in, and the fuel can be entered later on Station → PSO Cards."}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
-          onClick={onConfirm}
-          disabled={busy}
+          onClick={() => onConfirm(hasFuel ? { collectedDate, collectedTime, slipNo, amount, notes } : null)}
+          disabled={busy || amountBad}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,
             border: "none", color: "#fff", background: "#15803D",
-            cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+            cursor: busy ? "default" : "pointer", opacity: busy || amountBad ? 0.6 : 1,
           }}>
           ← Card is back in
         </button>
