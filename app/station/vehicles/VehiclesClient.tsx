@@ -28,6 +28,10 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
   const [busy, setBusy] = useState(false);
   const [showRetired, setShowRetired] = useState(false);
   const [manual, setManual] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+
+  const openAdd = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(true); };
+  const closeForm = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(false); };
 
   const driverName = (id: number | null) => {
     const d = drivers.find(x => x.id === id);
@@ -84,7 +88,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not save");
-      setForm({ ...BLANK });
+      closeForm();
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -92,6 +96,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
 
   const edit = (v: Vehicle) => {
     setErr("");
+    setFormOpen(true);
     setForm({
       id: v.id, vehicleNo: v.vehicleNo, pin: v.pin || "", name: v.name || "", type: v.type,
       defaultDriverId: v.defaultDriverId ?? "", drivers: v.drivers ?? [],
@@ -145,14 +150,19 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             Every vehicle that has a log book. A vehicle needs a PIN and at least one driver before it can go out at the gate. Retiring one keeps its journeys readable.
           </p>
         </div>
-        <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          {!readOnly && !formOpen && (
+            <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add vehicle</button>
+          )}
+          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
+        </div>
       </div>
 
       {err && (
         <div className="card" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>
       )}
 
-      {!readOnly && (
+      {!readOnly && formOpen && (
         <div className="card" style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 12px" }}>
             {form.id ? `Edit ${form.vehicleNo}` : "Add a vehicle"}
@@ -255,7 +265,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             <button className="btn btn-primary" onClick={save} disabled={busy}>
               {busy ? "Saving…" : form.id ? "Save changes" : "Add vehicle"}
             </button>
-            {form.id > 0 && <button className="btn" onClick={() => { setForm({ ...BLANK }); setErr(""); }}>Cancel</button>}
+            <button className="btn" onClick={closeForm}>Cancel</button>
           </div>
         </div>
       )}
@@ -281,7 +291,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
             {loading && <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
             {!loading && shown.length === 0 && (
               <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>
-                No vehicles yet{readOnly ? "." : " — add the first one above."}
+                No vehicles yet{readOnly ? "." : " — use “+ Add vehicle” above."}
               </td></tr>
             )}
             {shown.map(v => (
