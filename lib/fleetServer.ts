@@ -332,3 +332,79 @@ export async function cardsInDrawer(vehicleId: number): Promise<DrawerCard[]> {
   const rows: any[] = (res as any).rows ?? (res as any);
   return rows.map(r => ({ ...r, own: r.own === true || r.own === "t" }));
 }
+
+export type CustodyRow = {
+  cardId: number;
+  sn: string;
+  vehicleNo: string | null;
+  holder: string;
+  takenDate: string;
+  takenTime: string;
+  returnedDate: string | null;
+  returnedTime: string;
+  fills: number;
+  amount: number;
+};
+
+// Who held which card on a given day. A spell counts if it had started by then
+// and had not ended before it — so a card out for a fortnight answers for every
+// day of that fortnight, not just the day it was handed over.
+export async function custodyOn(date: string): Promise<CustodyRow[]> {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT h.card_id AS "cardId", c.sn, v.vehicle_no AS "vehicleNo",
+           h.holder_name AS holder,
+           h.taken_date::text AS "takenDate", COALESCE(h.taken_time, '') AS "takenTime",
+           h.returned_date::text AS "returnedDate", COALESCE(h.returned_time, '') AS "returnedTime",
+           -- What was drawn on the card while this person had it.
+           COALESCE((
+             SELECT COUNT(*) FROM pso_card_issues i
+             WHERE i.card_id = h.card_id
+               AND i.collected_date >= h.taken_date
+               AND (h.returned_date IS NULL OR i.collected_date <= h.returned_date)
+           ), 0) AS fills,
+           COALESCE((
+             SELECT SUM(i.amount) FROM pso_card_issues i
+             WHERE i.card_id = h.card_id
+               AND i.collected_date >= h.taken_date
+               AND (h.returned_date IS NULL OR i.collected_date <= h.returned_date)
+           ), 0) AS amount
+    FROM pso_card_custody h
+    JOIN pso_cards c ON c.id = h.card_id
+    LEFT JOIN vehicles v ON v.id = c.vehicle_id
+    WHERE h.taken_date <= ${date}::date
+      AND (h.returned_date IS NULL OR h.returned_date >= ${date}::date)
+    ORDER BY c.sn
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  return rows.map(r => ({ ...r, fills: Number(r.fills), amount: Number(r.amount) }));
+}
+
+// Every vehicle journey on a given day, closed or not — the fleet half of the
+// Who's Out board once it is looking at a day other than today.
+export async function tripsOn(date: string) {
+  await ensureFleetSchema();
+  const res = await db.execute(sql`
+    SELECT t.id, t.out_at AS "outAt", t.in_at AS "inAt",
+           t.meter_out AS "meterOut", t.meter_in AS "meterIn", t.km_covered AS "kmCovered",
+           COALESCE(t.destination, '') AS destination, COALESCE(t.purpose, '') AS purpose,
+           v.vehicle_no AS "vehicleNo", COALESCE(v.name, '') AS "vehicleName",
+           COALESCE(NULLIF(TRIM(e.first_name || ' ' || e.last_name), ''), NULLIF(TRIM(t.driver_name), ''), '—') AS driver,
+           COALESCE(
+             (SELECT json_agg(o.name ORDER BY o.id) FROM fleet_trip_officers o WHERE o.trip_id = t.id),
+             '[]'::json
+           ) AS officers
+    FROM fleet_trips t
+    JOIN vehicles v ON v.id = t.vehicle_id
+    LEFT JOIN employees e ON e.id = t.driver_id
+    WHERE t.date = ${date}::date
+    ORDER BY t.out_at
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  return rows.map(r => ({
+    ...r,
+    outAt: new Date(r.outAt).toISOString(),
+    inAt: r.inAt ? new Date(r.inAt).toISOString() : null,
+    officers: r.officers ?? [],
+  }));
+}

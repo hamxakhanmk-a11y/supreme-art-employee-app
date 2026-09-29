@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, psoCardIssues, psoCards } from "@/lib/schema";
+import { employees, psoCardCustody, psoCardIssues, psoCards } from "@/lib/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
@@ -26,9 +26,16 @@ export async function POST(req: NextRequest) {
 
     if (action === "return") {
       if (!card.heldByName) return NextResponse.json({ error: `Card ${card.sn} is already in the drawer` }, { status: 409 });
+      const back = new Date();
       await db.update(psoCards)
         .set({ heldById: null, heldByName: null, heldSince: null })
         .where(eq(psoCards.id, cardId));
+      // Closes the spell rather than deleting it: the point of the table is
+      // that last month's holder is still answerable for last month.
+      await db.update(psoCardCustody).set({
+        returnedDate: back.toISOString().slice(0, 10),
+        returnedTime: back.toTimeString().slice(0, 5),
+      }).where(and(eq(psoCardCustody.cardId, cardId), isNull(psoCardCustody.returnedDate)));
 
       // Every fill drawn while the card was out is submitted the moment it
       // comes back — that is when the slips are handed over, so a record
@@ -64,11 +71,18 @@ export async function POST(req: NextRequest) {
     }
     if (!holderName) return NextResponse.json({ error: "Who is taking the card?" }, { status: 400 });
 
+    const now = new Date();
+    const takenDate = now.toISOString().slice(0, 10);
     await db.update(psoCards).set({
       heldById: holderId,
       heldByName: holderName,
-      heldSince: new Date().toISOString().slice(0, 10),
+      heldSince: takenDate,
     }).where(eq(psoCards.id, cardId));
+    // The card carries where it is; this carries where it has been.
+    await db.insert(psoCardCustody).values({
+      cardId, holderId, holderName,
+      takenDate, takenTime: now.toTimeString().slice(0, 5),
+    });
 
     await logActivity({
       user: guard, action: "station.card.out", employeeId: holderId ?? undefined, employeeName: holderName,

@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { CustodyRow } from "@/lib/fleetServer";
 import CardsPanel from "./CardsPanel";
 
 // PSO Cards: where the cards are. The ones out with someone sit at the top,
@@ -21,8 +23,12 @@ type Card = {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function PsoCardsClient({
-  vehicles, people, readOnly,
-}: { vehicles: VehicleRow[]; people: Person[]; readOnly: boolean }) {
+  vehicles, people, readOnly, custody, date, isToday,
+}: {
+  vehicles: VehicleRow[]; people: Person[]; readOnly: boolean;
+  custody: CustodyRow[]; date: string; isToday: boolean;
+}) {
+  const router = useRouter();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -69,12 +75,65 @@ export default function PsoCardsClient({
             the fuel drawn on them is recorded here and listed on <Link href="/station/cards-log" style={{ color: "var(--brand)" }}>Cards Logbook</Link>.
           </p>
         </div>
-        <Link href="/station/cards-log" className="btn btn-sm">📋 Cards Logbook</Link>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            type="date"
+            value={date}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={e => e.target.value && router.push("/station/pso?date=" + e.target.value)}
+            style={{ width: 150 }}
+          />
+          {!isToday && <button className="btn btn-sm" onClick={() => router.push("/station/pso")}>Today</button>}
+          <Link href="/station/cards-log" className="btn btn-sm">📋 Cards Logbook</Link>
+        </div>
       </div>
 
       {err && <div className="card" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
       {saved && <div className="card" style={{ borderColor: "#15803D", color: "#15803D", marginBottom: 14, fontSize: 13 }}>{saved}</div>}
 
+      {!isToday ? (
+        <>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>
+            Who had which card on {date} <span style={{ color: "var(--text3)", fontWeight: 400 }}>({custody.length})</span>
+          </h2>
+          <div className="card" style={{ padding: 0, overflow: "auto" }}>
+            <table style={{ fontSize: 12.5 }}>
+              <thead>
+                <tr>
+                  <th>Card SN</th><th>Vehicle</th><th>Held by</th>
+                  <th>Taken</th><th>Returned</th><th className="num">Fills</th><th className="num">Fuel (PKR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {custody.length === 0 && (
+                  <tr><td colSpan={7} style={{ color: "var(--text3)", padding: 22, textAlign: "center" }}>
+                    No card was out with anyone that day.
+                  </td></tr>
+                )}
+                {custody.map(h => (
+                  <tr key={h.cardId + h.takenDate}>
+                    <td style={{ fontFamily: "monospace", fontWeight: 700 }}>{h.sn}</td>
+                    <td>{h.vehicleNo || "—"}</td>
+                    <td style={{ fontWeight: 600 }}>{h.holder}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{h.takenDate}{h.takenTime ? " " + h.takenTime : ""}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {h.returnedDate
+                        ? h.returnedDate + (h.returnedTime ? " " + h.returnedTime : "")
+                        : <span style={{ color: "#B45309", fontWeight: 700 }}>still out</span>}
+                    </td>
+                    <td className="num">{h.fills || ""}</td>
+                    <td className="num" style={{ fontWeight: 700 }}>{h.amount ? h.amount.toLocaleString("en-PK") : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>
+            A card out across several days shows on every one of them. Fills are what was drawn while that person held it.
+          </div>
+        </>
+      ) : (
+      <>
       <h2 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px" }}>
         Out with someone {out.length > 0 && <span style={{ color: "var(--text3)", fontWeight: 400 }}>({out.length})</span>}
       </h2>
@@ -123,6 +182,9 @@ export default function PsoCardsClient({
             </div>
           ))}
         </div>
+      )}
+
+      </>
       )}
 
       <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={load} />

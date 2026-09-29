@@ -802,6 +802,20 @@ export const psoCards = pgTable("pso_cards", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Who held a card, and when. psoCards says where a card is now; this says
+// where it has been — handing a card on would otherwise overwrite the only
+// record of who last had it.
+export const psoCardCustody = pgTable("pso_card_custody", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").notNull().references(() => psoCards.id, { onDelete: "cascade" }),
+  holderId: integer("holder_id").references(() => employees.id, { onDelete: "set null" }),
+  holderName: varchar("holder_name", { length: 160 }).notNull(),
+  takenDate: date("taken_date").notNull(),
+  takenTime: varchar("taken_time", { length: 5 }),
+  returnedDate: date("returned_date"),          // null = still in their hands
+  returnedTime: varchar("returned_time", { length: 5 }),
+});
+
 // One row per time a card went out with a driver and came back. Dates and
 // times are held apart because that is how the register is written and read.
 export const psoCardIssues = pgTable("pso_card_issues", {

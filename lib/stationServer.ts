@@ -146,3 +146,40 @@ export async function stationMinutesByEmpDay(fromISO: string, toISO: string): Pr
   }
   return map;
 }
+
+// Everyone who was outside the factory on a given day, closed spells included.
+// currentlyOut() answers "right now"; this answers "that day" — which is what
+// the Who's Out board is asked once someone wants to check back.
+export async function outOn(date: string): Promise<(OutNow & { inAt: string | null; minutes: number | null })[]> {
+  const rows = await db.select({
+    id: stationLeaves.id,
+    employeeId: stationLeaves.employeeId,
+    empCode: employees.employeeId,
+    firstName: employees.firstName,
+    lastName: employees.lastName,
+    designation: employees.designation,
+    department: employees.department,
+    outAt: stationLeaves.outAt,
+    inAt: stationLeaves.inAt,
+    minutes: stationLeaves.minutes,
+    type: stationLeaves.type,
+    reason: stationLeaves.reason,
+  }).from(stationLeaves)
+    .innerJoin(employees, eq(employees.id, stationLeaves.employeeId))
+    .where(eq(stationLeaves.date, date))
+    .orderBy(stationLeaves.outAt);
+
+  return rows.map(r => ({
+    id: r.id,
+    employeeId: r.employeeId,
+    empCode: r.empCode,
+    name: `${r.firstName} ${r.lastName}`,
+    designation: r.designation,
+    department: r.department,
+    outAt: new Date(r.outAt).toISOString(),
+    inAt: r.inAt ? new Date(r.inAt).toISOString() : null,
+    minutes: r.minutes,
+    type: r.type,
+    reason: r.reason,
+  }));
+}

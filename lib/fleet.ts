@@ -176,6 +176,26 @@ DO $$ BEGIN
   ALTER TABLE pso_cards ADD COLUMN IF NOT EXISTS held_by_name varchar(160);
   ALTER TABLE pso_cards ADD COLUMN IF NOT EXISTS held_since date;
 
+  -- Who held a card, and when. The columns above say where a card is now;
+  -- this says where it was — without it, "who had which card in August" has no
+  -- answer, because handing a card on overwrites the only record of the last
+  -- person to hold it.
+  CREATE TABLE IF NOT EXISTS pso_card_custody (
+    id serial PRIMARY KEY,
+    card_id integer NOT NULL REFERENCES pso_cards(id) ON DELETE CASCADE,
+    holder_id integer REFERENCES employees(id) ON DELETE SET NULL,
+    holder_name varchar(160) NOT NULL,
+    taken_date date NOT NULL,
+    taken_time varchar(5),
+    returned_date date,
+    returned_time varchar(5)
+  );
+  -- A card is in one pair of hands at a time.
+  CREATE UNIQUE INDEX IF NOT EXISTS pso_card_custody_open_key
+    ON pso_card_custody (card_id) WHERE returned_date IS NULL;
+  CREATE INDEX IF NOT EXISTS pso_card_custody_dates_idx
+    ON pso_card_custody (taken_date, returned_date);
+
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
   -- vehicle_ids never collide.
