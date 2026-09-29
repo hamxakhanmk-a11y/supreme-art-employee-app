@@ -16,5 +16,10 @@ export default async function StoreModulePage({ params }: { params: Promise<{ mo
   if (!user) redirect(`/login?next=/store/${module}`);
   const allowed = await roleCanAccess(user.role, "store");
   if (!allowed) redirect("/");
-  return <StoreFrame module={module} />;
+  // The store is a static file in public/, so a browser can go on serving the
+  // copy it already has — an iframe especially — and a deploy that changed it
+  // looks like a deploy that did nothing. Stamping the commit into the URL
+  // makes every deploy a new address, which no cache can answer from memory.
+  const version = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) || "dev";
+  return <StoreFrame module={module} version={version} />;
 }
