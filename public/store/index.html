@@ -140,6 +140,13 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .bulk-row-del:hover{background:#fbefef}
 .bulk-hint{font-size:11px;color:#999;margin-top:10px;line-height:1.55}
 .row-actions{display:flex;flex-wrap:wrap;gap:4px}
+.return-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #e8e1d3;border-left:4px solid #8C2326;border-radius:10px;padding:9px 12px;margin-bottom:12px}
+.return-bar span{font-size:12px;color:#666}
+.return-bar b{color:#1a1a1a}
+@keyframes rowFlash{0%{background:#fdf0d5}70%{background:#fdf0d5}100%{background:transparent}}
+.row-flash>td{animation:rowFlash 2.6s ease-out}
+.txn-row-link{cursor:pointer}
+.txn-row-link:hover>td{background:#fbf6ee}
 @media (max-width:560px){.three-col{grid-template-columns:1fr}.bulk-table .col-qty{width:84px}}
 .bulk-info{font-size:12px;color:#888;font-weight:500}
 .btn-danger-strong{background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600;box-shadow:0 0 0 1px #A32D2D inset}
@@ -418,6 +425,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
         <button class="btn btn-sm btn-danger-strong write-only" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
       </div>
+      <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Supplier / Ref</th><th>Notes</th><th class="no-print" style="width:60px"></th></tr></thead>
@@ -447,6 +455,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
         <button class="btn btn-sm btn-danger-strong write-only" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
       </div>
+      <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th class="no-print" style="width:60px"></th></tr></thead>
@@ -472,6 +481,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <span style="font-size:12px;color:#666">To</span>
         <input type="date" id="iss-date-to" onchange="renderIssuance()" style="width:150px">
         <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
+        <span style="font-size:11.5px;color:#aaa">Click a row to open it in its report</span>
         <span class="bulk-info" id="iss-bulk-info" style="margin-left:auto"></span>
         <button class="btn btn-sm btn-danger-strong write-only" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
       </div>
@@ -989,7 +999,97 @@ async function loadAll(){
   renderAll();
 }
 
+// ---- Jumping from the Issuance Log into a Stock In / Stock Out report ----
+// Clicking a movement opens it where it belongs, filtered to that part and
+// carrying whatever date range the log was showing — so a row read under an
+// August filter lands on August, not on everything.
+//
+// The report's own filters are put back when the jump ends, whether by the
+// Back button or by walking off to another page: a filter set by a jump must
+// never outlive the visit and leave someone staring at a filtered report
+// wondering where their stock went.
+let storeReturn = null;
+
+function navItemFor(page){
+  return document.querySelector(`.nav-item[onclick*="'${page}'"]`);
+}
+function fieldVal(id){const el=document.getElementById(id);return el?el.value:''}
+function setFieldVal(id,v){const el=document.getElementById(id);if(el)el.value=v}
+
+function openTxnInReport(id){
+  const t=state.transactions.find(x=>x.id===id);
+  if(!t)return;
+  const target=t.type==='in'?'stockin':'stockout';
+  const prefix=t.type==='in'?'in':'out';
+
+  storeReturn={
+    target,prefix,txnId:t.id,
+    label:getPartName(t.partId),
+    // What the report was showing before the jump.
+    filters:{
+      search:fieldVal(prefix+'-search'),
+      from:fieldVal(prefix+'-date-from'),
+      to:fieldVal(prefix+'-date-to'),
+    },
+  };
+
+  // The part by name, and the log's own date range carried across.
+  setFieldVal(prefix+'-search',getPartName(t.partId));
+  setFieldVal(prefix+'-date-from',fieldVal('iss-date-from'));
+  setFieldVal(prefix+'-date-to',fieldVal('iss-date-to'));
+
+  showPage(target,navItemFor(target));
+  renderStoreReturnBar();
+  flashTxnRow(prefix,t.id);
+}
+
+// Put the report back the way it was, and forget the jump.
+function clearStoreReturn(){
+  if(!storeReturn)return;
+  const {prefix,filters}=storeReturn;
+  setFieldVal(prefix+'-search',filters.search);
+  setFieldVal(prefix+'-date-from',filters.from);
+  setFieldVal(prefix+'-date-to',filters.to);
+  storeReturn=null;
+  renderStoreReturnBar();
+  if(prefix==='in')renderStockIn();else renderStockOut();
+}
+
+function storeReturnBack(){
+  const back=storeReturn;
+  clearStoreReturn();            // filters restored before we leave
+  if(!back)return;
+  showPage('issuance',navItemFor('issuance'));
+}
+
+function renderStoreReturnBar(){
+  ['in','out'].forEach(p=>{
+    const bar=document.getElementById(p+'-return-bar');
+    if(!bar)return;
+    if(!storeReturn||storeReturn.prefix!==p){bar.style.display='none';bar.innerHTML='';return;}
+    const range=[fmtDate(fieldVal(p+'-date-from')),fmtDate(fieldVal(p+'-date-to'))].filter(Boolean).join(' – ');
+    bar.style.display='block';
+    bar.innerHTML=`<div class="return-bar">
+      <button class="btn btn-sm" onclick="storeReturnBack()"><i class="ti ti-arrow-left"></i> Back to Issuance Log</button>
+      <span>Showing <b>${storeReturn.label}</b>${range?` · ${range}`:''}, opened from the log.</span>
+    </div>`;
+  });
+}
+
+// Which row was clicked, once the report has drawn itself.
+function flashTxnRow(prefix,id){
+  setTimeout(()=>{
+    const chk=document.querySelector(`.txn-chk-${prefix}[data-id="${id}"]`);
+    const row=chk&&chk.closest('tr');
+    if(!row)return;
+    row.classList.add('row-flash');
+    row.scrollIntoView({block:'center',behavior:'smooth'});
+    setTimeout(()=>row.classList.remove('row-flash'),2600);
+  });
+}
+
 function showPage(id,el){
+  if(storeReturn&&id!==storeReturn.target)clearStoreReturn();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -2562,8 +2662,8 @@ function renderIssuance(){
   const tb=document.getElementById('issuance-table');
   if(!tb)return;
   if(!txns.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-search"></i>No records found</div></td></tr>';updateBulkInfo('iss');return;}
-  tb.innerHTML=txns.map((t,i)=>`<tr>
-    <td class="no-print"><input type="checkbox" class="txn-chk-iss" data-id="${t.id}" onchange="updateBulkInfo('iss')"></td>
+  tb.innerHTML=txns.map((t,i)=>`<tr class="txn-row-link" onclick="openTxnInReport(${t.id})" title="Open this movement in the ${t.type==='in'?'Stock In':'Stock Out'} report">
+    <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" class="txn-chk-iss" data-id="${t.id}" onchange="updateBulkInfo('iss')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td>${fmtDate(t.date)}</td>
     <td style="font-family:monospace;color:#555">${t.challanNo||'—'}</td>
