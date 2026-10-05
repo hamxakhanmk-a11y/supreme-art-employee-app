@@ -20,12 +20,22 @@ type Found = {
   cards: DrawerCard[];
 };
 
+// The browser's own date — the terminal sits at the gate in Karachi, so local
+// is right. (toISOString would be UTC, and yesterday until 5am.)
+const localToday = () => new Date().toLocaleDateString("en-CA");
+
+// "HH:MM" on the Karachi clock, from a stored timestamp.
+function karachiHM(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Karachi" });
+}
+function karachiDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
+}
+
 export default function VehicleTerminal({
-  people, time, onDone,
+  people, onDone,
 }: {
   people: Person[];
-  /** Optional manual "HH:MM" shared with the rest of the terminal. */
-  time: string;
   onDone: (msg: string, color: string) => void;
 }) {
   const [pin, setPin] = useState("");
@@ -34,7 +44,24 @@ export default function VehicleTerminal({
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<"pick" | "trip" | "card">("pick");
 
-  const reset = useCallback(() => { setPin(""); setData(null); setError(null); setAction("pick"); }, []);
+  // When it happened. Left alone it is now; set for an entry written up after
+  // the fact — yesterday's trip, a card handed back last night.
+  const [entryDate, setEntryDate] = useState(localToday());
+  const [entryTime, setEntryTime] = useState("");
+  const backdated = entryDate !== localToday();
+  // An earlier day has no "now" to fall back on, so it needs its time.
+  const whenMissing = backdated && !entryTime;
+  const when = () => ({
+    date: backdated ? entryDate : undefined,
+    at: entryTime || undefined,
+  });
+
+  const reset = useCallback(() => {
+    setPin(""); setData(null); setError(null); setAction("pick");
+    // Back to now for the next vehicle: a date left set from the last entry
+    // is the easiest way to file today's trip under yesterday.
+    setEntryDate(localToday()); setEntryTime("");
+  }, []);
 
   const lookup = useCallback(async (p: string) => {
     setBusy(true); setError(null);
@@ -55,7 +82,7 @@ export default function VehicleTerminal({
     try {
       const res = await fetch("/api/fleet/trips", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, vehicleId: data.vehicle.id, at: time || undefined }),
+        body: JSON.stringify({ ...body, vehicleId: data.vehicle.id, ...when() }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not record the trip");
@@ -71,7 +98,7 @@ export default function VehicleTerminal({
     try {
       const res = await fetch("/api/fleet/trips", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, at: time || undefined }),
+        body: JSON.stringify({ ...body, ...when() }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not close the trip");
@@ -90,6 +117,7 @@ export default function VehicleTerminal({
         body: JSON.stringify({
           cardId: body.cardId, action: "take",
           holderId: body.driverId, holderName: body.driverName,
+          ...when(),
         }),
       });
       const j = await res.json();
@@ -125,7 +153,7 @@ export default function VehicleTerminal({
       }
       const res = await fetch("/api/fleet/cards/hand", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cardId: data.openCard.cardId, action: "return" }),
+        body: JSON.stringify({ cardId: data.openCard.cardId, action: "return", ...when() }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not take the card back");
@@ -175,34 +203,61 @@ export default function VehicleTerminal({
         </div>
       </div>
 
+      {/* When it happened — applies to whichever action follows. */}
+      <div className="card" style={{
+        marginTop: 12, padding: "10px 12px", textAlign: "left",
+        borderLeft: `4px solid ${backdated || entryTime ? "#B45309" : "var(--border)"}`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.3 }}>When</span>
+          <input type="date" value={entryDate} max={localToday()} disabled={busy}
+            onChange={e => setEntryDate(e.target.value || localToday())}
+            style={{ width: 150, padding: "7px 9px", fontSize: 14 }} />
+          <input type="time" value={entryTime} disabled={busy}
+            onChange={e => setEntryTime(e.target.value)}
+            style={{ width: 120, padding: "7px 9px", fontSize: 14, borderColor: whenMissing ? "#DC2626" : undefined }} />
+          {(backdated || entryTime) && (
+            <button type="button" className="btn btn-sm" disabled={busy}
+              onClick={() => { setEntryDate(localToday()); setEntryTime(""); }}>Use now</button>
+          )}
+        </div>
+        <div style={{ fontSize: 11.5, marginTop: 5, color: whenMissing ? "#DC2626" : backdated || entryTime ? "#B45309" : "var(--text3)", fontWeight: backdated ? 600 : 400 }}>
+          {whenMissing
+            ? "Give the time too — for an earlier day it can't be taken from the clock."
+            : backdated || entryTime
+              ? `Recording for ${new Date(entryDate + "T00:00").toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}${entryTime ? ` at ${entryTime}` : ""}, not now.`
+              : "Blank means right now. Set it for an entry made after the fact."}
+        </div>
+      </div>
+
       {action === "pick" ? (
         <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
           {data.openTrip ? (
-            <ActionButton color="#15803D" onClick={() => setAction("trip")}
+            <ActionButton color="#15803D" onClick={() => setAction("trip")} disabled={whenMissing}
               title="← Bring the vehicle back"
-              hint={`Out since ${data.openTrip.outAt.slice(11, 16)} · left on ${data.openTrip.meterOut} km`} />
-          ) : data.drivers.length === 0 ? (
-            <div style={{ textAlign: "left", fontSize: 13, color: "#B45309", fontWeight: 600 }}>
-              No drivers are set for {v.vehicleNo} — add them under Station → Vehicles before it can go out.
-            </div>
+              // Karachi time, and the day when it is not today — the slice of
+              // the raw timestamp this used to show was UTC, five hours early.
+              hint={`Out since ${karachiDate(data.openTrip.outAt) !== localToday() ? `${karachiDate(data.openTrip.outAt)} ` : ""}${karachiHM(data.openTrip.outAt)} · left on ${data.openTrip.meterOut} km`} />
           ) : (
-            <ActionButton color="#DC2626" onClick={() => setAction("trip")}
+            // Always offered: a typed name is enough to take a vehicle out, so
+            // an empty drivers list is no reason to stop anyone.
+            <ActionButton color="#DC2626" onClick={() => setAction("trip")} disabled={whenMissing}
               title="Take the vehicle out →" hint="Log book entry" />
           )}
 
           {data.openCard ? (
-            <ActionButton color="#15803D" onClick={() => setAction("card")}
+            <ActionButton color="#15803D" onClick={() => setAction("card")} disabled={whenMissing}
               title="← Take the fuel card back"
               hint={`${data.openCard.sn} · with ${data.openCard.takenBy} since ${data.openCard.collectedDate}`} />
           ) : (
-            <ActionButton color="#4F46E5" onClick={() => setAction("card")}
+            <ActionButton color="#4F46E5" onClick={() => setAction("card")} disabled={whenMissing}
               title="Take the fuel card →"
               hint={data.cards.find(c => c.own)?.sn ?? (data.cards.length ? "no card of its own — pick one" : "none free")} />
           )}
         </div>
       ) : action === "card" ? (
         data.openCard
-          ? <ReturnCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onConfirm={returnCard} />
+          ? <ReturnCard card={data.openCard} busy={busy} defaultDate={entryDate} onCancel={() => setAction("pick")} onConfirm={returnCard} />
           : <TakeCardOut cards={data.cards} drivers={data.drivers} people={people} busy={busy}
               onCancel={() => setAction("pick")} onSubmit={takeCard} />
       ) : data.openTrip ? (
@@ -219,10 +274,13 @@ export default function VehicleTerminal({
   );
 }
 
-function ActionButton({ title, hint, color, onClick }: { title: string; hint: string; color: string; onClick: () => void }) {
+function ActionButton({ title, hint, color, onClick, disabled }: {
+  title: string; hint: string; color: string; onClick: () => void; disabled?: boolean;
+}) {
   return (
-    <button onClick={onClick} style={{
-      width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+    <button onClick={onClick} disabled={disabled} style={{
+      width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: 12,
+      cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
       border: `1px solid ${color}`, background: color, color: "#fff", boxShadow: `0 2px 8px ${color}55`,
     }}>
       <div style={{ fontSize: 15.5, fontWeight: 800 }}>{title}</div>

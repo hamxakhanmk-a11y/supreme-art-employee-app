@@ -5,7 +5,8 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema, kmBetween } from "@/lib/fleet";
-import { checkMeterForward } from "@/lib/fleetServer";
+import { meterCheckAt } from "@/lib/fleetServer";
+import { gateWhen } from "@/lib/gateTime";
 
 const MODULE = "station";
 
@@ -54,7 +55,16 @@ export async function POST(req: NextRequest) {
     // constraint violation — the unique indexes are the backstop, not the UI.
     const [vehicleOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
       .where(and(eq(fleetTrips.vehicleId, vehicleId), isNull(fleetTrips.inAt))).limit(1);
-    if (vehicleOut) return NextResponse.json({ error: `${v.vehicleNo} is already out` }, { status: 409 });
+    if (vehicleOut) {
+      // The usual way to hit this when back-dating: today's trip is still open
+      // and yesterday's is being written up. Say how to get past it.
+      const backdating = typeof b?.date === "string" && b.date.trim() !== "";
+      return NextResponse.json({
+        error: backdating
+          ? `${v.vehicleNo} is out right now. Bring it back first, then enter the earlier trip.`
+          : `${v.vehicleNo} is already out`,
+      }, { status: 409 });
+    }
 
     // A name chosen off the list is checked against it here too: a terminal
     // left open while the list was edited could otherwise still book a trip
@@ -95,22 +105,20 @@ export async function POST(req: NextRequest) {
     }
     if (!driverName) return NextResponse.json({ error: "That driver has no name recorded" }, { status: 400 });
 
-    const meterErr = await checkMeterForward(vehicleId, meterOut);
-    if (meterErr) return NextResponse.json({ error: meterErr }, { status: 400 });
+    // Now, or the date and time typed for a trip written up after the fact.
+    const when = gateWhen(b);
+    if (when.error) return NextResponse.json({ error: when.error }, { status: 400 });
 
-    // Optional manual "HH:MM", same as the on-foot punch accepts.
-    const atRaw = typeof b?.at === "string" ? b.at.trim() : "";
-    if (atRaw && !/^\d{1,2}:\d{2}$/.test(atRaw)) {
-      return NextResponse.json({ error: "Time must be in HH:MM format" }, { status: 400 });
-    }
-    const stamp = atRaw
-      ? sql`(((now() AT TIME ZONE 'Asia/Karachi')::date + ${atRaw}::time) AT TIME ZONE 'Asia/Karachi')`
-      : sql`now()`;
+    // Against the readings either side of that moment, so a trip entered the
+    // next morning isn't refused for being lower than today's.
+    const meterErr = await meterCheckAt(vehicleId, when.stamp, meterOut);
+    if (meterErr) return NextResponse.json({ error: meterErr }, { status: 400 });
 
     const [trip] = await db.insert(fleetTrips).values({
       vehicleId,
-      date: sql`(now() AT TIME ZONE 'Asia/Karachi')::date`,
-      outAt: stamp,
+      // The log book's date column: the day the vehicle left, in Karachi.
+      date: when.date,
+      outAt: when.stamp,
       driverId,
       driverName,
       destination: String(b?.destination || "").trim(),
@@ -161,16 +169,23 @@ export async function PUT(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const atRaw = typeof b?.at === "string" ? b.at.trim() : "";
-    if (atRaw && !/^\d{1,2}:\d{2}$/.test(atRaw)) {
-      return NextResponse.json({ error: "Time must be in HH:MM format" }, { status: 400 });
+    const when = gateWhen(b);
+    if (when.error) return NextResponse.json({ error: when.error }, { status: 400 });
+
+    // A vehicle can't come back before it left — the easy slip when both ends
+    // of a trip are being typed in the next day.
+    const order = await db.execute(sql`SELECT (${when.stamp}) < ${trip.outAt.toISOString()}::timestamptz AS early`);
+    const orderRows: any[] = (order as any).rows ?? (order as any);
+    if (orderRows[0]?.early === true || orderRows[0]?.early === "t") {
+      return NextResponse.json({ error: "That is before the vehicle went out — check the date and time." }, { status: 400 });
     }
-    const stamp = atRaw
-      ? sql`(((now() AT TIME ZONE 'Asia/Karachi')::date + ${atRaw}::time) AT TIME ZONE 'Asia/Karachi')`
-      : sql`now()`;
+
+    // Nothing recorded later may read lower than this.
+    const meterErr = await meterCheckAt(trip.vehicleId, when.stamp, meterIn, trip.id);
+    if (meterErr) return NextResponse.json({ error: meterErr }, { status: 400 });
 
     const [row] = await db.update(fleetTrips)
-      .set({ inAt: stamp, meterIn, kmCovered: kmBetween(trip.meterOut, meterIn),
+      .set({ inAt: when.stamp, meterIn, kmCovered: kmBetween(trip.meterOut, meterIn),
              remarks: b?.remarks !== undefined ? String(b.remarks).trim() : trip.remarks })
       .where(eq(fleetTrips.id, tripId)).returning();
 

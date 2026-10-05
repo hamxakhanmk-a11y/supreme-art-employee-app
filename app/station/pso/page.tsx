@@ -5,6 +5,7 @@ import { ensureFleetSchema } from "@/lib/fleet";
 import { custodyOn } from "@/lib/fleetServer";
 import { isViewOnly } from "@/lib/pageGuard";
 import PsoCardsClient from "./PsoCardsClient";
+import { karachiNow } from "@/lib/gateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ type SP = { date?: string };
 export default async function PsoCardsPage({ searchParams }: { searchParams: Promise<SP> }) {
   await ensureFleetSchema();
   const sp = await searchParams;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = karachiNow().date;   // UTC would still be yesterday until 5am
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? sp.date! : today;
   const isToday = date === today;
 

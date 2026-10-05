@@ -115,7 +115,7 @@ export default function StationClient() {
 
       {view === "pin" && terminalFor === "vehicle" ? (
         <VehicleTerminal
-          people={fleet.people} time={time}
+          people={fleet.people}
           onDone={(msg, color) => { setFlash({ msg, color }); loadFleet(); }}
         />
       ) : view === "pin" && (

@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { ensureStationReasonColumn } from "@/lib/stationServer";
 import { openTripForDriver, type OpenTripInfo } from "@/lib/fleetServer";
+import { karachiNow } from "@/lib/gateTime";
 
 // POST /api/station/lookup  { pin }
 // Identify the employee by PIN and return their current open leave (if any),
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       .where(and(eq(stationLeaves.employeeId, emp.id), isNull(stationLeaves.inAt)))
       .limit(1);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = karachiNow().date;   // leaves are dated in Karachi; UTC is yesterday until 5am
     const todays = await db.select().from(stationLeaves)
       .where(and(eq(stationLeaves.employeeId, emp.id), eq(stationLeaves.date, today)))
       .orderBy(stationLeaves.outAt);

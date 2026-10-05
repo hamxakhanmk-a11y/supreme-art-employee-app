@@ -142,14 +142,16 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
 // card comes back having been filled several times, or not at all.
 export type ReturnFuel = { collectedDate: string; collectedTime: string; slipNo: string; amount: string; notes: string };
 
-export function ReturnCard({ card, busy, onCancel, onConfirm }: {
+export function ReturnCard({ card, busy, defaultDate, onCancel, onConfirm }: {
   card: OpenCard;
   busy: boolean;
+  /** The day being entered at the terminal — a back-dated return's fill was
+   *  drawn on or before it, not today. */
+  defaultDate: string;
   onCancel: () => void;
   onConfirm: (fuel: ReturnFuel | null) => void;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [collectedDate, setCollectedDate] = useState(today);
+  const [collectedDate, setCollectedDate] = useState(defaultDate);
   const [collectedTime, setCollectedTime] = useState("");
   const [slipNo, setSlipNo] = useState("");
   const [amount, setAmount] = useState("");

@@ -20,7 +20,7 @@ type Card = {
   out: { driver: string; since: string | null } | null;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString("en-CA");   // local, not UTC
 
 export default function PsoCardsClient({
   vehicles, people, readOnly, custody, date, isToday,
@@ -79,7 +79,7 @@ export default function PsoCardsClient({
           <input
             type="date"
             value={date}
-            max={new Date().toISOString().slice(0, 10)}
+            max={new Date().toLocaleDateString("en-CA")}
             onChange={e => e.target.value && router.push("/station/pso?date=" + e.target.value)}
             style={{ width: 150 }}
           />

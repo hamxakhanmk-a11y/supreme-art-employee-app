@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { roleCanAccess } from "@/lib/permissions";
 import { currentlyOut, outOn } from "@/lib/stationServer";
 import { tripsOn, vehiclesOut } from "@/lib/fleetServer";
+import { karachiNow } from "@/lib/gateTime";
 
 // GET /api/station/out — live list of everyone currently outside the factory.
 // Read-only, so a view-only station role can watch the board too.
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No access" }, { status: 403 });
   }
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = karachiNow().date;   // UTC would still be yesterday until 5am
     const asked = req.nextUrl.searchParams.get("date") || "";
     const date = /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : today;
     const isToday = date === today;

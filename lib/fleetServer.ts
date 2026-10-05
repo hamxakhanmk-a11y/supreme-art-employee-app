@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { ensureFleetSchema, lastMeterReading } from "./fleet";
 
 // Server-only fleet queries. Kept apart from lib/fleet.ts so the client
@@ -130,6 +130,41 @@ export async function vehiclesOut() {
   `);
   const rows: any[] = (res as any).rows ?? (res as any);
   return rows.map(r => ({ ...r, outAt: new Date(r.outAt).toISOString(), officers: r.officers ?? [] }));
+}
+
+// The odometer only goes forward — in time, not in order of entry. A trip
+// written up the next morning sits between readings that are already there, so
+// it is checked against the readings either side of when it happened, rather
+// than against the latest one, which would refuse every back-dated trip.
+//
+// `excludeTripId` leaves out the trip being closed, whose own opening reading
+// is not a neighbour of itself.
+export async function meterCheckAt(
+  vehicleId: number, at: SQL, meter: number, excludeTripId = 0,
+): Promise<string | null> {
+  const res = await db.execute(sql`
+    WITH readings AS (
+      SELECT meter_out AS km, out_at AS ts FROM fleet_trips
+      WHERE vehicle_id = ${vehicleId} AND id <> ${excludeTripId}
+      UNION ALL
+      SELECT meter_in AS km, in_at AS ts FROM fleet_trips
+      WHERE vehicle_id = ${vehicleId} AND id <> ${excludeTripId}
+        AND meter_in IS NOT NULL AND in_at IS NOT NULL
+    )
+    SELECT
+      (SELECT MAX(km) FROM readings WHERE ts <= ${at}) AS before,
+      (SELECT MIN(km) FROM readings WHERE ts > ${at}) AS after
+  `);
+  const rows: any[] = (res as any).rows ?? (res as any);
+  const before = rows[0]?.before == null ? null : Number(rows[0].before);
+  const after = rows[0]?.after == null ? null : Number(rows[0].after);
+  if (before !== null && meter < before) {
+    return `Meter reads ${meter} km, but this vehicle was already on ${before} km before then. Check the reading, or the date and time.`;
+  }
+  if (after !== null && meter > after) {
+    return `Meter reads ${meter} km, but this vehicle was on ${after} km later than that. Check the reading, or the date and time.`;
+  }
+  return null;
 }
 
 // Shared by the terminal and the Log Book's inline edit: the odometer only

@@ -72,7 +72,7 @@ export default function WhoIsOutClient({
           <input
             type="date"
             value={date}
-            max={new Date().toISOString().slice(0, 10)}
+            max={new Date().toLocaleDateString("en-CA")}
             onChange={e => e.target.value && router.push("/station/out?date=" + e.target.value)}
             style={{ width: 150 }}
           />
