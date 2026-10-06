@@ -130,6 +130,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/station", label: "Terminal" },
         { href: "/station/out", label: "Who's Out" },
         { href: "/station/report", label: "Report" },
+        { href: "/station/visits", label: "Visits Report" },
         { href: "/station/logbook", label: "Log Book" },
         { href: "/station/vehicles", label: "Vehicles" },
         { href: "/station/pso", label: "PSO Cards" },

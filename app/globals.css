@@ -971,3 +971,25 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .scroll-box { overflow: visible !important; max-height: none !important; }
   .scroll-box thead, .scroll-box tfoot { position: static; }
 }
+
+/* Station → Outside Visits report (app/station/visits). Stat cards across the
+   top, then one table: Total / Personal / Official grouped under a two-row
+   header, each group fenced off by a heavier left rule, and the reasons
+   column wrapping instead of running off to the right. */
+.visits-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 860px) { .visits-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.visits-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.visits-table th, .visits-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; text-align: left; }
+.visits-table thead th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); border-bottom: 1px solid var(--border2); }
+.visits-table .c { text-align: center; font-variant-numeric: tabular-nums; }
+.visits-table .grp { border-left: 2px solid var(--border2); }
+.visits-table td.where { white-space: normal; min-width: 340px; font-size: 12px; line-height: 1.4; }
+.visits-table .where .sep { color: var(--text3); }
+.visits-table tfoot td { font-weight: 800; }
+@media print {
+  .visits-stats { grid-template-columns: repeat(5, 1fr) !important; gap: 6px; margin-bottom: 8px; }
+  .visits-stats .stat { padding: 6px 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .visits-stats .stat-value { font-size: 15pt; }
+  .visits-table td.where { min-width: 0; }
+  .visits-table td, .visits-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
