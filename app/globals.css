@@ -956,3 +956,18 @@ select.edit-cell {
 }
 select.edit-cell:hover { border-color: var(--border2); background: var(--bg); }
 select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
+
+/* A wide table's own scroll box (app/station/ScrollBox.tsx): the sideways
+   scrollbar sits at the bottom of the screen, not under the last row. The
+   header is pinned whole (thead, not each th) so the log book's two-row header
+   — Time and Meter Reading over their From/To — stays together. */
+.scroll-box { overflow: auto; -webkit-overflow-scrolling: touch; }
+.scroll-box thead { position: sticky; top: 0; z-index: 3; }
+.scroll-box thead th { background: var(--bg2); }
+.scroll-box tfoot { position: sticky; bottom: 0; z-index: 3; }
+.scroll-box tfoot td { background: var(--bg2); border-top: 2px solid var(--border2); }
+@media print {
+  /* !important: the height is set inline, by measuring the screen. */
+  .scroll-box { overflow: visible !important; max-height: none !important; }
+  .scroll-box thead, .scroll-box tfoot { position: static; }
+}

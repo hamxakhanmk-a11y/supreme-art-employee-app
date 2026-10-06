@@ -5,6 +5,7 @@ import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
+import ScrollBox from "../ScrollBox";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { PsoRow } from "@/lib/fleetServer";
 
@@ -122,7 +123,7 @@ export default function RegisterClient({
         <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700 }}>{rupees(totalAmount)}</span>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <ScrollBox>
         <table style={{ fontSize: 12.5 }}>
           <thead>
             <tr>
@@ -214,7 +215,7 @@ export default function RegisterClient({
             </tfoot>
           )}
         </table>
-      </div>
+      </ScrollBox>
 
     </div>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
+import ScrollBox from "../ScrollBox";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { LogBookTrip, LogBookFuel } from "@/lib/fleetServer";
 import type { Person } from "../VehicleTripForms";
@@ -171,7 +172,7 @@ export default function LogBookClient({
             {totals.openTrips > 0 && <Stat label="Still out" value={String(totals.openTrips)} danger />}
           </div>
 
-          <div className="card" style={{ padding: 0, overflow: "auto" }}>
+          <ScrollBox>
             <table style={{ fontSize: 12.5 }}>
               <thead>
                 <tr>
@@ -287,7 +288,7 @@ export default function LogBookClient({
                 </tfoot>
               )}
             </table>
-          </div>
+          </ScrollBox>
 
         </>
       )}
