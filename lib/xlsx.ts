@@ -34,6 +34,7 @@ export interface SheetSpec {
     company: { name: string } };
   dayRange?: [number, number]; // inclusive 0-based column indices to color by code
   freezeCols?: number;         // sticky leading columns (default 2)
+  leftCols?: number[];         // further 0-based columns to left-align (text, not figures)
   colWidths?: number[];        // explicit per-column widths (else sized for the register)
 }
 
@@ -159,7 +160,7 @@ async function addStyledSheet(wb: ExcelWorkbook, spec: SheetSpec) {
     const r = ws.addRow(row as (string | number)[]);
     r.eachCell({ includeEmpty: true }, (cell, col) => {
       cell.border = BORDER;
-      cell.alignment = { horizontal: col <= 2 ? "left" : "center", vertical: "top", wrapText: true };
+      cell.alignment = { horizontal: col <= 2 || spec.leftCols?.includes(col - 1) ? "left" : "center", vertical: "top", wrapText: true };
       cell.font = { size: 10 };
       if (spec.headerGroups?.length && typeof cell.value === "number") {
         cell.numFmt = "#,##0.######";

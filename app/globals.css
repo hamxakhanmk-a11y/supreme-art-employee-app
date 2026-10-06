@@ -988,3 +988,20 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .visits-table td.where { min-width: 0; }
   .visits-table td, .visits-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Printed register letterhead (components/ReportLetterhead.tsx) — same box as
+   the Procurement Master and Purchase Requisition prints. */
+.report-letterhead { display: none; }
+@media print {
+  .report-letterhead {
+    display: flex !important; align-items: center; gap: 24px; margin-bottom: 8px;
+    border: 1px solid #000; padding: 5px 10px; background: #f3eee4 !important;
+    break-inside: avoid; print-color-adjust: exact; -webkit-print-color-adjust: exact;
+  }
+  .report-letterhead .rl-logo { width: 210px; flex-shrink: 0; text-align: center; color: #a32d2d; font: bold 9pt Arial, sans-serif; }
+  .report-letterhead .rl-logo img { display: block; object-fit: contain; margin: 0 auto 4px; }
+  .report-letterhead .rl-heading { flex: 1; text-align: center; font-family: "Times New Roman", serif; color: #000; }
+  .report-letterhead h2 { color: #a32d2d; font-size: 17pt; margin: 6px 0 7px; }
+  .report-letterhead .rl-control { display: grid; grid-template-columns: 1fr 2fr 1fr; font-size: 10.5pt; line-height: 1.1; }
+  .report-letterhead .rl-control span { padding: 2px; }
+}

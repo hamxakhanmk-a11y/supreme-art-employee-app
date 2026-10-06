@@ -3,10 +3,13 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
-import PrintHeader from "@/components/PrintHeader";
+import ReportLetterhead from "@/components/ReportLetterhead";
 import ScrollBox from "../ScrollBox";
 import { LEAVE_STYLE, formatMins } from "@/lib/station";
-import { downloadRegisterXlsx } from "@/lib/xlsx";
+import { downloadWorkbookXlsx } from "@/lib/xlsx";
+import { reportLetterhead } from "@/lib/report-export";
+
+const TITLE = "EMPLOYEES OUTSIDE VISITS REPORT";
 
 type Tally = { visits: number; minutes: number };
 type Reason = { text: string; n: number };
@@ -20,12 +23,8 @@ export type VisitRow = {
 const P = LEAVE_STYLE.personal;
 const O = LEAVE_STYLE.official;
 
-function fmt(d: string) {
-  const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y}`;
-}
 const reasonList = (rs: Reason[]) => rs.map(r => (r.n > 1 ? `${r.text} x${r.n}` : r.text)).join("; ");
-const visits = (n: number) => (n ? String(n) : "-");
+const visits = (n: number) => n || "-";
 const time = (t: Tally) => (t.visits ? formatMins(t.minutes) : "-");
 
 export type Staff = { id: number; empCode: string; name: string };
@@ -83,29 +82,50 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
   const sum = (pick: (r: VisitRow) => number) => rows.reduce((s, r) => s + pick(r), 0);
   const pV = sum(r => r.personal.visits), pM = sum(r => r.personal.minutes);
   const oV = sum(r => r.official.visits), oM = sum(r => r.official.minutes);
-  const period = from === to ? fmt(from) : `${fmt(from)} to ${fmt(to)}`;
 
-  const exportXlsx = () => downloadRegisterXlsx({
-    filename: `station-visits_${from}_to_${to}`,
-    sheetName: "Outside Visits",
-    title: `Supreme Art — Employees Outside Visits with Reasons (Hourly Leaves)   ${period}`,
-    headers: ["#", "Emp ID", "Employee", "Total Visits", "Total Time", "Personal Visits", "Personal Time",
-      "Official Visits", "Official Time", "Where they went (reasons)"],
-    rows: [
-      ...rows.map((r, i) => {
-        const tot = { visits: r.personal.visits + r.official.visits, minutes: r.personal.minutes + r.official.minutes };
-        const where = [
-          r.personalReasons.length ? `P: ${reasonList(r.personalReasons)}` : "",
-          r.officialReasons.length ? `O: ${reasonList(r.officialReasons)}` : "",
-        ].filter(Boolean).join("  |  ");
-        return [i + 1, r.empCode, r.name, tot.visits, formatMins(tot.minutes),
-          visits(r.personal.visits), time(r.personal), visits(r.official.visits), time(r.official), where];
-      }),
-      ["", "", "TOTAL", pV + oV, formatMins(pM + oM), pV, formatMins(pM), oV, formatMins(oM), ""],
-    ],
-    freezeCols: 3,
-    colWidths: [5, 14, 24, 8, 10, 9, 10, 9, 10, 80],
-  });
+  // Same letterhead as the other registers, on paper and in Excel.
+  const letterhead = { ...reportLetterhead(from, to), issue: "01" };
+
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const exportXlsx = async () => {
+    setExporting(true); setExportError("");
+    try {
+      await downloadWorkbookXlsx({
+        filename: `outside-visits_${from}_to_${to}`,
+        sheets: [{
+          sheetName: "Outside Visits",
+          title: TITLE,
+          letterhead,
+          // Two header rows, as on screen: Total / Personal / Official over their
+          // Visits and Time. Excel numbers its own rows, so no Sr column — and the
+          // logo sits in the first column, which wants to be wide.
+          headers: ["Emp ID", "Employee", "Visits", "Time", "Visits", "Time", "Visits", "Time", "Where they went (reasons)"],
+          headerGroups: [
+            { label: "Total", start: 2, span: 2 },
+            { label: "Personal", start: 4, span: 2 },
+            { label: "Official", start: 6, span: 2 },
+          ],
+          rows: [
+            ...rows.map(r => {
+              const where = [
+                r.personalReasons.length ? `P: ${reasonList(r.personalReasons)}` : "",
+                r.officialReasons.length ? `O: ${reasonList(r.officialReasons)}` : "",
+              ].filter(Boolean).join("  |  ");
+              return [r.empCode, r.name,
+                r.personal.visits + r.official.visits, formatMins(r.personal.minutes + r.official.minutes),
+                visits(r.personal.visits), time(r.personal), visits(r.official.visits), time(r.official), where];
+            }),
+            ["", "TOTAL", pV + oV, formatMins(pM + oM), pV, formatMins(pM), oV, formatMins(oM), ""],
+          ],
+          leftCols: [8],
+          freezeCols: 2,
+          colWidths: [20, 26, 8, 10, 8, 10, 8, 10, 70],
+        }],
+      });
+    } catch (e) { setExportError(e instanceof Error ? e.message : "Export failed. Please try again."); }
+    finally { setExporting(false); }
+  };
 
   const presetBtn = (key: "today" | "month", label: string, f: string) => (
     <button className={`btn btn-sm${mode === key ? " btn-primary" : ""}`}
@@ -115,8 +135,11 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
   return (
     <div className="fade-up">
       <PrintLandscape />
-      <PrintHeader title="Employees Outside Visits Report" subtitle="with Reasons (Hourly Leaves)"
-        meta={`Period: ${period}${picked ? ` · ${picked.empCode} ${picked.name}` : ""} · Sorted by total time · P = Personal, O = Official`} />
+      <ReportLetterhead title={TITLE} code={letterhead.code} date={letterhead.date} issue={letterhead.issue} />
+      <div className="print-only" style={{ fontSize: "9pt", margin: "0 0 6px" }}>
+        {picked && <><strong>{picked.empCode} — {picked.name}</strong> · </>}
+        Sorted by total time · <strong style={{ color: P.color }}>P</strong> = Personal, <strong style={{ color: O.color }}>O</strong> = Official
+      </div>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
@@ -127,11 +150,12 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn btn-sm" onClick={exportXlsx} disabled={!rows.length}>⬇ Export Excel</button>
+          <button className="btn btn-sm" onClick={exportXlsx} disabled={!rows.length || exporting}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
           <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
           <Link href="/station/report" className="btn btn-sm">Every trip</Link>
         </div>
       </div>
+      {exportError && <p className="no-print" role="alert" style={{ color: "#DC2626", fontSize: 13 }}>{exportError}</p>}
 
       <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10, fontSize: 13, color: "var(--text2)" }}>
         {presetBtn("today", "Today", today)}
