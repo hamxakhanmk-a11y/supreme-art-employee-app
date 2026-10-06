@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { grns } from "@/lib/schema";
+import { grns, purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
 import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, type GrnItem } from "@/lib/procurement";
@@ -16,6 +16,12 @@ export default async function GrnView({ params, searchParams }: { params: Promis
   const [g] = await db.select().from(grns).where(eq(grns.id, parseInt(id)));
   if (!g) notFound();
   const items = parseItems<GrnItem>(g.items);
+  // The supplier lives on the PO the goods were ordered on; a standalone GRR
+  // has none, so its lines print blank to be written in by hand.
+  const [po] = g.poId
+    ? await db.select({ supplierName: purchaseOrders.supplierName, supplierBrand: purchaseOrders.supplierBrand })
+        .from(purchaseOrders).where(eq(purchaseOrders.id, g.poId))
+    : [];
   const m = FORM_META.grn;
 
   return (
@@ -37,6 +43,8 @@ export default async function GrnView({ params, searchParams }: { params: Promis
             <tbody>
               <tr><td>PO Ref No:</td><td className="u">{g.poNo != null ? docNoLabel(g.poNo, g.registered) : ""}</td></tr>
               <tr><td>Date:</td><td className="u">{fmtDate(g.date)}</td></tr>
+              <tr><td>Supplier:</td><td className="u">{po?.supplierName || ""}</td></tr>
+              <tr><td>Brand:</td><td className="u">{po?.supplierBrand || ""}</td></tr>
             </tbody>
           </table>
         </div>
