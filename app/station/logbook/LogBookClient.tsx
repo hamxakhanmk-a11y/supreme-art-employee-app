@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
+import EditCell from "../EditCell";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { LogBookTrip, LogBookFuel } from "@/lib/fleetServer";
 import type { Person } from "../VehicleTripForms";
@@ -49,8 +50,9 @@ export default function LogBookClient({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Record<string, string>>({});
+  // An open trip's return time and closing reading, held until both are in:
+  // the server keeps those two together, so neither can be saved alone.
+  const [closing, setClosing] = useState<Record<number, { inTime: string; meterIn: string }>>({});
 
   const vehicle = vehicles.find(v => v.id === vehicleId);
 
@@ -60,35 +62,33 @@ export default function LogBookClient({
   };
 
 
-  const startEdit = (t: LogBookTrip) => {
+  // One field at a time, straight from its cell. Resolves false on failure so
+  // the cell can put its old value back; the reason goes in the error bar.
+  const saveTrip = async (id: number, patch: Record<string, unknown>): Promise<boolean> => {
     setErr("");
-    setEditId(t.id);
-    setDraft({
-      date: t.date, outTime: hm(t.outAt), inTime: hm(t.inAt),
-      meterOut: String(t.meterOut), meterIn: t.meterIn === null ? "" : String(t.meterIn),
-      destination: t.destination, purpose: t.purpose, remarks: t.remarks,
-      officers: t.officers.join(", "),
-    });
-  };
-
-  const saveEdit = async (id: number) => {
-    setBusy(true); setErr("");
     try {
       const res = await fetch(`/api/fleet/trips/${id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...draft,
-          // Typed back as plain names: matching them to employees again would
-          // guess at who was meant, and the printed page only ever shows names.
-          officers: draft.officers.split(",").map(s => s.trim()).filter(Boolean).map(name => ({ name })),
-        }),
+        body: JSON.stringify(patch),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not save");
-      setEditId(null);
-      router.refresh();
-    } catch (e: any) { setErr(e.message); }
-    finally { setBusy(false); }
+      router.refresh();   // km covered and totals are worked out on the server
+      return true;
+    } catch (e: any) { setErr(e.message); return false; }
+  };
+
+  // Typed back as plain names: matching them to employees again would guess at
+  // who was meant, and the printed page only ever shows names.
+  const officersFrom = (text: string) =>
+    text.split(",").map(x => x.trim()).filter(Boolean).map(name => ({ name }));
+
+  // Closes an open trip once both halves are there.
+  const tryClose = async (t: LogBookTrip) => {
+    const c = closing[t.id];
+    if (!c?.inTime || c.meterIn.trim() === "") return;
+    const ok = await saveTrip(t.id, { inTime: c.inTime, meterIn: c.meterIn });
+    if (ok) setClosing(prev => { const next = { ...prev }; delete next[t.id]; return next; });
   };
 
   const remove = async (t: LogBookTrip) => {
@@ -200,58 +200,81 @@ export default function LogBookClient({
                   </td></tr>
                 )}
 
-                {trips.map(t => editId === t.id ? (
-                  <tr key={t.id} className="no-print">
-                    <td><input type="date" value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value })} /></td>
-                    <td><input type="time" value={draft.outTime} onChange={e => setDraft({ ...draft, outTime: e.target.value })} /></td>
-                    <td><input type="time" value={draft.inTime} onChange={e => setDraft({ ...draft, inTime: e.target.value })} /></td>
-                    <td><input value={draft.destination} onChange={e => setDraft({ ...draft, destination: e.target.value })} /></td>
-                    <td><input value={draft.purpose} onChange={e => setDraft({ ...draft, purpose: e.target.value })} /></td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 3 }}>{t.driver}</div>
-                      <input value={draft.officers} onChange={e => setDraft({ ...draft, officers: e.target.value })} placeholder="officers, comma separated" />
-                    </td>
-                    <td><input type="number" value={draft.meterOut} onChange={e => setDraft({ ...draft, meterOut: e.target.value })} /></td>
-                    <td><input type="number" value={draft.meterIn} onChange={e => setDraft({ ...draft, meterIn: e.target.value })} placeholder="blank = still out" /></td>
-                    <td className="num" style={{ color: "var(--text3)" }}>auto</td>
-                    <td />
-                    <td><input value={draft.remarks} onChange={e => setDraft({ ...draft, remarks: e.target.value })} /></td>
-                    <td className="no-print">
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => saveEdit(t.id)}>Save</button>
-                        <button className="btn btn-sm" disabled={busy} onClick={() => setEditId(null)}>Cancel</button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  <tr key={t.id}>
-                    <td style={{ whiteSpace: "nowrap" }}>{bookDate(t.date)}</td>
-                    <td>{hm(t.outAt)}</td>
-                    <td>{t.inAt ? hm(t.inAt) : <span className="no-print" style={{ color: "#DC2626", fontWeight: 700 }}>out</span>}</td>
-                    <td>{t.destination || "—"}</td>
-                    <td>{t.purpose || "—"}</td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{t.driver}</div>
-                      {ridingWith(t).length > 0 && (
-                        <div style={{ fontSize: 11.5, color: "var(--text2)", marginTop: 1 }}>with {ridingWith(t).join(", ")}</div>
-                      )}
-                    </td>
-                    <td className="num">{t.meterOut}</td>
-                    <td className="num">{t.meterIn ?? ""}</td>
-                    <td className="num" style={{ fontWeight: 700 }}>{t.kmCovered ?? ""}</td>
-                    {/* Signed in ink once the page is printed and filed. */}
-                    <td />
-                    <td style={{ color: "var(--text2)" }}>{t.remarks}</td>
-                    {!readOnly && (
-                      <td className="no-print">
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-sm" disabled={busy} onClick={() => startEdit(t)}>Edit</button>
-                          {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(t)}>Delete</button>}
-                        </div>
+                {trips.map(t => {
+                  const open = t.inAt === null;
+                  const c = closing[t.id] ?? { inTime: "", meterIn: "" };
+                  const setC = (patch: Partial<typeof c>) => setClosing(prev => ({ ...prev, [t.id]: { ...c, ...patch } }));
+                  return (
+                    <tr key={t.id}>
+                      <td>
+                        {/* Moving the day moves both times with it. */}
+                        <EditCell type="date" value={t.date} minWidth={130} readOnly={readOnly} print={bookDate(t.date)}
+                          onSave={v => saveTrip(t.id, { date: v, outTime: hm(t.outAt), inTime: hm(t.inAt) })} />
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td>
+                        <EditCell type="time" value={hm(t.outAt)} minWidth={100} readOnly={readOnly}
+                          onSave={v => saveTrip(t.id, { outTime: v })} />
+                      </td>
+                      <td>
+                        {open && !readOnly ? (
+                          <>
+                            <input type="time" className="edit-cell no-print" value={c.inTime} style={{ minWidth: 100 }}
+                              onChange={e => setC({ inTime: e.target.value })} onBlur={() => tryClose(t)} />
+                            {!c.inTime && <div className="no-print" style={{ color: "#DC2626", fontWeight: 700, fontSize: 11, paddingLeft: 6 }}>out</div>}
+                          </>
+                        ) : open ? (
+                          <span className="no-print" style={{ color: "#DC2626", fontWeight: 700 }}>out</span>
+                        ) : (
+                          <EditCell type="time" value={hm(t.inAt)} minWidth={100} readOnly={readOnly}
+                            onSave={v => saveTrip(t.id, { inTime: v })} />
+                        )}
+                      </td>
+                      <td>
+                        <EditCell value={t.destination} minWidth={150} readOnly={readOnly} placeholder="—"
+                          onSave={v => saveTrip(t.id, { destination: v })} />
+                      </td>
+                      <td>
+                        <EditCell value={t.purpose} minWidth={130} readOnly={readOnly} placeholder="—"
+                          onSave={v => saveTrip(t.id, { purpose: v })} />
+                      </td>
+                      <td>
+                        {/* The driver comes from the gate; who rode along is editable. */}
+                        <div style={{ fontWeight: 600, paddingLeft: readOnly ? 0 : 6 }}>{t.driver}</div>
+                        <EditCell value={ridingWith(t).join(", ")} minWidth={150} readOnly={readOnly}
+                          placeholder="+ who else went"
+                          print={ridingWith(t).length ? <div style={{ fontSize: 11.5 }}>with {ridingWith(t).join(", ")}</div> : null}
+                          onSave={v => saveTrip(t.id, { officers: officersFrom(v) })} />
+                      </td>
+                      <td className="num">
+                        <EditCell type="number" value={String(t.meterOut)} minWidth={95} align="right" readOnly={readOnly}
+                          onSave={v => saveTrip(t.id, { meterOut: v })} />
+                      </td>
+                      <td className="num">
+                        {open && !readOnly ? (
+                          <input type="number" className="edit-cell no-print" value={c.meterIn} placeholder="—"
+                            style={{ minWidth: 95, textAlign: "right" }}
+                            onChange={e => setC({ meterIn: e.target.value })} onBlur={() => tryClose(t)} />
+                        ) : (
+                          <EditCell type="number" value={t.meterIn === null ? "" : String(t.meterIn)} minWidth={95}
+                            align="right" readOnly={readOnly || open}
+                            onSave={v => saveTrip(t.id, { meterIn: v })} />
+                        )}
+                      </td>
+                      <td className="num" style={{ fontWeight: 700 }}>{t.kmCovered ?? ""}</td>
+                      {/* Signed in ink once the page is printed and filed. */}
+                      <td />
+                      <td>
+                        <EditCell value={t.remarks} minWidth={140} readOnly={readOnly} placeholder="—"
+                          onSave={v => saveTrip(t.id, { remarks: v })} />
+                      </td>
+                      {!readOnly && (
+                        <td className="no-print">
+                          {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(t)}>Delete</button>}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
 
               </tbody>
               {trips.length > 0 && (

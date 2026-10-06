@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
+import EditCell from "../EditCell";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { PsoRow } from "@/lib/fleetServer";
 
@@ -28,8 +29,6 @@ export default function RegisterClient({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const [editId, setEditId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
   const go = (patch: { from?: string; to?: string }) => {
@@ -45,35 +44,20 @@ export default function RegisterClient({
 
   const totalAmount = shown.reduce((s, r) => s + (r.amount ?? 0), 0);
 
-  const startEdit = (r: PsoRow) => {
-    setErr(""); setEditId(r.id);
-    setDraft({
-      vehicleId: r.vehicleId ? String(r.vehicleId) : "",
-      driverId: r.driverId ? String(r.driverId) : "",
-      driverName: r.driverId ? "" : r.driver === "—" ? "" : r.driver,
-      collectedDate: r.collectedDate, collectedTime: r.collectedTime,
-      submittedDate: r.submittedDate ?? "", submittedTime: r.submittedTime,
-      amount: r.amount === null ? "" : String(r.amount),
-
-      slipNo: r.slipNo,
-      notes: r.notes,
-    });
-  };
-
-
-  const saveEdit = async (id: number) => {
-    setBusy(true); setErr("");
+  // One field at a time, straight from its cell. Resolves false on failure so
+  // the cell can put its old value back; the reason goes in the error bar.
+  const saveRecord = async (id: number, patch: Record<string, unknown>): Promise<boolean> => {
+    setErr("");
     try {
       const res = await fetch("/api/fleet/card-issues", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...draft, driverId: draft.driverId || null }),
+        body: JSON.stringify({ id, ...patch }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not save");
-      setEditId(null);
-      router.refresh();
-    } catch (e: any) { setErr(e.message); }
-    finally { setBusy(false); }
+      router.refresh();   // totals come from the server
+      return true;
+    } catch (e: any) { setErr(e.message); return false; }
   };
 
   const remove = async (r: PsoRow) => {
@@ -155,69 +139,66 @@ export default function RegisterClient({
                 No entries in this range.
               </td></tr>
             )}
-            {shown.map((r, i) => editId === r.id ? (
-              <tr key={r.id} className="no-print">
+            {shown.map((r, i) => (
+              <tr key={r.id} style={!r.submittedDate ? { background: "#FFFBEB" } : undefined}>
                 <td style={{ color: "#bbb" }}>{i + 1}</td>
                 <td>
-                  <select value={draft.driverId} onChange={e => setDraft({ ...draft, driverId: e.target.value })}>
-                    <option value="">— typed name —</option>
-                    {people.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
-                  </select>
-                  {!draft.driverId && (
-                    <input value={draft.driverName} onChange={e => setDraft({ ...draft, driverName: e.target.value })} placeholder="Name" style={{ marginTop: 4 }} />
+                  {/* Typing a name here records it as typed: matching it back to an
+                      employee would be a guess. */}
+                  <EditCell value={r.driver === "—" ? "" : r.driver} minWidth={140} bold readOnly={readOnly} placeholder="—"
+                    onSave={v => saveRecord(r.id, { driverId: null, driverName: v })} />
+                </td>
+                <td>
+                  {readOnly ? <span style={{ fontFamily: "monospace" }}>{r.vehicleNo}</span> : (
+                    <>
+                      <select className="edit-cell no-print" value={r.vehicleId ?? ""} style={{ minWidth: 110, fontFamily: "monospace" }}
+                        onChange={e => saveRecord(r.id, { vehicleId: e.target.value ? Number(e.target.value) : null })}>
+                        <option value="">—</option>
+                        {vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicleNo}</option>)}
+                      </select>
+                      <span className="print-only" style={{ fontFamily: "monospace" }}>{r.vehicleNo}</span>
+                    </>
                   )}
                 </td>
                 <td>
-                  <select value={draft.vehicleId} onChange={e => setDraft({ ...draft, vehicleId: e.target.value })}>
-                    <option value="">—</option>
-                    {vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicleNo}</option>)}
-                  </select>
-                </td>
-                <td><input type="date" value={draft.collectedDate} onChange={e => setDraft({ ...draft, collectedDate: e.target.value })} /></td>
-                <td><input type="time" value={draft.collectedTime} onChange={e => setDraft({ ...draft, collectedTime: e.target.value })} /></td>
-                <td><input type="date" value={draft.submittedDate} onChange={e => setDraft({ ...draft, submittedDate: e.target.value })} /></td>
-                <td><input type="time" value={draft.submittedTime} onChange={e => setDraft({ ...draft, submittedTime: e.target.value })} /></td>
-                <td style={{ fontFamily: "monospace" }}>
-                  {r.sn}
-                  <input value={draft.slipNo} onChange={e => setDraft({ ...draft, slipNo: e.target.value })} placeholder="slip no." style={{ marginTop: 4 }} />
+                  <EditCell type="date" value={r.collectedDate} minWidth={130} readOnly={readOnly} print={fmt(r.collectedDate)}
+                    onSave={v => saveRecord(r.id, { collectedDate: v })} />
                 </td>
                 <td>
-                  <input type="number" step="any" value={draft.amount} onChange={e => setDraft({ ...draft, amount: e.target.value })} placeholder="PKR" style={{ fontWeight: 700 }} />
+                  <EditCell type="time" value={r.collectedTime} minWidth={100} readOnly={readOnly}
+                    onSave={v => saveRecord(r.id, { collectedTime: v })} />
                 </td>
-                <td><input value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} /></td>
-                <td className="no-print">
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => saveEdit(r.id)}>Save</button>
-                    <button className="btn btn-sm" disabled={busy} onClick={() => setEditId(null)}>Cancel</button>
-                  </div>
+                <td>
+                  <EditCell type="date" value={r.submittedDate ?? ""} minWidth={130} readOnly={readOnly}
+                    print={r.submittedDate ? fmt(r.submittedDate) : "pending"}
+                    onSave={v => saveRecord(r.id, { submittedDate: v })} />
+                  {!r.submittedDate && (
+                    <div className="no-print" style={{ color: "#B45309", fontWeight: 700, fontSize: 11, paddingLeft: readOnly ? 0 : 6 }}
+                      title="The card is still out — records are submitted when it comes back">pending</div>
+                  )}
                 </td>
-              </tr>
-            ) : (
-              <tr key={r.id} style={!r.submittedDate ? { background: "#FFFBEB" } : undefined}>
-                <td style={{ color: "#bbb" }}>{i + 1}</td>
-                <td style={{ fontWeight: 600 }}>{r.driver}</td>
-                <td style={{ fontFamily: "monospace" }}>{r.vehicleNo}</td>
-                <td style={{ whiteSpace: "nowrap" }}>{fmt(r.collectedDate)}</td>
-                <td>{r.collectedTime}</td>
-                <td style={{ whiteSpace: "nowrap" }}>
-                  {r.submittedDate ? fmt(r.submittedDate) : <span style={{ color: "#B45309", fontWeight: 700 }} title="The card is still out — records are submitted when it comes back">pending</span>}
+                <td>
+                  <EditCell type="time" value={r.submittedTime} minWidth={100} readOnly={readOnly || !r.submittedDate}
+                    onSave={v => saveRecord(r.id, { submittedTime: v })} />
                 </td>
-                <td>{r.submittedTime}</td>
-                <td style={{ fontFamily: "monospace" }}>
-                  {r.sn}
-                  {r.slipNo && <div style={{ fontSize: 11, color: "var(--text3)" }}>slip {r.slipNo}</div>}
+                <td>
+                  <div style={{ fontFamily: "monospace", paddingLeft: readOnly ? 0 : 6 }}>{r.sn}</div>
+                  <EditCell value={r.slipNo} minWidth={110} readOnly={readOnly} placeholder="slip no."
+                    print={r.slipNo ? <div style={{ fontSize: 11 }}>slip {r.slipNo}</div> : null}
+                    onSave={v => saveRecord(r.id, { slipNo: v })} />
                 </td>
-                <td className="num" style={{ fontWeight: 700 }}>
-                  {r.amount === null ? "" : r.amount.toLocaleString("en-PK")}
-
+                <td className="num">
+                  <EditCell type="number" value={r.amount === null ? "" : String(r.amount)} minWidth={105} align="right" bold
+                    readOnly={readOnly} print={r.amount === null ? "" : r.amount.toLocaleString("en-PK")}
+                    onSave={v => saveRecord(r.id, { amount: v })} />
                 </td>
-                <td style={{ color: "var(--text2)" }}>{r.notes}</td>
+                <td>
+                  <EditCell value={r.notes} minWidth={140} readOnly={readOnly} placeholder="—"
+                    onSave={v => saveRecord(r.id, { notes: v })} />
+                </td>
                 {!readOnly && (
                   <td className="no-print">
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn btn-sm" disabled={busy} onClick={() => startEdit(r)}>Edit</button>
-                      {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(r)}>Delete</button>}
-                    </div>
+                    {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(r)}>Delete</button>}
                   </td>
                 )}
               </tr>

@@ -926,3 +926,33 @@ html { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjus
 @media print {
   .procurement-report-title { color: #a32d2d !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* A table cell edited where it stands (app/station/EditCell.tsx). Reads as
+   text until hovered or focused, so a log book still looks like a log book. */
+input.edit-cell {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 5px 6px;
+  font-size: inherit;
+  color: inherit;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+input.edit-cell:hover:not(:disabled) { border-color: var(--border2); background: var(--bg); }
+input.edit-cell:focus { border-color: var(--brand); background: var(--bg); box-shadow: 0 0 0 3px rgba(140, 35, 38, 0.10); }
+input.edit-cell::placeholder { color: var(--text3); }
+input.edit-cell.edit-cell-ok { border-color: #15803D; background: #ecfdf3; }
+input.edit-cell.edit-cell-err { border-color: #DC2626; background: #fef2f2; }
+select.edit-cell {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 5px 6px;
+  font-size: inherit;
+  color: inherit;
+  border-radius: 6px;
+}
+select.edit-cell:hover { border-color: var(--border2); background: var(--bg); }
+select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }

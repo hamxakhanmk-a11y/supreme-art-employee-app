@@ -55,6 +55,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }, { status: 400 });
     }
 
+    // Back before it left — one mistyped digit away once times are edited a
+    // cell at a time, and it would put a negative-length trip in the book.
+    if (inAt !== null) {
+      // Either side is a typed time (SQL) or the stored one (a Date).
+      const ts = (v: any) => v instanceof Date ? sql`${v.toISOString()}::timestamptz` : sql`(${v})`;
+      const order = await db.execute(sql`SELECT ${ts(inAt)} < ${ts(outAt)} AS early`);
+      const rows: any[] = (order as any).rows ?? (order as any);
+      if (rows[0]?.early === true || rows[0]?.early === "t") {
+        return NextResponse.json({ error: "The return time is before it went out — check the times." }, { status: 400 });
+      }
+    }
+
     await db.update(fleetTrips).set({
       date,
       outAt: outAt as any,
