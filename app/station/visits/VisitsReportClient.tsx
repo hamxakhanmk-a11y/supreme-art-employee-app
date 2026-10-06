@@ -1,4 +1,5 @@
 "use client";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
@@ -27,17 +28,62 @@ const reasonList = (rs: Reason[]) => rs.map(r => (r.n > 1 ? `${r.text} x${r.n}` 
 const visits = (n: number) => (n ? String(n) : "-");
 const time = (t: Tally) => (t.visits ? formatMins(t.minutes) : "-");
 
-export default function VisitsReportClient({ rows, from, to }: { rows: VisitRow[]; from: string; to: string }) {
+export type Staff = { id: number; empCode: string; name: string };
+
+const blank = (s: Staff): VisitRow => ({
+  employeeId: s.id, empCode: s.empCode, name: s.name,
+  personal: { visits: 0, minutes: 0 }, official: { visits: 0, minutes: 0 },
+  outNow: false, personalReasons: [], officialReasons: [],
+});
+
+export default function VisitsReportClient({ rows: movers, everyone, from, to, today }: {
+  rows: VisitRow[]; everyone: Staff[]; from: string; to: string; today: string;
+}) {
   const router = useRouter();
-  const go = (patch: { from?: string; to?: string }) => {
-    const p = new URLSearchParams({ from: patch.from ?? from, to: patch.to ?? to });
-    router.push(`/station/visits?${p.toString()}`);
-  };
+  const go = (f: string, t: string) => router.push(`/station/visits?${new URLSearchParams({ from: f, to: t })}`);
+
+  const monthStart = `${today.slice(0, 8)}01`;
+  const preset = from === today && to === today ? "today" : from === monthStart && to === today ? "month" : "custom";
+  // Custom shows its two date boxes as soon as it's clicked, before any date
+  // is changed — the range itself only moves when a date is picked.
+  const [customOpen, setCustomOpen] = useState(preset === "custom");
+  const mode = preset === "custom" || customOpen ? "custom" : preset;
+
+  // Who's listed: by default only the people who went out in the period; ticked,
+  // everyone on the books, the ones who stayed in showing dashes.
+  const [showAll, setShowAll] = useState(false);
+  const [empId, setEmpId] = useState("");
+  const [search, setSearch] = useState("");
+
+  const base = useMemo(() => {
+    if (!showAll) return movers;
+    const went = new Set(movers.map(r => r.employeeId));
+    return [...movers, ...everyone.filter(s => !went.has(s.id)).map(blank)];
+  }, [movers, everyone, showAll]);
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return base.filter(r =>
+      (!empId || String(r.employeeId) === empId)
+      && (!q || `${r.empCode} ${r.name}`.toLowerCase().includes(q)));
+  }, [base, empId, search]);
+
+  // The list follows what's shown, by name; a pick that's dropped out of it
+  // (another range, box unticked) stays listed so the filter can be seen and cleared.
+  const pickList = useMemo(() => {
+    const list = [...base].sort((a, b) => a.name.localeCompare(b.name));
+    if (empId && !list.some(r => String(r.employeeId) === empId)) {
+      const s = everyone.find(e => String(e.id) === empId);
+      if (s) list.unshift(blank(s));
+    }
+    return list;
+  }, [base, empId, everyone]);
+  const picked = pickList.find(r => String(r.employeeId) === empId);
 
   const sum = (pick: (r: VisitRow) => number) => rows.reduce((s, r) => s + pick(r), 0);
   const pV = sum(r => r.personal.visits), pM = sum(r => r.personal.minutes);
   const oV = sum(r => r.official.visits), oM = sum(r => r.official.minutes);
-  const period = `${fmt(from)} to ${fmt(to)}`;
+  const period = from === to ? fmt(from) : `${fmt(from)} to ${fmt(to)}`;
 
   const exportXlsx = () => downloadRegisterXlsx({
     filename: `station-visits_${from}_to_${to}`,
@@ -61,19 +107,16 @@ export default function VisitsReportClient({ rows, from, to }: { rows: VisitRow[
     colWidths: [5, 14, 24, 8, 10, 9, 10, 9, 10, 80],
   });
 
-  const stats: { label: string; value: string; color?: string }[] = [
-    { label: "Employees", value: String(rows.length) },
-    { label: "Total Visits", value: String(pV + oV) },
-    { label: "Total Time", value: formatMins(pM + oM), color: "var(--brand)" },
-    { label: "Personal (visits / time)", value: `${pV} / ${formatMins(pM)}`, color: P.color },
-    { label: "Official (visits / time)", value: `${oV} / ${formatMins(oM)}`, color: O.color },
-  ];
+  const presetBtn = (key: "today" | "month", label: string, f: string) => (
+    <button className={`btn btn-sm${mode === key ? " btn-primary" : ""}`}
+      onClick={() => { setCustomOpen(false); if (preset !== key) go(f, today); }}>{label}</button>
+  );
 
   return (
     <div className="fade-up">
       <PrintLandscape />
       <PrintHeader title="Employees Outside Visits Report" subtitle="with Reasons (Hourly Leaves)"
-        meta={`Period: ${period} · Sorted by total time · P = Personal, O = Official`} />
+        meta={`Period: ${period}${picked ? ` · ${picked.empCode} ${picked.name}` : ""} · Sorted by total time · P = Personal, O = Official`} />
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
@@ -90,20 +133,33 @@ export default function VisitsReportClient({ rows, from, to }: { rows: VisitRow[
         </div>
       </div>
 
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, fontSize: 13, color: "var(--text2)" }}>
-        <span style={{ fontWeight: 600 }}>From</span>
-        <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 150 }} />
-        <span>→</span>
-        <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 150 }} />
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10, fontSize: 13, color: "var(--text2)" }}>
+        {presetBtn("today", "Today", today)}
+        {presetBtn("month", "This month", monthStart)}
+        <button className={`btn btn-sm${mode === "custom" ? " btn-primary" : ""}`} onClick={() => setCustomOpen(true)}>Custom</button>
+        {mode === "custom" && (
+          <>
+            <span style={{ fontWeight: 600, marginLeft: 6 }}>From</span>
+            <input type="date" value={from} max={to} onChange={e => e.target.value && go(e.target.value, to)} style={{ width: 150 }} />
+            <span>→</span>
+            <input type="date" value={to} min={from} onChange={e => e.target.value && go(from, e.target.value)} style={{ width: 150 }} />
+          </>
+        )}
       </div>
 
-      <div className="visits-stats">
-        {stats.map(s => (
-          <div key={s.label} className="stat" style={{ textAlign: "center" }}>
-            <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-label" style={{ marginTop: 6, marginBottom: 0 }}>{s.label}</div>
-          </div>
-        ))}
+      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, fontSize: 13, color: "var(--text2)" }}>
+        <select value={empId} onChange={e => setEmpId(e.target.value)} style={{ width: 260 }}>
+          <option value="">{showAll ? "All employees" : `Everyone who went out (${movers.length})`}</option>
+          {pickList.map(r => <option key={r.employeeId} value={r.employeeId}>{r.empCode} — {r.name}</option>)}
+        </select>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search name or Emp ID" style={{ width: 220 }} />
+        <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+          <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
+          Show all employees, including those who didn&apos;t go out
+        </label>
+        <span style={{ marginLeft: "auto" }}>
+          <strong>{rows.length}</strong> employee{rows.length === 1 ? "" : "s"} · <strong>{pV + oV}</strong> visit{pV + oV === 1 ? "" : "s"}
+        </span>
       </div>
 
       <ScrollBox>
@@ -127,7 +183,7 @@ export default function VisitsReportClient({ rows, from, to }: { rows: VisitRow[
           <tbody>
             {rows.length === 0 && (
               <tr><td colSpan={10} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>
-                Nobody went out in this period.
+                {movers.length ? "No one matches this filter." : "Nobody went out in this period."}
               </td></tr>
             )}
             {rows.map((r, i) => {

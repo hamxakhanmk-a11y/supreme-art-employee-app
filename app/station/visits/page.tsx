@@ -1,6 +1,9 @@
+import { db } from "@/lib/db";
+import { employees } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { stationTrips } from "@/lib/stationServer";
 import { karachiNow } from "@/lib/gateTime";
-import VisitsReportClient, { type VisitRow } from "./VisitsReportClient";
+import VisitsReportClient, { type VisitRow, type Staff } from "./VisitsReportClient";
 
 export const dynamic = "force-dynamic";
 
@@ -9,13 +12,19 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 // Where everyone went in a period: one row per employee who left the factory,
 // visits and time split Personal / Official, and every reason they gave.
+// Opens on today; This month and a custom range are a click away.
 export default async function VisitsReportPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const today = karachiNow().date;   // UTC would still be yesterday until 5am
-  const from = ISO.test(sp.from || "") ? sp.from! : `${today.slice(0, 8)}01`;
+  const from = ISO.test(sp.from || "") ? sp.from! : today;
   const to = ISO.test(sp.to || "") ? sp.to! : today;
 
-  const trips = await stationTrips(from, to);
+  const [trips, staff] = await Promise.all([
+    stationTrips(from, to),
+    // Everyone on the books, for "show everyone" — the ones who stayed in too.
+    db.select({ id: employees.id, empCode: employees.employeeId, firstName: employees.firstName, lastName: employees.lastName })
+      .from(employees).where(eq(employees.status, "active")).orderBy(employees.firstName),
+  ]);
 
   type Reason = { text: string; n: number; first: number };
   type Acc = VisitRow & { reasonMap: { personal: Map<string, Reason>; official: Map<string, Reason> } };
@@ -59,5 +68,7 @@ export default async function VisitsReportPage({ searchParams }: { searchParams:
       || (b.personal.visits + b.official.visits) - (a.personal.visits + a.official.visits)
       || a.name.localeCompare(b.name));
 
-  return <VisitsReportClient rows={rows} from={from} to={to} />;
+  const everyone: Staff[] = staff.map(s => ({ id: s.id, empCode: s.empCode, name: `${s.firstName} ${s.lastName}` }));
+
+  return <VisitsReportClient rows={rows} everyone={everyone} from={from} to={to} today={today} />;
 }
