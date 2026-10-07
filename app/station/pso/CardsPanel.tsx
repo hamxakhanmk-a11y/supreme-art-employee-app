@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 type Card = {
-  id: number; sn: string; vehicleId: number | null; vehicleNo: string | null;
+  id: number; sn: string; vehicleId: number | null; vehicleNo: string | null; vehiclePin: string | null;
   status: string; notes: string;
   out: { driver: string; since: string | null } | null;
 };
@@ -136,14 +136,14 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
         <table>
           <thead>
             <tr>
-              <th>Card SN</th><th>Vehicle</th><th>Status</th><th>Where it is</th><th>Notes</th>
+              <th>Card SN</th><th>Vehicle</th><th>Vehicle PIN</th><th>Status</th><th>Where it is</th><th>Notes</th>
               {!readOnly && <th style={{ width: 140 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
+            {loading && <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
             {!loading && list.length === 0 && (
-              <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>
+              <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>
                 No cards yet{readOnly ? "." : " — use “+ Add card” above."}
               </td></tr>
             )}
@@ -153,6 +153,11 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
                 <tr key={c.id}>
                   <td style={{ fontFamily: "monospace", fontWeight: 700 }}>{c.sn}</td>
                   <td>{c.vehicleNo || <span style={{ color: "var(--text3)" }}>not assigned</span>}</td>
+                  {/* The PIN that brings this card up at the station terminal. */}
+                  <td style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", color: c.vehiclePin ? "var(--brand)" : "var(--text3)" }}
+                    title={c.vehicleNo && !c.vehiclePin ? "This vehicle has no PIN yet — set one on Station → Vehicles" : undefined}>
+                    {c.vehiclePin || (c.vehicleNo ? "no PIN" : "—")}
+                  </td>
                   <td>
                     <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, background: st.bg, color: st.color, fontSize: 11, fontWeight: 700 }}>
                       {st.label}

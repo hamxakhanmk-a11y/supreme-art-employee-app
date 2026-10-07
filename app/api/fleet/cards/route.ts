@@ -25,6 +25,9 @@ export async function GET() {
       id: psoCards.id, sn: psoCards.sn, vehicleId: psoCards.vehicleId,
       status: psoCards.status, notes: psoCards.notes,
       vehicleNo: vehicles.vehicleNo,
+      // The PIN that brings this card up at the station: cards are taken out
+      // on their vehicle's PIN, so this is the one to check against.
+      vehiclePin: vehicles.pin,
       heldById: psoCards.heldById, heldByName: psoCards.heldByName, heldSince: psoCards.heldSince,
     }).from(psoCards)
       .leftJoin(vehicles, eq(vehicles.id, psoCards.vehicleId))
@@ -33,6 +36,7 @@ export async function GET() {
     return NextResponse.json(rows.map(r => ({
       ...r,
       vehicleNo: r.vehicleNo ?? null,
+      vehiclePin: r.vehiclePin ?? null,
       out: r.heldByName ? { driver: r.heldByName, since: r.heldSince } : null,
     })));
   } catch (e: any) {
