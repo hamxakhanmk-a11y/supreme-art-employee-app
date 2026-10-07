@@ -196,6 +196,26 @@ DO $$ BEGIN
   CREATE INDEX IF NOT EXISTS pso_card_custody_dates_idx
     ON pso_card_custody (taken_date, returned_date);
 
+  -- Which hand-over a fuel record was drawn under. A record's collection date
+  -- and time are the hand-over's taken date and time, and its submitted date
+  -- and time the hand-over's return — one fact, so correcting it in the Cards
+  -- Logbook has to correct the hand-over the terminal checks against, or the
+  -- station keeps refusing a return on the old time.
+  ALTER TABLE pso_card_issues ADD COLUMN IF NOT EXISTS custody_id integer
+    REFERENCES pso_card_custody(id) ON DELETE SET NULL;
+  -- Records from before the link: a pending one belongs to the card's open
+  -- hand-over; a submitted one to the hand-over whose return stamped it, which
+  -- wrote the very same date and time.
+  UPDATE pso_card_issues i SET custody_id = s.id
+    FROM pso_card_custody s
+    WHERE i.custody_id IS NULL AND i.submitted_date IS NULL
+      AND s.card_id = i.card_id AND s.returned_date IS NULL;
+  UPDATE pso_card_issues i SET custody_id = s.id
+    FROM pso_card_custody s
+    WHERE i.custody_id IS NULL AND i.submitted_date IS NOT NULL
+      AND s.card_id = i.card_id AND s.returned_date = i.submitted_date
+      AND s.returned_time IS NOT DISTINCT FROM i.submitted_time;
+
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
   -- vehicle_ids never collide.

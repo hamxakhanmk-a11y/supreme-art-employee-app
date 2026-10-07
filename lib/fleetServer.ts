@@ -341,9 +341,12 @@ export async function openCardForVehicle(vehicleId: number): Promise<OpenCard | 
   const res = await db.execute(sql`
     SELECT c.id AS "cardId", c.sn,
            COALESCE(NULLIF(TRIM(c.held_by_name), ''), '—') AS "takenBy",
-           COALESCE(c.held_since::text, '') AS "collectedDate",
-           '' AS "collectedTime"
+           -- From the open hand-over, which carries the time and any correction
+           -- made since in the Cards Logbook.
+           COALESCE(s.taken_date::text, c.held_since::text, '') AS "collectedDate",
+           COALESCE(s.taken_time, '') AS "collectedTime"
     FROM pso_cards c
+    LEFT JOIN pso_card_custody s ON s.card_id = c.id AND s.returned_date IS NULL
     WHERE c.vehicle_id = ${vehicleId} AND c.held_by_name IS NOT NULL
     ORDER BY c.id
     LIMIT 1

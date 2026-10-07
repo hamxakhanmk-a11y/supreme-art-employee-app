@@ -20,7 +20,6 @@ type Card = {
   out: { driver: string; since: string | null } | null;
 };
 
-const today = () => new Date().toLocaleDateString("en-CA");   // local, not UTC
 
 export default function PsoCardsClient({
   vehicles, people, readOnly, custody, date, isToday,
@@ -200,8 +199,6 @@ function FuelRecordForm({
   card: Card; people: Person[]; vehicles: VehicleRow[];
   onCancel: () => void; onSaved: (msg: string) => void; onError: (msg: string) => void;
 }) {
-  const [collectedDate, setCollectedDate] = useState(today());
-  const [collectedTime, setCollectedTime] = useState("");
   const [slipNo, setSlipNo] = useState("");
   const [amount, setAmount] = useState("");
   const [driverId, setDriverId] = useState<number | "">("");
@@ -219,7 +216,6 @@ function FuelRecordForm({
           vehicleId: vehicleId || null,
           // Blank means whoever is holding the card, which is the usual case.
           driverId: driverId || null,
-          collectedDate, collectedTime,
           slipNo, amount, notes,
         }),
       });
@@ -233,8 +229,9 @@ function FuelRecordForm({
   return (
     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-        <Field label="Collection date *"><input type="date" value={collectedDate} onChange={e => setCollectedDate(e.target.value)} /></Field>
-        <Field label="Collection time"><input type="time" value={collectedTime} onChange={e => setCollectedTime(e.target.value)} /></Field>
+        {/* Collection is when the card went out — taken from the hand-over, so
+            this record and the station agree on it. Corrected in the Cards Logbook. */}
+        <Field label="Collected"><input value={card.out?.since ?? ""} readOnly disabled /></Field>
 
         <Field label="Slip no."><input value={slipNo} onChange={e => setSlipNo(e.target.value)} placeholder="from the bill slip" /></Field>
         <Field label="Fuel (PKR) *"><input type="number" step="any" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" /></Field>
@@ -253,7 +250,7 @@ function FuelRecordForm({
         <Field label="Notes"><input value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional" /></Field>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
-        <button className="btn btn-primary" onClick={save} disabled={busy || !collectedDate || !Number(amount)}>
+        <button className="btn btn-primary" onClick={save} disabled={busy || !Number(amount)}>
           {busy ? "Saving…" : "Save record"}
         </button>
         <button className="btn" onClick={onCancel} disabled={busy}>Cancel</button>

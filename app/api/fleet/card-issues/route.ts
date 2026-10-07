@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { employees, psoCardIssues, psoCards } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { employees, psoCardCustody, psoCardIssues, psoCards } from "@/lib/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
+import { localKey } from "@/lib/gateTime";
 
 // One row here is one fuel record: the driver drew fuel on a card, and the
 // slip came in. It says nothing about where the card is — that lives on the
@@ -24,8 +25,12 @@ function money(v: unknown): number | null {
 }
 
 // POST — record fuel drawn. { cardId, vehicleId?, driverId?, driverName?,
-// collectedDate, collectedTime?, submittedDate?, submittedTime?, slipNo?,
+// collectedDate?, collectedTime?, submittedDate?, submittedTime?, slipNo?,
 // amount?, notes? }
+//
+// On a card that is out, the collection date and time are left out and taken
+// from the hand-over: they are when the card was collected, which the station
+// already knows — asking again only invites a second, different answer.
 export async function POST(req: NextRequest) {
   const guard = await guardWrite(MODULE);
   if (guard instanceof NextResponse) return guard;
@@ -33,11 +38,14 @@ export async function POST(req: NextRequest) {
     await ensureFleetSchema();
     const b = await req.json().catch(() => ({}));
     const cardId = Number(b?.cardId);
-    const collectedDate = String(b?.collectedDate || "");
     if (!cardId) return NextResponse.json({ error: "Pick a card" }, { status: 400 });
+
+    const [spell] = await db.select().from(psoCardCustody)
+      .where(and(eq(psoCardCustody.cardId, cardId), isNull(psoCardCustody.returnedDate))).limit(1);
+    const collectedDate = String(b?.collectedDate || spell?.takenDate || "");
     if (!collectedDate) return NextResponse.json({ error: "Collection date is required" }, { status: 400 });
 
-    const collectedTime = hhmm(b?.collectedTime);
+    const collectedTime = b?.collectedDate ? hhmm(b?.collectedTime) : (spell?.takenTime ?? null);
     const submittedTime = hhmm(b?.submittedTime);
     if (collectedTime === "" || submittedTime === "") {
       return NextResponse.json({ error: "Times must be HH:MM" }, { status: 400 });
@@ -75,6 +83,7 @@ export async function POST(req: NextRequest) {
       slipNo: String(b?.slipNo || "").trim().slice(0, 40),
       amount: money(b?.amount),
       notes: String(b?.notes || "").trim(),
+      custodyId: spell?.id ?? null,
     }).returning();
 
     await logActivity({
@@ -124,6 +133,25 @@ export async function PUT(req: NextRequest) {
       if (e) driverName = `${e.first} ${e.last}`.trim();
     }
 
+    // Collection, return and holder belong to the hand-over, not to this one
+    // record: correct them here and the hand-over is corrected too — so the
+    // station checks a return against the fixed time, PSO Cards shows it, and
+    // every other fill drawn under the same hand-over reads the same.
+    const [spell] = before.custodyId
+      ? await db.select().from(psoCardCustody).where(eq(psoCardCustody.id, before.custodyId))
+      : [];
+    const takenChanged = !!spell && (b?.collectedDate !== undefined || b?.collectedTime !== undefined);
+    const backChanged = !!spell && !!spell.returnedDate && !!submittedDate
+      && (b?.submittedDate !== undefined || b?.submittedTime !== undefined);
+    const holderChanged = !!spell && !!driverName && (b?.driverId !== undefined || b?.driverName !== undefined);
+    if (spell) {
+      const out = localKey(collectedDate, collectedTime);
+      const back = backChanged ? localKey(submittedDate!, submittedTime) : spell.returnedDate ? localKey(spell.returnedDate, spell.returnedTime) : null;
+      if (back && out > back) {
+        return NextResponse.json({ error: "The card can't come back before it was collected" }, { status: 400 });
+      }
+    }
+
     await db.update(psoCardIssues).set({
       vehicleId: b?.vehicleId !== undefined ? (b.vehicleId ? Number(b.vehicleId) : null) : before.vehicleId,
       driverId, driverName,
@@ -133,6 +161,31 @@ export async function PUT(req: NextRequest) {
       amount: b?.amount !== undefined ? money(b.amount) : before.amount,
       notes: b?.notes !== undefined ? String(b.notes).trim() : before.notes,
     }).where(eq(psoCardIssues.id, id));
+
+    if (spell && takenChanged) {
+      await db.update(psoCardCustody).set({ takenDate: collectedDate, takenTime: collectedTime })
+        .where(eq(psoCardCustody.id, spell.id));
+      await db.update(psoCardIssues).set({ collectedDate, collectedTime })
+        .where(eq(psoCardIssues.custodyId, spell.id));
+      if (!spell.returnedDate) {
+        await db.update(psoCards).set({ heldSince: collectedDate }).where(eq(psoCards.id, before.cardId));
+      }
+    }
+    if (spell && backChanged) {
+      await db.update(psoCardCustody).set({ returnedDate: submittedDate, returnedTime: submittedTime })
+        .where(eq(psoCardCustody.id, spell.id));
+      await db.update(psoCardIssues).set({ submittedDate, submittedTime })
+        .where(eq(psoCardIssues.custodyId, spell.id));
+    }
+    if (spell && holderChanged) {
+      await db.update(psoCardCustody).set({ holderId: driverId, holderName: driverName })
+        .where(eq(psoCardCustody.id, spell.id));
+      await db.update(psoCardIssues).set({ driverId, driverName })
+        .where(eq(psoCardIssues.custodyId, spell.id));
+      if (!spell.returnedDate) {
+        await db.update(psoCards).set({ heldById: driverId, heldByName: driverName }).where(eq(psoCards.id, before.cardId));
+      }
+    }
 
     const [card] = await db.select({ sn: psoCards.sn }).from(psoCards).where(eq(psoCards.id, before.cardId));
     await logActivity({

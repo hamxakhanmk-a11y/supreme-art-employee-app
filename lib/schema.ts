@@ -835,5 +835,8 @@ export const psoCardIssues = pgTable("pso_card_issues", {
   // also prints on the slip — hence the same SN recurring in the old sheet.
   slipNo: varchar("slip_no", { length: 40 }),
   notes: text("notes").default(""),
+  // The hand-over this fill was drawn under (see lib/fleet.ts). Null for a
+  // record entered while the card was in the drawer.
+  custodyId: integer("custody_id").references(() => psoCardCustody.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -142,7 +142,7 @@ export default function VehicleTerminal({
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cardId: card.cardId, vehicleId: data.vehicle.id,
-        collectedDate: fuel.collectedDate, collectedTime: fuel.collectedTime,
+        // Collection date and time come from the hand-over, on the server.
         slipNo: fuel.slipNo, amount: fuel.amount, notes: fuel.notes,
       }),
     });
@@ -294,11 +294,11 @@ export default function VehicleTerminal({
           )}
         </div>
       ) : action === "fuel" && data.openCard ? (
-        <ReturnCard key={fuelForm} keepOut card={data.openCard} busy={busy} defaultDate={entryDate}
+        <ReturnCard key={fuelForm} keepOut card={data.openCard} busy={busy}
           onCancel={() => setAction("pick")} onConfirm={recordFuel} />
       ) : action === "card" ? (
         data.openCard
-          ? <ReturnCard card={data.openCard} busy={busy} defaultDate={entryDate} onCancel={() => setAction("pick")} onConfirm={returnCard} />
+          ? <ReturnCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onConfirm={returnCard} />
           : <TakeCardOut cards={data.cards} drivers={data.drivers} people={people} busy={busy}
               onCancel={() => setAction("pick")} onSubmit={takeCard} />
       ) : data.openTrip ? (
