@@ -142,9 +142,13 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
 // card comes back having been filled several times, or not at all.
 export type ReturnFuel = { collectedDate: string; collectedTime: string; slipNo: string; amount: string; notes: string };
 
-export function ReturnCard({ card, busy, defaultDate, onCancel, onConfirm }: {
+export function ReturnCard({ card, busy, defaultDate, keepOut = false, onCancel, onConfirm }: {
   card: OpenCard;
   busy: boolean;
+  /** Record a fill and leave the card where it is. A driver can fill up two,
+   *  three, four times a day on one card before bringing it back, and each
+   *  slip is its own record. */
+  keepOut?: boolean;
   /** The day being entered at the terminal — a back-dated return's fill was
    *  drawn on or before it, not today. */
   defaultDate: string;
@@ -199,21 +203,25 @@ export function ReturnCard({ card, busy, defaultDate, onCancel, onConfirm }: {
 
       <div style={{ fontSize: 11.5, color: "var(--text3)", textAlign: "left", marginTop: 10, lineHeight: 1.5 }}>
         {hasFuel
-          ? "Saved as a fuel record against this card, and submitted as it comes in."
-          : "Leave the amount blank if there is no slip — the card still goes back in, and the fuel can be entered later on Station → PSO Cards."}
+          ? keepOut
+            ? `Saved as a fuel record — the card stays with ${card.takenBy}. Enter each slip on its own; they are all submitted when the card comes back.`
+            : "Saved as a fuel record against this card, and submitted as it comes in."
+          : keepOut
+            ? "Enter the amount from the slip."
+            : "Leave the amount blank if there is no slip — the card still goes back in, and the fuel can be entered later on Station → PSO Cards."}
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
         <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
           onClick={() => onConfirm(hasFuel ? { collectedDate, collectedTime, slipNo, amount, notes } : null)}
-          disabled={busy || amountBad}
+          disabled={busy || amountBad || (keepOut && !hasFuel)}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,
-            border: "none", color: "#fff", background: "#15803D",
-            cursor: busy ? "default" : "pointer", opacity: busy || amountBad ? 0.6 : 1,
+            border: "none", color: "#fff", background: keepOut ? "#B45309" : "#15803D",
+            cursor: busy ? "default" : "pointer", opacity: busy || amountBad || (keepOut && !hasFuel) ? 0.6 : 1,
           }}>
-          ← Card is back in
+          {keepOut ? "⛽ Save fuel record" : "← Card is back in"}
         </button>
       </div>
     </div>

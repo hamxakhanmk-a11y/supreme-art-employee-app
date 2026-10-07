@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PinPad from "./PinPad";
 import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Officer } from "./VehicleTripForms";
 import { TakeCardOut, ReturnCard, type DrawerCard, type OpenCard, type ReturnFuel } from "./CardForms";
@@ -42,7 +42,13 @@ export default function VehicleTerminal({
   const [data, setData] = useState<Found | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [action, setAction] = useState<"pick" | "trip" | "card">("pick");
+  const [action, setAction] = useState<"pick" | "trip" | "card" | "fuel">("pick");
+  // Bumped after each fill so the form comes back empty for the next slip.
+  const [fuelForm, setFuelForm] = useState(0);
+  // The fill typed on the return form, once saved. If the return itself is then
+  // refused (a time before the card went out, say), pressing it again must not
+  // save the same slip a second time.
+  const fuelSaved = useRef<string | null>(null);
 
   // When it happened. Left alone it is now; set for an entry written up after
   // the fact — yesterday's trip, a card handed back last night.
@@ -58,6 +64,7 @@ export default function VehicleTerminal({
 
   const reset = useCallback(() => {
     setPin(""); setData(null); setError(null); setAction("pick");
+    fuelSaved.current = null;
     // Back to now for the next vehicle: a date left set from the last entry
     // is the easiest way to file today's trip under yesterday.
     setEntryDate(localToday()); setEntryTime("");
@@ -129,6 +136,34 @@ export default function VehicleTerminal({
     finally { setBusy(false); }
   };
 
+  const postFuel = async (card: OpenCard, fuel: ReturnFuel) => {
+    if (!data) return;
+    const fr = await fetch("/api/fleet/card-issues", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cardId: card.cardId, vehicleId: data.vehicle.id,
+        collectedDate: fuel.collectedDate, collectedTime: fuel.collectedTime,
+        slipNo: fuel.slipNo, amount: fuel.amount, notes: fuel.notes,
+      }),
+    });
+    const fj = await fr.json();
+    if (!fr.ok) throw new Error(fj.error || "Could not save the fuel record");
+  };
+
+  // A fill on a card that stays out. No limit: the same driver can fill up on
+  // the same card several times in a day, and every slip is its own record.
+  // Stays on this vehicle with an empty form, ready for the next slip.
+  const recordFuel = async (fuel: ReturnFuel | null) => {
+    if (!data?.openCard || !fuel) return;
+    setBusy(true); setError(null);
+    try {
+      await postFuel(data.openCard, fuel);
+      onDone(`Rs ${fuel.amount} on card ${data.openCard.sn} · card still with ${data.openCard.takenBy}`, "#B45309");
+      setFuelForm(n => n + 1);
+    } catch (e: any) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+
   // Taking the card back is custody and nothing else: the fuel drawn on it is
   // recorded on the PSO Cards tab, and a card can come back having been
   // filled several times or not at all.
@@ -139,24 +174,20 @@ export default function VehicleTerminal({
       // The record goes in first, while the card is still out, so it is
       // pending — then handing the card back submits it along with any
       // other fills drawn on it.
-      if (fuel) {
-        const fr = await fetch("/api/fleet/card-issues", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cardId: data.openCard.cardId, vehicleId: data.vehicle.id,
-            collectedDate: fuel.collectedDate, collectedTime: fuel.collectedTime,
-            slipNo: fuel.slipNo, amount: fuel.amount, notes: fuel.notes,
-          }),
-        });
-        const fj = await fr.json();
-        if (!fr.ok) throw new Error(fj.error || "Could not save the fuel record");
+      const key = fuel ? JSON.stringify(fuel) : null;
+      if (fuel && fuelSaved.current !== key) {
+        await postFuel(data.openCard, fuel);
+        fuelSaved.current = key;
       }
       const res = await fetch("/api/fleet/cards/hand", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cardId: data.openCard.cardId, action: "return", ...when() }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "Could not take the card back");
+      if (!res.ok) {
+        throw new Error((j.error || "Could not take the card back")
+          + (fuelSaved.current ? " (The fuel record is saved — fix the time and press again.)" : ""));
+      }
       onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded` : ""}`, "#15803D");
       reset();
     } catch (e: any) { setError(e.message); }
@@ -246,15 +277,25 @@ export default function VehicleTerminal({
           )}
 
           {data.openCard ? (
-            <ActionButton color="#15803D" onClick={() => setAction("card")} disabled={whenMissing}
-              title="← Take the fuel card back"
-              hint={`${data.openCard.sn} · with ${data.openCard.takenBy} since ${data.openCard.collectedDate}`} />
+            <>
+              {/* The fill has its own date and time on the form, so the When
+                  box above doesn't hold it up. */}
+              <ActionButton color="#B45309" onClick={() => setAction("fuel")}
+                title="⛽ Record fuel — card stays out"
+                hint={`${data.openCard.sn} · with ${data.openCard.takenBy} · one slip at a time, as many as there are`} />
+              <ActionButton color="#15803D" onClick={() => setAction("card")} disabled={whenMissing}
+                title="← Take the fuel card back"
+                hint={`${data.openCard.sn} · with ${data.openCard.takenBy} since ${data.openCard.collectedDate}`} />
+            </>
           ) : (
             <ActionButton color="#4F46E5" onClick={() => setAction("card")} disabled={whenMissing}
               title="Take the fuel card →"
               hint={data.cards.find(c => c.own)?.sn ?? (data.cards.length ? "no card of its own — pick one" : "none free")} />
           )}
         </div>
+      ) : action === "fuel" && data.openCard ? (
+        <ReturnCard key={fuelForm} keepOut card={data.openCard} busy={busy} defaultDate={entryDate}
+          onCancel={() => setAction("pick")} onConfirm={recordFuel} />
       ) : action === "card" ? (
         data.openCard
           ? <ReturnCard card={data.openCard} busy={busy} defaultDate={entryDate} onCancel={() => setAction("pick")} onConfirm={returnCard} />
