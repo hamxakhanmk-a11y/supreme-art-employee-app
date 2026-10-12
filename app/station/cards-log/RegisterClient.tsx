@@ -108,7 +108,6 @@ export default function RegisterClient({
         <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 145 }} />
         <span style={{ fontSize: 12, color: "#666" }}>To</span>
         <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 145 }} />
-        <span className="mini-stat">Fuel <b>{rupees(totalAmount)}</b></span>
         <span style={{ flex: 1 }} />
         <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
         <button className="btn btn-xs" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>

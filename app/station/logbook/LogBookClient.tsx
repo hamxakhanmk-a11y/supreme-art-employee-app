@@ -169,8 +169,7 @@ export default function LogBookClient({
                 <input type="month" value={month} onChange={e => e.target.value && go({ month: e.target.value })} style={{ width: "auto" }} />
               </>
             )}
-            {/* The figures written at the top of the paper page. */}
-            <span className="mini-stat">K.M. covered <b>{totals.km} km</b></span>
+            {/* Only when something needs doing: a trip not yet closed. */}
             {totals.openTrips > 0 && <span className="mini-stat danger">Still out <b>{totals.openTrips}</b></span>}
             <span style={{ flex: 1 }} />
             <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
