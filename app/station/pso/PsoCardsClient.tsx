@@ -184,25 +184,31 @@ export default function PsoCardsClient({
           </div>
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 12 }}>
+        // Two to a row, one on a narrow screen (.out-cards). The one with its fuel
+        // form open takes the whole row, so the form has room.
+        <div className="out-cards">
           {out.map(c => (
-            <div key={c.id} className="card" style={{ borderLeft: "4px solid #B45309", padding: "12px 16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "monospace" }}>{c.sn}</div>
-                  <div style={{ fontSize: 12.5, color: "var(--text2)", marginTop: 2 }}>
-                    With <strong style={{ color: "var(--text)" }}>{c.out!.driver}</strong>
-                    {c.out!.since ? ` since ${c.out!.since}` : ""}
-                    {c.vehicleNo ? ` · ${c.vehicleNo}` : ""}
+            <div key={c.id} className="card" style={{
+              borderLeft: "4px solid #B45309", padding: "8px 12px",
+              gridColumn: fuelFor === c.id ? "1 / -1" : undefined,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "monospace", lineHeight: 1.2 }}>{c.sn}</div>
+                  <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 1 }}>
+                    <strong style={{ color: "var(--text)" }}>{c.out!.driver}</strong>
+                    {c.out!.since ? ` · since ${c.out!.since}` : ""}
+                    {c.vehicleNo && c.vehicleNo.replace(/\W/g, "") !== c.sn.replace(/\W/g, "") ? ` · ${c.vehicleNo}` : ""}
                   </div>
                 </div>
                 {!readOnly && (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn btn-sm btn-primary" disabled={busy}
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button className="btn btn-sm btn-primary" disabled={busy} style={{ padding: "4px 10px", fontSize: 12 }}
                       onClick={() => { setFuelFor(fuelFor === c.id ? null : c.id); setSaved(""); setErr(""); }}>
                       {fuelFor === c.id ? "Cancel" : "+ Record fuel"}
                     </button>
-                    <button className="btn btn-sm" disabled={busy} onClick={() => handBack(c)}>Take card back</button>
+                    <button className="btn btn-sm" disabled={busy} style={{ padding: "4px 10px", fontSize: 12 }}
+                      onClick={() => handBack(c)}>Take back</button>
                   </div>
                 )}
               </div>

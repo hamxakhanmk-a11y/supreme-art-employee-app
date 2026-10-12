@@ -1022,3 +1022,7 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .page-tabs button.on { background: var(--brand); color: #fff; box-shadow: 0 1px 3px rgba(163,45,45,0.35); }
 .page-tab-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); }
 .page-tabs button.on .page-tab-count { background: rgba(255,255,255,0.22); color: #fff; }
+
+/* Station → PSO Cards: the cards out with someone, two to a row. */
+.out-cards { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 900px) { .out-cards { grid-template-columns: 1fr; } }
