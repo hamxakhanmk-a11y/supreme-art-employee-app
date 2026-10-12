@@ -16,7 +16,7 @@ import { ensureFleetSchema } from "@/lib/fleet";
 
 // GET /api/fleet/drivers → [{ employeeId, name }]
 export async function GET() {
-  const guard = await guardView("station");
+  const guard = await guardView("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -47,7 +47,7 @@ export async function GET() {
 // same way a vehicle's own list is saved. It is a handful of names; diffing
 // would buy nothing but a chance to get it wrong.
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

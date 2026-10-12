@@ -21,6 +21,7 @@ export const REPORT_SUBKEYS = [
   "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
   "reports.procurement", "reports.station", "reports.activity",
 ];
+export const STATION_SUBKEYS = ["station", "station.vehicles", "station.cards", "station.monthly"];
 export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.receive", "purchase.delete", "purchase.hr-approve"];
 
 export const MODULES_BASE: ModuleDef[] = [
@@ -32,7 +33,7 @@ export const MODULES_BASE: ModuleDef[] = [
   // restored later without rebuilding; adding this MODULES_BASE entry back
   // is all that is needed to return the top-nav tab.
   { key: "purchase",   label: "Purchase",   anyModule: PURCHASE_SUBKEYS },
-  { key: "station",    label: "Station",    module: "station" },
+  { key: "station",    label: "Station",    anyModule: STATION_SUBKEYS },
   // Deliberately not including `suppliers`: /procurement itself is gated on
   // demand/po/grn, so a role holding only the Supplier Directory would get a
   // tab that dead-ends. They reach the report from the Profile sidebar.
@@ -127,12 +128,12 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       ];
     case "station":
       return [
-        { href: "/station", label: "Terminal" },
-        { href: "/station/out", label: "Who's Out" },
-        { href: "/station/visits", label: "Visits Report" },
-        { href: "/station/vehicles", label: "Vehicles" },
-        { href: "/station/pso", label: "PSO Cards" },
-        { href: "/station/monthly", label: "Monthly Report" },
+        { href: "/station", label: "Terminal", needs: "station" },
+        { href: "/station/out", label: "Who's Out", needs: "station" },
+        { href: "/station/visits", label: "Visits Report", needs: "station" },
+        { href: "/station/vehicles", label: "Vehicles", needs: "station.vehicles" },
+        { href: "/station/pso", label: "PSO Cards", needs: "station.cards" },
+        { href: "/station/monthly", label: "Monthly Report", needs: "station.monthly" },
       ];
     case "procurement":
       return [

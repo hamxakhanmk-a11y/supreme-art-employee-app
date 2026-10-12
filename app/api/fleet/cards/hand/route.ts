@@ -17,7 +17,7 @@ import { gateWhen, localKey } from "@/lib/gateTime";
 // Karachi. (They used to be read off the server's own clock, which runs in UTC
 // — so every card time saved before this was five hours behind the gate.)
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite(["station", "station.cards"]);
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

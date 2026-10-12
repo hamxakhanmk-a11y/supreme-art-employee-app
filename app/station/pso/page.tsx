@@ -47,7 +47,7 @@ export default async function PsoCardsPage({ searchParams }: { searchParams: Pro
     <PsoCardsClient
       vehicles={vehicleList}
       people={people.map(p => ({ id: p.id, code: p.code, name: `${p.firstName} ${p.lastName}`.trim() }))}
-      readOnly={await isViewOnly("station")}
+      readOnly={await isViewOnly("station.cards")}
       canDelete={canDelete}
       custody={custody}
       date={date}

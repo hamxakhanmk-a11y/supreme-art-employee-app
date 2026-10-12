@@ -7,7 +7,6 @@ import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { cardBalances, lowBalanceLevel } from "@/lib/cardBalance";
 
-const MODULE = "station";
 const STATUSES = new Set(["in_use", "spare", "blocked", "lost"]);
 
 function normalizeStatus(v: unknown): string {
@@ -18,7 +17,7 @@ function normalizeStatus(v: unknown): string {
 // GET /api/fleet/cards — every card, with the vehicle it belongs to and
 // whether it's out with someone right now.
 export async function GET() {
-  const guard = await guardView("station");
+  const guard = await guardView("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -51,7 +50,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -77,7 +76,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

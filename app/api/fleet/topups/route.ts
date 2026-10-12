@@ -28,7 +28,7 @@ const shape = (t: typeof psoCardTopups.$inferSelect) => ({
 
 // GET ?cardId= — one card's history, newest first.
 export async function GET(req: NextRequest) {
-  const guard = await guardView("station");
+  const guard = await guardView("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
 // POST { cardId, kind, date, amount, refNo? }
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
 
 // PUT { id, date?, amount?, refNo? } — fix an entry.
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

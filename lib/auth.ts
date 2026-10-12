@@ -120,12 +120,14 @@ export async function guardAuth(allowedRoles?: Role[]): Promise<SessionUser | Ne
 // Gate a read to one module: the user must be able to open that section (view
 // or edit). For data a section's pages fetch from the browser — the page itself
 // is guarded by its layout, but the API answers anyone who calls it directly.
-export async function guardView(module: ModuleKey): Promise<SessionUser | NextResponse> {
+// A list means any one of them will do (data shared by two sections).
+export async function guardView(module: ModuleKey | ModuleKey[]): Promise<SessionUser | NextResponse> {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   if (user.role === "superadmin") return user;
   const perm = await getPerm(user.role);
-  if (!perm.modules.includes(module)) {
+  const anyOf = Array.isArray(module) ? module : [module];
+  if (!anyOf.some(m => perm.modules.includes(m))) {
     return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
   }
   return user;
@@ -134,17 +136,20 @@ export async function guardView(module: ModuleKey): Promise<SessionUser | NextRe
 // Gate a write. Optionally scope it to a module — the user must both be allowed
 // to edit (role isn't view-only) and have that module in their permission set.
 // superadmin always passes. Called with no module it just enforces edit rights.
-export async function guardWrite(module?: ModuleKey): Promise<SessionUser | NextResponse> {
+// A list means editing any one of them will do — e.g. a fuel record is written
+// at the gate (Station) and in the office (Station · PSO Cards).
+export async function guardWrite(module?: ModuleKey | ModuleKey[]): Promise<SessionUser | NextResponse> {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   if (user.role === "superadmin") return user;
   const perm = await getPerm(user.role);
   const editModules = perm.editModules ?? [];
   if (module) {
-    if (!perm.modules.includes(module)) {
+    const anyOf = Array.isArray(module) ? module : [module];
+    if (!anyOf.some(m => perm.modules.includes(m))) {
       return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
     }
-    if (!editModules.includes(module)) {
+    if (!anyOf.some(m => editModules.includes(m))) {
       return NextResponse.json({ error: "Your role is view-only in this section." }, { status: 403 });
     }
   } else if (!editModules.length) {

@@ -8,7 +8,6 @@ import { ensureFleetSchema, VEHICLE_TYPES } from "@/lib/fleet";
 
 // Fleet rides on the Station permission — it lives in the Station tab and is
 // used by the same people at the same gate, so it gets no grant of its own.
-const MODULE = "station";
 
 // Two to six digits, and whatever length it is is the length. PINs are usually
 // the vehicle's own number because that is what people remember, and those run
@@ -64,7 +63,7 @@ function normalizeType(t: unknown): string {
 // GET /api/fleet/vehicles[?active=1] — the registry, with each vehicle's
 // current driver if it's out right now.
 export async function GET(req: NextRequest) {
-  const guard = await guardView("station");
+  const guard = await guardView("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -132,7 +131,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -172,7 +171,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

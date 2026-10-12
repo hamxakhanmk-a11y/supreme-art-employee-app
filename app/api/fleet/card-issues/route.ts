@@ -12,7 +12,6 @@ import { cardBalance, lowBalanceLevel } from "@/lib/cardBalance";
 // slip came in. It says nothing about where the card is — that lives on the
 // card itself, because a card stays with a driver across many fills.
 
-const MODULE = "station";
 
 function hhmm(v: unknown): string | null {
   const s = String(v || "").trim();
@@ -33,7 +32,7 @@ function money(v: unknown): number | null {
 // from the hand-over: they are when the card was collected, which the station
 // already knows — asking again only invites a second, different answer.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite(["station", "station.cards"]);
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -105,7 +104,7 @@ export async function POST(req: NextRequest) {
 
 // PUT — correct a record. { id, ... }
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

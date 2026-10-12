@@ -57,7 +57,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
   return (
     <VehiclesTabs
       tab={tab}
-      readOnly={await isViewOnly("station")}
+      readOnly={await isViewOnly("station.vehicles")}
       canDelete={canDelete}
       vehicles={list}
       people={people.map(p => ({ id: p.id, code: p.code, name: `${p.firstName} ${p.lastName}`.trim(), department: p.department || "" }))}

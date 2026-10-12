@@ -26,14 +26,13 @@ function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
   if (["demand", "po", "grn"].includes(key)) return "Procurement";
+  if (key.startsWith("station")) return "Station";   // station, .vehicles, .cards, .monthly, .delete
   switch (key) {
     case "employees":  return "Employees";
     case "attendance": return "Attendance";
     case "forms":      return "Forms & Leave";
     case "capa":       return "Forms & Leave";
     case "salary":     return "Salary";
-    case "station":    return "Station";
-    case "station.delete": return "Station";
     case "store":      return "Store";
     default:           return "Other";
   }

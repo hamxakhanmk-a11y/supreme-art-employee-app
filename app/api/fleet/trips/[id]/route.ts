@@ -11,7 +11,7 @@ import { ensureFleetSchema, kmBetween } from "@/lib/fleet";
 // where trips are made; this is where they're fixed.
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

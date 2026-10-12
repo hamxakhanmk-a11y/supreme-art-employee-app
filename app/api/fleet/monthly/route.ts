@@ -16,7 +16,7 @@ function figure(v: unknown): number | null | "bad" {
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station");
+  const guard = await guardWrite("station.monthly");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

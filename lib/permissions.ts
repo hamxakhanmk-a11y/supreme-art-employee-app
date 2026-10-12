@@ -34,7 +34,12 @@ export type ModuleKey =
   | "purchase.delete"
   | "purchase.hr-approve"
   | "purchase.receive"
+  // station — the gate: terminal, Who's Out & its report, Visits. The fleet
+  // pages each have their own key so a gate role needn't see money.
   | "station"
+  | "station.vehicles"
+  | "station.cards"
+  | "station.monthly"
   | "station.delete"
   | "demand"
   | "po"
@@ -63,7 +68,10 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "purchase.receive",    label: "Purchase · Receive",     hint: "Mark material received (Admin)" },
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
   { key: "purchase.hr-approve", label: "Purchase · HOD Approval", hint: "HOD-approve or HOD-reject a raised PR" },
-  { key: "station",        label: "Station",          hint: "Terminal, Who's Out & report, Visits, Vehicles & Log Book, PSO Cards & top-ups, Monthly Report — view, or edit entries" },
+  { key: "station",          label: "Station",                  hint: "Gate terminal (people, vehicles, card hand-over & fuel), Who's Out & report, Visits Report" },
+  { key: "station.vehicles", label: "Station · Vehicles",       hint: "Vehicles page — Log Book and the vehicle list, PINs, drivers" },
+  { key: "station.cards",    label: "Station · PSO Cards",      hint: "PSO Cards page — Cards Logbook, card list, top-ups & balances" },
+  { key: "station.monthly",  label: "Station · Monthly Report", hint: "Fleet monthly report — fuel rate & maintenance" },
   { key: "station.delete", label: "Station · Delete", hint: "Delete hourly-leave trips, vehicle trips, fuel records, top-ups and PSO cards" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
@@ -106,6 +114,9 @@ function expandMasters(modules: ModuleKey[]): ModuleKey[] {
 }
 
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
+
+// Every Station section; any one opens the Station tab (delete is an action, not a page).
+export const STATION_KEYS: ModuleKey[] = ["station", "station.vehicles", "station.cards", "station.monthly"];
 
 export interface RolePerm {
   modules: ModuleKey[];       // sections the role can OPEN (view access)
@@ -260,8 +271,40 @@ export async function deleteCustomRole(key: string) {
   invalidateRolesCache(); invalidatePermsCache();
 }
 
+// Station was split into Station + Vehicles + PSO Cards + Monthly Report.
+// Every role stored with Station before the split had all of those, so it is
+// given the three new keys at the same level (view or edit) — once. The marker
+// row is what makes it once: an owner who later unticks one keeps it unticked.
+// The marker is written into the SQL itself: a DO block can't take parameters.
+let stationSplitChecked = false;
+export async function migrateStationSplit() {
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TABLE IF NOT EXISTS perm_migrations (
+        name varchar(60) PRIMARY KEY,
+        done_at timestamptz NOT NULL DEFAULT now()
+      );
+      IF NOT EXISTS (SELECT 1 FROM perm_migrations WHERE name = 'station-split-2026-10') THEN
+        IF to_regclass('role_permissions') IS NOT NULL THEN
+          UPDATE role_permissions
+            SET modules = modules || ',station.vehicles,station.cards,station.monthly'
+            WHERE (',' || modules || ',') LIKE '%,station,%';
+          UPDATE role_permissions
+            SET edit_modules = edit_modules || ',station.vehicles,station.cards,station.monthly'
+            WHERE edit_modules IS NOT NULL AND (',' || edit_modules || ',') LIKE '%,station,%';
+        END IF;
+        INSERT INTO perm_migrations (name) VALUES ('station-split-2026-10');
+      END IF;
+    END $$;
+  `);
+}
+
 export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
+  if (!stationSplitChecked) {
+    try { await migrateStationSplit(); stationSplitChecked = true; }
+    catch { /* never lock anyone out over this; try again next load */ }
+  }
 
   // Seed every editable role from its default (custom roles start blank), then
   // let stored rows override. Default edit set = every accessible section when

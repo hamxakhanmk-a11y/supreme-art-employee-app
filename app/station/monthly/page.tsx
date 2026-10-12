@@ -13,6 +13,6 @@ export default async function MonthlyPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   // Karachi's month: on the server's UTC clock the 1st doesn't start until 5am.
   const month = /^\d{4}-\d{2}$/.test(sp.month || "") ? sp.month! : karachiNow().date.slice(0, 7);
-  const [data, readOnly] = await Promise.all([fleetMonth(month), isViewOnly("station")]);
+  const [data, readOnly] = await Promise.all([fleetMonth(month), isViewOnly("station.monthly")]);
   return <MonthlyClient data={data} readOnly={readOnly} />;
 }

@@ -15,12 +15,12 @@ export async function requireModule(moduleKey: ModuleKey) {
 
 // Redirect unless the user can access at least one of the given modules.
 // Used by container sections (e.g. Procurement) that hold several stages.
-export async function requireAnyModule(keys: ModuleKey[]) {
+export async function requireAnyModule(keys: ModuleKey[], deniedKey = "procurement") {
   const user = await getSession();
   if (!user) redirect("/login");
   if (user.role === "superadmin") return user;
   const perm = await getPerm(user.role);
-  if (!keys.some(k => perm.modules.includes(k))) redirect("/?denied=procurement");
+  if (!keys.some(k => perm.modules.includes(k))) redirect(`/?denied=${deniedKey}`);
   return user;
 }
 

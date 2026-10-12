@@ -7,7 +7,6 @@ import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { checkMeterForward } from "@/lib/fleetServer";
 
-const MODULE = "station";
 
 function money(n: unknown): number {
   const v = Number(n);
@@ -17,7 +16,7 @@ function money(n: unknown): number {
 // POST — record P.O.L. drawn. { vehicleId, date, litres, rate, meterReading?,
 // drawnById?, vendor?, notes? }
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
 
 // PUT — correct an entry. Same body plus { id }.
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite(MODULE);
+  const guard = await guardWrite("station.vehicles");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
