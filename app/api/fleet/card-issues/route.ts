@@ -6,6 +6,7 @@ import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { localKey } from "@/lib/gateTime";
+import { cardBalance, lowBalanceLevel } from "@/lib/cardBalance";
 
 // One row here is one fuel record: the driver drew fuel on a card, and the
 // slip came in. It says nothing about where the card is — that lives on the
@@ -91,7 +92,9 @@ export async function POST(req: NextRequest) {
       employeeId: driverId ?? undefined, employeeName: driverName || undefined,
       summary: `fuel on PSO card ${card.sn} — ${row.amount ? `Rs ${row.amount}` : "amount not given"} on ${collectedDate}`,
     });
-    return NextResponse.json(row);
+    // The terminal shows what is left on the card once the fill is in.
+    const [balance, lowLevel] = await Promise.all([cardBalance(cardId), lowBalanceLevel()]);
+    return NextResponse.json({ ...row, balance, lowLevel });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

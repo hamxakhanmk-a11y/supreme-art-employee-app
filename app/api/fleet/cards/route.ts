@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { psoCardIssues, psoCards, vehicles } from "@/lib/schema";
+import { psoCardIssues, psoCards, psoCardTopups, vehicles } from "@/lib/schema";
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
+import { cardBalances, lowBalanceLevel } from "@/lib/cardBalance";
 
 const MODULE = "station";
 const STATUSES = new Set(["in_use", "spare", "blocked", "lost"]);
@@ -33,12 +34,17 @@ export async function GET() {
       .leftJoin(vehicles, eq(vehicles.id, psoCards.vehicleId))
       .orderBy(asc(psoCards.sn));
 
-    return NextResponse.json(rows.map(r => ({
-      ...r,
-      vehicleNo: r.vehicleNo ?? null,
-      vehiclePin: r.vehiclePin ?? null,
-      out: r.heldByName ? { driver: r.heldByName, since: r.heldSince } : null,
-    })));
+    const [balances, lowLevel] = await Promise.all([cardBalances(), lowBalanceLevel()]);
+    return NextResponse.json({
+      lowLevel,
+      cards: rows.map(r => ({
+        ...r,
+        vehicleNo: r.vehicleNo ?? null,
+        vehiclePin: r.vehiclePin ?? null,
+        balance: balances.get(r.id) ?? null,
+        out: r.heldByName ? { driver: r.heldByName, since: r.heldSince } : null,
+      })),
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -135,6 +141,14 @@ export async function DELETE(req: NextRequest) {
     if (used) {
       return NextResponse.json({
         error: "This card has entries in the register. Mark it blocked or lost instead of deleting it.",
+      }, { status: 400 });
+    }
+    // Money loaded onto it is history too.
+    const [loaded] = await db.select({ id: psoCardTopups.id }).from(psoCardTopups)
+      .where(eq(psoCardTopups.cardId, id)).limit(1);
+    if (loaded) {
+      return NextResponse.json({
+        error: "This card has top-ups recorded. Mark it blocked or lost instead of deleting it.",
       }, { status: 400 });
     }
 
