@@ -99,33 +99,22 @@ export default function RegisterClient({
       <PrintLandscape />
       <PrintHeader title="PSO Cards — Fuel Logbook" meta={`${fmt(from)} to ${fmt(to)} · ${shown.length} entries · ${rupees(totalAmount)}`} />
 
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>📋 Cards Logbook</h2>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Every fuel record drawn on a PSO card — entered at the Station or above, against whoever
-            is holding the card, and corrected here by clicking into a cell.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-
-          <button className="btn btn-sm" onClick={() => window.print()}>🖨 Print</button>
-          <button className="btn btn-sm" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>
-        </div>
+      {/* Title, filters, total and buttons on one line, so the entries start
+          as high up the screen as they can. */}
+      <div className="no-print toolbar-row">
+        <strong style={{ fontSize: 15, marginRight: 4 }}>📋 Cards Logbook</strong>
+        <input placeholder="Search SN, driver, vehicle…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: 210 }} />
+        <span style={{ fontSize: 12, color: "#666" }}>From</span>
+        <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 145 }} />
+        <span style={{ fontSize: 12, color: "#666" }}>To</span>
+        <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 145 }} />
+        <span className="mini-stat">Fuel <b>{rupees(totalAmount)}</b></span>
+        <span style={{ flex: 1 }} />
+        <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
+        <button className="btn btn-xs" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>
       </div>
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}
-
-
-
-      <div className="no-print" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-        <input placeholder="Search SN, driver, vehicle…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: 230 }} />
-        <span style={{ fontSize: 12, color: "#666" }}>From</span>
-        <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 150 }} />
-        <span style={{ fontSize: 12, color: "#666" }}>To</span>
-        <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 150 }} />
-        <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700 }}>{rupees(totalAmount)}</span>
-      </div>
 
       <ScrollBox>
         <table style={{ fontSize: 12.5 }}>

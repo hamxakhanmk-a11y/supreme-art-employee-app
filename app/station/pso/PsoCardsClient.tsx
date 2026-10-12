@@ -90,20 +90,15 @@ export default function PsoCardsClient({
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 PSO Cards</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Cards are handed out and taken back at the Station terminal, on the vehicle&apos;s PIN.
-          </p>
-        </div>
-        <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
+      <div className="no-print page-head">
+        <h1>💳 PSO Cards</h1>
+        <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
+          { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
+          { key: "cards", label: "💳 All cards", count: cards.length || undefined },
+        ]} />
+        <span className="spacer" />
+        <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
-
-      <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
-        { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
-        { key: "cards", label: "💳 All cards", count: cards.length || undefined },
-      ]} />
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
 

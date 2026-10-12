@@ -136,19 +136,6 @@ export default function LogBookClient({
         meta={`${monthLabel(month)} · ${totals.km} km`}
       />
 
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>📖 Vehicle Log Book</h2>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            One page per vehicle per month, as the book has it. Rows come from the gate terminal and can be corrected here.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn btn-sm" onClick={() => window.print()}>🖨 Print</button>
-          <button className="btn btn-sm" onClick={exportXlsx} disabled={!trips.length}>📊 Excel</button>
-        </div>
-      </div>
-
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}
 
       {vehicles.length === 0 ? (
@@ -165,8 +152,10 @@ export default function LogBookClient({
         </div>
       ) : (
         <>
-          <div className="no-print" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-            <select value={vehicleId} onChange={e => go({ vehicle: Number(e.target.value) })} style={{ width: "auto", minWidth: 200 }}>
+          {/* One row: which page of the book, what it adds up to, and its
+              buttons — so the entries start as high up the screen as they can. */}
+          <div className="no-print toolbar-row">
+            <select value={vehicleId} onChange={e => go({ vehicle: Number(e.target.value) })} style={{ width: "auto", minWidth: 190 }}>
               {vehicles.map(v => (
                 <option key={v.id} value={v.id}>
                   {v.vehicleNo}{v.name ? ` — ${v.name}` : ""}{v.active ? "" : " (retired)"}
@@ -174,12 +163,12 @@ export default function LogBookClient({
               ))}
             </select>
             <input type="month" value={month} onChange={e => e.target.value && go({ month: e.target.value })} style={{ width: "auto" }} />
-          </div>
-
-          {/* The figures written at the top of the paper page. */}
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-            <Stat label="K.M. covered" value={`${totals.km} km`} />
-            {totals.openTrips > 0 && <Stat label="Still out" value={String(totals.openTrips)} danger />}
+            {/* The figures written at the top of the paper page. */}
+            <span className="mini-stat">K.M. covered <b>{totals.km} km</b></span>
+            {totals.openTrips > 0 && <span className="mini-stat danger">Still out <b>{totals.openTrips}</b></span>}
+            <span style={{ flex: 1 }} />
+            <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
+            <button className="btn btn-xs" onClick={exportXlsx} disabled={!trips.length}>📊 Excel</button>
           </div>
 
           <ScrollBox>
@@ -306,12 +295,3 @@ export default function LogBookClient({
   );
 }
 
-function Stat({ label, value, hint, danger }: { label: string; value: string; hint?: string; danger?: boolean }) {
-  return (
-    <div className="card" style={{ padding: "10px 16px", minWidth: 130, borderLeft: `4px solid ${danger ? "#DC2626" : "var(--brand)"}` }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
-      <div style={{ fontSize: 17, fontWeight: 800, marginTop: 2, color: danger ? "#DC2626" : "var(--text)" }}>{value}</div>
-      {hint && <div style={{ fontSize: 10.5, color: "var(--text3)" }}>{hint}</div>}
-    </div>
-  );
-}

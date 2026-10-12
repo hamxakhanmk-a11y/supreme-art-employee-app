@@ -1009,15 +1009,35 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 /* The switch between views inside one Station sub-tab (app/station/PageTabs.tsx):
    a pill with the chosen view filled in brand red, like the Tracker's switches. */
 .page-tabs {
-  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 16px;
-  background: var(--bg); border: 1px solid var(--border2); border-radius: 12px;
+  display: inline-flex; gap: 3px; padding: 3px; margin-bottom: 12px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 10px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .page-tabs button {
-  background: none; border: none; border-radius: 9px; cursor: pointer;
-  padding: 8px 20px; font-size: 14px; font-weight: 700; color: var(--text);
-  display: inline-flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
+  background: none; border: none; border-radius: 8px; cursor: pointer;
+  padding: 5px 14px; font-size: 13px; font-weight: 700; color: var(--text);
+  display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s, color 0.15s;
 }
+
+/* A Station page's top line: title, its view switch, and the way back to the
+   terminal — one row, so the page's own content starts higher up. */
+.page-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.page-head h1 { font-size: 20px; font-weight: 700; margin: 0; }
+.page-head .page-tabs { margin-bottom: 0; }
+.page-head .spacer { flex: 1; }
+
+/* A page's filters, figures and buttons on a single line. */
+.toolbar-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.toolbar-row select, .toolbar-row input { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
+.btn-xs { padding: 3px 9px; font-size: 11.5px; }
+.mini-stat {
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px;
+  background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--brand); border-radius: 8px;
+  font-size: 10.5px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.mini-stat b { font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.mini-stat.danger { border-left-color: #DC2626; }
+.mini-stat.danger b { color: #DC2626; }
 .page-tabs button:hover { background: var(--bg2); }
 .page-tabs button.on { background: var(--brand); color: #fff; box-shadow: 0 1px 3px rgba(163,45,45,0.35); }
 .page-tab-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); }

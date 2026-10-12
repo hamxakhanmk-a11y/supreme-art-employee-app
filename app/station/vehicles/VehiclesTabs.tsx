@@ -30,20 +30,15 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚐 Vehicles</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Vehicles go out and come back at the Station terminal, on the vehicle&apos;s PIN.
-          </p>
-        </div>
-        <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
+      <div className="no-print page-head">
+        <h1>🚐 Vehicles</h1>
+        <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
+          { key: "logbook", label: "📖 Log Book" },
+          { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },
+        ]} />
+        <span className="spacer" />
+        <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
-
-      <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
-        { key: "logbook", label: "📖 Log Book" },
-        { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },
-      ]} />
 
       {tab === "logbook"
         ? <LogBookClient {...logBook} onAddVehicle={() => showTab("vehicles")} />
