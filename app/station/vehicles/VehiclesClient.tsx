@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import DriverPoolPanel from "./DriverPoolPanel";
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL } from "@/lib/fleet";
 
@@ -156,7 +155,7 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
     <div className="fade-up">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚐 Vehicles</h1>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>🚐 All vehicles</h2>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
             Every vehicle that has a log book. A vehicle needs a PIN, and a driver from the pool or its own, before it can go out at the gate. Retiring one keeps its journeys readable.
           </p>
@@ -168,7 +167,6 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
           {!readOnly && !formOpen && (
             <button className="btn btn-sm btn-primary" onClick={openAdd}>+ Add vehicle</button>
           )}
-          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
         </div>
       </div>
 

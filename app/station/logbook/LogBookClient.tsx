@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
@@ -43,12 +42,15 @@ function monthLabel(month: string) {
 }
 
 export default function LogBookClient({
-  vehicles, people, vehicleId, month, trips, fuel, totals, readOnly, canDelete,
+  vehicles, people, vehicleId, month, trips, fuel, totals, readOnly, canDelete, onAddVehicle,
 }: {
   vehicles: VehicleRow[]; people: Person[]; vehicleId: number; month: string;
   trips: LogBookTrip[]; fuel: LogBookFuel[]; totals: Totals; readOnly: boolean; canDelete: boolean;
+  /** Opens the All vehicles tab, from the empty state. */
+  onAddVehicle?: () => void;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   // An open trip's return time and closing reading, held until both are in:
@@ -58,8 +60,12 @@ export default function LogBookClient({
   const vehicle = vehicles.find(v => v.id === vehicleId);
 
   const go = (patch: { vehicle?: number; month?: string }) => {
-    const p = new URLSearchParams({ vehicle: String(patch.vehicle ?? vehicleId), month: patch.month ?? month });
-    router.push(`/station/logbook?${p.toString()}`);
+    // Keeps the rest of the address (the tab) as it is.
+    const p = new URLSearchParams(params.toString());
+    p.set("tab", "logbook");
+    p.set("vehicle", String(patch.vehicle ?? vehicleId));
+    p.set("month", patch.month ?? month);
+    router.push(`/station/vehicles?${p.toString()}`, { scroll: false });
   };
 
 
@@ -132,7 +138,7 @@ export default function LogBookClient({
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚐 Vehicle Log Book</h1>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>📖 Vehicle Log Book</h2>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
             One page per vehicle per month, as the book has it. Rows come from the gate terminal and can be corrected here.
           </p>
@@ -140,7 +146,6 @@ export default function LogBookClient({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn btn-sm" onClick={() => window.print()}>🖨 Print</button>
           <button className="btn btn-sm" onClick={exportXlsx} disabled={!trips.length}>📊 Excel</button>
-          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
         </div>
       </div>
 
@@ -150,7 +155,12 @@ export default function LogBookClient({
         <div className="card" style={{ textAlign: "center", padding: "40px 20px", color: "var(--text2)" }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>No vehicles yet</div>
           <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 4 }}>
-            Add one under <Link href="/station/vehicles" style={{ color: "var(--brand)" }}>Station → Vehicles</Link> and its log book starts here.
+            Add one under{" "}
+            <button type="button" onClick={onAddVehicle} disabled={!onAddVehicle}
+              style={{ background: "none", border: "none", padding: 0, color: "var(--brand)", cursor: "pointer", font: "inherit" }}>
+              All vehicles
+            </button>{" "}
+            and its log book starts here.
           </div>
         </div>
       ) : (

@@ -1006,14 +1006,19 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .report-letterhead .rl-control span { padding: 2px; }
 }
 
-/* Tabs inside a page (Station → PSO Cards: Cards Logbook | All cards). */
-.pso-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
-.pso-tabs button {
-  background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px;
-  padding: 9px 16px; font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 8px;
+/* The switch between views inside one Station sub-tab (app/station/PageTabs.tsx):
+   a pill with the chosen view filled in brand red, like the Tracker's switches. */
+.page-tabs {
+  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 16px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
-.pso-tabs button:hover { color: var(--text); }
-.pso-tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
-.pso-tab-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); }
-.pso-tabs button.on .pso-tab-count { background: var(--brand-soft); color: var(--brand); }
+.page-tabs button {
+  background: none; border: none; border-radius: 9px; cursor: pointer;
+  padding: 8px 20px; font-size: 14px; font-weight: 700; color: var(--text);
+  display: inline-flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
+}
+.page-tabs button:hover { background: var(--bg2); }
+.page-tabs button.on { background: var(--brand); color: #fff; box-shadow: 0 1px 3px rgba(163,45,45,0.35); }
+.page-tab-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); }
+.page-tabs button.on .page-tab-count { background: rgba(255,255,255,0.22); color: #fff; }

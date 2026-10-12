@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { CustodyRow, PsoRow } from "@/lib/fleetServer";
 import CardsPanel from "./CardsPanel";
+import PageTabs from "../PageTabs";
 import RegisterClient from "../cards-log/RegisterClient";
 
 // PSO Cards, in two tabs. Cards Logbook: the cards out with someone at the
@@ -99,14 +100,10 @@ export default function PsoCardsClient({
         <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
       </div>
 
-      <div className="no-print pso-tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "logbook"} className={tab === "logbook" ? "on" : ""} onClick={() => showTab("logbook")}>
-          📋 Cards Logbook{out.length > 0 && <span className="pso-tab-count">{out.length} out</span>}
-        </button>
-        <button role="tab" aria-selected={tab === "cards"} className={tab === "cards" ? "on" : ""} onClick={() => showTab("cards")}>
-          💳 All cards{cards.length > 0 && <span className="pso-tab-count">{cards.length}</span>}
-        </button>
-      </div>
+      <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
+        { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
+        { key: "cards", label: "💳 All cards", count: cards.length || undefined },
+      ]} />
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
 

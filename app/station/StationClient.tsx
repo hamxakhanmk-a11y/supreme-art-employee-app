@@ -225,7 +225,7 @@ export default function StationClient() {
       <div style={{ marginTop: 24, fontSize: 12, display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap" }}>
         <Link href="/station/out" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>🚶 Who&apos;s out now →</Link>
         <Link href="/station/report" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>📊 Time-outside report →</Link>
-        <Link href="/station/logbook" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>🚐 Vehicle log book →</Link>
+        <Link href="/station/vehicles" style={{ color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>🚐 Vehicle log book →</Link>
       </div>
     </div>
   );
