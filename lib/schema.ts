@@ -840,3 +840,23 @@ export const psoCardIssues = pgTable("pso_card_issues", {
   custodyId: integer("custody_id").references(() => psoCardCustody.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Money loaded onto a PSO card: an opening balance or a recharge. The card's
+// balance is worked out from these and its fuel records (lib/cardBalance.ts),
+// never stored.
+export const psoCardTopups = pgTable("pso_card_topups", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").notNull().references(() => psoCards.id, { onDelete: "cascade" }),
+  kind: varchar("kind", { length: 10 }).notNull(),            // opening | topup
+  date: date("date").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  refNo: varchar("ref_no", { length: 60 }),
+  createdBy: varchar("created_by", { length: 120 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Fleet screen settings, key → value. pso_low_balance: rupees.
+export const fleetSettings = pgTable("fleet_settings", {
+  key: varchar("key", { length: 60 }).primaryKey(),
+  value: text("value").notNull(),
+});

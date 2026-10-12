@@ -216,6 +216,27 @@ DO $$ BEGIN
       AND s.card_id = i.card_id AND s.returned_date = i.submitted_date
       AND s.returned_time IS NOT DISTINCT FROM i.submitted_time;
 
+  -- Money loaded onto a card. 'opening' is the balance typed in when a card's
+  -- money is first (or again) counted; 'topup' is a recharge. A card's balance
+  -- runs from its newest opening — see lib/cardBalance.ts.
+  CREATE TABLE IF NOT EXISTS pso_card_topups (
+    id serial PRIMARY KEY,
+    card_id integer NOT NULL REFERENCES pso_cards(id) ON DELETE CASCADE,
+    kind varchar(10) NOT NULL,
+    date date NOT NULL,
+    amount double precision NOT NULL,
+    ref_no varchar(60),
+    created_by varchar(120),
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS pso_card_topups_card_idx ON pso_card_topups (card_id, created_at);
+  -- Settings for the fleet screens, one row per key. pso_low_balance: the
+  -- balance under which a card is flagged at the station.
+  CREATE TABLE IF NOT EXISTS fleet_settings (
+    key varchar(60) PRIMARY KEY,
+    value text NOT NULL
+  );
+
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
   -- vehicle_ids never collide.
