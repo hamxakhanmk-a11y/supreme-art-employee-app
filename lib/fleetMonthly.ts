@@ -23,11 +23,16 @@ export type FleetMonthRow = {
   km: number;
   closing: number | null;
   openedOn: string | null;      // when the opening was set inside this month
+  // Written in by the office (fleet_month_notes); litres and km/l follow.
+  fuelRate: number | null;
+  litres: number | null;        // consumption ÷ rate, 1 decimal
+  kmPerLitre: number | null;    // km ÷ litres, 2 decimals
+  maintenance: number | null;
 };
 export type FleetMonth = {
   month: string;
   rows: FleetMonthRow[];
-  totals: { opening: number; topup: number; consumption: number; km: number; closing: number };
+  totals: { opening: number; topup: number; consumption: number; km: number; closing: number; litres: number; maintenance: number };
 };
 
 const rowsOf = (res: unknown): any[] => (res as any).rows ?? (res as any);
@@ -43,7 +48,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
   const start = `${month}-01`;
   const end = nextMonthStart(month);   // exclusive
 
-  const [vehicleRes, cardRes, moneyRes, fillRes, kmRes] = await Promise.all([
+  const [vehicleRes, cardRes, moneyRes, fillRes, kmRes, notesRes] = await Promise.all([
     db.execute(sql`SELECT id, vehicle_no AS "vehicleNo", COALESCE(name, '') AS name, type, active FROM vehicles ORDER BY vehicle_no`),
     db.execute(sql`SELECT id, sn, vehicle_id AS "vehicleId" FROM pso_cards ORDER BY sn`),
     db.execute(sql`
@@ -61,6 +66,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
       FROM fleet_trips WHERE date >= ${start}::date AND date < ${end}::date
       GROUP BY vehicle_id
     `),
+    db.execute(sql`SELECT vehicle_id AS "vehicleId", fuel_rate AS "fuelRate", maintenance FROM fleet_month_notes WHERE month = ${month}`),
   ]);
 
   type Entry = { cardId: number; day: string; amount: number; at: number };
@@ -69,6 +75,18 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
   const topups: Entry[] = entries.filter(e => e.kind === "topup");
   const fills: Entry[] = rowsOf(fillRes).map(r => ({ cardId: Number(r.cardId), day: String(r.day), amount: Number(r.amount), at: Number(r.at) }));
   const kmBy = new Map(rowsOf(kmRes).map(r => [Number(r.vehicleId), Number(r.km)]));
+  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  const notesBy = new Map(rowsOf(notesRes).map(r => [Number(r.vehicleId), { fuelRate: num(r.fuelRate), maintenance: num(r.maintenance) }]));
+
+  // Litres from what was spent and the month's rate; km/l from those litres.
+  const fuelFigures = (consumption: number, km: number, fuelRate: number | null) => {
+    if (!fuelRate || fuelRate <= 0) return { litres: null, kmPerLitre: null };
+    const litres = consumption / fuelRate;
+    return {
+      litres: Math.round(litres * 10) / 10,
+      kmPerLitre: litres > 0 ? Math.round((km / litres) * 100) / 100 : null,
+    };
+  };
 
   // One card's month.
   const cardMonth = (cardId: number) => {
@@ -100,9 +118,10 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const topup = parts.reduce((s, p) => s + p.topup, 0);
     const consumption = parts.reduce((s, p) => s + p.consumption, 0);
     // A retired vehicle only appears in a month it was used in.
-    if (!v.active && !km && !topup && !consumption) continue;
+    if (!v.active && !km && !topup && !consumption && !notesBy.has(id)) continue;
     // Known only when every card on the vehicle has its opening set.
     const known = parts.length > 0 && parts.every(p => p.opening !== null);
+    const note = notesBy.get(id) ?? { fuelRate: null, maintenance: null };
     rows.push({
       vehicleId: id,
       vehicleNo: String(v.vehicleNo),
@@ -113,6 +132,9 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
       km,
       closing: known ? money(parts.reduce((s, p) => s + (p.closing ?? 0), 0)) : null,
       openedOn: parts.map(p => p.openedOn).filter(Boolean).sort().pop() ?? null,
+      fuelRate: note.fuelRate,
+      ...fuelFigures(consumption, km, note.fuelRate),
+      maintenance: note.maintenance,
     });
   }
 
@@ -126,6 +148,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
       topup: money(p.topup), consumption: money(p.consumption), km: 0,
       closing: p.closing === null ? null : money(p.closing),
       openedOn: p.openedOn,
+      fuelRate: null, litres: null, kmPerLitre: null, maintenance: null,
     });
   }
 
@@ -136,6 +159,8 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     totals: {
       opening: total(r => r.opening), topup: total(r => r.topup), consumption: total(r => r.consumption),
       km: rows.reduce((s, r) => s + r.km, 0), closing: total(r => r.closing),
+      litres: Math.round(rows.reduce((s, r) => s + (r.litres ?? 0), 0) * 10) / 10,
+      maintenance: total(r => r.maintenance),
     },
   };
 }

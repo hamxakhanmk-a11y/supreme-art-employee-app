@@ -74,7 +74,7 @@ export default function VehiclesTabs({ tab: initialTab, drivers, monthly, ...log
       {tab === "logbook"
         ? <LogBookClient {...logBook} filtersInHead onAddVehicle={() => showTab("vehicles")} />
         : tab === "report"
-          ? <MonthlyReport data={monthly} />
+          ? <MonthlyReport data={monthly} readOnly={logBook.readOnly} />
           : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} />}
     </div>
   );

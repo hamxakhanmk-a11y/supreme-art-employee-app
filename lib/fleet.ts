@@ -236,6 +236,20 @@ DO $$ BEGIN
     key varchar(60) PRIMARY KEY,
     value text NOT NULL
   );
+  -- What the office writes onto the monthly fleet sheet by hand: the month's
+  -- average fuel rate and the maintenance spent on a vehicle. One row per
+  -- vehicle per month (month = 'YYYY-MM'); litres and km/l are worked out
+  -- from the rate, not stored.
+  CREATE TABLE IF NOT EXISTS fleet_month_notes (
+    id serial PRIMARY KEY,
+    vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    month varchar(7) NOT NULL,
+    fuel_rate double precision,
+    maintenance double precision,
+    updated_by varchar(120),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS fleet_month_notes_key ON fleet_month_notes (vehicle_id, month);
 
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
