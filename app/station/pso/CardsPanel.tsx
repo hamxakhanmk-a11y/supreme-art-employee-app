@@ -251,9 +251,19 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                   <tr>
                     <td colSpan={8} style={{ background: "var(--bg2)" }}>
                       <div className="toolbar-row" style={{ marginBottom: 0 }}>
-                        <strong style={{ fontSize: 13 }}>
-                          {money.kind === "opening" ? `Opening balance on ${c.sn}` : `Top up ${c.sn}`}
-                        </strong>
+                        {c.balance === null ? (
+                          <strong style={{ fontSize: 13 }}>Opening balance on {c.sn}</strong>
+                        ) : (
+                          // A card already counted can be counted again: the
+                          // new figure takes over from the old one, rather
+                          // than the old opening being edited (which would
+                          // subtract every fill since then a second time).
+                          <select value={money.kind} style={{ width: "auto", fontWeight: 700 }}
+                            onChange={e => setMoney({ ...money, kind: e.target.value === "opening" ? "opening" : "topup" })}>
+                            <option value="topup">Top up {c.sn}</option>
+                            <option value="opening">Recount {c.sn} — new opening balance</option>
+                          </select>
+                        )}
                         <input type="date" value={money.date} max={today()} onChange={e => setMoney({ ...money, date: e.target.value })} style={{ width: 150 }} />
                         <input type="number" min={0} step="any" value={money.amount} placeholder={money.kind === "opening" ? "Balance on the card (Rs)" : "Amount loaded (Rs)"}
                           onChange={e => setMoney({ ...money, amount: e.target.value })} style={{ width: 190 }} />

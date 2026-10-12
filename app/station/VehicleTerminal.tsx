@@ -168,8 +168,14 @@ export default function VehicleTerminal({
     if (!data?.openCard || !fuel) return;
     setBusy(true); setError(null);
     try {
-      const a = afterFill(await postFuel(data.openCard, fuel));
+      const r = await postFuel(data.openCard, fuel);
+      const a = afterFill(r);
       onDone(`Rs ${fuel.amount} on card ${data.openCard.sn} · card still with ${data.openCard.takenBy}${a.text}`, a.low ? "#DC2626" : "#B45309");
+      // The card box below shows what is left now, not what was left at the PIN.
+      if (r && r.balance !== null && r.balance !== undefined) {
+        const balance = r.balance;
+        setData(d => (d?.openCard ? { ...d, openCard: { ...d.openCard, balance } } : d));
+      }
       setFuelForm(n => n + 1);
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
@@ -200,7 +206,7 @@ export default function VehicleTerminal({
         throw new Error((j.error || "Could not take the card back")
           + (fuelSaved.current ? " (The fuel record is saved — fix the time and press again.)" : ""));
       }
-      onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded${after.text}` : ""}`, "#15803D");
+      onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded${after.text}` : ""}`, after.low ? "#DC2626" : "#15803D");
       reset();
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }

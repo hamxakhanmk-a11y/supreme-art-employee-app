@@ -92,8 +92,11 @@ export async function POST(req: NextRequest) {
       employeeId: driverId ?? undefined, employeeName: driverName || undefined,
       summary: `fuel on PSO card ${card.sn} — ${row.amount ? `Rs ${row.amount}` : "amount not given"} on ${collectedDate}`,
     });
-    // The terminal shows what is left on the card once the fill is in.
-    const [balance, lowLevel] = await Promise.all([cardBalance(cardId), lowBalanceLevel()]);
+    // The terminal shows what is left on the card once the fill is in. The
+    // fill is already saved: if the balance can't be read, say so quietly
+    // rather than fail — a failure here gets the same slip entered twice.
+    const [balance, lowLevel] = await Promise.all([cardBalance(cardId), lowBalanceLevel()])
+      .catch(() => [null, 5000] as const);
     return NextResponse.json({ ...row, balance, lowLevel });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

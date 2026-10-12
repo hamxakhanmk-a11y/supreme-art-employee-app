@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
 
     // What is left on each card, for the terminal to show (never to stop anyone).
     const ids = [...cards.map(c => c.id), ...(openCard ? [openCard.cardId] : [])];
-    const [balances, lowLevel] = await Promise.all([cardBalances(ids), lowBalanceLevel()]);
+    // A balance that can't be read is left out, not allowed to stop the gate.
+    const [balances, lowLevel] = await Promise.all([cardBalances(ids), lowBalanceLevel()])
+      .catch(() => [new Map<number, number>(), 5000] as const);
 
     return NextResponse.json({
       vehicle: v,
