@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, vehicleDrivers } from "@/lib/schema";
 import { asc, eq, isNull } from "drizzle-orm";
-import { guardAuth, guardWrite } from "@/lib/auth";
+import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 
@@ -16,7 +16,7 @@ import { ensureFleetSchema } from "@/lib/fleet";
 
 // GET /api/fleet/drivers → [{ employeeId, name }]
 export async function GET() {
-  const guard = await guardAuth();
+  const guard = await guardView("station");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

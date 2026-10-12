@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, fleetTrips, vehicleDrivers, vehicles } from "@/lib/schema";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { guardAuth, guardWrite } from "@/lib/auth";
+import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema, VEHICLE_TYPES } from "@/lib/fleet";
 
@@ -64,7 +64,7 @@ function normalizeType(t: unknown): string {
 // GET /api/fleet/vehicles[?active=1] — the registry, with each vehicle's
 // current driver if it's out right now.
 export async function GET(req: NextRequest) {
-  const guard = await guardAuth();
+  const guard = await guardView("station");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

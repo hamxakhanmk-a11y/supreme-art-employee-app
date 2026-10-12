@@ -242,7 +242,8 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                           {c.balance === null ? "Set opening balance" : "⊕ Top up"}
                         </button>
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(c)}>Edit</button>
-                        <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(c)}>Delete</button>
+                        {/* Deleting is its own grant (Station · Delete). */}
+                        {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(c)}>Delete</button>}
                       </div>
                     </td>
                   )}

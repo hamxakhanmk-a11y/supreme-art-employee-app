@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { psoCardIssues, psoCards, psoCardTopups, vehicles } from "@/lib/schema";
 import { asc, eq, isNull, sql } from "drizzle-orm";
-import { guardAuth, guardWrite } from "@/lib/auth";
+import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { cardBalances, lowBalanceLevel } from "@/lib/cardBalance";
@@ -18,7 +18,7 @@ function normalizeStatus(v: unknown): string {
 // GET /api/fleet/cards — every card, with the vehicle it belongs to and
 // whether it's out with someone right now.
 export async function GET() {
-  const guard = await guardAuth();
+  const guard = await guardView("station");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

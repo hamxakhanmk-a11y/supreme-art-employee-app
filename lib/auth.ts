@@ -117,6 +117,20 @@ export async function guardAuth(allowedRoles?: Role[]): Promise<SessionUser | Ne
   return user;
 }
 
+// Gate a read to one module: the user must be able to open that section (view
+// or edit). For data a section's pages fetch from the browser — the page itself
+// is guarded by its layout, but the API answers anyone who calls it directly.
+export async function guardView(module: ModuleKey): Promise<SessionUser | NextResponse> {
+  const user = await getSession();
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (user.role === "superadmin") return user;
+  const perm = await getPerm(user.role);
+  if (!perm.modules.includes(module)) {
+    return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
+  }
+  return user;
+}
+
 // Gate a write. Optionally scope it to a module — the user must both be allowed
 // to edit (role isn't view-only) and have that module in their permission set.
 // superadmin always passes. Called with no module it just enforces edit rights.

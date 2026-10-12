@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { guardAuth } from "@/lib/auth";
+import { guardView } from "@/lib/auth";
 import { vehicleOptions } from "@/lib/fleetServer";
 
 // GET /api/fleet/terminal — everything the gate terminal needs to offer a
@@ -10,7 +10,7 @@ import { vehicleOptions } from "@/lib/fleetServer";
 // travelling. One request, fetched once when the terminal loads, kept apart
 // from the PIN lookup so a slow or missing fleet table never delays the PIN.
 export async function GET() {
-  const guard = await guardAuth();
+  const guard = await guardView("station");
   if (guard instanceof NextResponse) return guard;
   try {
     const [vehicles, people] = await Promise.all([

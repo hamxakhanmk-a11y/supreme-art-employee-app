@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { psoCards, psoCardTopups } from "@/lib/schema";
 import { and, desc, eq } from "drizzle-orm";
-import { guardAuth, guardWrite } from "@/lib/auth";
+import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { cardBalance } from "@/lib/cardBalance";
@@ -28,7 +28,7 @@ const shape = (t: typeof psoCardTopups.$inferSelect) => ({
 
 // GET ?cardId= — one card's history, newest first.
 export async function GET(req: NextRequest) {
-  const guard = await guardAuth();
+  const guard = await guardView("station");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
