@@ -118,8 +118,14 @@ html, body {
 .btn-success { background: #166534; color: #fff; border-color: #166534; font-weight: 600; }
 .btn-success:hover { background: #14532d; border-color: #14532d; }
 
-.btn-print { background: var(--text); color: #fff; border-color: var(--text); }
-.btn-print:hover { opacity: 0.85; }
+/* Button colours say who can press them: maroon for the everyday ones
+   (Print and the like), black for those only the owner (Super Admin) or a
+   Delete right holder can use. */
+.btn-print { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn-print:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+.btn-restricted { background: #111; color: #fff; border-color: #111; }
+.btn-restricted:hover { background: #333; border-color: #333; }
+.btn-restricted:disabled { opacity: 0.5; }
 
 .btn-danger { color: var(--brand); border-color: var(--red-border); background: var(--bg); }
 .btn-danger:hover { background: var(--red-bg); }

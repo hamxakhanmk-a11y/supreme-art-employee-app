@@ -226,7 +226,7 @@ export default function StationReportClient({
                       {showActions && (
                         <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                           {canEditStation && <button onClick={() => startEdit(r)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
-                          {canDeleteStation && <button onClick={() => del(r)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
+                          {canDeleteStation && <button onClick={() => del(r)} className="btn btn-sm btn-restricted">Delete</button>}
                         </td>
                       )}
                     </>

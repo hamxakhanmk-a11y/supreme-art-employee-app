@@ -578,7 +578,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
                             </>
                           )}
                           {canDeletePr && (
-                            <button onClick={() => remove(r)} className="btn btn-sm btn-danger" title="Delete this requisition">Delete</button>
+                            <button onClick={() => remove(r)} className="btn btn-sm btn-restricted" title="Delete this requisition">Delete</button>
                           )}
                         </div>
                       )}

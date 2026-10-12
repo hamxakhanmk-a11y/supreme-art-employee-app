@@ -222,7 +222,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                       <button onClick={() => patch(u.id, { active: true })} style={{ ...btnOutline, flexShrink: 0 }}>
                         Enable
                       </button>
-                      <button onClick={() => del(u.id, u.name)} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
+                      <button onClick={() => del(u.id, u.name)} className="btn btn-sm btn-restricted" style={{ flexShrink: 0 }}>
                         Remove
                       </button>
                     </>

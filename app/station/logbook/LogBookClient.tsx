@@ -274,7 +274,7 @@ export default function LogBookClient({
                       </td>
                       {!readOnly && (
                         <td className="no-print">
-                          {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(t)}>Delete</button>}
+                          {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(t)}>Delete</button>}
                         </td>
                       )}
                     </tr>

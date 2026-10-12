@@ -191,7 +191,7 @@ export default function RegisterClient({
                 </td>
                 {!readOnly && (
                   <td className="no-print">
-                    {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(r)}>Delete</button>}
+                    {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(r)}>Delete</button>}
                   </td>
                 )}
               </tr>

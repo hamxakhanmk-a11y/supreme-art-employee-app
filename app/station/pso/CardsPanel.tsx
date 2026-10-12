@@ -243,7 +243,7 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                         </button>
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(c)}>Edit</button>
                         {/* Deleting is its own grant (Station · Delete). */}
-                        {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(c)}>Delete</button>}
+                        {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(c)}>Delete</button>}
                       </div>
                     </td>
                   )}

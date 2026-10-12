@@ -262,7 +262,7 @@ export default function RolesClient() {
                     <button onClick={() => setTabLevel(r.role, "view")} style={linkBtn}>View all</button>
                     <button onClick={() => setTabLevel(r.role, "none")} style={linkBtn}>None</button>
                     {!r.builtin && (
-                      <button onClick={() => deleteRole(r.role, r.label)} style={{ ...linkBtn, color: "#A32D2D" }}>Delete role</button>
+                      <button onClick={() => deleteRole(r.role, r.label)} className="btn btn-xs btn-restricted">Delete role</button>
                     )}
                   </div>
 

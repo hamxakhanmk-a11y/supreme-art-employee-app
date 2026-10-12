@@ -71,7 +71,7 @@ export default function TopupHistory({ cardId, readOnly, canDelete, onChanged }:
                 <td><EditCell value={t.refNo} minWidth={120} placeholder="—" readOnly={readOnly} onSave={v => save(t.id, { refNo: v })} /></td>
                 <td style={{ color: "var(--text2)" }}>{t.createdBy || "—"}</td>
                 {!readOnly && canDelete && (
-                  <td><button className="btn btn-xs" style={{ color: "#A32D2D" }} onClick={() => remove(t)}>Delete</button></td>
+                  <td><button className="btn btn-xs btn-restricted" onClick={() => remove(t)}>Delete</button></td>
                 )}
               </tr>
             ))}

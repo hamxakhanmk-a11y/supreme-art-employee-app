@@ -138,7 +138,7 @@ export default function FuelPanel({
                     ) : (
                       <div style={{ display: "flex", gap: 6 }}>
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(f)}>Edit</button>
-                        {canDelete && <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(f)}>Delete</button>}
+                        {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(f)}>Delete</button>}
                       </div>
                     )}
                   </td>
