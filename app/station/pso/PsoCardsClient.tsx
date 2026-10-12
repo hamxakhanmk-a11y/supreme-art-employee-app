@@ -1,13 +1,15 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import type { CustodyRow } from "@/lib/fleetServer";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { CustodyRow, PsoRow } from "@/lib/fleetServer";
 import CardsPanel from "./CardsPanel";
+import RegisterClient from "../cards-log/RegisterClient";
 
-// PSO Cards: where the cards are. The ones out with someone sit at the top,
-// because they are the ones that need something done — a fuel record entered,
-// or the card taken back. The full list is underneath.
+// PSO Cards, in two tabs. Cards Logbook: the cards out with someone at the
+// top, because they are the ones that need something done — a fuel record
+// entered, or the card taken back — and every fill drawn underneath. All
+// cards: the list itself, to add a card or change one.
 //
 // Recording fuel says nothing about the card coming back: it stays with whoever
 // has it until it is handed in.
@@ -21,13 +23,33 @@ type Card = {
 };
 
 
+type Tab = "logbook" | "cards";
+
 export default function PsoCardsClient({
-  vehicles, people, readOnly, custody, date, isToday,
+  vehicles, people, readOnly, canDelete, custody, date, isToday, rows, from, to, tab: initialTab,
 }: {
-  vehicles: VehicleRow[]; people: Person[]; readOnly: boolean;
+  vehicles: VehicleRow[]; people: Person[]; readOnly: boolean; canDelete: boolean;
   custody: CustodyRow[]; date: string; isToday: boolean;
+  rows: PsoRow[]; from: string; to: string; tab: Tab;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
+  // Switching tabs is instant — both are already on the page. The address
+  // follows, so a refresh or Back lands on the same tab.
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const showTab = (t: Tab) => {
+    setTab(t);
+    const p = new URLSearchParams(params.toString());
+    p.set("tab", t);
+    window.history.replaceState(null, "", `/station/pso?${p.toString()}`);
+  };
+  // Another day for the cards above, keeping the logbook's range and the tab.
+  const showDay = (d: string | null) => {
+    const p = new URLSearchParams(params.toString());
+    if (d) p.set("date", d); else p.delete("date");
+    p.set("tab", "logbook");
+    router.push(`/station/pso?${p.toString()}`, { scroll: false });
+  };
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -60,34 +82,52 @@ export default function PsoCardsClient({
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not take it back");
       await load();
+      router.refresh();   // its fills are submitted now — the logbook below shows it
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   };
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>💳 PSO Cards</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Where every card is. Cards are handed out at the Station terminal on the vehicle&apos;s PIN;
-            the fuel drawn on them is recorded here and listed on <Link href="/station/cards-log" style={{ color: "var(--brand)" }}>Cards Logbook</Link>.
+            Cards are handed out and taken back at the Station terminal, on the vehicle&apos;s PIN.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            type="date"
-            value={date}
-            max={new Date().toLocaleDateString("en-CA")}
-            onChange={e => e.target.value && router.push("/station/pso?date=" + e.target.value)}
-            style={{ width: 150 }}
-          />
-          {!isToday && <button className="btn btn-sm" onClick={() => router.push("/station/pso")}>Today</button>}
-          <Link href="/station/cards-log" className="btn btn-sm">📋 Cards Logbook</Link>
-        </div>
+        <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
       </div>
 
-      {err && <div className="card" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
+      <div className="no-print pso-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === "logbook"} className={tab === "logbook" ? "on" : ""} onClick={() => showTab("logbook")}>
+          📋 Cards Logbook{out.length > 0 && <span className="pso-tab-count">{out.length} out</span>}
+        </button>
+        <button role="tab" aria-selected={tab === "cards"} className={tab === "cards" ? "on" : ""} onClick={() => showTab("cards")}>
+          💳 All cards{cards.length > 0 && <span className="pso-tab-count">{cards.length}</span>}
+        </button>
+      </div>
+
+      {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
+
+      {tab === "cards" ? (
+        <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={load} />
+      ) : (
+      <>
+      {/* Who has a card — on screen only; the logbook below is what prints. */}
+      <div className="no-print" style={{ marginBottom: 26 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <span style={{ fontSize: 12.5, color: "var(--text2)", fontWeight: 600 }}>Cards out on</span>
+        <input
+          type="date"
+          value={date}
+          max={new Date().toLocaleDateString("en-CA")}
+          onChange={e => e.target.value && showDay(e.target.value)}
+          style={{ width: 150 }}
+        />
+        {!isToday && <button className="btn btn-sm" onClick={() => showDay(null)}>Today</button>}
+      </div>
+
       {saved && <div className="card" style={{ borderColor: "#15803D", color: "#15803D", marginBottom: 14, fontSize: 13 }}>{saved}</div>}
 
       {!isToday ? (
@@ -174,7 +214,7 @@ export default function PsoCardsClient({
                 <FuelRecordForm
                   card={c} people={people} vehicles={vehicles}
                   onCancel={() => setFuelFor(null)}
-                  onSaved={msg => { setFuelFor(null); setSaved(msg); }}
+                  onSaved={msg => { setFuelFor(null); setSaved(msg); router.refresh(); }}
                   onError={setErr}
                 />
               )}
@@ -185,8 +225,12 @@ export default function PsoCardsClient({
 
       </>
       )}
+      </div>
 
-      <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={load} />
+      <RegisterClient rows={rows} vehicles={vehicles} people={people} from={from} to={to}
+        readOnly={readOnly} canDelete={canDelete} />
+      </>
+      )}
     </div>
   );
 }

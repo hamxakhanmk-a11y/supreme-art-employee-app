@@ -26,7 +26,13 @@ export default function ScrollBox({ children }: { children: React.ReactNode }) {
     };
     fit();
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    // Content above can arrive after this does (PSO Cards loads the cards out
+    // with someone above the logbook) and push the box down; measure again
+    // whenever the page changes height. Setting the height below changes the
+    // page too, but to the same value, so it settles at once.
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    ro?.observe(document.body);
+    return () => { window.removeEventListener("resize", fit); ro?.disconnect(); };
   }, []);
 
   return (

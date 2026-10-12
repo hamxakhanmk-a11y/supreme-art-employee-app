@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
@@ -32,9 +31,15 @@ export default function RegisterClient({
 
   const [search, setSearch] = useState("");
 
+  // Keeps the rest of the page's address — the tab, and the day the cards
+  // above are showing — so moving the range doesn't move anything else.
+  const params = useSearchParams();
   const go = (patch: { from?: string; to?: string }) => {
-    const p = new URLSearchParams({ from: patch.from ?? from, to: patch.to ?? to });
-    router.push(`/station/pso?${p.toString()}`);
+    const p = new URLSearchParams(params.toString());
+    p.set("tab", "logbook");
+    p.set("from", patch.from ?? from);
+    p.set("to", patch.to ?? to);
+    router.push(`/station/pso?${p.toString()}`, { scroll: false });
   };
 
   const shown = useMemo(() => {
@@ -96,17 +101,16 @@ export default function RegisterClient({
 
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>📋 Cards Logbook</h1>
+          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>📋 Cards Logbook</h2>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Every fuel record drawn on a PSO card. Records are entered on <Link href="/station/pso" style={{ color: "var(--brand)" }}>PSO Cards</Link>,
-            against whoever is holding the card, and corrected here.
+            Every fuel record drawn on a PSO card — entered at the Station or above, against whoever
+            is holding the card, and corrected here by clicking into a cell.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 
           <button className="btn btn-sm" onClick={() => window.print()}>🖨 Print</button>
           <button className="btn btn-sm" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>
-          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
         </div>
       </div>
 

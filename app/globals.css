@@ -1005,3 +1005,15 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .report-letterhead .rl-control { display: grid; grid-template-columns: 1fr 2fr 1fr; font-size: 10.5pt; line-height: 1.1; }
   .report-letterhead .rl-control span { padding: 2px; }
 }
+
+/* Tabs inside a page (Station → PSO Cards: Cards Logbook | All cards). */
+.pso-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 16px; }
+.pso-tabs button {
+  background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  padding: 9px 16px; font-size: 14px; font-weight: 600; color: var(--text2); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.pso-tabs button:hover { color: var(--text); }
+.pso-tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
+.pso-tab-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bg2); color: var(--text2); }
+.pso-tabs button.on .pso-tab-count { background: var(--brand-soft); color: var(--brand); }
