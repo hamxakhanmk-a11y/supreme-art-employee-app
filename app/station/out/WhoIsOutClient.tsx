@@ -20,12 +20,14 @@ export type VehicleOut = {
 };
 
 export default function WhoIsOutClient({
-  initial, initialVehicles = [], date, isToday,
+  initial, initialVehicles = [], date, isToday, embedded = false,
 }: {
   initial: OutRow[];
   initialVehicles?: VehicleOut[];
   date: string;
   isToday: boolean;
+  /** Inside the Who's Out tab, whose title line carries the title and Terminal. */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [out, setOut] = useState<OutRow[]>(initial);
@@ -61,8 +63,8 @@ export default function WhoIsOutClient({
     <div className="fade-up" style={{ maxWidth: 720, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚶 Who&apos;s Out</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
+          {!embedded && <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚶 Who&apos;s Out</h1>}
+          <p style={{ color: "#888", marginTop: embedded ? 0 : 4, fontSize: 13 }}>
             {isToday
               ? "Who and what is outside the factory right now. Updates automatically."
               : "Who went out that day, and what they took — the whole day, not only what was still out at the end of it."}
@@ -84,7 +86,7 @@ export default function WhoIsOutClient({
               {refreshing ? "Refreshing…" : "↻ Refresh"}
             </button>
           )}
-          <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>
+          {!embedded && <Link href="/station" className="btn btn-sm">🏭 Terminal</Link>}
         </div>
       </div>
 

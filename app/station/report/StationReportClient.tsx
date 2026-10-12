@@ -33,8 +33,12 @@ function fmtDate(d: string) {
 }
 
 export default function StationReportClient({
-  trips, from, to,
-}: { trips: Trip[]; from: string; to: string }) {
+  trips, from, to, tab,
+}: {
+  trips: Trip[]; from: string; to: string;
+  /** Kept in the address when the dates are applied, so the page stays on this view. */
+  tab?: string;
+}) {
   const router = useRouter();
   const canEditStation = useCanEdit("station");
   const canDeleteStation = useCanEdit("station.delete");
@@ -117,6 +121,7 @@ export default function StationReportClient({
     <>
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
         <form method="GET" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13, color: "var(--text2)" }}>
+          {tab && <input type="hidden" name="tab" value={tab} />}
           <span style={{ fontWeight: 600 }}>From</span>
           <input type="date" name="from" defaultValue={from} style={{ width: 150 }} />
           <span>→</span>

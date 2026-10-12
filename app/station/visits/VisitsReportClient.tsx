@@ -152,7 +152,7 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn btn-sm" onClick={exportXlsx} disabled={!rows.length || exporting}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
           <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
-          <Link href="/station/report" className="btn btn-sm">Every trip</Link>
+          <Link href="/station/out?tab=report" className="btn btn-sm">Every trip</Link>
         </div>
       </div>
       {exportError && <p className="no-print" role="alert" style={{ color: "#DC2626", fontSize: 13 }}>{exportError}</p>}
