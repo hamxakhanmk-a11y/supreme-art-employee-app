@@ -5,14 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PageTabs from "../PageTabs";
 import LogBookClient from "../logbook/LogBookClient";
 import VehiclesClient from "./VehiclesClient";
+import MonthlyReport from "./MonthlyReport";
+import type { FleetMonth } from "@/lib/fleetMonthly";
 
-type Tab = "logbook" | "vehicles";
+type Tab = "logbook" | "vehicles" | "report";
 type LogBookProps = React.ComponentProps<typeof LogBookClient>;
 type VehiclesProps = React.ComponentProps<typeof VehiclesClient>;
 
 // Station → Vehicles: the Log Book and the list of vehicles, one switch apart.
-export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: LogBookProps & {
-  tab: Tab; drivers: VehiclesProps["drivers"];
+export default function VehiclesTabs({ tab: initialTab, drivers, monthly, ...logBook }: LogBookProps & {
+  tab: Tab; drivers: VehiclesProps["drivers"]; monthly: FleetMonth;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -25,12 +27,12 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
     window.history.replaceState(null, "", `/station/vehicles?${p.toString()}`);
     // A vehicle added or retired on the other tab belongs in the Log Book's
     // picker too.
-    if (t === "logbook") router.refresh();
+    if (t !== "vehicles") router.refresh();
   };
   // Another vehicle or month of the Log Book.
   const openPage = (patch: { vehicle?: number; month?: string }) => {
     const p = new URLSearchParams(params.toString());
-    p.set("tab", "logbook");
+    p.set("tab", tab === "report" ? "report" : "logbook");
     p.set("vehicle", String(patch.vehicle ?? logBook.vehicleId));
     p.set("month", patch.month ?? logBook.month);
     router.push(`/station/vehicles?${p.toString()}`, { scroll: false });
@@ -43,6 +45,7 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
           { key: "logbook", label: "📖 Log Book" },
           { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },
+          { key: "report", label: "📊 Monthly Report" },
         ]} />
         <span className="spacer" />
         {/* Which page of the book: vehicle and month, at the right of the title
@@ -59,12 +62,20 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
             <input type="month" value={logBook.month} onChange={e => e.target.value && openPage({ month: e.target.value })} />
           </span>
         )}
+        {tab === "report" && (
+          <span className="head-filter">
+            Month
+            <input type="month" value={logBook.month} onChange={e => e.target.value && openPage({ month: e.target.value })} />
+          </span>
+        )}
         <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
 
       {tab === "logbook"
         ? <LogBookClient {...logBook} filtersInHead onAddVehicle={() => showTab("vehicles")} />
-        : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} />}
+        : tab === "report"
+          ? <MonthlyReport data={monthly} />
+          : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} />}
     </div>
   );
 }

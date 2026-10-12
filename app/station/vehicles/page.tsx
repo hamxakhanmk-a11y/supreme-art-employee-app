@@ -7,19 +7,21 @@ import { isViewOnly } from "@/lib/pageGuard";
 import { getSession } from "@/lib/auth";
 import { roleCanEdit } from "@/lib/permissions";
 import { karachiNow } from "@/lib/gateTime";
+import { fleetMonth } from "@/lib/fleetMonthly";
 import VehiclesTabs from "./VehiclesTabs";
 
 export const dynamic = "force-dynamic";
 
 type SP = { vehicle?: string; month?: string; tab?: string };
 
-// Vehicles, one tab with two views inside it: the Log Book (one vehicle, one
-// month, as the book has it) and All vehicles (the list, PINs and drivers).
+// Vehicles, one tab with three views inside it: the Log Book (one vehicle, one
+// month, as the book has it), All vehicles (the list, PINs and drivers) and
+// the Monthly Report (the fleet sheet the office signs each month).
 export default async function VehiclesPage({ searchParams }: { searchParams: Promise<SP> }) {
   // Reads, not just writes: the tables may not exist on this database yet.
   await ensureFleetSchema();
   const sp = await searchParams;
-  const tab = sp.tab === "vehicles" ? "vehicles" : "logbook";
+  const tab = sp.tab === "vehicles" ? "vehicles" : sp.tab === "report" ? "report" : "logbook";
 
   const [list, people, drivers, user] = await Promise.all([
     db.select({
@@ -47,7 +49,11 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
     ? asked
     : (list.find(v => v.active)?.id ?? list[0]?.id ?? 0);
 
-  const page = vehicleId ? await logBookMonth(vehicleId, month) : { trips: [], fuel: [], totals: { km: 0, litres: 0, cost: 0, average: null, openTrips: 0 } };
+  const [page, monthly] = await Promise.all([
+    vehicleId ? logBookMonth(vehicleId, month) : Promise.resolve({ trips: [], fuel: [], totals: { km: 0, litres: 0, cost: 0, average: null, openTrips: 0 } }),
+    // The month's fleet sheet, for the Monthly Report view.
+    fleetMonth(month),
+  ]);
 
   const canDelete = user?.role === "superadmin" || (user ? await roleCanEdit(user.role, "station.delete") : false);
 
@@ -64,6 +70,7 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
       trips={page.trips}
       fuel={page.fuel}
       totals={page.totals}
+      monthly={monthly}
     />
   );
 }

@@ -1050,3 +1050,22 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 /* A filter that sits at the right of a .page-head row. */
 .head-filter { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text2); }
 .head-filter input, .head-filter select { width: auto; padding: 5px 8px; font-size: 13px; }
+
+/* Station → Vehicles → Monthly Report: a ruled sheet like the paper one,
+   blank cells left open to be written in. */
+.fleet-month { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.fleet-month th, .fleet-month td { border: 1px solid var(--border2); padding: 6px 8px; }
+.fleet-month thead th { background: var(--bg2); font-size: 11px; text-transform: uppercase; text-align: center; white-space: normal; line-height: 1.2; }
+.fleet-month td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fleet-month td.strong { font-weight: 700; }
+.fleet-month td.reg { font-weight: 700; text-align: center; white-space: nowrap; }
+.fleet-month td.type { text-align: center; }
+.fleet-month td.blank { min-width: 60px; }
+.fleet-month tfoot td { font-weight: 800; background: var(--bg2); border-top: 2px solid var(--text2); }
+.fleet-sign { display: none; }
+@media print {
+  .fleet-month th, .fleet-month td { border: 1px solid #555 !important; }
+  .fleet-month thead th, .fleet-month tfoot td { background: #f3eee4 !important; color: #111 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .fleet-sign { display: flex !important; justify-content: flex-end; align-items: flex-end; gap: 8px; margin-top: 28px; font-weight: 700; font-size: 10pt; }
+  .fleet-sign .line { display: inline-block; width: 260px; border-bottom: 1px solid #000; }
+}
