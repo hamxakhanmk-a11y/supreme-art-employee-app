@@ -133,6 +133,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/station/visits", label: "Visits Report" },
         { href: "/station/vehicles", label: "Vehicles" },
         { href: "/station/pso", label: "PSO Cards" },
+        { href: "/station/monthly", label: "Monthly Report" },
       ];
     case "procurement":
       return [
