@@ -97,6 +97,19 @@ export default function PsoCardsClient({
           { key: "cards", label: "💳 All cards", count: cards.length || undefined },
         ]} />
         <span className="spacer" />
+        {/* Which day the cards out with someone are shown for. */}
+        {tab === "logbook" && (
+          <span className="head-filter">
+            Cards out on
+            <input
+              type="date"
+              value={date}
+              max={new Date().toLocaleDateString("en-CA")}
+              onChange={e => e.target.value && showDay(e.target.value)}
+            />
+            {!isToday && <button className="btn btn-xs" onClick={() => showDay(null)}>Today</button>}
+          </span>
+        )}
         <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
 
@@ -108,18 +121,6 @@ export default function PsoCardsClient({
       <>
       {/* Who has a card — on screen only; the logbook below is what prints. */}
       <div className="no-print" style={{ marginBottom: 26 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-        <span style={{ fontSize: 12.5, color: "var(--text2)", fontWeight: 600 }}>Cards out on</span>
-        <input
-          type="date"
-          value={date}
-          max={new Date().toLocaleDateString("en-CA")}
-          onChange={e => e.target.value && showDay(e.target.value)}
-          style={{ width: 150 }}
-        />
-        {!isToday && <button className="btn btn-sm" onClick={() => showDay(null)}>Today</button>}
-      </div>
-
       {saved && <div className="card" style={{ borderColor: "#15803D", color: "#15803D", marginBottom: 14, fontSize: 13 }}>{saved}</div>}
 
       {!isToday ? (

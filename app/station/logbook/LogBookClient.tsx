@@ -42,12 +42,14 @@ function monthLabel(month: string) {
 }
 
 export default function LogBookClient({
-  vehicles, people, vehicleId, month, trips, fuel, totals, readOnly, canDelete, onAddVehicle,
+  vehicles, people, vehicleId, month, trips, fuel, totals, readOnly, canDelete, onAddVehicle, filtersInHead = false,
 }: {
   vehicles: VehicleRow[]; people: Person[]; vehicleId: number; month: string;
   trips: LogBookTrip[]; fuel: LogBookFuel[]; totals: Totals; readOnly: boolean; canDelete: boolean;
   /** Opens the All vehicles tab, from the empty state. */
   onAddVehicle?: () => void;
+  /** The vehicle and month pickers are in the page's title line instead. */
+  filtersInHead?: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -155,14 +157,18 @@ export default function LogBookClient({
           {/* One row: which page of the book, what it adds up to, and its
               buttons — so the entries start as high up the screen as they can. */}
           <div className="no-print toolbar-row">
-            <select value={vehicleId} onChange={e => go({ vehicle: Number(e.target.value) })} style={{ width: "auto", minWidth: 190 }}>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.vehicleNo}{v.name ? ` — ${v.name}` : ""}{v.active ? "" : " (retired)"}
-                </option>
-              ))}
-            </select>
-            <input type="month" value={month} onChange={e => e.target.value && go({ month: e.target.value })} style={{ width: "auto" }} />
+            {!filtersInHead && (
+              <>
+                <select value={vehicleId} onChange={e => go({ vehicle: Number(e.target.value) })} style={{ width: "auto", minWidth: 190 }}>
+                  {vehicles.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.vehicleNo}{v.name ? ` — ${v.name}` : ""}{v.active ? "" : " (retired)"}
+                    </option>
+                  ))}
+                </select>
+                <input type="month" value={month} onChange={e => e.target.value && go({ month: e.target.value })} style={{ width: "auto" }} />
+              </>
+            )}
             {/* The figures written at the top of the paper page. */}
             <span className="mini-stat">K.M. covered <b>{totals.km} km</b></span>
             {totals.openTrips > 0 && <span className="mini-stat danger">Still out <b>{totals.openTrips}</b></span>}

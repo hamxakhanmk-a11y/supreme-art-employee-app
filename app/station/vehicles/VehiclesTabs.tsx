@@ -27,6 +27,14 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
     // picker too.
     if (t === "logbook") router.refresh();
   };
+  // Another vehicle or month of the Log Book.
+  const openPage = (patch: { vehicle?: number; month?: string }) => {
+    const p = new URLSearchParams(params.toString());
+    p.set("tab", "logbook");
+    p.set("vehicle", String(patch.vehicle ?? logBook.vehicleId));
+    p.set("month", patch.month ?? logBook.month);
+    router.push(`/station/vehicles?${p.toString()}`, { scroll: false });
+  };
 
   return (
     <div className="fade-up">
@@ -37,11 +45,25 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
           { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },
         ]} />
         <span className="spacer" />
+        {/* Which page of the book: vehicle and month, at the right of the title
+            line rather than on a row of their own. */}
+        {tab === "logbook" && logBook.vehicles.length > 0 && (
+          <span className="head-filter">
+            <select value={logBook.vehicleId} onChange={e => openPage({ vehicle: Number(e.target.value) })} style={{ minWidth: 180 }}>
+              {logBook.vehicles.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.vehicleNo}{v.name ? ` — ${v.name}` : ""}{v.active ? "" : " (retired)"}
+                </option>
+              ))}
+            </select>
+            <input type="month" value={logBook.month} onChange={e => e.target.value && openPage({ month: e.target.value })} />
+          </span>
+        )}
         <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
 
       {tab === "logbook"
-        ? <LogBookClient {...logBook} onAddVehicle={() => showTab("vehicles")} />
+        ? <LogBookClient {...logBook} filtersInHead onAddVehicle={() => showTab("vehicles")} />
         : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} />}
     </div>
   );
