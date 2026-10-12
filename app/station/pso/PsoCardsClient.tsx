@@ -64,7 +64,7 @@ export default function PsoCardsClient({
       const res = await fetch("/api/fleet/cards", { cache: "no-store" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not load the cards");
-      setCards(j); setErr("");
+      setCards(j.cards); setErr("");
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }, []);
@@ -116,7 +116,7 @@ export default function PsoCardsClient({
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
 
       {tab === "cards" ? (
-        <CardsPanel vehicles={vehicles} readOnly={readOnly} onChanged={load} />
+        <CardsPanel vehicles={vehicles} readOnly={readOnly} canDelete={canDelete} onChanged={load} />
       ) : (
       <>
       {/* Who has a card — on screen only; the logbook below is what prints. */}

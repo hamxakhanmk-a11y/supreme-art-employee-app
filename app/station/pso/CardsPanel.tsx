@@ -1,5 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import TopupHistory from "./TopupHistory";
+import { balanceState, BALANCE_COLOR, rs } from "@/lib/pso";
 
 // The cards themselves, above the register they appear in: what the terminal
 // hands out, and where a card is moved to another vehicle, blocked, or written
@@ -9,6 +11,7 @@ type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: 
 type Card = {
   id: number; sn: string; vehicleId: number | null; vehicleNo: string | null; vehiclePin: string | null;
   status: string; notes: string;
+  balance: number | null;   // null until the card's opening balance is set
   out: { driver: string; since: string | null } | null;
 };
 
@@ -21,13 +24,20 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
 
 const BLANK = { id: 0, sn: "", vehicleId: "" as number | "", status: "in_use", notes: "" };
 
-export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles: VehicleRow[]; readOnly: boolean; onChanged?: () => void }) {
+export default function CardsPanel({ vehicles, readOnly, canDelete = false, onChanged }: {
+  vehicles: VehicleRow[]; readOnly: boolean; canDelete?: boolean; onChanged?: () => void;
+}) {
   const [list, setList] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ ...BLANK });
   const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [lowLevel, setLowLevel] = useState(5000);
+  const [lowDraft, setLowDraft] = useState("");
+  // The card whose money form is open, and whether it is a first count.
+  const [money, setMoney] = useState<{ cardId: number; kind: "opening" | "topup"; date: string; amount: string; refNo: string } | null>(null);
+  const [historyFor, setHistoryFor] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,7 +45,7 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
       const res = await fetch("/api/fleet/cards", { cache: "no-store" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not load cards");
-      setList(j); setErr("");
+      setList(j.cards); setLowLevel(j.lowLevel); setLowDraft(String(j.lowLevel)); setErr("");
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
   }, []);
@@ -77,6 +87,39 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
       if (!res.ok) throw new Error(j.error || "Could not delete");
       await load();
       onChanged?.();
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const today = () => new Date().toLocaleDateString("en-CA");
+  const openMoney = (c: Card) => {
+    setErr(""); setHistoryFor(null);
+    setMoney({ cardId: c.id, kind: c.balance === null ? "opening" : "topup", date: today(), amount: "", refNo: "" });
+  };
+  const saveMoney = async () => {
+    if (!money) return;
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/fleet/topups", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(money),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not save");
+      setMoney(null);
+      await load();
+      onChanged?.();
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+  const saveLow = async () => {
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/fleet/settings", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lowBalance: lowDraft }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not save");
+      setLowLevel(j.lowLevel);
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   };
@@ -132,25 +175,35 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
         </div>
       )}
 
+      <div className="toolbar-row">
+        <span style={{ fontSize: 12.5, color: "var(--text2)", fontWeight: 600 }}>Warn when a card is under</span>
+        <input type="number" min={0} step={500} value={lowDraft} disabled={readOnly || busy}
+          onChange={e => setLowDraft(e.target.value)} style={{ width: 110 }} />
+        {!readOnly && Number(lowDraft) !== lowLevel && (
+          <button className="btn btn-xs btn-primary" disabled={busy} onClick={saveLow}>Save</button>
+        )}
+      </div>
+
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
             <tr>
-              <th>Card SN</th><th>Vehicle</th><th>Vehicle PIN</th><th>Status</th><th>Where it is</th><th>Notes</th>
+              <th>Card SN</th><th>Vehicle</th><th>Vehicle PIN</th><th>Status</th><th className="num">Balance</th><th>Where it is</th><th>Notes</th>
               {!readOnly && <th style={{ width: 140 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
+            {loading && <tr><td colSpan={readOnly ? 7 : 8} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
             {!loading && list.length === 0 && (
-              <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>
+              <tr><td colSpan={readOnly ? 7 : 8} style={{ color: "var(--text3)", padding: 18 }}>
                 No cards yet{readOnly ? "." : " — use “+ Add card” above."}
               </td></tr>
             )}
             {list.map(c => {
               const st = STATUS[c.status] ?? { label: c.status, color: "var(--text2)", bg: "var(--bg2)" };
               return (
-                <tr key={c.id}>
+                <Fragment key={c.id}>
+                <tr>
                   <td style={{ fontFamily: "monospace", fontWeight: 700 }}>{c.sn}</td>
                   <td>{c.vehicleNo || <span style={{ color: "var(--text3)" }}>not assigned</span>}</td>
                   {/* The PIN that brings this card up at the station terminal. */}
@@ -163,6 +216,19 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
                       {st.label}
                     </span>
                   </td>
+                  <td className="num">
+                    {(() => {
+                      const bs = balanceState(c.balance, lowLevel);
+                      return (
+                        <button type="button" onClick={() => { setMoney(null); setHistoryFor(historyFor === c.id ? null : c.id); }}
+                          title="Show this card's top-ups"
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit",
+                                   fontWeight: 700, color: BALANCE_COLOR[bs], textDecoration: "underline dotted" }}>
+                          {c.balance === null ? "—" : rs(c.balance)}
+                        </button>
+                      );
+                    })()}
+                  </td>
                   <td style={{ fontSize: 12 }}>
                     {c.out
                       ? <span style={{ color: "#B45309", fontWeight: 600 }}>With {c.out.driver} since {c.out.since}</span>
@@ -171,13 +237,41 @@ export default function CardsPanel({ vehicles, readOnly, onChanged }: { vehicles
                   <td style={{ fontSize: 12, color: "var(--text2)" }}>{c.notes || "—"}</td>
                   {!readOnly && (
                     <td>
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, whiteSpace: "nowrap" }}>
+                        <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => openMoney(c)}>
+                          {c.balance === null ? "Set opening balance" : "⊕ Top up"}
+                        </button>
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(c)}>Edit</button>
                         <button className="btn btn-sm" style={{ color: "#A32D2D" }} disabled={busy} onClick={() => remove(c)}>Delete</button>
                       </div>
                     </td>
                   )}
                 </tr>
+                {money?.cardId === c.id && !readOnly && (
+                  <tr>
+                    <td colSpan={8} style={{ background: "var(--bg2)" }}>
+                      <div className="toolbar-row" style={{ marginBottom: 0 }}>
+                        <strong style={{ fontSize: 13 }}>
+                          {money.kind === "opening" ? `Opening balance on ${c.sn}` : `Top up ${c.sn}`}
+                        </strong>
+                        <input type="date" value={money.date} max={today()} onChange={e => setMoney({ ...money, date: e.target.value })} style={{ width: 150 }} />
+                        <input type="number" min={0} step="any" value={money.amount} placeholder={money.kind === "opening" ? "Balance on the card (Rs)" : "Amount loaded (Rs)"}
+                          onChange={e => setMoney({ ...money, amount: e.target.value })} style={{ width: 190 }} />
+                        <input value={money.refNo} placeholder="Ref / receipt no." onChange={e => setMoney({ ...money, refNo: e.target.value })} style={{ width: 170 }} />
+                        <button className="btn btn-sm btn-primary" disabled={busy || money.amount === ""} onClick={saveMoney}>{busy ? "Saving…" : "Save"}</button>
+                        <button className="btn btn-sm" onClick={() => setMoney(null)}>Cancel</button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {historyFor === c.id && (
+                  <tr>
+                    <td colSpan={8} style={{ background: "var(--bg2)" }}>
+                      <TopupHistory cardId={c.id} readOnly={readOnly} canDelete={canDelete} onChanged={load} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
