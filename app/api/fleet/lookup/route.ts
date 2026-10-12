@@ -5,6 +5,7 @@ import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { ensureFleetSchema, lastMeterReading } from "@/lib/fleet";
 import { openCardForVehicle, cardsInDrawer, openTripForVehicle } from "@/lib/fleetServer";
+import { cardBalances, lowBalanceLevel } from "@/lib/cardBalance";
 
 // POST /api/fleet/lookup { pin }
 // The vehicle half of the gate terminal: a vehicle identifies itself, and the
@@ -63,13 +64,18 @@ export async function POST(req: NextRequest) {
       cardsInDrawer(v.id),
     ]);
 
+    // What is left on each card, for the terminal to show (never to stop anyone).
+    const ids = [...cards.map(c => c.id), ...(openCard ? [openCard.cardId] : [])];
+    const [balances, lowLevel] = await Promise.all([cardBalances(ids), lowBalanceLevel()]);
+
     return NextResponse.json({
       vehicle: v,
       drivers,
       openTrip,
       lastMeter: last?.km ?? null,
-      openCard,
-      cards,
+      openCard: openCard ? { ...openCard, balance: balances.get(openCard.cardId) ?? null } : null,
+      cards: cards.map(c => ({ ...c, balance: balances.get(c.id) ?? null })),
+      lowLevel,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

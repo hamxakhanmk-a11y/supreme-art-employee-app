@@ -1,16 +1,18 @@
 "use client";
 import { useState } from "react";
 import type { Person } from "./VehicleTripForms";
+import { balanceState, BALANCE_COLOR, rs } from "@/lib/pso";
 
 // Handing a fuel card out and taking it back, at the gate, on the vehicle's
 // PIN. The vehicle is already known, its own card is already chosen, and the
 // date and time are whatever the clock says — so what is left to say is who is
 // taking it, and on return what the slip says.
 
-export type DrawerCard = { id: number; sn: string; vehicleNo: string | null; own: boolean };
+export type DrawerCard = { id: number; sn: string; vehicleNo: string | null; own: boolean; balance?: number | null };
 export type OpenCard = {
   issueId: number; cardId: number; sn: string; takenBy: string;
   collectedDate: string; collectedTime: string;
+  balance?: number | null;
 };
 export type Driver = { rowId: number; employeeId: number | null; code: string; name: string };
 
@@ -23,9 +25,23 @@ const labelStyle: React.CSSProperties = {
   color: "var(--text2)", textTransform: "uppercase", letterSpacing: 0.3, margin: "12px 0 4px",
 };
 
+// What is left on a card, coloured by how low it is. Shown, never enforced:
+// the slip is what PSO actually charged.
+function BalanceLine({ balance, low }: { balance?: number | null; low: number }) {
+  if (balance === null || balance === undefined) return null;
+  const st = balanceState(balance, low);
+  return (
+    <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4, textAlign: "left", color: BALANCE_COLOR[st] }}>
+      Balance {rs(balance)}{st === "red" ? " — empty" : st === "amber" ? " — running low" : ""}
+    </div>
+  );
+}
+
 // --- Taking a card out ------------------------------------------------------
-export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }: {
+export function TakeCardOut({ cards, drivers, people, busy, lowLevel, onCancel, onSubmit }: {
   cards: DrawerCard[];
+  /** Below this a card's balance is flagged. */
+  lowLevel: number;
   drivers: Driver[];
   people: Person[];
   busy: boolean;
@@ -74,9 +90,11 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
         {cards.map(c => (
           <option key={c.id} value={c.id}>
             {c.sn}{c.own ? " · this vehicle's" : c.vehicleNo ? ` · ${c.vehicleNo}` : ""}
+            {c.balance !== null && c.balance !== undefined ? ` · ${rs(c.balance)}` : ""}
           </option>
         ))}
       </select>
+      <BalanceLine balance={cards.find(c => c.id === cardId)?.balance} low={lowLevel} />
 
       <span style={labelStyle}>Taken by</span>
       {!someoneElse ? (
@@ -145,9 +163,11 @@ export function TakeCardOut({ cards, drivers, people, busy, onCancel, onSubmit }
 // Asking again here only invited a second, different answer.
 export type ReturnFuel = { slipNo: string; amount: string; notes: string };
 
-export function ReturnCard({ card, busy, keepOut = false, onCancel, onConfirm }: {
+export function ReturnCard({ card, busy, keepOut = false, lowLevel, onCancel, onConfirm }: {
   card: OpenCard;
   busy: boolean;
+  /** Below this the card's balance is flagged. */
+  lowLevel: number;
   /** Record a fill and leave the card where it is. A driver can fill up two,
    *  three, four times a day on one card before bringing it back, and each
    *  slip is its own record. */
@@ -172,6 +192,7 @@ export function ReturnCard({ card, busy, keepOut = false, onCancel, onConfirm }:
         <div style={{ fontSize: 12.5, color: "var(--text2)", marginTop: 3 }}>
           With {card.takenBy} · collected {card.collectedDate}{card.collectedTime ? ` at ${card.collectedTime}` : ""}
         </div>
+        <BalanceLine balance={card.balance} low={lowLevel} />
       </div>
 
       <span style={labelStyle}>Fuel drawn <span style={{ textTransform: "none", fontWeight: 400, color: "var(--text3)" }}>(from the slip, if there is one)</span></span>

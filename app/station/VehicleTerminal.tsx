@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import PinPad from "./PinPad";
 import { TakeVehicleOut, BringVehicleBack, type Person, type OpenTrip, type Officer } from "./VehicleTripForms";
 import { TakeCardOut, ReturnCard, type DrawerCard, type OpenCard, type ReturnFuel } from "./CardForms";
+import { balanceState, rs } from "@/lib/pso";
 
 // The vehicle half of the gate terminal. The vehicle identifies itself with
 // its own PIN and the driver is then chosen from those allowed to drive it —
@@ -18,6 +19,8 @@ type Found = {
   lastMeter: number | null;
   openCard: OpenCard | null;
   cards: DrawerCard[];
+  /** Below this a card's balance is flagged. */
+  lowLevel: number;
 };
 
 // The browser's own date — the terminal sits at the gate in Karachi, so local
@@ -148,6 +151,14 @@ export default function VehicleTerminal({
     });
     const fj = await fr.json();
     if (!fr.ok) throw new Error(fj.error || "Could not save the fuel record");
+    return fj as { balance: number | null; lowLevel: number };
+  };
+
+  // "· balance Rs 6,400", and the message turns red when that is low.
+  const afterFill = (r: { balance: number | null; lowLevel: number } | undefined) => {
+    if (!r || r.balance === null || r.balance === undefined) return { text: "", low: false };
+    const st = balanceState(r.balance, r.lowLevel);
+    return { text: ` · balance ${rs(r.balance)}${st === "red" ? " (empty)" : st === "amber" ? " (low)" : ""}`, low: st === "red" || st === "amber" };
   };
 
   // A fill on a card that stays out. No limit: the same driver can fill up on
@@ -157,8 +168,8 @@ export default function VehicleTerminal({
     if (!data?.openCard || !fuel) return;
     setBusy(true); setError(null);
     try {
-      await postFuel(data.openCard, fuel);
-      onDone(`Rs ${fuel.amount} on card ${data.openCard.sn} · card still with ${data.openCard.takenBy}`, "#B45309");
+      const a = afterFill(await postFuel(data.openCard, fuel));
+      onDone(`Rs ${fuel.amount} on card ${data.openCard.sn} · card still with ${data.openCard.takenBy}${a.text}`, a.low ? "#DC2626" : "#B45309");
       setFuelForm(n => n + 1);
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
@@ -175,8 +186,9 @@ export default function VehicleTerminal({
       // pending — then handing the card back submits it along with any
       // other fills drawn on it.
       const key = fuel ? JSON.stringify(fuel) : null;
+      let after = { text: "", low: false };
       if (fuel && fuelSaved.current !== key) {
-        await postFuel(data.openCard, fuel);
+        after = afterFill(await postFuel(data.openCard, fuel));
         fuelSaved.current = key;
       }
       const res = await fetch("/api/fleet/cards/hand", {
@@ -188,7 +200,7 @@ export default function VehicleTerminal({
         throw new Error((j.error || "Could not take the card back")
           + (fuelSaved.current ? " (The fuel record is saved — fix the time and press again.)" : ""));
       }
-      onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded` : ""}`, "#15803D");
+      onDone(`Card ${data.openCard.sn} back in${fuel ? ` · Rs ${fuel.amount} recorded${after.text}` : ""}`, "#15803D");
       reset();
     } catch (e: any) { setError(e.message); }
     finally { setBusy(false); }
@@ -294,12 +306,12 @@ export default function VehicleTerminal({
           )}
         </div>
       ) : action === "fuel" && data.openCard ? (
-        <ReturnCard key={fuelForm} keepOut card={data.openCard} busy={busy}
+        <ReturnCard lowLevel={data.lowLevel} key={fuelForm} keepOut card={data.openCard} busy={busy}
           onCancel={() => setAction("pick")} onConfirm={recordFuel} />
       ) : action === "card" ? (
         data.openCard
-          ? <ReturnCard card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onConfirm={returnCard} />
-          : <TakeCardOut cards={data.cards} drivers={data.drivers} people={people} busy={busy}
+          ? <ReturnCard lowLevel={data.lowLevel} card={data.openCard} busy={busy} onCancel={() => setAction("pick")} onConfirm={returnCard} />
+          : <TakeCardOut lowLevel={data.lowLevel} cards={data.cards} drivers={data.drivers} people={people} busy={busy}
               onCancel={() => setAction("pick")} onSubmit={takeCard} />
       ) : data.openTrip ? (
         <BringVehicleBack trip={data.openTrip} busy={busy} onSubmit={bringBack} />
