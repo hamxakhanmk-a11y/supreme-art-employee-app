@@ -6,12 +6,13 @@ import { ensureFleetSchema, VEHICLE_TYPE_LABEL } from "./fleet";
 // what was on its PSO card at the start of the month, what was loaded, what
 // was drawn, what is left, and how far it went.
 //
-// The money follows the same rule as the live balance (lib/cardBalance.ts):
-// from a card's opening, count what was entered after it. Each entry then
-// lands in a month — a top-up by the date written on it, a fill by the day it
-// was entered. A fill's own "collection date" is when the card was handed
-// out, which can be weeks before the fuel was drawn, so it can't place a fill.
-// For the current month the closing figure is the balance PSO Cards shows.
+// The money follows the same rule as the live balance (lib/cardBalance.ts): a
+// card's opening is its balance at the start of the opening's date, and what
+// is dated from that day on counts against it. A top-up is dated by the date
+// written on it, a fill by the day it was entered — a fill's own "collection
+// date" is when the card was handed out, which can be weeks before the fuel
+// was drawn, so it can't place a fill. For the current month the closing
+// figure is the balance PSO Cards shows.
 
 export type FleetMonthRow = {
   vehicleId: number | null;     // null: a card with no vehicle
@@ -93,12 +94,14 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const sum = (list: Entry[], keep: (e: Entry) => boolean) =>
       list.filter(e => e.cardId === cardId && keep(e)).reduce((s, e) => s + e.amount, 0);
     const inMonth = (e: Entry) => e.day >= start;
-    // The opening in force: the one entered last, of those dated by month end.
-    const o = openings.filter(e => e.cardId === cardId).sort((a, b) => b.at - a.at)[0];
+    // The opening in force: the latest-dated of those dated by month end (the
+    // one typed last, on a tie). It is the balance at the start of its date.
+    const o = openings.filter(e => e.cardId === cardId)
+      .sort((a, b) => (a.day === b.day ? b.at - a.at : a.day < b.day ? 1 : -1))[0];
     if (!o) {
       return { opening: null, topup: sum(topups, inMonth), consumption: sum(fills, inMonth), closing: null, openedOn: null };
     }
-    const after = (e: Entry) => e.at > o.at;
+    const after = (e: Entry) => e.day >= o.day;
     const openedHere = o.day >= start;
     const opening = openedHere
       ? o.amount

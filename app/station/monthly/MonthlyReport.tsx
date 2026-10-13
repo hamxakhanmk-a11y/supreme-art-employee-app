@@ -154,9 +154,9 @@ export default function MonthlyReport({ data, readOnly = false }: { data: FleetM
         <span>Prepared by HEAD HR &amp; ADMIN:</span><span className="line" />
       </div>
       <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>
-        Opening is last month&apos;s closing; in the month a card&apos;s opening balance is first set, that figure, and only
-        what came after it. Top-ups count by their date, fuel by the day it was entered. Closing for the current month
-        matches the balance on PSO Cards.
+        Opening is last month&apos;s closing; in the month a card&apos;s opening balance is set, it is that balance as at the
+        start of the opening&apos;s date, and everything from that day on counts. Top-ups count by their date, fuel by the
+        day it was entered. Closing for the current month matches the balance on PSO Cards.
       </div>
     </div>
   );
