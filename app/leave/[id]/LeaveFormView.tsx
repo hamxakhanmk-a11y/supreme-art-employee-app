@@ -32,7 +32,7 @@ export default function LeaveFormView({ req, emp, leaveType }: { req: Req; emp: 
   return (
     <>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, justifyContent: "space-between", alignItems: "center" }}>
-        <Link href="/reports/leaves" className="btn">← Back to Leave History</Link>
+        <Link href="/reports/leaves" className="btn btn-back">← Back to Leave History</Link>
         <button onClick={doPrint} className="btn btn-print">🖨 Print</button>
       </div>
 

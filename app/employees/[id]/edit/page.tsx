@@ -50,7 +50,7 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <Link href={`/employees/${empId}`} style={{ fontSize: 12, color: "var(--primary)" }}>← Back to Profile</Link>
+        <Link href={`/employees/${empId}`} className="btn btn-sm btn-back">← Back to Profile</Link>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: "6px 0 4px" }}>Edit Employee</h1>
         <p style={{ color: "#888", fontSize: 13 }}>{emp.employeeId} • {emp.firstName} {emp.lastName}</p>
       </div>

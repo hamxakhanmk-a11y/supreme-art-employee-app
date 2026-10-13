@@ -59,7 +59,7 @@ export default function AssignClient({ employees }: { employees: Emp[] }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <Link href="/kpi" className="btn">← Overview</Link>
+          <Link href="/kpi" className="btn btn-back">← Overview</Link>
           <Link href="/kpi/entry" className="btn btn-primary">Monthly Entry →</Link>
         </div>
       </div>

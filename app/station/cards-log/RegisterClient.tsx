@@ -130,7 +130,7 @@ export default function RegisterClient({
             <strong>{rupees(totalAmount)}</strong>
           </span>
           <span style={{ flex: 1 }} />
-          {focus.back && <Link href={`/station/monthly?month=${focus.back}`} className="btn btn-xs">← Back to Monthly Report</Link>}
+          {focus.back && <Link href={`/station/monthly?month=${focus.back}`} className="btn btn-back btn-xs">← Back to Monthly Report</Link>}
           <Link href={`/station/pso?${new URLSearchParams({ tab: "logbook", from, to })}`} className="btn btn-xs">Show all</Link>
         </div>
       )}

@@ -68,7 +68,7 @@ export default function ProcurementPrint({
   return (
     <div id={rootId} className={twoUp ? "pf-2up" : undefined}>
       <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
-        <Link href={backHref} className="btn">{backLabel}</Link>
+        <Link href={backHref} className="btn btn-back">{backLabel}</Link>
         <button onClick={doPrint} className="btn btn-primary">🖨 Print</button>
         <button onClick={savePdf} className="btn" title="Opens the print dialog — choose &quot;Save as PDF&quot; as the destination">💾 Save as PDF</button>
         {sheets.length > 1 && (

@@ -71,7 +71,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
     <div className="fade-up capa-page">
       {/* ── Action bar (screen only) ── */}
       <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <Link href="/forms/capa" className="btn btn-sm">← All CAPAs</Link>
+        <Link href="/forms/capa" className="btn btn-back btn-sm">← All CAPAs</Link>
         <span style={{
           display: "inline-block", padding: "4px 12px", borderRadius: 999,
           fontSize: 10, fontWeight: 800, letterSpacing: 0.4,

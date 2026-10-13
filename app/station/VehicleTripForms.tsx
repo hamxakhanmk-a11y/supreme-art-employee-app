@@ -158,7 +158,7 @@ export function TakeVehicleOut({ drivers, defaultDriverId, lastMeter, busy, onCa
         placeholder="e.g. Delivery, pick-up, bank work" style={field} />
 
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-        <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
+        <button className="btn btn-back" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
           onClick={() => onSubmit({
             // The first name drives; the rest ride along.

@@ -123,6 +123,10 @@ html, body {
    Delete right holder can use. */
 .btn-print { background: var(--brand); color: #fff; border-color: var(--brand); }
 .btn-print:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+/* "Back" and "back up a level" buttons: filled maroon so the way back stands out. */
+.btn-back { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 600; text-decoration: none; }
+.btn-back:hover { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+.btn-back:disabled { opacity: 0.6; }
 .btn-restricted { background: #111; color: #fff; border-color: #111; }
 .btn-restricted:hover { background: #333; border-color: #333; }
 .btn-restricted:disabled { opacity: 0.5; }

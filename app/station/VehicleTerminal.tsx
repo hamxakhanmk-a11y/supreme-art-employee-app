@@ -328,7 +328,7 @@ export default function VehicleTerminal({
         />
       )}
 
-      <button onClick={reset} className="btn" style={{ marginTop: 16 }}>← Different vehicle</button>
+      <button onClick={reset} className="btn btn-back" style={{ marginTop: 16 }}>← Different vehicle</button>
     </div>
   );
 }

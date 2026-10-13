@@ -28,7 +28,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Link href="/employees" style={{ fontSize: 12, color: "var(--primary)" }}>← Back to Employees</Link>
+        <Link href="/employees" className="btn btn-sm btn-back">← Back to Employees</Link>
       </div>
 
       {/* Profile header */}

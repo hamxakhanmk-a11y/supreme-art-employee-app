@@ -18,7 +18,7 @@ export default async function EmployeeAttendancePage({ params }: { params: Promi
   return (
     <div className="fade-up">
       <div className="no-print" style={{ marginBottom: 16 }}>
-        <Link href={`/employees/${empId}`} style={{ fontSize: 12, color: "var(--primary)" }}>← Back to Profile</Link>
+        <Link href={`/employees/${empId}`} className="btn btn-sm btn-back">← Back to Profile</Link>
       </div>
 
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>

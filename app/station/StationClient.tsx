@@ -218,7 +218,7 @@ export default function StationClient() {
             </div>
           )}
 
-          <button onClick={reset} className="btn" style={{ marginTop: 16 }}>← Different employee</button>
+          <button onClick={reset} className="btn btn-back" style={{ marginTop: 16 }}>← Different employee</button>
         </div>
       )}
 

@@ -40,7 +40,7 @@ export default function PrintableForm({ data = {} }: { data?: EmployeePrintData 
     <>
       {/* Print controls + document picker (hidden when printing) */}
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 10 }}>
-        <a href="/employees" style={{ fontSize: 12, color: "var(--primary)" }}>← Back</a>
+        <a href="/employees" className="btn btn-sm btn-back">← Back</a>
         <button className="btn btn-print" onClick={() => window.print()}>
           🖨 Print Form{attached.length > 0 ? ` + ${attached.length} doc${attached.length === 1 ? "" : "s"}` : ""}
         </button>

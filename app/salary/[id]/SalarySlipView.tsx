@@ -14,7 +14,7 @@ export default function SalarySlipView({ slip, embedded = false }: { slip: any; 
     <div className="fade-up salary-slip-page">
       {!embedded && (
         <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <button onClick={goBack} style={{ fontSize: 13, color: "var(--brand)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
+          <button onClick={goBack} className="btn btn-sm btn-back">← Back</button>
           <button className="btn btn-primary" onClick={() => window.print()}>🖨 Save PDF</button>
         </div>
       )}

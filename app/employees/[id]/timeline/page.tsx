@@ -30,7 +30,7 @@ export default async function EmployeeTimelinePage({ params }: { params: Promise
     <div className="fade-up">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 14, flexWrap: "wrap" }}>
         <div>
-          <Link href={`/employees/${emp.id}`} style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>← Back to Profile</Link>
+          <Link href={`/employees/${emp.id}`} className="btn btn-sm btn-back">← Back to Profile</Link>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: "4px 0 0" }}>🕘 Timeline — {emp.firstName} {emp.lastName}</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
             {emp.employeeId} · {emp.designation || "—"} · every change made to this employee, newest first (last {rows.length}).

@@ -285,7 +285,7 @@ export default function SupplierDirectoryClient({
             Which supplier a product was ordered from, and at what rate, drawn from Purchase Order history. Read-only — click a row to open its PO.
           </p>
         </div>
-        <Link href="/reports/procurement" className="btn btn-sm">← Procurement Report</Link>
+        <Link href="/reports/procurement" className="btn btn-back btn-sm">← Procurement Report</Link>
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>

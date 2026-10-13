@@ -21,7 +21,7 @@ export default async function PrintAllEmployees({ searchParams }: { searchParams
     return (
       <div className="fade-up">
         <div className="card no-print" style={{ maxWidth: 600, margin: "40px auto", textAlign: "center" }}>
-          No employees selected to print. <a href="/employees" style={{ color: "var(--primary)" }}>← Back to Employees</a>
+          No employees selected to print. <a href="/employees" className="btn btn-sm btn-back">← Back to Employees</a>
         </div>
       </div>
     );

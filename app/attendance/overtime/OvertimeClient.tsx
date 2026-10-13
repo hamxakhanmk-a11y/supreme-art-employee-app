@@ -65,7 +65,7 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href="/reports/overtime" className="btn">📊 Overtime Report</Link>
-          <Link href="/attendance" className="btn">← Mark Today</Link>
+          <Link href="/attendance" className="btn btn-back">← Mark Today</Link>
         </div>
       </div>
 

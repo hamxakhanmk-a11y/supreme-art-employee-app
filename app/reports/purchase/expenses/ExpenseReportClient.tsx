@@ -140,7 +140,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
             Every expense line raised through Purchase Requisitions, with its category and value. Read-only — click a row to open its requisition.
           </p>
         </div>
-        <Link href="/purchase" className="btn btn-sm">← PR Register</Link>
+        <Link href="/purchase" className="btn btn-back btn-sm">← PR Register</Link>
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>

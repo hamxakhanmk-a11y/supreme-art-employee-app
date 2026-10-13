@@ -50,7 +50,7 @@ export default async function EmployeeTrackerPage({
     <div className="fade-up">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 14, flexWrap: "wrap" }}>
         <div>
-          <Link href={`/kpi/reports?year=${year}`} style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, textDecoration: "none" }}>← All reports</Link>
+          <Link href={`/kpi/reports?year=${year}`} className="btn btn-sm btn-back">← All reports</Link>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: "4px 0 0" }}>{emp.firstName} {emp.lastName}</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
             {emp.employeeId} · {tpl.code} · {tpl.title} · {tpl.department} · {tpl.kpis.length} KPIs

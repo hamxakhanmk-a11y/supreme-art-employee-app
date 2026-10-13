@@ -10,7 +10,7 @@ export default async function NewEmployeePage() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <Link href="/employees" style={{ fontSize: 12, color: "var(--primary)" }}>← Back to Employees</Link>
+        <Link href="/employees" className="btn btn-sm btn-back">← Back to Employees</Link>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: "6px 0 4px" }}>Add New Employee</h1>
         <p style={{ color: "#888", fontSize: 13 }}>Fill in the employee details across all sections.</p>
       </div>

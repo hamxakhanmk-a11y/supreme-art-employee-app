@@ -78,7 +78,7 @@ export function TakeCardOut({ cards, drivers, people, busy, lowLevel, onCancel, 
         <div style={{ fontSize: 12.5, color: "var(--text2)", marginTop: 6 }}>
           Every card is already out, or none has been added yet — the cards live on Station → PSO Cards.
         </div>
-        <button className="btn" style={{ marginTop: 12 }} onClick={onCancel}>← Back</button>
+        <button className="btn btn-back" style={{ marginTop: 12 }} onClick={onCancel}>← Back</button>
       </div>
     );
   }
@@ -127,7 +127,7 @@ export function TakeCardOut({ cards, drivers, people, busy, lowLevel, onCancel, 
               placeholder="or type a name — e.g. Aamir (Purchaser)" style={{ ...field, marginTop: 8 }} />
           )}
           {drivers.length > 0 && (
-            <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} disabled={busy}
+            <button type="button" className="btn btn-back btn-sm" style={{ marginTop: 8 }} disabled={busy}
               onClick={() => { setSomeoneElse(false); setPersonId(""); setTyped(""); }}>
               ← Back to this vehicle&apos;s drivers
             </button>
@@ -140,7 +140,7 @@ export function TakeCardOut({ cards, drivers, people, busy, lowLevel, onCancel, 
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-        <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
+        <button className="btn btn-back" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button onClick={submit} disabled={busy || !ready}
           style={{
             flex: 1, padding: "16px 12px", fontSize: 16, fontWeight: 800, borderRadius: 12,
@@ -218,7 +218,7 @@ export function ReturnCard({ card, busy, keepOut = false, lowLevel, onCancel, on
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-        <button className="btn" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
+        <button className="btn btn-back" onClick={onCancel} disabled={busy} style={{ flex: "0 0 auto" }}>← Back</button>
         <button
           onClick={() => onConfirm(hasFuel ? { slipNo, amount, notes } : null)}
           disabled={busy || amountBad || (keepOut && !hasFuel)}

@@ -11,7 +11,7 @@ export default function BulkPrintClient({ slips }: { slips: any[] }) {
   return (
     <div className="fade-up">
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <button onClick={() => history.back()} style={{ fontSize: 13, color: "var(--brand)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>← Back</button>
+        <button onClick={() => history.back()} className="btn btn-sm btn-back">← Back</button>
         <div style={{ fontSize: 13, color: "var(--text2)" }}>{slips.length} salary slip{slips.length === 1 ? "" : "s"} — printing…</div>
         <button className="btn btn-primary" onClick={() => window.print()}>🖨 Print Again</button>
       </div>

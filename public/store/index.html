@@ -46,6 +46,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);background:va
 .btn-excel:hover{background:#155232}
 .btn-print{background:#8C2326;color:#fff;border-color:#8C2326}
 .btn-print:hover{background:#6E1B1D}
+.btn-back{background:#8C2326;color:#fff;border-color:#8C2326;font-weight:600}
+.btn-back:hover{background:#6E1B1D}
 .btn-danger-soft{background:#fff;color:#A32D2D;border-color:#e8e1d3}
 .btn-danger-soft:hover{background:#fff5f5}
 .btn-sm{padding:5px 10px;font-size:12px}
@@ -1070,7 +1072,7 @@ function renderStoreReturnBar(){
     const range=[fmtDate(fieldVal(p+'-date-from')),fmtDate(fieldVal(p+'-date-to'))].filter(Boolean).join(' – ');
     bar.style.display='block';
     bar.innerHTML=`<div class="return-bar">
-      <button class="btn btn-sm" onclick="storeReturnBack()"><i class="ti ti-arrow-left"></i> Back to Issuance Log</button>
+      <button class="btn btn-sm btn-back" onclick="storeReturnBack()"><i class="ti ti-arrow-left"></i> Back to Issuance Log</button>
       <span>Showing <b>${storeReturn.label}</b>${range?` · ${range}`:''}, opened from the log.</span>
     </div>`;
   });
