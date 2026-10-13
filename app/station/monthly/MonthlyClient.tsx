@@ -6,7 +6,7 @@ import type { FleetMonth } from "@/lib/fleetMonthly";
 
 // The page around the report: its title, the month, and the way back to the
 // terminal, on one line like the other Station pages.
-export default function MonthlyClient({ data, readOnly }: { data: FleetMonth; readOnly: boolean }) {
+export default function MonthlyClient({ data, readOnly, canOpenCards }: { data: FleetMonth; readOnly: boolean; canOpenCards: boolean }) {
   const router = useRouter();
   return (
     <div className="fade-up">
@@ -20,7 +20,7 @@ export default function MonthlyClient({ data, readOnly }: { data: FleetMonth; re
         </span>
         <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
       </div>
-      <MonthlyReport data={data} readOnly={readOnly} />
+      <MonthlyReport data={data} readOnly={readOnly} canOpenCards={canOpenCards} />
     </div>
   );
 }

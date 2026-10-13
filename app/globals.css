@@ -1075,3 +1075,8 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .fleet-sign { display: flex !important; justify-content: flex-end; align-items: flex-end; gap: 8px; margin-top: 28px; font-weight: 700; font-size: 10pt; }
   .fleet-sign .line { display: inline-block; width: 260px; border-bottom: 1px solid #000; }
 }
+
+/* Monthly Report: a Consumption figure that opens the logbook rows behind it. */
+.consumption-link { color: var(--brand); font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; }
+.consumption-link:hover { text-decoration-style: solid; }
+@media print { .consumption-link { color: inherit !important; text-decoration: none !important; font-weight: inherit; } }

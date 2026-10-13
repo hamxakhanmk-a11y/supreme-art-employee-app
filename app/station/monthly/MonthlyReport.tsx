@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import EditCell from "../EditCell";
 import PrintLandscape from "@/components/PrintLandscape";
 import ReportLetterhead from "@/components/ReportLetterhead";
@@ -28,7 +29,24 @@ const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const litresText = (n: number | null) => (n === null ? "" : n.toLocaleString("en-PK", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 const kmlText = (n: number | null) => (n === null ? "" : n.toFixed(2));
 
-export default function MonthlyReport({ data, readOnly = false }: { data: FleetMonth; readOnly?: boolean }) {
+// The Cards Logbook rows behind one row's Consumption: its card(s), the fills
+// entered in the month — from the opening's date when that falls inside it.
+function consumptionHref(month: string, r: FleetMonth["rows"][number]): string {
+  const [y, m] = month.split("-").map(Number);
+  const start = `${month}-01`;
+  const end = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+  const from = r.openedOn && r.openedOn > start ? r.openedOn : start;
+  return `/station/pso?${new URLSearchParams({
+    tab: "logbook", by: "entered", from, to: end,
+    cards: r.cardIds.join(","), label: r.vehicleNo, back: month,
+  })}`;
+}
+
+export default function MonthlyReport({ data, readOnly = false, canOpenCards = false }: {
+  data: FleetMonth; readOnly?: boolean;
+  /** Station · PSO Cards: Consumption opens the logbook rows behind it. */
+  canOpenCards?: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -109,7 +127,13 @@ export default function MonthlyReport({ data, readOnly = false }: { data: FleetM
                   {r.openedOn && <div style={{ fontSize: 10, color: "var(--text3)" }}>set {dm(r.openedOn)}</div>}
                 </td>
                 <td className="n">{pkr(r.topup)}</td>
-                <td className="n">{pkr(r.consumption)}</td>
+                <td className="n">
+                  {canOpenCards && r.consumption > 0 && r.cardIds.length > 0 ? (
+                    <Link href={consumptionHref(data.month, r)} className="consumption-link" title="Show these fuel records in the Cards Logbook">
+                      {pkr(r.consumption)}
+                    </Link>
+                  ) : pkr(r.consumption)}
+                </td>
                 <td className="n">
                   {r.vehicleId === null ? null : (
                     <EditCell type="number" align="right" minWidth={80} readOnly={readOnly} placeholder="rate"

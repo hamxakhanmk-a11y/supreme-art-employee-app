@@ -16,6 +16,7 @@ import { ensureFleetSchema, VEHICLE_TYPE_LABEL } from "./fleet";
 
 export type FleetMonthRow = {
   vehicleId: number | null;     // null: a card with no vehicle
+  cardIds: number[];            // the PSO card(s) its money comes from
   vehicleNo: string;
   vehicleType: string;
   opening: number | null;       // null until the card's opening balance is set
@@ -127,6 +128,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const note = notesBy.get(id) ?? { fuelRate: null, maintenance: null };
     rows.push({
       vehicleId: id,
+      cardIds: cards.filter(c => c.vehicleId === id).map(c => c.id),
       vehicleNo: String(v.vehicleNo),
       vehicleType: String(v.name).trim() || VEHICLE_TYPE_LABEL[String(v.type)] || String(v.type),
       opening: known ? money(parts.reduce((s, p) => s + (p.opening ?? 0), 0)) : null,
@@ -146,7 +148,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const p = cardMonth(c.id);
     if (p.opening === null && !p.topup && !p.consumption) continue;
     rows.push({
-      vehicleId: null, vehicleNo: c.sn, vehicleType: "No vehicle",
+      vehicleId: null, cardIds: [c.id], vehicleNo: c.sn, vehicleType: "No vehicle",
       opening: p.opening === null ? null : money(p.opening),
       topup: money(p.topup), consumption: money(p.consumption), km: 0,
       closing: p.closing === null ? null : money(p.closing),

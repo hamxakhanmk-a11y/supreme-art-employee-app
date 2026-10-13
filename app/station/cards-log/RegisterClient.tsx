@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
@@ -11,6 +12,8 @@ import type { PsoRow } from "@/lib/fleetServer";
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
 export type Person = { id: number; code: string; name: string };
+/** Opened from a Monthly Report consumption: what it counted, and the way back. */
+export type LogbookFocus = { label: string; back: string | null };
 
 function fmt(d: string | null) {
   if (!d) return "";
@@ -20,10 +23,11 @@ function fmt(d: string | null) {
 const rupees = (n: number | null) => (n === null ? "" : `Rs ${n.toLocaleString("en-PK")}`);
 
 export default function RegisterClient({
-  rows, vehicles, people, from, to, readOnly, canDelete,
+  rows, vehicles, people, from, to, readOnly, canDelete, focus = null,
 }: {
   rows: PsoRow[]; vehicles: VehicleRow[]; people: Person[];
   from: string; to: string; readOnly: boolean; canDelete: boolean;
+  focus?: LogbookFocus | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -114,6 +118,22 @@ export default function RegisterClient({
       </div>
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}
+
+      {focus && (
+        // The rows behind a Monthly Report figure. They're placed by the day
+        // each was entered, as the report counts them — not by collection
+        // date, which is how the logbook normally reads.
+        <div className="card no-print" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+          marginBottom: 12, padding: "8px 12px", borderLeft: "4px solid var(--brand)", fontSize: 13 }}>
+          <span>
+            Fuel the Monthly Report counted for <strong>{focus.label}</strong> — entered {fmt(from)} to {fmt(to)} ·{" "}
+            <strong>{rupees(totalAmount)}</strong>
+          </span>
+          <span style={{ flex: 1 }} />
+          {focus.back && <Link href={`/station/monthly?month=${focus.back}`} className="btn btn-xs">← Back to Monthly Report</Link>}
+          <Link href={`/station/pso?${new URLSearchParams({ tab: "logbook", from, to })}`} className="btn btn-xs">Show all</Link>
+        </div>
+      )}
 
       <ScrollBox>
         <table style={{ fontSize: 12.5 }}>

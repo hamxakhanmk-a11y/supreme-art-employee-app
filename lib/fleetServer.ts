@@ -293,12 +293,16 @@ export type PsoRow = {
   notes: string;
 };
 
-// The PSO card register over a date range, read on the collection date — that
-// is the day the card left, and the day the register is written against.
-// Cards still out are included whatever the range's end, since an unsubmitted
-// card is the thing you most need to see.
-export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
+// The Cards Logbook between two dates. Normally by collection date — when the
+// card went out, as the paper register is kept. `by: "entered"` with card ids
+// is the Monthly Report's view instead: the fills it counted for one vehicle,
+// placed by the day each was entered (see lib/fleetMonthly.ts).
+export async function psoRegister(from: string, to: string, opts: { by?: "collected" | "entered"; cardIds?: number[] } = {}): Promise<PsoRow[]> {
   await ensureFleetSchema();
+  const day = opts.by === "entered" ? sql`(i.created_at AT TIME ZONE 'Asia/Karachi')::date` : sql`i.collected_date`;
+  const cards = opts.cardIds
+    ? (opts.cardIds.length ? sql`AND i.card_id IN (${sql.join(opts.cardIds.map(id => sql`${id}`), sql`, `)})` : sql`AND false`)
+    : sql``;
   const res = await db.execute(sql`
     SELECT i.id, i.card_id AS "cardId", c.sn,
            i.vehicle_id AS "vehicleId", COALESCE(v.vehicle_no, '—') AS "vehicleNo",
@@ -312,7 +316,7 @@ export async function psoRegister(from: string, to: string): Promise<PsoRow[]> {
     JOIN pso_cards c ON c.id = i.card_id
     LEFT JOIN vehicles v ON v.id = i.vehicle_id
     LEFT JOIN employees e ON e.id = i.driver_id
-    WHERE i.collected_date BETWEEN ${from}::date AND ${to}::date
+    WHERE ${day} BETWEEN ${from}::date AND ${to}::date ${cards}
     ORDER BY i.collected_date DESC, i.id DESC
   `);
   const rows: any[] = (res as any).rows ?? (res as any);

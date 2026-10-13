@@ -11,7 +11,7 @@ import { karachiNow } from "@/lib/gateTime";
 
 export const dynamic = "force-dynamic";
 
-type SP = { date?: string; from?: string; to?: string; tab?: string };
+type SP = { date?: string; from?: string; to?: string; tab?: string; by?: string; cards?: string; label?: string; back?: string };
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 // PSO Cards, one tab with two views inside it: the Cards Logbook (who has a
@@ -26,6 +26,13 @@ export default async function PsoCardsPage({ searchParams }: { searchParams: Pro
   const from = ISO.test(sp.from || "") ? sp.from! : `${today.slice(0, 8)}01`;
   const to = ISO.test(sp.to || "") ? sp.to! : today;
   const tab = sp.tab === "cards" ? "cards" : "logbook";
+  // Opened from a Monthly Report consumption: the fills it counted for one
+  // vehicle's card(s), placed by the day each was entered.
+  const focused = sp.by === "entered";
+  const cardIds = focused ? String(sp.cards || "").split(",").map(Number).filter(n => n > 0) : undefined;
+  const focus = focused
+    ? { label: String(sp.label || "").slice(0, 60) || "this card", back: /^\d{4}-\d{2}$/.test(sp.back || "") ? sp.back! : null }
+    : null;
 
   const [vehicleList, people, custody, rows, user] = await Promise.all([
     db.select({ id: vehicles.id, vehicleNo: vehicles.vehicleNo, name: vehicles.name, active: vehicles.active })
@@ -37,7 +44,7 @@ export default async function PsoCardsPage({ searchParams }: { searchParams: Pro
     // Who held what that day. On today this is the same set the cards
     // themselves report, but it carries the times and what was drawn.
     custodyOn(date),
-    psoRegister(from, to),
+    psoRegister(from, to, focused ? { by: "entered", cardIds } : {}),
     getSession(),
   ]);
 
@@ -56,6 +63,7 @@ export default async function PsoCardsPage({ searchParams }: { searchParams: Pro
       from={from}
       to={to}
       tab={tab}
+      focus={focus}
     />
   );
 }

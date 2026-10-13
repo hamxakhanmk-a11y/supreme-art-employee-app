@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { CustodyRow, PsoRow } from "@/lib/fleetServer";
 import CardsPanel from "./CardsPanel";
 import PageTabs from "../PageTabs";
-import RegisterClient from "../cards-log/RegisterClient";
+import RegisterClient, { type LogbookFocus } from "../cards-log/RegisterClient";
 
 // PSO Cards, in two tabs. Cards Logbook: the cards out with someone at the
 // top, because they are the ones that need something done — a fuel record
@@ -27,11 +27,12 @@ type Card = {
 type Tab = "logbook" | "cards";
 
 export default function PsoCardsClient({
-  vehicles, people, readOnly, canDelete, custody, date, isToday, rows, from, to, tab: initialTab,
+  vehicles, people, readOnly, canDelete, custody, date, isToday, rows, from, to, tab: initialTab, focus = null,
 }: {
   vehicles: VehicleRow[]; people: Person[]; readOnly: boolean; canDelete: boolean;
   custody: CustodyRow[]; date: string; isToday: boolean;
   rows: PsoRow[]; from: string; to: string; tab: Tab;
+  focus?: LogbookFocus | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -227,7 +228,7 @@ export default function PsoCardsClient({
       </div>
 
       <RegisterClient rows={rows} vehicles={vehicles} people={people} from={from} to={to}
-        readOnly={readOnly} canDelete={canDelete} />
+        readOnly={readOnly} canDelete={canDelete} focus={focus} />
       </>
       )}
     </div>
