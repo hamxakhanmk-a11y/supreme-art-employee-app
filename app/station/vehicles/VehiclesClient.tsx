@@ -29,7 +29,11 @@ const BLANK = {
   defaultDriverId: "" as number | "", drivers: [] as DriverEntry[], notes: "", active: true,
 };
 
-export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[]; readOnly: boolean }) {
+export default function VehiclesClient({ drivers, readOnly, canDelete = false }: {
+  drivers: Driver[]; readOnly: boolean;
+  /** Station · Delete: deleting a vehicle takes its log book with it. */
+  canDelete?: boolean;
+}) {
   const [list, setList] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -143,6 +147,35 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not save");
+      await load();
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  // A vehicle with no history goes on a plain "are you sure". One with trips,
+  // cards or fuel behind it is only deleted once its number is typed back —
+  // the log book goes with it, and Retire is nearly always what's meant.
+  const remove = async (v: Vehicle) => {
+    if (!confirm(`Delete vehicle ${v.vehicleNo}?`)) return;
+    setBusy(true); setErr("");
+    try {
+      const url = `/api/fleet/vehicles?id=${v.id}`;
+      let res = await fetch(url, { method: "DELETE" });
+      let j = await res.json();
+      if (res.status === 409 && j.needsConfirm) {
+        const lose = [
+          j.trips ? `${j.trips} log-book trip${j.trips === 1 ? "" : "s"} (deleted with it)` : "",
+          j.fills ? `${j.fills} fuel record${j.fills === 1 ? "" : "s"} (kept, no vehicle)` : "",
+          j.cards ? `${j.cards} PSO card${j.cards === 1 ? "" : "s"} (kept, unassigned)` : "",
+        ].filter(Boolean).join("\n  • ");
+        const typed = prompt(
+          `${v.vehicleNo} has history:\n  • ${lose}\n\nTo keep its history, press Cancel and Retire it instead.\n\nTo delete it anyway, type its number (${j.needsConfirm}):`);
+        if (typed === null) return;
+        res = await fetch(`${url}&confirm=${encodeURIComponent(typed)}`, { method: "DELETE" });
+        j = await res.json();
+        if (res.status === 409) throw new Error("The number didn't match — nothing was deleted.");
+      }
+      if (!res.ok) throw new Error(j.error || "Could not delete");
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -348,6 +381,9 @@ export default function VehiclesClient({ drivers, readOnly }: { drivers: Driver[
                       <button className="btn btn-sm" disabled={busy} onClick={() => setActive(v, !v.active)}>
                         {v.active ? "Retire" : "Restore"}
                       </button>
+                      {canDelete && (
+                        <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(v)}>Delete</button>
+                      )}
                     </div>
                   </td>
                 )}

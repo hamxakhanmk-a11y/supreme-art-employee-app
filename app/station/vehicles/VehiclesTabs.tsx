@@ -64,7 +64,7 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
 
       {tab === "logbook"
         ? <LogBookClient {...logBook} filtersInHead onAddVehicle={() => showTab("vehicles")} />
-        : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} />}
+        : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} canDelete={logBook.canDelete} />}
     </div>
   );
 }

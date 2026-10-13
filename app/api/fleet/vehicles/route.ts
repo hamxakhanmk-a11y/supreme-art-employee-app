@@ -6,8 +6,8 @@ import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema, VEHICLE_TYPES } from "@/lib/fleet";
 
-// Fleet rides on the Station permission — it lives in the Station tab and is
-// used by the same people at the same gate, so it gets no grant of its own.
+// Station · Vehicles grants this list (view / edit); deleting a vehicle needs
+// Station · Delete. The gate reads vehicles through /api/fleet/terminal.
 
 // Two to six digits, and whatever length it is is the length. PINs are usually
 // the vehicle's own number because that is what people remember, and those run
@@ -232,6 +232,45 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE is deliberately absent. A vehicle with journeys behind it can't be
-// removed without taking the log book with it — retire it instead (PUT with
-// active:false), which stops it being offered and keeps its history readable.
+// DELETE ?id=N[&confirm=<vehicle no>] — Station · Delete.
+//
+// Deleting a vehicle takes its log book with it (trips, monthly notes and its
+// drivers go by cascade); its PSO cards and fuel records stay, with no vehicle.
+// Retiring (PUT active:false) is the way to put a real vehicle out of service
+// and keep its history; this is for a mistake or a test entry. So a vehicle
+// with any history is only deleted when its number is typed back: the first
+// call answers 409 with what would go, the second carries the number.
+export async function DELETE(req: NextRequest) {
+  const guard = await guardWrite("station.delete");
+  if (guard instanceof NextResponse) return guard;
+  try {
+    await ensureFleetSchema();
+    const id = Number(req.nextUrl.searchParams.get("id"));
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const [v] = await db.select({ vehicleNo: vehicles.vehicleNo }).from(vehicles).where(eq(vehicles.id, id));
+    if (!v) return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
+
+    const res = await db.execute(sql`
+      SELECT
+        (SELECT COUNT(*) FROM fleet_trips WHERE vehicle_id = ${id})::int AS trips,
+        (SELECT COUNT(*) FROM pso_cards WHERE vehicle_id = ${id})::int AS cards,
+        (SELECT COUNT(*) FROM pso_card_issues WHERE vehicle_id = ${id})::int AS fills
+    `);
+    const usage = ((res as any).rows ?? (res as any))[0] as { trips: number; cards: number; fills: number };
+    const hasHistory = usage.trips > 0 || usage.cards > 0 || usage.fills > 0;
+    const typed = String(req.nextUrl.searchParams.get("confirm") || "").trim().toLowerCase();
+    if (hasHistory && typed !== v.vehicleNo.trim().toLowerCase()) {
+      return NextResponse.json({ needsConfirm: v.vehicleNo, ...usage }, { status: 409 });
+    }
+
+    await db.delete(vehicles).where(eq(vehicles.id, id));
+    await logActivity({
+      user: guard, action: "station.vehicle.delete",
+      summary: `deleted vehicle "${v.vehicleNo}"`
+        + (usage.trips ? ` and its ${usage.trips} log-book trip${usage.trips === 1 ? "" : "s"}` : ""),
+    });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
