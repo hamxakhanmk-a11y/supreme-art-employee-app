@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, grns } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
 import {
-  ensureProcurementTables, parseItems, computePoReceipts, docNoLabel,
+  ensureProcurementTables, parseItems, computePoReceipts, docNoLabel, parseInspection,
   type PoItem, type GrnItem,
 } from "@/lib/procurement";
 import ProcurementReportClient, { type MasterRow, type GrrRef } from "./ProcurementReportClient";
@@ -49,6 +49,7 @@ export default async function ProcurementReportPage({ searchParams }: { searchPa
     }
     const grnRef = (g: typeof poGrns[number]): GrrRef => ({
       id: g.id, label: docNoLabel(g.grnNo, g.registered), gatePass: g.gatePassNo || "", invNo: g.invNo || "",
+      dcNo: g.dcNo || "", qc: parseInspection(g.inspection).result,
     });
     const grnsBySr = new Map<number, Map<number, GrrRef>>();
     for (const g of poGrns) {

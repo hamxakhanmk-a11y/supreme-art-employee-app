@@ -4,6 +4,7 @@ import ReportExportControls, { useReportRange } from "@/components/ReportExportC
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
+import QcBadge from "@/components/procurement/QcBadge";
 import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, type GrnItem, type GrnInspection } from "@/lib/procurement";
 
 interface Grn {
@@ -371,23 +372,6 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </table>
       </div>
     </div>
-  );
-}
-
-// The incoming-material inspection result at a glance: green passed, yellow
-// partly accepted, red rejected, grey while nobody has inspected it yet.
-const QC_BADGE = {
-  accepted: { text: "Passed", color: "#166534", bg: "#dcfce7" },
-  partial:  { text: "Partial", color: "#92400E", bg: "#fef3c7" },
-  rejected: { text: "Rejected", color: "#991B1B", bg: "#fee2e2" },
-} as const;
-function QcBadge({ result }: { result: GrnInspection["result"] }) {
-  const b = result ? QC_BADGE[result] : null;
-  return (
-    <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
-      background: b ? b.bg : "var(--bg2)", color: b ? b.color : "var(--text3)" }}>
-      {b ? b.text : "Not inspected"}
-    </span>
   );
 }
 
