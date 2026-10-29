@@ -46,6 +46,9 @@ export type ModuleKey =
   | "grn"
   | "suppliers"
   | "store"
+  // store actions that are their own grants, separate from store edit
+  | "store.delete"
+  | "store.reconcile"
   | "capa";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
@@ -82,6 +85,8 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   // also gets the full report — the per-order view with order values.
   { key: "suppliers",  label: "Supplier Directory", hint: "Which supplier a product comes from & its rate — edit allows correcting the rate" },
   { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
+  { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
+  { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
 ];
 
@@ -133,6 +138,7 @@ export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("reports.")) return "view";
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
+  if (key === "store.delete" || key === "store.reconcile") return "action";
   return "section";
 }
 
@@ -162,11 +168,15 @@ export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.k
 // Out-of-the-box defaults preserve the app's previous behaviour exactly:
 // admin & hr can do everything; ceo sees everything but can't edit.
 // procurement and engineer start narrow — tune them in Role Permissions.
+// Grants that belong to the Super Admin until the owner ticks them for a role:
+// a role without a stored row would otherwise inherit "everything" below.
+const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile"];
+const EVERYTHING_BUT_OWNER_ONLY = ALL_MODULE_KEYS.filter(k => !OWNER_ONLY_BY_DEFAULT.includes(k));
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
   superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  admin:       { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  hr:          { modules: [...ALL_MODULE_KEYS], canEdit: true },
-  ceo:         { modules: [...ALL_MODULE_KEYS], canEdit: false },
+  admin:       { modules: [...EVERYTHING_BUT_OWNER_ONLY], canEdit: true },
+  hr:          { modules: [...EVERYTHING_BUT_OWNER_ONLY], canEdit: true },
+  ceo:         { modules: [...EVERYTHING_BUT_OWNER_ONLY], canEdit: false },
   procurement: { modules: ["purchase", "po"], canEdit: true },
   engineer:    { modules: ["purchase", "suppliers"], canEdit: true },
   // Finance starts on salary + its report plus the purchase register — tune it

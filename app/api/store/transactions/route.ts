@@ -116,6 +116,12 @@ export async function DELETE(req: NextRequest) {
       historyOnly = body?.historyOnly === true;
     }
     if (!ids.length) return NextResponse.json({ error: "ID(s) required" }, { status: 400 });
+    // Deleting records from history (the quantity is kept) is its own grant;
+    // reversing an entry (the quantity comes back) stays with store edit.
+    if (historyOnly) {
+      const owner = await guardWrite("store.delete");
+      if (owner instanceof NextResponse) return owner;
+    }
 
     const txns = await db.select().from(storeTransactions).where(inArray(storeTransactions.id, ids));
     if (!txns.length) return NextResponse.json({ ok: true, deleted: 0 });

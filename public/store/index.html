@@ -162,6 +162,8 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .btn-danger-strong{background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600;box-shadow:0 0 0 1px #A32D2D inset}
 .btn-danger-strong:hover{background:#7d1f1f;border-color:#7d1f1f}
 .btn-danger-strong i{font-size:14px}
+.btn-restricted{background:#111;color:#fff;border-color:#111}
+.btn-restricted:hover{background:#333;border-color:#333}
 .part-sku{color:#8C2326;font-family:monospace;font-weight:600;font-size:12px;margin-right:4px}
 /* ===== Branded dialog system (replaces native alert/confirm/prompt) ===== */
 .app-dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:2000;opacity:0;transition:opacity 0.15s}
@@ -429,14 +431,14 @@ body:not(.role-admin) .admin-only{display:none!important}
         <span class="toolbar-spacer"></span>
         <span class="bulk-info" id="in-bulk-info"></span>
         <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
-        <button class="btn btn-sm btn-danger-strong write-only" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-restricted" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
         <button class="btn btn-sm btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
         <button class="btn btn-sm btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Supplier / Ref</th><th>Notes</th><th class="no-print" style="width:60px"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
         </table>
       </div>
@@ -458,14 +460,14 @@ body:not(.role-admin) .admin-only{display:none!important}
         <span class="toolbar-spacer"></span>
         <span class="bulk-info" id="out-bulk-info"></span>
         <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
-        <button class="btn btn-sm btn-danger-strong write-only" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-restricted" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
         <button class="btn btn-sm btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
         <button class="btn btn-sm btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th class="no-print" style="width:60px"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
         </table>
       </div>
@@ -486,7 +488,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
         <span class="toolbar-spacer"></span>
         <span class="bulk-info" id="iss-bulk-info"></span>
-        <button class="btn btn-sm btn-danger-strong write-only" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-restricted" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
         <button class="btn btn-sm btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
         <button class="btn btn-sm btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
@@ -1589,8 +1591,8 @@ function getHeaders(sec){
   if(sec==='inventory') return isInks()
     ? ['#','SKU / Part No.','Part Name','Category','Brand','Supplier','Rack No.','Unit','Qty on Hand','Min Qty','Status']
     : ['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
-  if(sec==='stockin')   return['#','Date','Challan No.','Part Name','Category','Qty Added','Balance','Supplier / Ref','Notes'];
-  if(sec==='stockout')  return['#','Date','Challan No.','Part Name','Category','Qty Issued','Balance','Issued To','Purpose'];
+  if(sec==='stockin')   return['#','Date','Challan No.','Part Name','Category','Qty Added','Balance','Supplier / Ref','Notes','Done by'];
+  if(sec==='stockout')  return['#','Date','Challan No.','Part Name','Category','Qty Issued','Balance','Issued To','Purpose','Done by'];
   if(sec==='issuance')  return['#','Date','Challan No.','Part Name','Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
   return[];
 }
@@ -1605,8 +1607,8 @@ function rowCells(sec,item,i){
     return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.ref||'—',item.notes||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.issuedTo||'—',item.purpose||'—'];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.ref||'—',item.notes||'—',item.createdBy||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.issuedTo||'—',item.purpose||'—',item.createdBy||'—'];
   if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
   return[];
 }
@@ -2331,14 +2333,16 @@ function updateBulkInfo(kind){
   const purge=document.getElementById(kind+'-bulk-purge');
   if(info)info.textContent=checked?(checked+' of '+total+' selected'):'';
   if(btn)btn.style.display=checked?'inline-flex':'none';
-  if(purge)purge.style.display=checked?'inline-flex':'none';
+  if(purge)purge.style.display=(checked&&canDelete())?'inline-flex':'none';
   const all=document.getElementById(kind+'-chk-all');
   if(all)all.checked=total>0&&checked===total;
 }
 
-async function bulkDeleteTxns(kind,historyOnly){
-  const ids=Array.from(document.querySelectorAll('.txn-chk-'+kind+':checked')).map(c=>parseInt(c.dataset.id));
+// idsOverride: delete exactly these records (a row's own Delete button) instead of the ticked ones.
+async function bulkDeleteTxns(kind,historyOnly,idsOverride){
+  const ids=idsOverride||Array.from(document.querySelectorAll('.txn-chk-'+kind+':checked')).map(c=>parseInt(c.dataset.id));
   if(!ids.length)return;
+  if(historyOnly&&!canDelete())return;
   const label=kind==='in'?'stock in':(kind==='out'?'stock out':'transaction');
   const plural=ids.length===1?'':'s';
   let confirmed;
@@ -2456,6 +2460,10 @@ function isInks(){return state.module==='consumables'}
 // quantity was kept - so the gap can never sit there unnoticed. Each line can
 // be reconciled (an adjustment is recorded so the history matches the quantity)
 // or ignored (hidden, until its difference changes).
+// Delete (records from history) and Reconcile / Ignore are their own grants in
+// Role Permissions - the Super Admin has them, other roles only if given them.
+function canDelete(){return !!(state.user&&state.user.canDelete);}
+function canReconcile(){return !!(state.user&&state.user.canReconcile);}
 let _ledgerShowIgnored=false;
 function ledgerOff(){
   const sums=new Map();
@@ -2483,16 +2491,16 @@ function renderLedgerCheck(){
   if(off.length){
     html=`<div style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
       <div style="font-weight:700;color:#991b1b;margin-bottom:4px">&#9888; ${off.length} part${off.length===1?' does':'s do'} not add up - the quantity on hand and the stock movements disagree</div>
-      <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference. <b>Reconcile</b> records an adjustment so the history matches the quantity on hand (the quantity itself is not changed); <b>Ignore</b> hides the warning until its difference changes.</div>
+      <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference.${canReconcile()?' <b>Reconcile</b> records an adjustment so the history matches the quantity on hand (the quantity itself is not changed); <b>Ignore</b> hides the warning until its difference changes.':''}</div>
       <table style="width:auto;font-size:12px;border-collapse:collapse">${head}
-        ${off.map(m=>rowHtml(m,`${histBtn(m)} <button class="btn btn-sm btn-primary write-only" title="Record an adjustment so the movements add up to the quantity on hand" onclick="ledgerReconcile(${m.p.id})">Reconcile</button> <button class="btn btn-sm write-only" title="Hide this warning" onclick="ledgerIgnore(${m.p.id})">Ignore</button>`)).join('')}
+        ${off.map(m=>rowHtml(m,`${histBtn(m)}${canReconcile()?` <button class="btn btn-sm btn-restricted" title="Record an adjustment so the movements add up to the quantity on hand" onclick="ledgerReconcile(${m.p.id})">Reconcile</button> <button class="btn btn-sm btn-restricted" title="Hide this warning" onclick="ledgerIgnore(${m.p.id})">Ignore</button>`:''}`)).join('')}
       </table></div>`;
   } else {
     html=`<div style="margin:0 0 10px;font-size:12px;color:#166534">&#10003; 0 parts off - every quantity matches its stock movements</div>`;
   }
   if(ignored.length){
     html+=`<div style="margin:0 0 10px;font-size:12px;color:#666">${ignored.length} warning${ignored.length===1?'':'s'} ignored - <a href="#" onclick="toggleLedgerIgnored();return false" style="color:#8C2326;font-weight:600">${_ledgerShowIgnored?'hide':'show'}</a>
-      ${_ledgerShowIgnored?`<table style="width:auto;font-size:12px;border-collapse:collapse;margin-top:6px">${head}${ignored.map(m=>rowHtml(m,`${histBtn(m)} <button class="btn btn-sm write-only" onclick="ledgerUnignore(${m.p.id})">Stop ignoring</button>`)).join('')}</table>`:''}
+      ${_ledgerShowIgnored?`<table style="width:auto;font-size:12px;border-collapse:collapse;margin-top:6px">${head}${ignored.map(m=>rowHtml(m,`${histBtn(m)}${canReconcile()?` <button class="btn btn-sm btn-restricted" onclick="ledgerUnignore(${m.p.id})">Stop ignoring</button>`:''}`)).join('')}</table>`:''}
     </div>`;
   }
   document.querySelectorAll('.ledger-check').forEach(el=>{el.innerHTML=html;});
@@ -2568,7 +2576,7 @@ function openPartHistory(pid){
   const stat=(label,val,color)=>`<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">${label}</div><div style="font-size:15px;font-weight:700;${color?'color:'+color:''}">${val}</div></div>`;
   const warn=Math.abs(diff)>0.0005
     ?`<div style="margin:0 0 12px;padding:8px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px;color:#7f1d1d">&#9888; The movements add up to ${fmtQty(sum)} ${u} but ${fmtQty(have)} ${u} is on hand (difference ${diff>0?'+':''}${fmtQty(diff)} ${u}).
-        <button class="btn btn-sm btn-primary write-only" style="margin-left:8px" onclick="ledgerReconcile(${p.id})">Reconcile</button></div>`
+        ${canReconcile()?`<button class="btn btn-sm btn-restricted" style="margin-left:8px" onclick="ledgerReconcile(${p.id})">Reconcile</button>`:''}</div>`
     :'';
   document.getElementById('ph-title').textContent=(p.sku?'['+p.sku+'] ':'')+p.name+' - history';
   document.getElementById('ph-body').innerHTML=`
@@ -2740,7 +2748,7 @@ function renderStockIn(){
   const bal=computeBalances();
   const tb=document.getElementById('stockin-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="12"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-in" data-id="${t.id}" onchange="updateBulkInfo('in')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
@@ -2752,7 +2760,8 @@ function renderStockIn(){
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${t.ref||'—'}</td>
     <td style="color:#888">${t.notes||'—'}</td>
-    <td class="no-print write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></td>
+    <td style="white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+    <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('in');
 }
@@ -2768,7 +2777,7 @@ function renderStockOut(){
   const bal=computeBalances();
   const tb=document.getElementById('stockout-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="12"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-out" data-id="${t.id}" onchange="updateBulkInfo('out')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
@@ -2780,7 +2789,8 @@ function renderStockOut(){
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${t.issuedTo||'—'}</td>
     <td style="color:#888">${t.purpose||'—'}</td>
-    <td class="no-print write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></td>
+    <td style="white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+    <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('out');
 }

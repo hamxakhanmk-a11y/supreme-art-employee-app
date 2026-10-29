@@ -26,8 +26,10 @@ export async function GET() {
 }
 
 // POST { action: "ignore" | "unignore" | "reconcile", partId, diff? }
+// Reconcile and Ignore are their own grant ("Store · Reconcile / Ignore" in Role
+// Permissions) — the Super Admin has it, other roles only if given it.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.reconcile");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureStoreSchema();

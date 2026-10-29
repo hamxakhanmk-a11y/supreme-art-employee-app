@@ -12,6 +12,7 @@ function kindOf(key: string): Kind {
   if (key.startsWith("reports.")) return "view";
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action";
+  if (key === "store.delete" || key === "store.reconcile") return "action";
   return "section";
 }
 
@@ -27,6 +28,7 @@ function groupOf(key: string): string {
   if (key.startsWith("purchase")) return "Purchase";
   if (["demand", "po", "grn"].includes(key)) return "Procurement";
   if (key.startsWith("station")) return "Station";   // station, .vehicles, .cards, .monthly, .delete
+  if (key.startsWith("store.")) return "Store";      // store.delete, store.reconcile
   switch (key) {
     case "employees":  return "Employees";
     case "attendance": return "Attendance";

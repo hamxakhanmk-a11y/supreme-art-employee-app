@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession, type Role } from "@/lib/auth";
+import { roleCanEdit } from "@/lib/permissions";
 
 // Compatibility shim for the ported store HTML.
 // The store's original vanilla-JS UI expects its own /api/auth endpoint to
@@ -33,6 +34,9 @@ async function meResponse() {
       email: user.email,
       name: user.name,
       role: toStoreRole(user.role),
+      // The store's own grants, so the page can show only the buttons this role may use.
+      canDelete: user.role === "superadmin" || await roleCanEdit(user.role, "store.delete"),
+      canReconcile: user.role === "superadmin" || await roleCanEdit(user.role, "store.reconcile"),
     },
   });
 }
