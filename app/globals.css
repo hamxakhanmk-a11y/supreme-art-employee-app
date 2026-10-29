@@ -1084,3 +1084,26 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .consumption-link { color: var(--brand); font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; }
 .consumption-link:hover { text-decoration-style: solid; }
 @media print { .consumption-link { color: inherit !important; text-decoration: none !important; font-weight: inherit; } }
+
+/* GRR print: the incoming-material inspection block (app/procurement/grn/[id]). */
+.pf-insp { margin-top: 14px; border: 1px solid #000; padding: 8px 10px; font-size: 13px; break-inside: avoid; }
+.pf-insp-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 700; margin-bottom: 4px; }
+.pf-insp-head > span:first-child { text-transform: uppercase; letter-spacing: 0.04em; }
+.pf-insp .u { display: inline-block; min-width: 120px; border-bottom: 1px solid #000; padding: 0 4px; font-weight: 400; }
+.pf-insp .u.wide { min-width: 260px; }
+.pf-insp .pf-table { margin: 4px 0 6px; }
+.pf-insp-checks { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 4px 0 8px; }
+.pf-insp-result { border: 2px solid #000; padding: 6px 10px; text-align: center; font-weight: 800; font-size: 15px; margin-bottom: 8px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.pf-insp-result-blank { font-weight: 700; font-size: 13px; }
+.pf-insp-foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+@media print {
+  .pf-insp { font-size: 10.5pt; }
+  /* Two copies to a page: the block shrinks so each copy still fits its half. */
+  .pf-2up .pf-sheet .pf-insp { margin-top: 5px !important; padding: 3px 6px !important; font-size: 8.5px !important; }
+  .pf-2up .pf-sheet .pf-insp .pf-table th, .pf-2up .pf-sheet .pf-insp .pf-table td { padding: 1px 4px !important; font-size: 8.5px !important; }
+  .pf-2up .pf-sheet .pf-insp-result { padding: 2px 6px !important; font-size: 10px !important; margin-bottom: 3px !important; }
+  .pf-2up .pf-sheet .pf-insp-checks { margin: 2px 0 3px !important; }
+  .pf-2up .pf-sheet .pf-insp .u { min-width: 70px !important; }
+  .pf-2up .pf-sheet .pf-insp .u.wide { min-width: 140px !important; }
+}

@@ -4,10 +4,11 @@ import ReportExportControls, { useReportRange } from "@/components/ReportExportC
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, docNoLabel, type GrnItem } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, type GrnItem, type GrnInspection } from "@/lib/procurement";
 
 interface Grn {
-  id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; poNo: number | null;
+  id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; dcNo: string | null; poNo: number | null;
+  inspection: string | null;
   registered: boolean | null;
   date: string; verifiedBy: string | null; receivedBy: string | null; items: string;
 }
@@ -16,7 +17,7 @@ interface OpenPo {
   id: number; poNo: number; registered: boolean | null; supplierName: string | null; outstanding: OutLine[];
 }
 
-const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "" });
+const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "", invoiceQty: "" });
 
 export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
   const router = useRouter();
@@ -40,6 +41,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
   const [manualGrnNo, setManualGrnNo] = useState(""); // unregistered only — blank = auto
   const [gatePassNo, setGatePassNo] = useState("");
   const [invNo, setInvNo] = useState("");
+  const [dcNo, setDcNo] = useState("");
+  // The incoming-material inspection. Its date starts empty: the inspector writes it.
+  const [inspection, setInspection] = useState<GrnInspection>(() => parseInspection(null));
+  const setInsp = (patch: Partial<GrnInspection>) => setInspection(x => ({ ...x, ...patch }));
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [verifiedBy, setVerifiedBy] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
@@ -47,7 +52,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   function resetForm() {
     setEditId(null); setEditNo(null); setRegistered(null);
-    setPoId(""); setPoNoManual(""); setManualGrnNo(""); setGatePassNo(""); setInvNo(""); setDate(new Date().toISOString().slice(0, 10));
+    setPoId(""); setPoNoManual(""); setManualGrnNo(""); setGatePassNo(""); setInvNo(""); setDcNo(""); setInspection(parseInspection(null)); setDate(new Date().toISOString().slice(0, 10));
     setVerifiedBy(""); setReceivedBy("");
     setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
   }
@@ -64,12 +69,13 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     setEditId(g.id); setEditNo(g.grnNo); setRegistered(g.registered); setPoId("");
     setPoNoManual(g.poNo != null ? String(g.poNo) : "");
     setManualGrnNo(g.registered === false ? String(g.grnNo) : "");
-    setGatePassNo(g.gatePassNo || ""); setInvNo(g.invNo || "");
+    setGatePassNo(g.gatePassNo || ""); setInvNo(g.invNo || ""); setDcNo(g.dcNo || "");
+    setInspection(parseInspection(g.inspection));
     setDate((g.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setVerifiedBy(g.verifiedBy || ""); setReceivedBy(g.receivedBy || "");
     const its = parseItems<GrnItem>(g.items);
     setItems(its.length
-      ? its.map((it, i) => ({ srNo: i + 1, item: it.item || "", quantity: it.quantity || "", remarks: it.remarks || "", poSrNo: it.poSrNo }))
+      ? its.map((it, i) => ({ srNo: i + 1, item: it.item || "", quantity: it.quantity || "", remarks: it.remarks || "", poSrNo: it.poSrNo, invoiceQty: it.invoiceQty || "" }))
       : [blankItem(1)]);
     setErr(""); setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -83,11 +89,11 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     // Only the lines still awaiting delivery, pre-filled with what's outstanding.
     if (p.outstanding.length) {
       setItems(p.outstanding.map((o, i) => ({
-        srNo: i + 1, item: o.item, quantity: o.remaining, remarks: "", poSrNo: o.poSrNo,
+        srNo: i + 1, item: o.item, quantity: o.remaining, remarks: "", poSrNo: o.poSrNo, invoiceQty: "",
       })));
     }
   }
-  function setItem(i: number, k: "item" | "quantity" | "remarks", v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
+  function setItem(i: number, k: "item" | "quantity" | "remarks" | "invoiceQty", v: string) { setItems(l => l.map((it, idx) => idx === i ? { ...it, [k]: v } : it)); }
   function addRow() { setItems(l => [...l, blankItem(l.length + 1)]); }
   function removeRow(i: number) { setItems(l => l.filter((_, idx) => idx !== i).map((it, idx) => ({ ...it, srNo: idx + 1 }))); }
 
@@ -100,7 +106,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       const clean = items.filter(it => it.item.trim());
       const res = await fetch(editId ? `/api/procurement/grns/${editId}` : "/api/procurement/grns", {
         method: editId ? "PUT" : "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, manualGrnNo, registered, gatePassNo, invNo, date, verifiedBy, receivedBy, items: clean }),
+        body: JSON.stringify({ poId: poId || null, poNo: poNoManual, manualGrnNo, registered, gatePassNo, invNo, dcNo, inspection, date, verifiedBy, receivedBy, items: clean }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
       setOpen(false); resetForm(); router.refresh();
@@ -140,7 +146,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
     const hay = [
       `#${docNoLabel(g.grnNo, g.registered)}`, String(g.grnNo),
       g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "", String(g.poNo ?? ""),
-      g.gatePassNo, g.invNo, g.receivedBy, g.verifiedBy,
+      g.gatePassNo, g.invNo, g.dcNo, g.receivedBy, g.verifiedBy,
       ...its.flatMap(it => [it.item, it.remarks]),
     ].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(qs);
@@ -226,6 +232,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
               <input value={invNo} onChange={e => setInvNo(e.target.value)} className="auth-input"
                 placeholder="Supplier invoice #" />
             </Field>
+            <Field label="Delivery Challan (DC) No">
+              <input value={dcNo} onChange={e => setDcNo(e.target.value)} className="auth-input"
+                placeholder="Supplier DC #" />
+            </Field>
             <Field label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className="auth-input" /></Field>
           </div>
 
@@ -237,13 +247,20 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
           )}
           <div style={{ overflow: "auto" }}>
             <table style={{ width: "100%" }}>
-              <thead><tr><th style={{ width: 44 }}>S.No</th><th>Item(s)</th><th style={{ width: 130 }}>Quantity</th><th>Remarks</th><th style={{ width: 36 }}></th></tr></thead>
+              <thead><tr><th style={{ width: 44 }}>S.No</th><th>Item(s)</th><th style={{ width: 110 }}>Invoice Qty</th><th style={{ width: 120 }}>Received Qty</th><th style={{ width: 70, textAlign: "center" }}>Diff.</th><th>Remarks</th><th style={{ width: 36 }}></th></tr></thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i}>
                     <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
                     <td><input value={it.item} onChange={e => setItem(i, "item", e.target.value)} className="auth-input" style={cellInput} /></td>
+                    <td><input value={it.invoiceQty || ""} onChange={e => setItem(i, "invoiceQty", e.target.value)} className="auth-input" style={cellInput} placeholder="as invoiced" /></td>
                     <td><input value={it.quantity} onChange={e => setItem(i, "quantity", e.target.value)} className="auth-input" style={cellInput} /></td>
+                    <td style={{ textAlign: "center", fontWeight: 700 }}>{(() => {
+                      // Received − invoiced: red when short, amber when over.
+                      const d = qtyDifference(it.invoiceQty, it.quantity);
+                      return d === null ? <span style={{ color: "var(--text3)" }}>—</span>
+                        : <span style={{ color: d < 0 ? "#DC2626" : d > 0 ? "#B45309" : "#15803D" }}>{d > 0 ? `+${d}` : d}</span>;
+                    })()}</td>
                     <td><input value={it.remarks || ""} onChange={e => setItem(i, "remarks", e.target.value)} className="auth-input" style={cellInput} placeholder="e.g. 2 short, damaged…" /></td>
                     <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
                   </tr>
@@ -252,6 +269,42 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
             </table>
           </div>
           <button onClick={addRow} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add row</button>
+
+          {/* The incoming-material inspection, printed as part of this GRR. */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "16px 0 6px" }}>INCOMING MATERIAL INSPECTION</div>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12, background: "var(--bg2)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+              <Field label="Date of inspection (filled by the inspector)">
+                <input type="date" value={inspection.date} onChange={e => setInsp({ date: e.target.value })} className="auth-input" />
+              </Field>
+              <Field label="Board grammage">
+                <input value={inspection.grammage} onChange={e => setInsp({ grammage: e.target.value })} className="auth-input" placeholder="e.g. 350 gsm" />
+              </Field>
+              <Field label="Result">
+                <select value={inspection.result} onChange={e => setInsp({ result: e.target.value as GrnInspection["result"] })} className="auth-input">
+                  <option value="">— not inspected yet —</option>
+                  {Object.entries(INSPECTION_RESULTS).map(([k, r]) => <option key={k} value={k}>{r.choice}</option>)}
+                </select>
+              </Field>
+              <Field label="Checked by (inspector)">
+                <input value={inspection.checkedBy} onChange={e => setInsp({ checkedBy: e.target.value })} className="auth-input" placeholder="e.g. Saqib Khan" />
+              </Field>
+            </div>
+            <div style={{ display: "flex", gap: 18, flexWrap: "wrap", margin: "12px 0 4px", fontSize: 13 }}>
+              {([
+                ["designSpec", "As per required design specification"],
+                ["approvedSample", "As per approved sample"],
+                ["approvedSupplier", "As per approved supplier"],
+              ] as const).map(([k, label]) => (
+                <label key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="checkbox" checked={inspection[k]} onChange={e => setInsp({ [k]: e.target.checked })} /> {label}
+                </label>
+              ))}
+            </div>
+            <Field label="Remarks">
+              <input value={inspection.remarks} onChange={e => setInsp({ remarks: e.target.value })} className="auth-input" placeholder="e.g. GOOD" />
+            </Field>
+          </div>
 
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px" }}>SIGN-OFF</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
@@ -280,10 +333,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
       </div>
 
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","Quantity","Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,12,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,it.quantity,it.remarks,g.receivedBy,g.verifiedBy]);})}} />
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,g.receivedBy,g.verifiedBy]);})}} />
       <div style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, or item…"
+          placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, DC, or item…"
           style={searchInput} />
       </div>
 

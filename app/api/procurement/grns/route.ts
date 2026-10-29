@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, nextGrnNo, recomputePoStatus } from "@/lib/procurement";
+import { ensureProcurementTables, nextGrnNo, recomputePoStatus, cleanInspection } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +56,9 @@ export async function POST(req: Request) {
     registered,
     gatePassNo: b.gatePassNo || null,
     invNo: b.invNo || null,
+    dcNo: String(b.dcNo || "").trim().slice(0, 60) || null,
+    // The inspection travels with the GRR; only its known fields are kept.
+    inspection: JSON.stringify(cleanInspection(b.inspection)),
     date: b.date || new Date().toISOString().slice(0, 10),
     receivedBy: b.receivedBy || null,
     verifiedBy: b.verifiedBy || null,

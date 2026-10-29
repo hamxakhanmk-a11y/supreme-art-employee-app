@@ -585,6 +585,9 @@ export const grns = pgTable("grns", {
   grnNo: integer("grn_no").notNull(),                // auto running serial (internal doc no)
   gatePassNo: varchar("gate_pass_no", { length: 60 }), // inward gate pass — entered by hand
   invNo: varchar("inv_no", { length: 60 }),          // supplier invoice number — entered by hand
+  dcNo: varchar("dc_no", { length: 60 }),            // supplier's delivery challan number — by hand
+  // The incoming-material inspection (GrnInspection in lib/procurement.ts), as JSON.
+  inspection: text("inspection"),
   poId: integer("po_id"),                            // nullable — GRN can be standalone
   poNo: integer("po_no"),                            // denormalised for display
   // Tax status, inherited from the PO. true = registered (15000 series),

@@ -41,7 +41,61 @@ export interface PoItem {
 // reason…). `poSrNo` links the line back to the PO line it fulfils so partial
 // receipts add up correctly across multiple GRNs — both optional so GRNs saved
 // before this change (and standalone GRNs) still parse.
-export interface GrnItem { srNo: number; item: string; quantity: string; remarks?: string; poSrNo?: number }
+// `invoiceQty` is what the supplier's invoice says, written in at inspection;
+// against the received `quantity` it gives the difference the inspection shows.
+export interface GrnItem { srNo: number; item: string; quantity: string; remarks?: string; poSrNo?: number; invoiceQty?: string }
+
+// The incoming-material inspection, kept on the GRR itself (grns.inspection,
+// JSON) — the paper inspection report the store fills when goods arrive. Its
+// date stays empty until the inspector writes it in.
+export type InspectionResult = "" | "accepted" | "partial" | "rejected";
+export interface GrnInspection {
+  date: string;
+  designSpec: boolean;        // as per required design specification
+  approvedSample: boolean;    // as per approved sample
+  approvedSupplier: boolean;  // as per approved supplier
+  grammage: string;           // board grammage, as written
+  result: InspectionResult;
+  remarks: string;
+  checkedBy: string;
+}
+export const INSPECTION_RESULTS: Record<Exclude<InspectionResult, "">, { label: string; color: string; bg: string; choice: string }> = {
+  accepted: { choice: "Accepted",        label: "GOOD RECEIVED – ACCEPTED",        color: "#14532D", bg: "#dcfce7" },
+  partial:  { choice: "Partly accepted", label: "GOOD RECEIVED – PARTLY ACCEPTED", color: "#92400E", bg: "#fef3c7" },
+  rejected: { choice: "Rejected",        label: "GOOD RECEIVED – REJECTED",        color: "#991B1B", bg: "#fee2e2" },
+};
+const blankInspection = (): GrnInspection => ({
+  date: "", designSpec: false, approvedSample: false, approvedSupplier: false,
+  grammage: "", result: "", remarks: "", checkedBy: "",
+});
+// Only the known fields, each the right kind — whatever was stored or sent.
+export function cleanInspection(v: unknown): GrnInspection {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  const text = (x: unknown, max: number) => String(x ?? "").trim().slice(0, max);
+  const date = text(o.date, 10);
+  const result = String(o.result ?? "");
+  return {
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+    designSpec: o.designSpec === true,
+    approvedSample: o.approvedSample === true,
+    approvedSupplier: o.approvedSupplier === true,
+    grammage: text(o.grammage, 60),
+    result: result in INSPECTION_RESULTS ? (result as InspectionResult) : "",
+    remarks: text(o.remarks, 500),
+    checkedBy: text(o.checkedBy, 120),
+  };
+}
+export function parseInspection(raw: string | null | undefined): GrnInspection {
+  if (!raw) return blankInspection();
+  try { return cleanInspection(JSON.parse(raw)); } catch { return blankInspection(); }
+}
+// Received − invoiced: negative is a shortfall. Null unless both are numbers.
+export function qtyDifference(invoiceQty: string | undefined, received: string | undefined): number | null {
+  const a = String(invoiceQty ?? "").trim(), b = String(received ?? "").trim();
+  if (!a || !b) return null;
+  const inv = Number(a), rec = Number(b);
+  return Number.isFinite(inv) && Number.isFinite(rec) ? Math.round((rec - inv) * 1000) / 1000 : null;
+}
 
 // Default sales-tax percentage seeded on every new PO line.
 export const PO_DEFAULT_TAX = 18;
@@ -415,6 +469,8 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS dc_no varchar(60);
+  ALTER TABLE grns ADD COLUMN IF NOT EXISTS inspection text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS registered boolean;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_ntn varchar(40);
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_strn varchar(40);
