@@ -155,7 +155,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Goods Receipts Reports (Store)</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Record goods received against a PO, or standalone.</p>
@@ -167,7 +167,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       </div>
 
       {open && canEdit && (
-        <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+        <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
             {editId ? `✏️ Edit GRR #${docNoLabel(editNo, registered)}` : "＋ New GRR"}
           </div>
@@ -318,21 +318,21 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
       )}
 
       {/* Registered / Unregistered GRR lists */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
       </div>
 
       {/* Final (invoice in) vs Pending (awaiting invoice) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <FilterTab label="All" n={invCounts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
         <FilterTab label="Final (invoice in)" n={invCounts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
         <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
       </div>
 
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,g.receivedBy,g.verifiedBy]);})}} />
-      <div style={{ marginBottom: 10 }}>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} />
+      <div className="no-print" style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, DC, or item…"
           style={searchInput} />
@@ -340,10 +340,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
-          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th style={{ textAlign: "center" }}>Design Spec</th><th style={{ textAlign: "center" }}>Appr. Sample</th><th style={{ textAlign: "center" }}>Appr. Supplier</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={13} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(g => (
               <tr
                 key={g.id}
@@ -361,7 +361,8 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
                 <td style={{ textAlign: "center" }}><QcBadge result={parseInspection(g.inspection).result} /></td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                <QcPoints raw={g.inspection} />
+                <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(g)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(g)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
@@ -372,6 +373,23 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </table>
       </div>
     </div>
+  );
+}
+
+// The checks a GRR's QC result rests on. Ticked or not only means something
+// once it has been inspected, so until then they read "—".
+function QcPoints({ raw }: { raw: string | null }) {
+  const ins = parseInspection(raw);
+  const point = (ok: boolean) => !ins.result
+    ? <span style={{ color: "var(--text3)" }}>—</span>
+    : ok ? <b style={{ color: "#15803D" }} title="Yes">✓</b> : <b style={{ color: "#DC2626" }} title="No">✗</b>;
+  return (
+    <>
+      <td style={{ textAlign: "center" }}>{point(ins.designSpec)}</td>
+      <td style={{ textAlign: "center" }}>{point(ins.approvedSample)}</td>
+      <td style={{ textAlign: "center" }}>{point(ins.approvedSupplier)}</td>
+      <td>{ins.grammage || <span style={{ color: "var(--text3)" }}>—</span>}</td>
+    </>
   );
 }
 

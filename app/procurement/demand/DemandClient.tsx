@@ -99,7 +99,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Material Demand Forms</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Raise a demand — it flows to Purchase Orders. <span style={{ color: "var(--text3)" }}>PUR/QR/005</span></p>
@@ -112,7 +112,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
       </div>
 
       {open && canEdit && (
-        <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+        <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{editId ? `✏️ Edit Demand #${editNo}` : "＋ New Demand"}</div>
           {err && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{err}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
@@ -144,7 +144,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
       )}
 
       <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} />
-      <div style={{ marginBottom: 10 }}>
+      <div className="no-print" style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search demands — number, person, department, or item description…"
           style={searchInput} />
@@ -155,7 +155,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
           <thead>
             <tr>
               <th>Demand #</th><th>Date</th><th>Required by</th><th>Demand by</th>
-              <th>Department</th><th className="num">Items</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th>
+              <th>Department</th><th className="num">Items</th><th>Status</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -177,7 +177,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
                 <td><StatusBadge status={d.status} /></td>
                 {/* stopPropagation so Edit/Delete don’t also fire the row’s
                     navigation on the way to their own click handler. */}
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/demand/${d.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(d)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(d)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}

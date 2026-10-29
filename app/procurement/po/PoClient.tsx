@@ -240,7 +240,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <div>
           <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Create a PO from a demand, or standalone. <span style={{ color: "var(--text3)" }}>PUR/QR/006</span></p>
@@ -256,7 +256,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       </div>
 
       {open && canEdit && (
-        <div className="card" style={{ marginBottom: 18, padding: 18 }}>
+        <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
           <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
             {editId ? `✏️ Edit PO #${docNoLabel(editNo, registered)}` : `＋ New ${registered === false ? "Unregistered" : "Registered"} PO`}
           </div>
@@ -413,7 +413,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       )}
 
       {/* Registered / Unregistered lists = the PO register, filtered by tax status */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
@@ -422,11 +422,11 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       </div>
 
       {taxFilter === "unreg" && (
-        <UnregLimitChecker rows={rows} suppliers={supplierList} />
+        <div className="no-print"><UnregLimitChecker rows={rows} suppliers={supplierList} /></div>
       )}
 
       <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} />
-      <div style={{ marginBottom: 10 }}>
+      <div className="no-print" style={{ marginBottom: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 Search POs — number, supplier, or item description…"
           style={searchInput} />
@@ -435,7 +435,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
           <thead>
-            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+            <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr>
           </thead>
           <tbody>
             {shown.length === 0 ? (
@@ -464,7 +464,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
                 <td><TaxCell p={p} /></td>
                 <td><StatusBadge status={p.status} /></td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(p)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
                   {canEdit && <button onClick={() => del(p)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
