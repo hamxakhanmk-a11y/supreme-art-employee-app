@@ -180,7 +180,7 @@ export default function RolesClient() {
             view its sections but not make changes. The Owner (Super Admin) always has full access.
           </p>
         </div>
-        <button onClick={() => setShowNew(v => !v)} className="btn btn-primary" style={{ whiteSpace: "nowrap" }}>
+        <button onClick={() => setShowNew(v => !v)} className="btn btn-restricted" style={{ whiteSpace: "nowrap" }}>
           {showNew ? "✕ Close" : "＋ New role"}
         </button>
       </div>
@@ -201,7 +201,7 @@ export default function RolesClient() {
             <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
               style={{ width: 48, height: 38, padding: 2, cursor: "pointer" }} />
           </div>
-          <button type="submit" disabled={creating || !newLabel.trim()} className="btn btn-primary">
+          <button type="submit" disabled={creating || !newLabel.trim()} className="btn btn-restricted">
             {creating ? "Creating…" : "Create role"}
           </button>
           <span style={{ fontSize: 11.5, color: "var(--text3)" }}>
@@ -276,7 +276,7 @@ export default function RolesClient() {
                   </div>
 
                   <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                    <button onClick={() => save(r.role)} disabled={savingRole === r.role} style={saveBtn(accent)}>
+                    <button onClick={() => save(r.role)} disabled={savingRole === r.role} style={saveBtn()}>
                       {savingRole === r.role ? "Saving…" : "Save"}
                     </button>
                     {savedRole === r.role && <span style={{ fontSize: 13, color: "#166534", fontWeight: 600 }}>Saved ✓</span>}
@@ -338,7 +338,7 @@ const linkBtn: React.CSSProperties = {
   background: "none", border: "none", color: "var(--brand)", fontWeight: 600,
   fontSize: 12, cursor: "pointer", padding: "2px 4px",
 };
-const saveBtn = (accent: string): React.CSSProperties => ({
-  background: accent, color: "#fff", border: "none", padding: "8px 20px",
+const saveBtn = (): React.CSSProperties => ({
+  background: "#111", color: "#fff", border: "none", padding: "8px 20px",
   borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer",
 });
