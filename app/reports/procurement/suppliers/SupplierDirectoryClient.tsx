@@ -232,6 +232,18 @@ export default function SupplierDirectoryClient({
     return flat;
   }, [rows, rateNotes, q, supplierFilter, fromDate, toDate]);
 
+  // ---- Rate history (By product view) ----
+  // Every order of one product from one supplier, newest first. Built from all
+  // of the rows rather than the date-filtered ones, so the history is complete
+  // whatever range the list above is showing.
+  const [historyFor, setHistoryFor] = useState<{ product: string; supplier: string } | null>(null);
+  const history = useMemo(() => {
+    if (!historyFor) return [];
+    return rows
+      .filter(r => r.product === historyFor.product && r.supplier === historyFor.supplier)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo);
+  }, [rows, historyFor]);
+
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   async function exportXlsx() {
@@ -376,11 +388,12 @@ export default function SupplierDirectoryClient({
                 <th>Concerned Person</th>
                 <th style={{ width: 150 }}>Rate</th>
                 <th style={{ width: 80 }}>Tax %</th>
+                <th style={{ width: 44, textAlign: "center" }} title="Rate history">H</th>
               </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={10} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={11} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((r, i) => (
                 <tr
@@ -464,12 +477,79 @@ export default function SupplierDirectoryClient({
                       </td>
                     </>
                   )}
+                  <td style={{ textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                    <button
+                      className="btn btn-xs"
+                      onClick={() => setHistoryFor({ product: r.product, supplier: r.supplier })}
+                      title="Rate history — every order of this product from this supplier"
+                      style={{ minWidth: 26, padding: "2px 7px", fontWeight: 800 }}
+                    >H</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {historyFor && (
+        <div onClick={() => setHistoryFor(null)} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+        }}>
+          <div onClick={ev => ev.stopPropagation()} className="card" style={{ maxWidth: 560, width: "100%", padding: 20, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Rate history</div>
+                <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>{historyFor.product} — {historyFor.supplier}</div>
+              </div>
+              <button className="btn btn-sm" onClick={() => setHistoryFor(null)}>Close</button>
+            </div>
+            {(() => {
+              const rates = history.map(h => h.rate).filter((x): x is number => x != null);
+              const uom = history.find(h => h.uom)?.uom || "";
+              const money = (n: number) => rateLabel(n, uom);
+              return (
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap", fontSize: 12.5, margin: "12px 0", color: "var(--text2)" }}>
+                  <span><b style={{ color: "var(--text)" }}>{history.length}</b> order{history.length === 1 ? "" : "s"}</span>
+                  {rates.length > 0 && <>
+                    <span>Lowest <b style={{ color: "#15803D" }}>{money(Math.min(...rates))}</b></span>
+                    <span>Highest <b style={{ color: "#DC2626" }}>{money(Math.max(...rates))}</b></span>
+                  </>}
+                </div>
+              );
+            })()}
+            <div style={{ overflowY: "auto" }}>
+              <table className="rpt-table">
+                <thead>
+                  <tr><th style={{ width: 100 }}>Date</th><th style={{ width: 80 }}>PO #</th><th>Rate</th><th style={{ width: 70 }}>Tax %</th><th style={{ width: 90 }}>Change</th></tr>
+                </thead>
+                <tbody>
+                  {history.map((h, i) => {
+                    // Compared with the next row down, i.e. the previous order that had a rate.
+                    const prev = history.slice(i + 1).find(p => p.rate != null);
+                    const diff = h.rate != null && prev?.rate != null ? h.rate - prev.rate : null;
+                    return (
+                      <tr key={`${h.poId}-${i}`} className="rpt-row-clickable" onClick={() => openPo(h.poId)} title="Open this Purchase Order">
+                        <td>{h.date ? fmtDate(h.date) : "—"}</td>
+                        <td>{h.poNo}</td>
+                        <td>{rateLabel(h.rate, h.uom)}</td>
+                        <td>{taxPctLabel(h.rate, h.taxPct)}</td>
+                        <td style={{ fontWeight: 700, color: diff == null || diff === 0 ? "var(--text3)" : diff > 0 ? "#DC2626" : "#15803D" }}>
+                          {diff == null ? "—" : diff === 0 ? "same" : `${diff > 0 ? "▲" : "▼"} ${fmtMoney(Math.abs(diff), false)}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 11, color: "var(--text3)", margin: "10px 0 0" }}>
+              Rates as entered on each Purchase Order. A rate noted by hand on the list is not part of this history.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
