@@ -415,6 +415,9 @@ th.num, th.num-strong { text-align: right; }
 }
 .rpt-table tbody tr:last-child td { border-bottom: none; }
 .rpt-row-clickable { cursor: pointer; }
+.rpt-table-wrap--fit { width: fit-content; max-width: 100%; }
+.rpt-table-wrap--fit .rpt-table { width: auto; }
+.rpt-table-wrap--fit .rpt-table th, .rpt-table-wrap--fit .rpt-table td { padding: 7px 10px; }
 .rpt-total-row td {
   position: sticky; bottom: 0; z-index: 2;
   background: var(--bg2); font-weight: 700; color: var(--text);
@@ -1040,6 +1043,12 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .toolbar-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
 .toolbar-row select, .toolbar-row input { padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
 .btn-xs { padding: 3px 9px; font-size: 11.5px; }
+/* A list's table hugs its text: columns as wide as their content, no stretched
+   gaps, wrapping before it scrolls sideways. Printed pages still fill the sheet. */
+.fit-card { padding: 0; overflow: auto; width: fit-content; max-width: 100%; }
+.fit-card table { width: auto; }
+.fit-card th, .fit-card td { padding: 7px 10px; }
+@media print { .fit-card { width: 100%; } .fit-card table { width: 100%; } }
 .mini-stat {
   display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px;
   background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--brand); border-radius: 8px;

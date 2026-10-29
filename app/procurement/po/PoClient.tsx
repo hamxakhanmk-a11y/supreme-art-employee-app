@@ -240,20 +240,16 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Orders</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Create a PO from a demand, or standalone. <span style={{ color: "var(--text3)" }}>PUR/QR/006</span></p>
-        </div>
-        {canEdit && (open
-          ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button>
-          : (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}
-              {taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}
-            </div>
-          ))}
-      </div>
+      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 PO, supplier, item…" title="Search POs — number, supplier, or item description" style={searchInput} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary btn-sm">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn btn-sm" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
+        <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
+        <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
+        <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
+        {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
+      </>} />
+      {taxFilter === "unreg" && (
+        <div className="no-print"><UnregLimitChecker rows={rows} suppliers={supplierList} /></div>
+      )}
+
 
       {open && canEdit && (
         <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
@@ -412,27 +408,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         </div>
       )}
 
-      {/* Registered / Unregistered lists = the PO register, filtered by tax status */}
-      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
-        <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
-        <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
-        {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
-        <div style={{ flex: 1 }} />
-      </div>
-
-      {taxFilter === "unreg" && (
-        <div className="no-print"><UnregLimitChecker rows={rows} suppliers={supplierList} /></div>
-      )}
-
-      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} />
-      <div className="no-print" style={{ marginBottom: 10 }}>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Search POs — number, supplier, or item description…"
-          style={searchInput} />
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="card fit-card">
         <table>
           <thead>
             <tr><th>PO #</th><th>Demand #</th><th>Date</th><th>Supplier</th><th>Delivery</th><th className="num">Items</th><th>Tax status</th><th>Status</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr>
@@ -465,9 +441,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td><TaxCell p={p} /></td>
                 <td><StatusBadge status={p.status} /></td>
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
-                  <Link href={`/procurement/po/${p.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
-                  {canEdit && <button onClick={() => openEdit(p)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(p)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
+                  <Link href={`/procurement/po/${p.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
+                  {canEdit && <button onClick={() => openEdit(p)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
+                  {canEdit && <button onClick={() => del(p)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}
@@ -563,7 +539,7 @@ function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
 }) {
   return (
     <button onClick={onClick} style={{
-      padding: "6px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+      padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
       border: `1px solid ${active ? color : "var(--border)"}`,
       background: active ? color : "transparent",
       color: active ? "#fff" : "var(--text2)",
@@ -591,4 +567,4 @@ const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repea
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
 const numInput: React.CSSProperties = { width: "100%", minWidth: 50, textAlign: "right" };
 const calcCell: React.CSSProperties = { textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text2)", whiteSpace: "nowrap", paddingRight: 6 };
-const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };
+const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };

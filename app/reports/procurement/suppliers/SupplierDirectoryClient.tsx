@@ -301,54 +301,48 @@ export default function SupplierDirectoryClient({
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div>
-          <h1 className="procurement-report-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Product / Supplier Directory</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Which supplier a product was ordered from, and at what rate, drawn from Purchase Order history. Read-only — click a row to open its PO.
-          </p>
-        </div>
-        <Link href="/reports/procurement" className="btn btn-back btn-sm">← Procurement Report</Link>
+      {/* Row 1: search, supplier, and the way back. Row 2: the view tabs, the date range, Excel. */}
+      <div className="toolbar-row">
+        <input
+          value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Product or supplier…"
+          style={{ width: 240 }}
+        />
+        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} style={{ maxWidth: 220 }}>
+          <option value="">All suppliers</option>
+          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <div style={{ flex: 1 }} />
+        <Link href="/reports/procurement" className="btn btn-back btn-sm">← Back</Link>
       </div>
-
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+      <div className="toolbar-row">
         {!byProductOnly && (
           <div className="tabs">
             <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => setView("orders")}>Every order</button>
             <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => setView("byProduct")}>By product</button>
           </div>
         )}
-        <input
-          value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search product or supplier…"
-          style={{ maxWidth: 260 }}
-        />
-        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} style={{ maxWidth: 220 }}>
-          <option value="">All suppliers</option>
-          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title="From date" style={{ width: 145 }} />
-        <span style={{ color: "var(--text3)" }}>–</span>
-        <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
+        <label className="head-filter">From <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} style={{ width: 138 }} /></label>
+        <label className="head-filter">To <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} style={{ width: 138 }} /></label>
         <div style={{ flex: 1 }} />
-        <button className="btn btn-sm" disabled={exporting || !!(fromDate && toDate && fromDate > toDate)} onClick={exportXlsx}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
         {(exportError || (fromDate && toDate && fromDate > toDate)) && <span role="alert">{exportError || "From date must be on or before To date."}</span>}
+        <button className="btn btn-sm" disabled={exporting || !!(fromDate && toDate && fromDate > toDate)} onClick={exportXlsx}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
       </div>
 
-      <div className="rpt-table-wrap">
+      <div className="rpt-table-wrap rpt-table-wrap--fit">
         {activeView === "orders" ? (
           <table className="rpt-table">
             <thead>
               <tr>
-                <th style={{ width: 100 }}>Date</th>
+                <th>Date</th>
                 <th>Product / Description</th>
                 <th>Supplier</th>
                 <th>Brand</th>
-                <th style={{ width: 150 }}>Rate</th>
-                <th style={{ width: 80 }}>Tax %</th>
-                <th className="num" style={{ width: 110 }}>Gross</th>
-                <th className="num" style={{ width: 120 }}>Tax</th>
-                <th className="num" style={{ width: 110 }}>Net Value</th>
+                <th>Rate</th>
+                <th>Tax %</th>
+                <th className="num">Gross</th>
+                <th className="num">Tax</th>
+                <th className="num">Net Value</th>
               </tr>
             </thead>
             <tbody>
@@ -393,12 +387,12 @@ export default function SupplierDirectoryClient({
                 <th>Supplier</th>
                 <th>Brand</th>
                 <th>Location</th>
-                <th style={{ width: 110 }}>NTN</th>
-                <th style={{ width: 110 }}>STRN</th>
-                <th style={{ width: 120 }}>Contact #</th>
+                <th>NTN</th>
+                <th>STRN</th>
+                <th>Contact #</th>
                 <th>Concerned Person</th>
-                <th style={{ width: 200 }}>Rate</th>
-                <th style={{ width: 80 }}>Tax %</th>
+                <th>Rate</th>
+                <th>Tax %</th>
               </tr>
             </thead>
             <tbody>
@@ -524,7 +518,7 @@ export default function SupplierDirectoryClient({
             <div style={{ overflowY: "auto" }}>
               <table className="rpt-table">
                 <thead>
-                  <tr><th style={{ width: 100 }}>Date</th><th style={{ width: 80 }}>PO #</th><th>Rate</th><th style={{ width: 70 }}>Tax %</th><th style={{ width: 90 }}>Change</th></tr>
+                  <tr><th>Date</th><th>PO #</th><th>Rate</th><th>Tax %</th><th>Change</th></tr>
                 </thead>
                 <tbody>
                   {history.map((h, i) => {

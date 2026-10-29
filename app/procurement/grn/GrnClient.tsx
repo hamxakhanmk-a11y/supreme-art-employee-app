@@ -155,16 +155,16 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Goods Receipts Reports (Store)</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Record goods received against a PO, or standalone.</p>
-        </div>
-        {canEdit && (open
-          ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button>
-          : <button onClick={startCreate} className="btn btn-primary">＋ New GRR</button>
-        )}
-      </div>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>) : null} tabs={<>
+        <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
+        <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
+        <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
+        <span style={{ width: 1, height: 18, background: "var(--border2)", margin: "0 4px" }} />
+        <FilterTab label="All" n={invCounts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
+        <FilterTab label="Final (invoice in)" n={invCounts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
+        <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
+      </>} />
+
 
       {open && canEdit && (
         <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
@@ -317,28 +317,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </div>
       )}
 
-      {/* Registered / Unregistered GRR lists */}
-      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
-        <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
-        <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
-      </div>
-
-      {/* Final (invoice in) vs Pending (awaiting invoice) */}
-      <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <FilterTab label="All" n={invCounts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
-        <FilterTab label="Final (invoice in)" n={invCounts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
-        <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
-      </div>
-
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} />
-      <div className="no-print" style={{ marginBottom: 10 }}>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Search GRRs — number, PO, gate pass, invoice, DC, or item…"
-          style={searchInput} />
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="card fit-card">
         <table>
           <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th style={{ textAlign: "center" }}>Design Spec</th><th style={{ textAlign: "center" }}>Appr. Sample</th><th style={{ textAlign: "center" }}>Appr. Supplier</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
@@ -363,9 +342,9 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <td style={{ textAlign: "center" }}><QcBadge result={parseInspection(g.inspection).result} /></td>
                 <QcPoints raw={g.inspection} />
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
-                  <Link href={`/procurement/grn/${g.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
-                  {canEdit && <button onClick={() => openEdit(g)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(g)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
+                  <Link href={`/procurement/grn/${g.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
+                  {canEdit && <button onClick={() => openEdit(g)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
+                  {canEdit && <button onClick={() => del(g)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}
@@ -402,7 +381,7 @@ function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
 }) {
   return (
     <button onClick={onClick} style={{
-      padding: "6px 13px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+      padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
       border: `1px solid ${active ? color : "var(--border)"}`,
       background: active ? color : "transparent",
       color: active ? "#fff" : "var(--text2)",
@@ -410,4 +389,4 @@ function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
   );
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
-const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };
+const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };

@@ -105,51 +105,39 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           <div className="master-heading"><h2>PROCUREMENT MASTER REPORT</h2><div className="master-control"><span>{meta.code}</span><span>Date: {meta.date}</span><span>Issue Status: {meta.issue}</span></div></div>
         </div>
       </div>
-      <div className="no-print" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Procurement Master Report</h1>
-        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-          Every ordered item traced Demand → PO → GRR, with its delivery status. Click any number to open the document.
-        </p>
+      {/* Row 1: search and supplier. Row 2: the received-status pills, the date range
+          (a GET form, laid out inline), and Excel / Print at the right end. */}
+      <div className="no-print toolbar-row">
+        <input value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 Item, supplier, PO / GRR…" title="Description, supplier, demand / PO / GRR / gate pass / invoice / DC / QC"
+          style={{ borderRadius: 8, border: "1px solid var(--border)", width: 240 }} />
+        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
+          style={{ borderRadius: 8, border: "1px solid var(--border)", maxWidth: 220 }}>
+          <option value="">All suppliers ({suppliers.length})</option>
+          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
       </div>
-
-      {/* Date range (server) */}
-      <form method="GET" className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, fontSize: 13, color: "var(--text2)" }}>
-        <span style={{ fontWeight: 600 }}>From</span>
-        <input type="date" name="from" defaultValue={from} style={{ width: 150 }} />
-        <span>→</span>
-        <input type="date" name="to" defaultValue={to} style={{ width: 150 }} />
-        <button type="submit" className="btn btn-primary btn-sm">Apply</button>
-      </form>
-
-      {/* Status filter + search */}
-      <div className="no-print" style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="no-print toolbar-row">
         {FILTERS.map(f => (
           <button key={f.key} onClick={() => setFilter(f.key)} style={{
-            padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer",
+            padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, cursor: "pointer",
             border: `1px solid ${filter === f.key ? "var(--brand)" : "var(--border)"}`,
             background: filter === f.key ? "var(--brand)" : "var(--bg)",
             color: filter === f.key ? "#fff" : "var(--text)",
           }}>{f.label} ({counts[f.key]})</button>
         ))}
-        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, maxWidth: 220, marginLeft: 6 }}>
-          <option value="">All suppliers ({suppliers.length})</option>
-          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Description, supplier, demand / PO / GRR / gate pass…"
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 280 }} />
+        <form method="GET" style={{ display: "contents" }}>
+          <label className="head-filter">From <input type="date" name="from" defaultValue={from} style={{ width: 138 }} /></label>
+          <label className="head-filter">To <input type="date" name="to" defaultValue={to} style={{ width: 138 }} /></label>
+          <button type="submit" className="btn btn-primary btn-sm">Apply</button>
+        </form>
         <div style={{ flex: 1 }} />
-        <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0 || exporting}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
-        <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
-      </div>
-
-      <div className="no-print" style={{ fontSize: 13, color: "var(--text2)", marginBottom: 10 }}>
-        Showing <strong>{shown.length}</strong> of {rows.length} item{rows.length === 1 ? "" : "s"} in range.
+        <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0 || exporting}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
+        <button onClick={() => window.print()} className="btn btn-sm btn-print">🖨 Print</button>
       </div>
 
       {exportError && <p className="no-print" role="alert">{exportError}</p>}
-      <div className="card master-table" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+      <div className="card master-table" style={{ WebkitOverflowScrolling: "touch" }}>
         <table>
           <thead>
             <tr>
@@ -206,14 +194,11 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
         </table>
       </div>
 
-      <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 10 }}>
-        One line per ordered item. <strong>Received</strong> once its full quantity is booked on a GRR,
-        <strong> Partially received</strong> when some has arrived, <strong>Not received</strong> when none has.
-        Items only demanded (no PO yet) don&apos;t appear here — they have no supplier or PO.
-      </div>
-
       <style jsx>{`
         .master-letterhead { display: none; }
+        .master-table { padding: 0; overflow: auto; width: fit-content; max-width: 100%; }
+        .master-table table { width: auto; }
+        .master-table th, .master-table td { padding: 7px 10px; }
         .master-table thead th { background: #f3eee4; color: #111; }
         @media print {
           .master-letterhead { display: block; font-family: "Times New Roman", serif; color: #000; break-inside: avoid; }
@@ -227,8 +212,8 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-heading { flex: 1; text-align: center; }
           .master-letterhead h2 { color: #a32d2d; text-align: center; font-size: 17pt; margin: 6px 0 7px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
-          .master-table { overflow: visible !important; border-radius: 0; border: none !important; box-shadow: none !important; }
-          .master-table table { table-layout: fixed; }
+          .master-table { overflow: visible !important; width: 100% !important; max-width: none !important; border-radius: 0; border: none !important; box-shadow: none !important; }
+          .master-table table { table-layout: fixed; width: 100% !important; }
           .master-table thead { display: table-header-group; }
           .master-table tr { break-inside: avoid; }
           .master-table th, .master-table td { white-space: normal !important; }
@@ -240,8 +225,12 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-table tbody td {
             border: none !important; outline: none !important; box-shadow: none !important;
           }
-          .master-table th:first-child { width: 22%; }
-          .master-table th:nth-child(2) { width: 18%; }
+          .master-table th { letter-spacing: 0; }
+          .master-table th:first-child { width: 17%; }
+          .master-table th:nth-child(4) { width: 8%; }
+          .master-table th:nth-child(2) { width: 14%; }
+          .master-table th:nth-child(3) { width: 8%; }
+          .master-table th:nth-child(11) { width: 11%; }
           .master-table td span { white-space: normal !important; }
         }
         .doc-link { color: var(--brand); font-weight: 700; text-decoration: none; }

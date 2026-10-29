@@ -99,17 +99,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 className="procurement-report-title" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Material Demand Forms</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Raise a demand — it flows to Purchase Orders. <span style={{ color: "var(--text3)" }}>PUR/QR/005</span></p>
-        </div>
-        {canEdit && (
-          <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">
-            {open ? "✕ Close" : "＋ New Demand"}
-          </button>
-        )}
-      </div>
+      <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Number, person, item…" title="Search demands — number, person, department, or item description" style={searchInput} />} actions={canEdit ? <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary btn-sm">{open ? "✕ Close" : "＋ New Demand"}</button> : null} />
 
       {open && canEdit && (
         <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
@@ -143,14 +133,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
         </div>
       )}
 
-      <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} />
-      <div className="no-print" style={{ marginBottom: 10 }}>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Search demands — number, person, department, or item description…"
-          style={searchInput} />
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="card fit-card">
         <table>
           <thead>
             <tr>
@@ -178,9 +161,9 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
                 {/* stopPropagation so Edit/Delete don’t also fire the row’s
                     navigation on the way to their own click handler. */}
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
-                  <Link href={`/procurement/demand/${d.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
-                  {canEdit && <button onClick={() => openEdit(d)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(d)} className="btn btn-sm" style={{ color: "#A32D2D" }}>Delete</button>}
+                  <Link href={`/procurement/demand/${d.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
+                  {canEdit && <button onClick={() => openEdit(d)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
+                  {canEdit && <button onClick={() => del(d)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}
@@ -239,4 +222,4 @@ function StatusBadge({ status }: { status: string }) {
   return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{status}</span>;
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
-const searchInput: React.CSSProperties = { width: "100%", maxWidth: 460, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 };
+const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };
