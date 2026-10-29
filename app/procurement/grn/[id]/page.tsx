@@ -52,59 +52,53 @@ export default async function GrnView({ params, searchParams }: { params: Promis
           </table>
         </div>
 
+        {/* What arrived against what was invoiced. Line remarks sit under the
+            table, so the quantities have the width. */}
         <table className="pf-table">
           <thead>
             <tr>
               <th>Item(s)</th>
-              <th style={{ width: 120 }}>Quantity</th>
-              <th style={{ width: 200 }}>Remarks</th>
+              <th style={{ width: 105 }}>Invoice Qty</th>
+              <th style={{ width: 120 }}>Received Qty</th>
+              <th style={{ width: 95 }}>Difference</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td></td><td></td><td></td></tr>
-            ) : items.map(it => (
-              <tr key={it.srNo}>
-                <td>{it.item}</td>
-                <td className="c">{it.quantity}</td>
-                <td>{it.remarks || ""}</td>
-              </tr>
-            ))}
+              <tr><td></td><td></td><td></td><td></td></tr>
+            ) : items.map(it => {
+              const d = qtyDifference(it.invoiceQty, it.quantity);
+              return (
+                <tr key={it.srNo}>
+                  <td>{it.item}</td>
+                  <td className="c">{it.invoiceQty || ""}</td>
+                  <td className="c">{it.quantity}</td>
+                  <td className="c" style={{ fontWeight: 700 }}>{d === null ? "" : d > 0 ? `+${d}` : d}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+        {(() => {
+          // One item: its remark as it is. Several: each named, one per line.
+          const noted = items.filter(it => (it.remarks || "").trim());
+          return (
+            <div className="pf-remarks">
+              <b>Remarks:</b>{" "}
+              {noted.length === 0 ? <span className="u wide" />
+                : items.length === 1 ? noted[0].remarks
+                : noted.map(it => <div key={it.srNo}>{it.item} — {it.remarks}</div>)}
+            </div>
+          );
+        })()}
 
         {/* The incoming-material inspection, part of the GRR. Anything not yet
             filled prints blank, to be completed by hand. */}
         <div className="pf-insp">
           <div className="pf-insp-head">
-            <span>Incoming Material Inspection</span>
+            <span className="pf-insp-title">Incoming Material Inspection</span>
             <span>Date of Inspection: <span className="u">{ins.date ? fmtDate(ins.date) : ""}</span></span>
           </div>
-          <table className="pf-table">
-            <thead>
-              <tr>
-                <th>Material</th>
-                <th style={{ width: 95 }}>Invoice Qty</th>
-                <th style={{ width: 95 }}>Received Qty</th>
-                <th style={{ width: 95 }}>Difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr><td></td><td></td><td></td><td></td></tr>
-              ) : items.map(it => {
-                const d = qtyDifference(it.invoiceQty, it.quantity);
-                return (
-                  <tr key={it.srNo}>
-                    <td>{it.item}</td>
-                    <td className="c">{it.invoiceQty || ""}</td>
-                    <td className="c">{it.quantity}</td>
-                    <td className="c" style={{ fontWeight: 700 }}>{d === null ? "" : d > 0 ? `+${d}` : d}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
           <div className="pf-insp-checks">
             <span>{ins.designSpec ? "☑" : "☐"} As per required design specification</span>
             <span>{ins.approvedSample ? "☑" : "☐"} As per approved sample</span>
@@ -120,7 +114,6 @@ export default async function GrnView({ params, searchParams }: { params: Promis
           )}
           <div className="pf-insp-foot">
             <span>Remarks: <span className="u wide">{ins.remarks}</span></span>
-            <span>Checked by: <span className="u">{ins.checkedBy}</span></span>
           </div>
         </div>
 

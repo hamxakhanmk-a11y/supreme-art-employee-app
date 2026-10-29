@@ -1089,6 +1089,11 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .pf-insp { margin-top: 14px; border: 1px solid #000; padding: 8px 10px; font-size: 13px; break-inside: avoid; }
 .pf-insp-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 700; margin-bottom: 4px; }
 .pf-insp-head > span:first-child { text-transform: uppercase; letter-spacing: 0.04em; }
+/* Red, like the GRR's own title (.pf-title). */
+.pf-insp-title { color: #a32d2d; font-size: 15px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+/* The item lines' remarks, under the items table. */
+.pf-remarks { font-size: 13px; margin: 2px 0 4px; line-height: 1.5; }
+.pf-remarks .u { display: inline-block; min-width: 300px; border-bottom: 1px solid #000; }
 .pf-insp .u { display: inline-block; min-width: 120px; border-bottom: 1px solid #000; padding: 0 4px; font-weight: 400; }
 .pf-insp .u.wide { min-width: 260px; }
 .pf-insp .pf-table { margin: 4px 0 6px; }
@@ -1106,4 +1111,7 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .pf-2up .pf-sheet .pf-insp-checks { margin: 2px 0 3px !important; }
   .pf-2up .pf-sheet .pf-insp .u { min-width: 70px !important; }
   .pf-2up .pf-sheet .pf-insp .u.wide { min-width: 140px !important; }
+  .pf-2up .pf-sheet .pf-insp-title { font-size: 10px !important; }
+  .pf-2up .pf-sheet .pf-remarks { font-size: 8.5px !important; margin: 0 0 2px !important; }
+  .pf-remarks { font-size: 10.5pt; }
 }

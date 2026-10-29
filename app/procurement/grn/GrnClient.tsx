@@ -286,9 +286,6 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                   {Object.entries(INSPECTION_RESULTS).map(([k, r]) => <option key={k} value={k}>{r.choice}</option>)}
                 </select>
               </Field>
-              <Field label="Checked by (inspector)">
-                <input value={inspection.checkedBy} onChange={e => setInsp({ checkedBy: e.target.value })} className="auth-input" placeholder="e.g. Saqib Khan" />
-              </Field>
             </div>
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", margin: "12px 0 4px", fontSize: 13 }}>
               {([
