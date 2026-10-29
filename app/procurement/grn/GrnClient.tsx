@@ -339,10 +339,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
         <table>
-          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(g => (
               <tr
                 key={g.id}
@@ -355,9 +355,11 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <td>{g.invNo && g.invNo.trim()
                   ? g.invNo
                   : <span style={{ padding: "2px 8px", borderRadius: 999, background: "#fef3c7", color: "#B45309", fontSize: 10.5, fontWeight: 700 }}>Pending</span>}</td>
+                <td>{g.dcNo && g.dcNo.trim() ? g.dcNo : <span style={{ color: "var(--text3)" }}>—</span>}</td>
                 <td>{g.poNo != null ? `#${docNoLabel(g.poNo, g.registered)}` : "—"}</td>
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
+                <td style={{ textAlign: "center" }}><QcBadge result={parseInspection(g.inspection).result} /></td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-sm" style={{ marginRight: 6 }}>View / Print</Link>
                   {canEdit && <button onClick={() => openEdit(g)} className="btn btn-sm" style={{ marginRight: 6 }}>Edit</button>}
@@ -369,6 +371,23 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         </table>
       </div>
     </div>
+  );
+}
+
+// The incoming-material inspection result at a glance: green passed, yellow
+// partly accepted, red rejected, grey while nobody has inspected it yet.
+const QC_BADGE = {
+  accepted: { text: "Passed", color: "#166534", bg: "#dcfce7" },
+  partial:  { text: "Partial", color: "#92400E", bg: "#fef3c7" },
+  rejected: { text: "Rejected", color: "#991B1B", bg: "#fee2e2" },
+} as const;
+function QcBadge({ result }: { result: GrnInspection["result"] }) {
+  const b = result ? QC_BADGE[result] : null;
+  return (
+    <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap",
+      background: b ? b.bg : "var(--bg2)", color: b ? b.color : "var(--text3)" }}>
+      {b ? b.text : "Not inspected"}
+    </span>
   );
 }
 
