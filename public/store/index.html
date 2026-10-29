@@ -84,6 +84,14 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #f1ead9}
 .search-bar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
 .search-bar input[type=text]{max-width:240px}
+.page .search-bar{margin-bottom:8px}
+.search-bar input[type=date]{width:138px}
+.search-bar .lbl{font-size:12px;color:#666}
+.toolbar-spacer{flex:1}
+/* A list's table is as wide as its text: no stretched gaps, wrapping before it scrolls sideways. */
+.fit-card{width:fit-content;max-width:100%;overflow:auto;padding:0}
+.fit-card table{width:auto}
+.fit-card th,.fit-card td{padding:7px 10px}
 .empty{text-align:center;padding:3rem;color:#aaa;font-size:13px}
 .empty i{display:block;font-size:32px;margin-bottom:8px;opacity:0.4}
 .divider{height:1px;background:#f1ead9;margin:0.5rem 1rem}
@@ -384,21 +392,20 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- INVENTORY -->
     <div class="page" id="page-inventory">
-      <div class="page-header">
-        <div class="page-title">Inventory</div>
-        <div class="header-actions no-print">
-          <button class="btn btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
-          <button class="btn btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-          <button class="btn btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
-        </div>
-      </div>
       <div class="search-bar no-print">
         <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
+        <span class="toolbar-spacer"></span>
+        <button class="btn btn-sm btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
+      </div>
+      <div class="search-bar no-print">
         <select id="inv-cat-filter" onchange="renderInventory()" style="width:170px"></select>
         <select id="inv-machine-filter" onchange="renderInventory()" style="width:170px"></select>
         <select id="inv-rack-filter" class="consumables-only" onchange="renderInventory()" style="width:170px"></select>
+        <span class="toolbar-spacer"></span>
+        <button class="btn btn-sm btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
+        <button class="btn btn-sm btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card fit-card">
         <table>
           <thead id="inv-thead"></thead>
           <tbody id="inv-table"></tbody>
@@ -408,27 +415,26 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- STOCK IN -->
     <div class="page" id="page-stockin">
-      <div class="page-header">
-        <div class="page-title">Stock In</div>
-        <div class="header-actions no-print">
-          <button class="btn btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
-          <button class="btn btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-          <button class="btn btn-success write-only" onclick="openModal('bulkIn')"><i class="ti ti-stack-2"></i> Bulk Stock In</button>
-        </div>
-      </div>
       <div class="search-bar no-print">
         <input type="text" placeholder="Search by part, supplier, notes..." id="in-search" oninput="renderStockIn()">
-        <span style="font-size:12px;color:#666">From</span>
-        <input type="date" id="in-date-from" onchange="renderStockIn()" style="width:150px">
-        <span style="font-size:12px;color:#666">To</span>
-        <input type="date" id="in-date-to" onchange="renderStockIn()" style="width:150px">
+        <span class="toolbar-spacer"></span>
+        <button class="btn btn-sm btn-success write-only" onclick="openModal('bulkIn')"><i class="ti ti-stack-2"></i> Bulk Stock In</button>
+      </div>
+      <div class="search-bar no-print">
+        <span class="lbl">From</span>
+        <input type="date" id="in-date-from" onchange="renderStockIn()">
+        <span class="lbl">To</span>
+        <input type="date" id="in-date-to" onchange="renderStockIn()">
         <button class="btn btn-sm" onclick="clearLogFilters('in')">Clear</button>
-        <span class="bulk-info" id="in-bulk-info" style="margin-left:auto"></span>
+        <span class="toolbar-spacer"></span>
+        <span class="bulk-info" id="in-bulk-info"></span>
         <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
         <button class="btn btn-sm btn-danger-strong write-only" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
+        <button class="btn btn-sm btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="in-return-bar" class="no-print" style="display:none"></div>
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card fit-card">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Supplier / Ref</th><th>Notes</th><th class="no-print" style="width:60px"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
@@ -438,27 +444,26 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- STOCK OUT -->
     <div class="page" id="page-stockout">
-      <div class="page-header">
-        <div class="page-title">Stock Out</div>
-        <div class="header-actions no-print">
-          <button class="btn btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
-          <button class="btn btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-          <button class="btn btn-danger-soft write-only" onclick="openModal('bulkOut')"><i class="ti ti-stack-2"></i> Bulk Stock Out</button>
-        </div>
-      </div>
       <div class="search-bar no-print">
         <input type="text" placeholder="Search by part, issued to, purpose..." id="out-search" oninput="renderStockOut()">
-        <span style="font-size:12px;color:#666">From</span>
-        <input type="date" id="out-date-from" onchange="renderStockOut()" style="width:150px">
-        <span style="font-size:12px;color:#666">To</span>
-        <input type="date" id="out-date-to" onchange="renderStockOut()" style="width:150px">
+        <span class="toolbar-spacer"></span>
+        <button class="btn btn-sm btn-danger-soft write-only" onclick="openModal('bulkOut')"><i class="ti ti-stack-2"></i> Bulk Stock Out</button>
+      </div>
+      <div class="search-bar no-print">
+        <span class="lbl">From</span>
+        <input type="date" id="out-date-from" onchange="renderStockOut()">
+        <span class="lbl">To</span>
+        <input type="date" id="out-date-to" onchange="renderStockOut()">
         <button class="btn btn-sm" onclick="clearLogFilters('out')">Clear</button>
-        <span class="bulk-info" id="out-bulk-info" style="margin-left:auto"></span>
+        <span class="toolbar-spacer"></span>
+        <span class="bulk-info" id="out-bulk-info"></span>
         <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
         <button class="btn btn-sm btn-danger-strong write-only" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
+        <button class="btn btn-sm btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="out-return-bar" class="no-print" style="display:none"></div>
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card fit-card">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th class="no-print" style="width:60px"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
@@ -468,28 +473,25 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- ISSUANCE LOG -->
     <div class="page" id="page-issuance">
-      <div class="page-header">
-        <div class="page-title">Issuance Log</div>
-        <div class="header-actions no-print">
-          <button class="btn btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
-          <button class="btn btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-        </div>
+      <div class="search-bar no-print">
+        <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
       </div>
       <div class="search-bar no-print">
-        <label>View <select id="movement-view" onchange="StoreMovement.change()"><option value="weekly">Weekly report</option><option value="daily">Daily report</option><option value="monthly">Monthly report</option><option value="history">Transaction history</option></select></label>
-        <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
-        <span style="font-size:12px;color:#666">From</span>
-        <input type="date" id="iss-date-from" onchange="renderIssuance()" style="width:150px">
-        <span style="font-size:12px;color:#666">To</span>
-        <input type="date" id="iss-date-to" onchange="renderIssuance()" style="width:150px">
+        <label class="lbl">View <select id="movement-view" onchange="StoreMovement.change()" style="width:auto"><option value="weekly">Weekly report</option><option value="daily">Daily report</option><option value="monthly">Monthly report</option><option value="history">Transaction history</option></select></label>
+        <span class="lbl">From</span>
+        <input type="date" id="iss-date-from" onchange="renderIssuance()">
+        <span class="lbl">To</span>
+        <input type="date" id="iss-date-to" onchange="renderIssuance()">
         <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
-        <span style="font-size:11.5px;color:#aaa">Click a row to open it in its report</span>
-        <span class="bulk-info" id="iss-bulk-info" style="margin-left:auto"></span>
+        <span class="toolbar-spacer"></span>
+        <span class="bulk-info" id="iss-bulk-info"></span>
         <button class="btn btn-sm btn-danger-strong write-only" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+        <button class="btn btn-sm btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
+        <button class="btn btn-sm btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
-      <div id="movement-categories" class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+      <div id="movement-categories" class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <div id="movement-output"></div>
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card fit-card">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>Date</th><th>Challan No.</th><th>Part</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
           <tbody id="issuance-table"></tbody>
@@ -2490,7 +2492,7 @@ function renderInventory(){
     const mid=inks
       ? '<th>Brand</th><th>Supplier</th><th>Rack No.</th>'
       : '<th>Machine</th>';
-    th.innerHTML=`<tr><th>#</th><th>SKU / Part No.</th><th>Part Name</th><th>Category</th>${mid}<th>Unit</th><th>Qty on Hand</th><th>Min Qty</th><th>Status</th><th class="no-print" style="width:210px">Actions</th></tr>`;
+    th.innerHTML=`<tr><th>#</th><th>SKU / Part No.</th><th>Part Name</th><th>Category</th>${mid}<th>Unit</th><th>Qty on Hand</th><th>Min Qty</th><th>Status</th><th class="no-print">Actions</th></tr>`;
   }
 
   const tb=document.getElementById('inv-table');
