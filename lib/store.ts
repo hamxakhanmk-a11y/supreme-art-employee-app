@@ -35,6 +35,15 @@ DO $$ BEGIN
   CREATE UNIQUE INDEX IF NOT EXISTS store_recipients_name_key
     ON store_recipients (LOWER(name));
 
+  -- "Does not add up" warnings the owner chose to ignore: the difference at the
+  -- time, so the warning comes back if the part's gap changes.
+  CREATE TABLE IF NOT EXISTS store_ledger_ignores (
+    part_id INTEGER PRIMARY KEY REFERENCES parts(id) ON DELETE CASCADE,
+    diff DOUBLE PRECISION NOT NULL,
+    ignored_by TEXT NOT NULL DEFAULT '',
+    ignored_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'parts' AND column_name = 'qty' AND data_type = 'integer'

@@ -864,6 +864,15 @@ body:not(.role-admin) .admin-only{display:none!important}
   </div>
 </div>
 
+<!-- PART HISTORY MODAL -->
+<div class="modal-overlay" id="modal-partHistory">
+  <div class="modal" style="width:880px">
+    <div class="modal-title"><i class="ti ti-history"></i> <span id="ph-title">History</span></div>
+    <div id="ph-body"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('partHistory')">Close</button></div>
+  </div>
+</div>
+
 <!-- EXPORT SELECTION MODAL -->
 <div class="modal-overlay" id="modal-export">
   <div class="modal modal-wide">
@@ -996,6 +1005,10 @@ async function loadAll(){
     ]);
     state.employees=emps;state.recipients=recips;
   }catch(e){state.employees=[];state.recipients=[];console.warn('Issued-to list unavailable:',e.message);}
+  try{
+    const ig=await apiFetch('/api/store/ledger');
+    state.ledgerIgnores=new Map(ig.map(x=>[x.partId,Number(x.diff)]));
+  }catch(e){state.ledgerIgnores=new Map();}
   if(state.user && state.user.role==='admin'){
     try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
   } else {
@@ -2457,22 +2470,132 @@ function isInks(){return state.module==='consumables'}
 // Safeguard: every part's quantity on hand must equal the sum of ALL its stock
 // movements (in minus out). A part that doesn't add up is listed in red - the
 // usual cause is a record removed with "Delete from History" while the
-// quantity was kept - so the gap can never sit there unnoticed.
-function renderLedgerCheck(){
+// quantity was kept - so the gap can never sit there unnoticed. Each line can
+// be reconciled (an adjustment is recorded so the history matches the quantity)
+// or ignored (hidden, until its difference changes).
+let _ledgerShowIgnored=false;
+function ledgerOff(){
   const sums=new Map();
   state.transactions.forEach(t=>sums.set(t.partId,(sums.get(t.partId)||0)+(t.type==='in'?Number(t.qty):-Number(t.qty))));
-  const off=state.parts
-    .map(p=>({p,bal:Math.round((Number(p.qty)||0)*1000)/1000,sum:Math.round((sums.get(p.id)||0)*1000)/1000}))
-    .filter(m=>Math.abs(m.bal-m.sum)>0.0005);
-  const html=off.length?`<div style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
+  return state.parts
+    .map(p=>{
+      const bal=Math.round((Number(p.qty)||0)*1000)/1000;
+      const sum=Math.round((sums.get(p.id)||0)*1000)/1000;
+      return {p,bal,sum,diff:Math.round((bal-sum)*1000)/1000};
+    })
+    .filter(m=>Math.abs(m.diff)>0.0005);
+}
+function renderLedgerCheck(){
+  const ig=state.ledgerIgnores||new Map();
+  const all=ledgerOff();
+  // An ignore only holds while the gap is the one that was ignored.
+  const isIgnored=m=>ig.has(m.p.id)&&Math.abs(ig.get(m.p.id)-m.diff)<0.0005;
+  const off=all.filter(m=>!isIgnored(m)), ignored=all.filter(isIgnored);
+  const sgn=d=>(d>0?'+':'')+fmtQty(d);
+  const th='padding:4px 8px';
+  const rowHtml=(m,btns)=>`<tr><td style="${th}">${getPartLabel(m.p.id)}</td><td style="${th};text-align:right">${fmtQty(m.bal)} ${m.p.unit}</td><td style="${th};text-align:right">${fmtQty(m.sum)} ${m.p.unit}</td><td style="${th};text-align:right;font-weight:700;color:#991b1b">${sgn(m.diff)} ${m.p.unit}</td><td style="${th};white-space:nowrap">${btns}</td></tr>`;
+  const histBtn=m=>`<button class="btn btn-sm" title="Stock in / out history of this part" onclick="openPartHistory(${m.p.id})"><i class="ti ti-history"></i> History</button>`;
+  const head=`<tr style="background:#fee2e2"><th style="text-align:left;${th}">Part</th><th style="text-align:right;${th}">Qty on hand</th><th style="text-align:right;${th}">Movements add up to</th><th style="text-align:right;${th}">Difference</th><th style="${th}"></th></tr>`;
+  let html;
+  if(off.length){
+    html=`<div style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
       <div style="font-weight:700;color:#991b1b;margin-bottom:4px">&#9888; ${off.length} part${off.length===1?' does':'s do'} not add up - the quantity on hand and the stock movements disagree</div>
-      <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference.</div>
-      <table style="width:auto;font-size:12px;border-collapse:collapse">
-        <tr style="background:#fee2e2"><th style="text-align:left;padding:4px 8px">Part</th><th style="text-align:right;padding:4px 8px">Qty on hand</th><th style="text-align:right;padding:4px 8px">Movements add up to</th><th style="text-align:right;padding:4px 8px">Difference</th></tr>
-        ${off.map(m=>`<tr><td style="padding:4px 8px">${getPartLabel(m.p.id)}</td><td style="padding:4px 8px;text-align:right">${fmtQty(m.bal)} ${m.p.unit}</td><td style="padding:4px 8px;text-align:right">${fmtQty(m.sum)} ${m.p.unit}</td><td style="padding:4px 8px;text-align:right;font-weight:700;color:#991b1b">${m.bal-m.sum>0?'+':''}${fmtQty(Math.round((m.bal-m.sum)*1000)/1000)} ${m.p.unit}</td></tr>`).join('')}
-      </table></div>`
-    :`<div style="margin:0 0 10px;font-size:12px;color:#166534">&#10003; 0 parts off - every quantity matches its stock movements</div>`;
+      <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference. <b>Reconcile</b> records an adjustment so the history matches the quantity on hand (the quantity itself is not changed); <b>Ignore</b> hides the warning until its difference changes.</div>
+      <table style="width:auto;font-size:12px;border-collapse:collapse">${head}
+        ${off.map(m=>rowHtml(m,`${histBtn(m)} <button class="btn btn-sm btn-primary write-only" title="Record an adjustment so the movements add up to the quantity on hand" onclick="ledgerReconcile(${m.p.id})">Reconcile</button> <button class="btn btn-sm write-only" title="Hide this warning" onclick="ledgerIgnore(${m.p.id})">Ignore</button>`)).join('')}
+      </table></div>`;
+  } else {
+    html=`<div style="margin:0 0 10px;font-size:12px;color:#166534">&#10003; 0 parts off - every quantity matches its stock movements</div>`;
+  }
+  if(ignored.length){
+    html+=`<div style="margin:0 0 10px;font-size:12px;color:#666">${ignored.length} warning${ignored.length===1?'':'s'} ignored - <a href="#" onclick="toggleLedgerIgnored();return false" style="color:#8C2326;font-weight:600">${_ledgerShowIgnored?'hide':'show'}</a>
+      ${_ledgerShowIgnored?`<table style="width:auto;font-size:12px;border-collapse:collapse;margin-top:6px">${head}${ignored.map(m=>rowHtml(m,`${histBtn(m)} <button class="btn btn-sm write-only" onclick="ledgerUnignore(${m.p.id})">Stop ignoring</button>`)).join('')}</table>`:''}
+    </div>`;
+  }
   document.querySelectorAll('.ledger-check').forEach(el=>{el.innerHTML=html;});
+}
+function toggleLedgerIgnored(){_ledgerShowIgnored=!_ledgerShowIgnored;renderLedgerCheck();}
+
+async function ledgerReconcile(pid){
+  const m=ledgerOff().find(x=>x.p.id===pid);
+  if(!m)return;
+  const stockWord=m.diff>0?'Stock In':'Stock Out';
+  const ok=await confirmDialog({
+    title:'Reconcile '+m.p.name+'?',
+    message:'Quantity on hand: '+fmtQty(m.bal)+' '+m.p.unit+' (this is NOT changed).\nThe movements add up to: '+fmtQty(m.sum)+' '+m.p.unit+'.\n\nThis records an adjustment of '+(m.diff>0?'+':'-')+fmtQty(Math.abs(m.diff))+' '+m.p.unit+' as a '+stockWord+' entry marked "Adjustment", dated '+(m.diff>0?'just before the part\'s first movement, as its opening stock':'today')+', so the history adds up to the quantity on hand.',
+    variant:'warn',
+    confirmText:'Reconcile'
+  });
+  if(!ok)return;
+  try{
+    await apiFetch('/api/store/ledger','POST',{action:'reconcile',partId:pid});
+    closeModal('partHistory');
+    await loadAll();
+  }catch(e){await errorDialog('Could not reconcile',e.message);}
+}
+async function ledgerIgnore(pid){
+  const m=ledgerOff().find(x=>x.p.id===pid);
+  if(!m)return;
+  const ok=await confirmDialog({
+    title:'Ignore this warning?',
+    message:'The warning for '+m.p.name+' (difference '+(m.diff>0?'+':'')+fmtQty(m.diff)+' '+m.p.unit+') will be hidden. It comes back if the difference changes, and you can bring it back any time with "Stop ignoring".',
+    variant:'confirm',
+    confirmText:'Ignore'
+  });
+  if(!ok)return;
+  try{
+    await apiFetch('/api/store/ledger','POST',{action:'ignore',partId:pid,diff:m.diff});
+    if(!state.ledgerIgnores)state.ledgerIgnores=new Map();
+    state.ledgerIgnores.set(pid,m.diff);
+    renderLedgerCheck();
+  }catch(e){await errorDialog('Could not ignore',e.message);}
+}
+async function ledgerUnignore(pid){
+  try{
+    await apiFetch('/api/store/ledger','POST',{action:'unignore',partId:pid});
+    if(state.ledgerIgnores)state.ledgerIgnores.delete(pid);
+    renderLedgerCheck();
+  }catch(e){await errorDialog('Could not bring the warning back',e.message);}
+}
+
+// A part's own history: every stock in and out, newest first, with its totals.
+function openPartHistory(pid){
+  const p=state.parts.find(x=>x.id===pid);
+  if(!p)return;
+  const txs=state.transactions.filter(t=>t.partId===pid)
+    .sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id);
+  const bal=computeBalances();
+  const totIn=txs.filter(t=>t.type==='in').reduce((s,t)=>s+Number(t.qty),0);
+  const totOut=txs.filter(t=>t.type==='out').reduce((s,t)=>s+Number(t.qty),0);
+  const sum=Math.round((totIn-totOut)*1000)/1000;
+  const have=Math.round((Number(p.qty)||0)*1000)/1000;
+  const diff=Math.round((have-sum)*1000)/1000;
+  const u=p.unit||'';
+  const cell='padding:6px 10px';
+  const rows=txs.length?txs.map(t=>`<tr>
+      <td style="${cell};white-space:nowrap">${fmtDate(t.date)}</td>
+      <td style="${cell}"><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td>
+      <td class="${t.type==='in'?'qty-positive':'qty-negative'}" style="${cell};white-space:nowrap">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${u}</td>
+      <td style="${cell};font-weight:600;white-space:nowrap">${fmtQty(bal[t.id])??'—'} ${u}</td>
+      <td style="${cell};font-family:monospace;color:#555">${t.challanNo||'—'}</td>
+      <td style="${cell}">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td>
+      <td style="${cell};color:#888">${t.type==='in'?(t.notes||'—'):(t.purpose||'—')}</td>
+    </tr>`).join(''):`<tr><td colspan="7"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded for this part</div></td></tr>`;
+  const stat=(label,val,color)=>`<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">${label}</div><div style="font-size:15px;font-weight:700;${color?'color:'+color:''}">${val}</div></div>`;
+  const warn=Math.abs(diff)>0.0005
+    ?`<div style="margin:0 0 12px;padding:8px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px;color:#7f1d1d">&#9888; The movements add up to ${fmtQty(sum)} ${u} but ${fmtQty(have)} ${u} is on hand (difference ${diff>0?'+':''}${fmtQty(diff)} ${u}).
+        <button class="btn btn-sm btn-primary write-only" style="margin-left:8px" onclick="ledgerReconcile(${p.id})">Reconcile</button></div>`
+    :'';
+  document.getElementById('ph-title').textContent=(p.sku?'['+p.sku+'] ':'')+p.name+' - history';
+  document.getElementById('ph-body').innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${stat('On hand',fmtQty(have)+' '+u)}${stat('Total in','+'+fmtQty(totIn)+' '+u,'#2d6a10')}${stat('Total out','−'+fmtQty(totOut)+' '+u,'#993C1D')}${stat('Movements add up to',fmtQty(sum)+' '+u)}
+    </div>
+    ${warn}
+    <div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px">
+      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">Date</th><th style="${cell}">Type</th><th style="${cell}">Qty</th><th style="${cell}">Balance</th><th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  document.getElementById('modal-partHistory').classList.add('open');
 }
 
 function renderInventory(){
@@ -2548,12 +2671,13 @@ function renderInventory(){
       <td style="font-weight:700;font-size:15px">${fmtQty(p.qty)}</td>
       <td style="color:#888">${p.minQty}</td>
       <td><span class="badge ${s.cls}">${s.label}</span></td>
-      <td class="no-print write-only">
+      <td class="no-print">
         <div class="row-actions">
-          <button class="btn btn-sm" style="color:#2d6a10" title="Stock in this item" onclick="openSingleIn(${p.id})"><i class="ti ti-arrow-bar-to-down"></i> Stock In</button>
-          <button class="btn btn-sm" style="color:#993C1D" title="Issue / stock out this item" onclick="openSingleOut(${p.id})"><i class="ti ti-arrow-bar-up"></i> Stock Out</button>
-          <button class="btn btn-sm" title="Edit this part" onclick="openEditPart(${p.id})"><i class="ti ti-edit"></i> Edit</button>
-          <button class="btn btn-sm" title="Move this part to trash" style="color:#A32D2D" onclick="deletePart(${p.id})"><i class="ti ti-trash"></i> Delete</button>
+          <button class="btn btn-sm" title="Every stock in and out of this part" onclick="openPartHistory(${p.id})"><i class="ti ti-history"></i> History</button>
+          <button class="btn btn-sm write-only" style="color:#2d6a10" title="Stock in this item" onclick="openSingleIn(${p.id})"><i class="ti ti-arrow-bar-to-down"></i> Stock In</button>
+          <button class="btn btn-sm write-only" style="color:#993C1D" title="Issue / stock out this item" onclick="openSingleOut(${p.id})"><i class="ti ti-arrow-bar-up"></i> Stock Out</button>
+          <button class="btn btn-sm write-only" title="Edit this part" onclick="openEditPart(${p.id})"><i class="ti ti-edit"></i> Edit</button>
+          <button class="btn btn-sm write-only" title="Move this part to trash" style="color:#A32D2D" onclick="deletePart(${p.id})"><i class="ti ti-trash"></i> Delete</button>
         </div>
       </td>
     </tr>`;
