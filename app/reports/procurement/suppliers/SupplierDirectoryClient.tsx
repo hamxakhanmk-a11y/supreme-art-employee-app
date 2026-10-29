@@ -244,6 +244,17 @@ export default function SupplierDirectoryClient({
       .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo);
   }, [rows, historyFor]);
 
+  // The H that sits beside a rate. Stops the click so it doesn't also open the
+  // PO or start an inline edit of the cell it's in.
+  const historyBtn = (product: string, supplier: string) => (
+    <button
+      className="btn btn-xs"
+      onClick={e => { e.stopPropagation(); setHistoryFor({ product, supplier }); }}
+      title="Rate history — every order of this product from this supplier"
+      style={{ marginLeft: 6, minWidth: 22, padding: "0 6px", fontWeight: 800, lineHeight: 1.5 }}
+    >H</button>
+  );
+
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   async function exportXlsx() {
@@ -386,14 +397,13 @@ export default function SupplierDirectoryClient({
                 <th style={{ width: 110 }}>STRN</th>
                 <th style={{ width: 120 }}>Contact #</th>
                 <th>Concerned Person</th>
-                <th style={{ width: 150 }}>Rate</th>
+                <th style={{ width: 200 }}>Rate</th>
                 <th style={{ width: 80 }}>Tax %</th>
-                <th style={{ width: 44, textAlign: "center" }} title="Rate history">H</th>
               </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={11} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={10} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((r, i) => (
                 <tr
@@ -426,7 +436,7 @@ export default function SupplierDirectoryClient({
                   <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
                   {!canEditRates ? (
                     <>
-                      <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}</td>
+                      <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}{historyBtn(r.product, r.supplier)}</td>
                       <td>{taxPctLabel(r.shownRate, r.shownTaxPct)}</td>
                     </>
                   ) : editKey === noteKey(r.product, r.supplier) ? (
@@ -464,7 +474,7 @@ export default function SupplierDirectoryClient({
                           ? "Your noted rate — click to change it. Clear both fields to go back to the PO's rate."
                           : "From this product's latest PO. Click to note your own rate — the PO won't change."}
                       >
-                        {rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>
+                        {rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>{historyBtn(r.product, r.supplier)}
                       </td>
                       <td
                         onClick={e => { e.stopPropagation(); startEdit(r); }}
@@ -477,14 +487,6 @@ export default function SupplierDirectoryClient({
                       </td>
                     </>
                   )}
-                  <td style={{ textAlign: "center" }} onClick={e => e.stopPropagation()}>
-                    <button
-                      className="btn btn-xs"
-                      onClick={() => setHistoryFor({ product: r.product, supplier: r.supplier })}
-                      title="Rate history — every order of this product from this supplier"
-                      style={{ minWidth: 26, padding: "2px 7px", fontWeight: 800 }}
-                    >H</button>
-                  </td>
                 </tr>
               ))}
             </tbody>
