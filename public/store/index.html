@@ -392,6 +392,7 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- INVENTORY -->
     <div class="page" id="page-inventory">
+      <div class="ledger-check no-print"></div>
       <div class="search-bar no-print">
         <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
         <span class="toolbar-spacer"></span>
@@ -473,6 +474,7 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- ISSUANCE LOG -->
     <div class="page" id="page-issuance">
+      <div class="ledger-check no-print"></div>
       <div class="search-bar no-print">
         <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
       </div>
@@ -2347,7 +2349,7 @@ async function bulkDeleteTxns(kind,historyOnly){
   if(historyOnly){
     confirmed=await confirmDialog({
       title:'Permanently delete '+ids.length+' record'+plural+' from history?',
-      message:'• Current stock quantities will NOT be adjusted (use this for cleaning up old records).\n• The records will be gone from Stock In / Out / Issuance views.\n• An entry is written to the main app\'s Activity Log (Reports → Activity Log) so you can see what was purged.\n\nThis cannot be undone.',
+      message:'⚠ The quantity on hand is KEPT, so afterwards the part\x27s quantity and its stock movements will no longer add up. The part is then listed in the red warning box, and the Weekly / Daily / Monthly reports show its opening balance wrong by this quantity.\n• To undo a mistake and put the quantity back, use Reverse instead.\n• The records will be gone from Stock In / Out / Issuance views.\n• An entry is written to the main app\'s Activity Log (Reports → Activity Log) so you can see what was purged.\n\nThis cannot be undone.',
       variant:'danger',
       confirmText:'Delete from History'
     });
@@ -2452,7 +2454,29 @@ function renderDashboard(){
 // Machine column for Brand / Supplier / Rack No.
 function isInks(){return state.module==='consumables'}
 
+// Safeguard: every part's quantity on hand must equal the sum of ALL its stock
+// movements (in minus out). A part that doesn't add up is listed in red - the
+// usual cause is a record removed with "Delete from History" while the
+// quantity was kept - so the gap can never sit there unnoticed.
+function renderLedgerCheck(){
+  const sums=new Map();
+  state.transactions.forEach(t=>sums.set(t.partId,(sums.get(t.partId)||0)+(t.type==='in'?Number(t.qty):-Number(t.qty))));
+  const off=state.parts
+    .map(p=>({p,bal:Math.round((Number(p.qty)||0)*1000)/1000,sum:Math.round((sums.get(p.id)||0)*1000)/1000}))
+    .filter(m=>Math.abs(m.bal-m.sum)>0.0005);
+  const html=off.length?`<div style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
+      <div style="font-weight:700;color:#991b1b;margin-bottom:4px">&#9888; ${off.length} part${off.length===1?' does':'s do'} not add up - the quantity on hand and the stock movements disagree</div>
+      <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference.</div>
+      <table style="width:auto;font-size:12px;border-collapse:collapse">
+        <tr style="background:#fee2e2"><th style="text-align:left;padding:4px 8px">Part</th><th style="text-align:right;padding:4px 8px">Qty on hand</th><th style="text-align:right;padding:4px 8px">Movements add up to</th><th style="text-align:right;padding:4px 8px">Difference</th></tr>
+        ${off.map(m=>`<tr><td style="padding:4px 8px">${getPartLabel(m.p.id)}</td><td style="padding:4px 8px;text-align:right">${fmtQty(m.bal)} ${m.p.unit}</td><td style="padding:4px 8px;text-align:right">${fmtQty(m.sum)} ${m.p.unit}</td><td style="padding:4px 8px;text-align:right;font-weight:700;color:#991b1b">${m.bal-m.sum>0?'+':''}${fmtQty(Math.round((m.bal-m.sum)*1000)/1000)} ${m.p.unit}</td></tr>`).join('')}
+      </table></div>`
+    :`<div style="margin:0 0 10px;font-size:12px;color:#166534">&#10003; 0 parts off - every quantity matches its stock movements</div>`;
+  document.querySelectorAll('.ledger-check').forEach(el=>{el.innerHTML=html;});
+}
+
 function renderInventory(){
+  renderLedgerCheck();
   const inks=isInks();
   const search=(document.getElementById('inv-search')||{value:''}).value.toLowerCase();
   const catF=(document.getElementById('inv-cat-filter')||{value:''}).value;
@@ -2654,6 +2678,7 @@ function renderStockOut(){
 }
 
 function renderIssuance(){
+  renderLedgerCheck();
   if(StoreMovement.render())return;
   const search=(document.getElementById('iss-search')||{value:''}).value.toLowerCase();
   const dFrom=(document.getElementById('iss-date-from')||{value:''}).value;

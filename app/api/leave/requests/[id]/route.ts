@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { leaveRequests, attendance, leaveTypes } from "@/lib/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, like, lte } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+
+// Takes back the attendance an approval stamped on the days of a request.
+// Only a day still carrying the approval's own note is removed — a day HR has
+// since edited by hand is left alone.
+async function unstampAttendance(r: { employeeId: number; startDate: string; endDate: string; halfSegment: string | null }) {
+  await db.delete(attendance).where(and(
+    eq(attendance.employeeId, r.employeeId),
+    gte(attendance.date, r.startDate),
+    lte(attendance.date, r.endDate),
+    inArray(attendance.status, ["leave", "half-day"]),
+    like(attendance.notes, r.halfSegment ? "Approved half-day — %" : "Approved leave — %"),
+  ));
+}
 
 // PUT — approve/reject or edit request
 // On approval of a half-day request, auto-stamp attendance for that date
@@ -16,6 +29,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const reqId = parseInt(id);
     const body = await req.json();
 
+    // What the request was before this change, so an approval that is being
+    // taken back (approved → rejected / pending) can undo its attendance.
+    const [before] = await db.select().from(leaveRequests).where(eq(leaveRequests.id, reqId));
+
     const update: any = { updatedAt: new Date() };
     if (body.status) {
       update.status = body.status;
@@ -27,6 +44,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     const [u] = await db.update(leaveRequests).set(update)
       .where(eq(leaveRequests.id, reqId)).returning();
+
+    if (before && before.status === "approved" && body.status && body.status !== "approved") {
+      await unstampAttendance(before);
+    }
 
     // Auto-stamp attendance across the whole leave range for an approved full
     // leave (not a half-day) — including future dates. These are ordinary
@@ -105,7 +126,18 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
-    await db.delete(leaveRequests).where(eq(leaveRequests.id, parseInt(id)));
+    const reqId = parseInt(id);
+    const [r] = await db.select().from(leaveRequests).where(eq(leaveRequests.id, reqId));
+    // An approved request has put leave on the attendance sheet; deleting the
+    // request takes that back too, so no leave day is left without its request.
+    if (r && r.status === "approved") await unstampAttendance(r);
+    await db.delete(leaveRequests).where(eq(leaveRequests.id, reqId));
+    if (r) {
+      await logActivity({
+        user: guard, action: "leave.delete", employeeId: r.employeeId,
+        summary: `leave request deleted (${r.startDate}${r.endDate !== r.startDate ? ` → ${r.endDate}` : ""}, ${r.status})`,
+      });
+    }
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

@@ -64,28 +64,34 @@ export async function POST(req: NextRequest) {
     if (type === "out" && p.qty < qty) {
       return NextResponse.json({ error: `Not enough stock! Available: ${p.qty}` }, { status: 400 });
     }
-    await db.update(storeParts)
-      .set({ qty: roundQty(type === "in" ? p.qty + qty : p.qty - qty) })
-      .where(eq(storeParts.id, partId));
-
-    const [row] = await db.insert(storeTransactions).values({
-      type, partId, qty, date,
-      ref: (b?.ref || "").toString(),
-      notes: (b?.notes || "").toString(),
-      issuedTo: (b?.issuedTo || "").toString(),
-      purpose: (b?.purpose || "").toString(),
-      challanNo: (b?.challanNo || "").toString(),
-    }).returning({
-      id: storeTransactions.id, type: storeTransactions.type, partId: storeTransactions.partId,
-      qty: storeTransactions.qty, date: sql<string>`${storeTransactions.date}::text`.as("date"),
-      ref: storeTransactions.ref, notes: storeTransactions.notes,
-      issuedTo: storeTransactions.issuedTo, purpose: storeTransactions.purpose,
-      challanNo: storeTransactions.challanNo,
-    });
-    const label = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
+    // The quantity and the record are ONE statement, so they stand or fall
+    // together: a failed save can no longer move the stock without a record
+    // (or the reverse), and two entries at the same moment each add to the
+    // quantity as it is NOW rather than overwriting each other's figure.
+    const ref = (b?.ref || "").toString(), notes = (b?.notes || "").toString();
+    const issuedTo = (b?.issuedTo || "").toString(), purpose = (b?.purpose || "").toString();
+    const challanNo = (b?.challanNo || "").toString();
+    const saved = await db.execute(sql`
+      WITH upd AS (
+        UPDATE parts SET qty = ROUND((qty ${type === "in" ? sql`+` : sql`-`} ${qty})::numeric, 3)::double precision
+        WHERE id = ${partId} ${type === "out" ? sql`AND qty >= ${qty}` : sql``}
+        RETURNING id
+      )
+      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no)
+      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo} FROM upd
+      RETURNING id, type, part_id AS "partId", qty, date::text AS date, ref, notes,
+                issued_to AS "issuedTo", purpose, challan_no AS "challanNo"
+    `);
+    const row = ((saved as any).rows ?? (saved as any))[0];
+    if (!row) {
+      // Someone issued the same part a moment ago and there is no longer enough.
+      const [now] = await db.select({ qty: storeParts.qty }).from(storeParts).where(eq(storeParts.id, partId));
+      return NextResponse.json({ error: `Not enough stock! Available: ${now?.qty ?? 0}` }, { status: 400 });
+    }
+    const logLabel = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
     await logActivity({
       user: guard, action: `store.${p.module}.txn.${type}`,
-      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${label}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
+      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${logLabel}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
     });
     return NextResponse.json(row);
   } catch (e: any) {
@@ -135,14 +141,23 @@ export async function DELETE(req: NextRequest) {
           }, { status: 400 });
         }
       }
-      for (const [pid, d] of delta.entries()) {
-        if (!d) continue;
-        const p = partsMap.get(pid);
-        if (!p) continue;
-        await db.update(storeParts).set({ qty: roundQty(p.qty + d) }).where(eq(storeParts.id, pid));
-      }
+      // The records go and the quantities come back in ONE statement, so a
+      // failure part-way can't leave stock changed with the records still
+      // there (or the reverse).
+      await db.execute(sql`
+        WITH del AS (
+          DELETE FROM transactions WHERE id IN (${sql.join(ids.map(i => sql`${i}`), sql`, `)})
+          RETURNING part_id, type, qty
+        ), agg AS (
+          SELECT part_id, SUM(CASE WHEN type = 'in' THEN -qty ELSE qty END) AS d FROM del GROUP BY part_id
+        )
+        UPDATE parts p SET qty = ROUND((p.qty + agg.d)::numeric, 3)::double precision
+        FROM agg WHERE p.id = agg.part_id
+      `);
+    } else {
+      // "Delete from History": the records only; the quantities are left as they are.
+      await db.delete(storeTransactions).where(inArray(storeTransactions.id, ids));
     }
-    await db.delete(storeTransactions).where(inArray(storeTransactions.id, ids));
 
     for (const t of txns) {
       const p = partsMap.get(t.partId);

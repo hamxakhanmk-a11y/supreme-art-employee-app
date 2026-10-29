@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands, grns } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, syncSupplierFromPo } from "@/lib/procurement";
+import { ensureProcurementTables, PO_DEFAULT_REMARKS, recomputePoStatus, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +60,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,
     items: JSON.stringify(items),
   }).where(eq(purchaseOrders.id, parseInt(id)));
+  // The items (quantities) may have changed under GRRs already booked against
+  // this PO, so its stored status is worked out again from what was received.
+  await recomputePoStatus(parseInt(id));
   await syncSupplierFromPo(b.supplierName, {
     registered: existing?.registered, ntn: b.supplierNtn, strn: b.supplierStrn, address: b.supplierAddress, phone: b.supplierPhone,
     brand: b.supplierBrand, concernedPerson: b.supplierConcernedPerson,
