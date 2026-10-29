@@ -361,7 +361,6 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="nav-item" onclick="showPage('stockin',this)"><i class="ti ti-arrow-bar-to-down"></i> Stock In</div>
     <div class="nav-item" onclick="showPage('stockout',this)"><i class="ti ti-arrow-bar-up"></i> Stock Out</div>
     <div class="nav-item" onclick="showPage('issuance',this)"><i class="ti ti-clipboard-list"></i> Issuance Log</div>
-    <div class="nav-item" onclick="showPage('activity',this)"><i class="ti ti-history"></i> Activity Log</div>
     <div class="divider"></div>
     <div class="nav-item" onclick="showPage('categories',this)"><i class="ti ti-tag"></i> Categories</div>
     <div class="nav-item machinery-only" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
@@ -525,30 +524,6 @@ body:not(.role-admin) .admin-only{display:none!important}
         <table>
           <thead><tr><th>Machine Name</th><th>Parts Count</th><th style="width:80px">Actions</th></tr></thead>
           <tbody id="machine-table"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ACTIVITY LOG -->
-    <div class="page" id="page-activity">
-      <div class="page-header">
-        <div class="page-title">Activity Log</div>
-        <span style="font-size:12px;color:#888">Tracks deletions, qty edits, and user management actions.</span>
-      </div>
-      <div class="card no-print" style="padding:12px 16px;margin-bottom:14px;border-color:#A32D2D;background:#fdf3f3">
-        <b>This tab is no longer where Store activity is recorded.</b> Every Store action (stock in/out,
-        qty edits, deletions) is now logged in the main app's Activity Log instead, alongside everything
-        else across the system.
-        <a href="/reports/activity" target="_top" style="color:#A32D2D;font-weight:700">Open Activity Log →</a>
-      </div>
-      <div class="search-bar no-print">
-        <select id="act-user-filter" onchange="renderActivity()" style="width:220px"></select>
-        <button class="btn btn-sm" onclick="document.getElementById('act-user-filter').value='';renderActivity()">Clear</button>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr><th style="width:160px">When</th><th style="width:130px">Action</th><th style="width:170px">By</th><th>Details</th></tr></thead>
-          <tbody id="activity-table"></tbody>
         </table>
       </div>
     </div>
@@ -866,7 +841,7 @@ body:not(.role-admin) .admin-only{display:none!important}
 
 <!-- PART HISTORY MODAL -->
 <div class="modal-overlay" id="modal-partHistory">
-  <div class="modal" style="width:880px">
+  <div class="modal" style="width:980px">
     <div class="modal-title"><i class="ti ti-history"></i> <span id="ph-title">History</span></div>
     <div id="ph-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('partHistory')">Close</button></div>
@@ -971,19 +946,17 @@ async function apiFetch(url, method='GET', body=null){
 async function loadAll(){
   try{
     const m='?module='+encodeURIComponent(state.module);
-    const [categories,machines,parts,transactions,trash,activity]=await Promise.all([
+    const [categories,machines,parts,transactions,trash]=await Promise.all([
       apiFetch('/api/store/categories'+m),
       apiFetch('/api/store/machines'+m),
       apiFetch('/api/store/parts'+m),
       apiFetch('/api/store/transactions'),
-      apiFetch('/api/store/trash'+m),
-      apiFetch('/api/store/activity'+m)
+      apiFetch('/api/store/trash'+m)
     ]);
     state.categories=categories;
     state.machines=machines;
     state.parts=parts;
     state.trash=trash.items||[];
-    state.activity=activity||[];
     // Only transactions for parts in this module
     const partIds=new Set(parts.map(p=>p.id));
     state.transactions=transactions.filter(t=>partIds.has(t.partId));
@@ -1035,14 +1008,17 @@ function navItemFor(page){
 function fieldVal(id){const el=document.getElementById(id);return el?el.value:''}
 function setFieldVal(id,v){const el=document.getElementById(id);if(el)el.value=v}
 
-function openTxnInReport(id){
+// "origin" is where the jump started, so Back can return there: the Issuance
+// Log (the default) or a part's History window on the Inventory page.
+function openTxnInReport(id,origin){
   const t=state.transactions.find(x=>x.id===id);
   if(!t)return;
   const target=t.type==='in'?'stockin':'stockout';
   const prefix=t.type==='in'?'in':'out';
+  origin=origin||{page:'issuance'};
 
   storeReturn={
-    target,prefix,txnId:t.id,
+    target,prefix,txnId:t.id,origin,
     label:getPartName(t.partId),
     // What the report was showing before the jump.
     filters:{
@@ -1052,10 +1028,11 @@ function openTxnInReport(id){
     },
   };
 
-  // The part by name, and the log's own date range carried across.
+  // The part by name. From the Issuance Log its date range comes along too; from a
+  // part's History the whole range is shown, so the entry is found whatever its date.
   setFieldVal(prefix+'-search',getPartName(t.partId));
-  setFieldVal(prefix+'-date-from',fieldVal('iss-date-from'));
-  setFieldVal(prefix+'-date-to',fieldVal('iss-date-to'));
+  setFieldVal(prefix+'-date-from',origin.page==='issuance'?fieldVal('iss-date-from'):'');
+  setFieldVal(prefix+'-date-to',origin.page==='issuance'?fieldVal('iss-date-to'):'');
 
   showPage(target,navItemFor(target));
   renderStoreReturnBar();
@@ -1078,6 +1055,11 @@ function storeReturnBack(){
   const back=storeReturn;
   clearStoreReturn();            // filters restored before we leave
   if(!back)return;
+  if(back.origin&&back.origin.page==='inventory'){
+    showPage('inventory',navItemFor('inventory'));
+    openPartHistory(back.origin.partId);
+    return;
+  }
   showPage('issuance',navItemFor('issuance'));
 }
 
@@ -1087,10 +1069,11 @@ function renderStoreReturnBar(){
     if(!bar)return;
     if(!storeReturn||storeReturn.prefix!==p){bar.style.display='none';bar.innerHTML='';return;}
     const range=[fmtDate(fieldVal(p+'-date-from')),fmtDate(fieldVal(p+'-date-to'))].filter(Boolean).join(' – ');
+    const fromHistory=storeReturn.origin&&storeReturn.origin.page==='inventory';
     bar.style.display='block';
     bar.innerHTML=`<div class="return-bar">
-      <button class="btn btn-sm btn-back" onclick="storeReturnBack()"><i class="ti ti-arrow-left"></i> Back to Issuance Log</button>
-      <span>Showing <b>${storeReturn.label}</b>${range?` · ${range}`:''}, opened from the log.</span>
+      <button class="btn btn-sm btn-back" onclick="storeReturnBack()"><i class="ti ti-arrow-left"></i> Back to ${fromHistory?'History':'Issuance Log'}</button>
+      <span>Showing <b>${storeReturn.label}</b>${range?` · ${range}`:''}, opened from the ${fromHistory?'part\'s history':'log'}.</span>
     </div>`;
   });
 }
@@ -2572,7 +2555,7 @@ function openPartHistory(pid){
   const diff=Math.round((have-sum)*1000)/1000;
   const u=p.unit||'';
   const cell='padding:6px 10px';
-  const rows=txs.length?txs.map(t=>`<tr>
+  const rows=txs.length?txs.map(t=>`<tr class="txn-row-link" onclick="closeModal('partHistory');openTxnInReport(${t.id},{page:'inventory',partId:${p.id}})" title="Open this entry in the ${t.type==='in'?'Stock In':'Stock Out'} report">
       <td style="${cell};white-space:nowrap">${fmtDate(t.date)}</td>
       <td style="${cell}"><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td>
       <td class="${t.type==='in'?'qty-positive':'qty-negative'}" style="${cell};white-space:nowrap">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${u}</td>
@@ -2580,7 +2563,8 @@ function openPartHistory(pid){
       <td style="${cell};font-family:monospace;color:#555">${t.challanNo||'—'}</td>
       <td style="${cell}">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td>
       <td style="${cell};color:#888">${t.type==='in'?(t.notes||'—'):(t.purpose||'—')}</td>
-    </tr>`).join(''):`<tr><td colspan="7"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded for this part</div></td></tr>`;
+      <td style="${cell};white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+    </tr>`).join(''):`<tr><td colspan="8"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded for this part</div></td></tr>`;
   const stat=(label,val,color)=>`<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">${label}</div><div style="font-size:15px;font-weight:700;${color?'color:'+color:''}">${val}</div></div>`;
   const warn=Math.abs(diff)>0.0005
     ?`<div style="margin:0 0 12px;padding:8px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px;color:#7f1d1d">&#9888; The movements add up to ${fmtQty(sum)} ${u} but ${fmtQty(have)} ${u} is on hand (difference ${diff>0?'+':''}${fmtQty(diff)} ${u}).
@@ -2593,7 +2577,7 @@ function openPartHistory(pid){
     </div>
     ${warn}
     <div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px">
-      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">Date</th><th style="${cell}">Type</th><th style="${cell}">Qty</th><th style="${cell}">Balance</th><th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th></tr></thead><tbody>${rows}</tbody></table>
+      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">Date</th><th style="${cell}">Type</th><th style="${cell}">Qty</th><th style="${cell}">Balance</th><th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th><th style="${cell}">Done by</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   document.getElementById('modal-partHistory').classList.add('open');
 }
@@ -3029,7 +3013,7 @@ async function showSetupLinkDialog(url,hours,name,email,purpose,emailed){
   });
 }
 
-function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderActivity();renderTrash();/* renderUsers removed after merge */}
+function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderTrash();/* renderUsers removed after merge */}
 
 // ---- AUTH ----
 function applyModuleToUI(){

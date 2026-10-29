@@ -24,6 +24,10 @@ DO $$ BEGIN
   -- and shared across every row of a bulk entry (one challan, many parts).
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS challan_no TEXT;
 
+  -- Who entered a stock movement (their name at the time). Older movements
+  -- have none recorded.
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by TEXT;
+
   -- Stock recipients who aren't on the payroll (contractors, outside workshops),
   -- added from the store's own "Issued To" picker.
   CREATE TABLE IF NOT EXISTS store_recipients (

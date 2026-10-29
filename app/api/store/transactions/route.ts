@@ -24,7 +24,8 @@ export async function GET() {
              t.ref, t.notes,
              t.issued_to AS "issuedTo",
              t.purpose,
-             t.challan_no AS "challanNo"
+             t.challan_no AS "challanNo",
+             t.created_by AS "createdBy"
       FROM transactions t
       JOIN parts p ON p.id = t.part_id
       WHERE p.deleted_at IS NULL
@@ -77,10 +78,10 @@ export async function POST(req: NextRequest) {
         WHERE id = ${partId} ${type === "out" ? sql`AND qty >= ${qty}` : sql``}
         RETURNING id
       )
-      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no)
-      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo} FROM upd
+      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, created_by)
+      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${guard.name || ""} FROM upd
       RETURNING id, type, part_id AS "partId", qty, date::text AS date, ref, notes,
-                issued_to AS "issuedTo", purpose, challan_no AS "challanNo"
+                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", created_by AS "createdBy"
     `);
     const row = ((saved as any).rows ?? (saved as any))[0];
     if (!row) {
