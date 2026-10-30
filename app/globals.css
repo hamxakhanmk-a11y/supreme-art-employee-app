@@ -1085,8 +1085,18 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 
 /* Station → Vehicles → Monthly Report: a ruled sheet like the paper one,
    blank cells left open to be written in. */
-.fleet-month { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.fleet-month th, .fleet-month td { border: 1px solid var(--border2); padding: 6px 8px; }
+.fleet-month { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.fleet-month th, .fleet-month td { border-right: 1px solid var(--border2); border-bottom: 1px solid var(--border2); padding: 6px 8px; }
+.fleet-month th:first-child, .fleet-month td:first-child { border-left: 1px solid var(--border2); }
+.fleet-month thead th { border-top: 1px solid var(--border2); }
+/* The sheet scrolls inside its own box, so its sideways scrollbar is always in view; the
+   headings stay on top, the Totals row at the bottom, and the vehicle number at the left. */
+.fleet-scroll { padding: 0; overflow: auto; max-height: calc(100vh - 260px); min-height: 160px; }
+.fleet-month thead th { position: sticky; top: 0; z-index: 3; }
+.fleet-month thead th:first-child { left: 0; z-index: 4; }
+.fleet-month tbody td.reg { position: sticky; left: 0; z-index: 2; }
+.fleet-month tfoot td { position: sticky; bottom: 0; z-index: 2; }
+.fleet-month tbody tr:hover { transform: none; }
 .fleet-month thead th { background: var(--bg2); font-size: 11px; text-transform: uppercase; text-align: center; white-space: normal; line-height: 1.2; }
 .fleet-month td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fleet-month td.strong { font-weight: 700; }
@@ -1096,6 +1106,9 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .fleet-month tfoot td { font-weight: 800; background: var(--bg2); border-top: 2px solid var(--text2); }
 .fleet-sign { display: none; }
 @media print {
+  .fleet-scroll { max-height: none; overflow: visible; }
+  .fleet-month { border-collapse: collapse; }
+  .fleet-month thead th, .fleet-month tbody td.reg, .fleet-month tfoot td { position: static; }
   .fleet-month th, .fleet-month td { border: 1px solid #555 !important; }
   .fleet-month thead th, .fleet-month tfoot td { background: #f3eee4 !important; color: #111 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .fleet-sign { display: flex !important; justify-content: flex-end; align-items: flex-end; gap: 8px; margin-top: 28px; font-weight: 700; font-size: 10pt; }

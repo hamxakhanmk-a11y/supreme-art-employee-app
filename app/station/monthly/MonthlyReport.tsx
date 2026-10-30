@@ -108,7 +108,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
       </div>
       {err && <p className="no-print" role="alert" style={{ color: "#DC2626", fontSize: 13 }}>{err}</p>}
 
-      <div className="card" style={{ padding: 0, overflow: "auto" }}>
+      <div className="card fleet-scroll">
         <table className="fleet-month">
           <thead>
             <tr>{HEADERS.map(h => <th key={h}>{h}</th>)}</tr>
