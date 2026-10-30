@@ -204,8 +204,8 @@ export async function PUT(req: NextRequest) {
       });
       // Who made the correction — set after the insert, as the column isn't part
       // of the drizzle table (older rows have none).
-      await db.execute(sql`UPDATE transactions SET created_by = ${guard.name || ""} WHERE id = ${txn.id}`);
-      adjustmentTxn = { ...txn, createdBy: guard.name || "" };
+      await db.execute(sql`UPDATE transactions SET created_by = ${guard.name || ""}, created_at = now() WHERE id = ${txn.id}`);
+      adjustmentTxn = { ...txn, createdBy: guard.name || "", createdAt: new Date().toISOString() };
       await logActivity({
         user: guard, action: `store.${partInfo.module}.part.qty_edit`,
         summary: `edited qty of "${partInfo.sku ? `[${partInfo.sku}] ` : ""}${partInfo.name}": ${beforeQty} → ${qtyVal} ${partInfo.unit} (${sign}${diff})`,

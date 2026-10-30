@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       //    movements) is recorded as an OUT dated today, when it was found
       //    missing — so a running balance never dips below zero in the past.
       const saved = rowsOf(await db.execute(sql`
-        INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, created_by)
+        INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, created_by, created_at)
         SELECT CASE WHEN p.qty > s.total THEN 'in' ELSE 'out' END,
                p.id,
                ABS(ROUND((p.qty - s.total)::numeric, 3))::double precision,
@@ -81,7 +81,8 @@ export async function POST(req: NextRequest) {
                CASE WHEN p.qty > s.total THEN '' ELSE 'Adjustment' END,
                'Adjustment',
                '',
-               ${guard.name || ""}
+               ${guard.name || ""},
+               now()
         FROM parts p
         CROSS JOIN LATERAL (
           SELECT COALESCE(SUM(CASE WHEN type = 'in' THEN qty ELSE -qty END), 0) AS total, MIN(date) AS first_day
