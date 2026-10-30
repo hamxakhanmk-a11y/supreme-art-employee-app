@@ -1048,7 +1048,20 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .fit-card { padding: 0; overflow: auto; width: fit-content; max-width: 100%; }
 .fit-card table { width: auto; }
 .fit-card th, .fit-card td { padding: 7px 10px; }
-@media print { .fit-card { width: 100%; } .fit-card table { width: 100%; } }
+/* The list scrolls inside its own box: the sideways scrollbar sits at the bottom of
+   what you can see (not after the last row), the headings stay on top, and the
+   Actions column stays at the right edge, so nothing needs scrolling to reach. */
+.fit-card { max-height: calc(100vh - 235px); min-height: 160px; }
+.fit-card thead th { position: sticky; top: 0; z-index: 3; }
+.fit-card thead th:last-child, .fit-card tbody td:last-child.no-print { position: sticky; right: 0; z-index: 2; box-shadow: -6px 0 6px -6px rgba(0, 0, 0, 0.18); }
+.fit-card thead th:last-child { z-index: 4; }
+/* A transform on the row would unpin the sticky cells while it is hovered. */
+.fit-card tbody tr:hover { transform: none; }
+@media print {
+  .fit-card { width: 100%; max-height: none; overflow: visible; }
+  .fit-card table { width: 100%; }
+  .fit-card thead th, .fit-card thead th:last-child, .fit-card tbody td:last-child.no-print { position: static; box-shadow: none; }
+}
 .mini-stat {
   display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px;
   background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--brand); border-radius: 8px;

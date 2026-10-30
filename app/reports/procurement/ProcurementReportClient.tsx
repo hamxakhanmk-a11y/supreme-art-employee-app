@@ -196,10 +196,11 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
 
       <style jsx>{`
         .master-letterhead { display: none; }
-        .master-table { padding: 0; overflow: auto; width: fit-content; max-width: 100%; }
+        .master-table { padding: 0; overflow: auto; width: fit-content; max-width: 100%; max-height: calc(100vh - 235px); min-height: 160px; }
         .master-table table { width: auto; }
         .master-table th, .master-table td { padding: 7px 10px; }
-        .master-table thead th { background: #f3eee4; color: #111; }
+        .master-table thead th { background: #f3eee4; color: #111; position: sticky; top: 0; z-index: 3; }
+        .master-table tbody tr:hover { transform: none; }
         @media print {
           .master-letterhead { display: block; font-family: "Times New Roman", serif; color: #000; break-inside: avoid; }
           .master-control { display: grid; grid-template-columns: 1fr 2fr 1fr; }
@@ -212,9 +213,10 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           .master-heading { flex: 1; text-align: center; }
           .master-letterhead h2 { color: #a32d2d; text-align: center; font-size: 17pt; margin: 6px 0 7px; }
           .master-letterhead p { font-size: 9pt; margin-bottom: 12px; }
-          .master-table { overflow: visible !important; width: 100% !important; max-width: none !important; border-radius: 0; border: none !important; box-shadow: none !important; }
+          .master-table { overflow: visible !important; max-height: none !important; width: 100% !important; max-width: none !important; border-radius: 0; border: none !important; box-shadow: none !important; }
           .master-table table { table-layout: fixed; width: 100% !important; }
           .master-table thead { display: table-header-group; }
+          .master-table thead th { position: static; }
           .master-table tr { break-inside: avoid; }
           .master-table th, .master-table td { white-space: normal !important; }
           .master-table th { border: 1px solid #777; background: #f3eee4 !important; color: #111 !important; font-size: 10pt !important; line-height: 1.1; padding: 2px 4px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
