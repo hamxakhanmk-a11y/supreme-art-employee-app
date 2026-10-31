@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
-import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistCategory, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistCategory, showsGrammage, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
 import ChecklistSettings from "./ChecklistSettings";
 
 interface Grn {
@@ -288,9 +288,11 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
               <Field label="Date of inspection (filled by the inspector)">
                 <input type="date" value={inspection.date} onChange={e => setInsp({ date: e.target.value })} className="auth-input" />
               </Field>
-              <Field label="Board grammage">
-                <input value={inspection.grammage} onChange={e => setInsp({ grammage: e.target.value })} className="auth-input" placeholder="e.g. 350 gsm" />
-              </Field>
+              {showsGrammage(inspection) && (
+                <Field label="Board grammage">
+                  <input value={inspection.grammage} onChange={e => setInsp({ grammage: e.target.value })} className="auth-input" placeholder="e.g. 350 gsm" />
+                </Field>
+              )}
               <Field label="Result">
                 <select value={inspection.result} onChange={e => setInsp({ result: e.target.value as GrnInspection["result"] })} className="auth-input">
                   <option value="">— not inspected yet —</option>

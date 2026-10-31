@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, loadChecklist, checklistCategory, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, showsGrammage, loadChecklist, checklistCategory, type GrnItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -122,7 +122,7 @@ export default async function GrnView({ params, searchParams }: { params: Promis
             <span>{ins.designSpec ? "☑" : "☐"} As per required design specification</span>
             <span>{ins.approvedSample ? "☑" : "☐"} As per approved sample</span>
             <span>{ins.approvedSupplier ? "☑" : "☐"} As per approved supplier</span>
-            <span>Board Grammage: <span className="u">{ins.grammage}</span></span>
+            {showsGrammage(ins) && <span>Board Grammage: <span className="u">{ins.grammage}</span></span>}
           </div>
           {result ? (
             <div className="pf-insp-result" style={{ color: result.color, background: result.bg, borderColor: result.color }}>

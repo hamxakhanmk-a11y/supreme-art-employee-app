@@ -58,6 +58,8 @@ export type InspectionResult = "" | "accepted" | "partial" | "rejected";
 export interface InspectionPoint { key: string; text: string }
 export interface InspectionCategory { id: string; label: string; points: InspectionPoint[] }
 export interface GrrChecklist { general: InspectionPoint[]; categories: InspectionCategory[] }
+// The board's grammage is only asked for on a GRR whose category is this one.
+export const BOARD_CATEGORY_ID = "board";
 const pts = (group: string, texts: string[]): InspectionPoint[] => texts.map((text, i) => ({ key: `${group}.${i + 1}`, text }));
 const DEFAULT_GENERAL: InspectionPoint[] = pts("g", [
   "Supplier, challan and invoice match the PO",
@@ -66,6 +68,11 @@ const DEFAULT_GENERAL: InspectionPoint[] = pts("g", [
   "Packing and container intact: sealed, no damage, leakage, dents, rust or wet",
 ]);
 const DEFAULT_CATEGORIES: InspectionCategory[] = [
+  { id: BOARD_CATEGORY_ID, label: "Board", points: pts(BOARD_CATEGORY_ID, [
+    "Board type and size match the PO",
+    "Surface clean and flat: no scratches, stains, spots or warping",
+    "Shade and finish match the approved sample",
+  ]) },
   { id: "die", label: "Cutting Die", points: pts("die", [
     "Matches the approved drawing or artwork (size, layout, design)",
     "Blades and rules sharp, straight, no rust",
@@ -126,6 +133,9 @@ const DEFAULT_CATEGORIES: InspectionCategory[] = [
   ]) },
 ];
 export const DEFAULT_CHECKLIST: GrrChecklist = { general: DEFAULT_GENERAL, categories: DEFAULT_CATEGORIES };
+
+/** Grammage belongs to board; a GRR that already has one written keeps showing it. */
+export const showsGrammage = (ins: { category: string; grammage: string }) => ins.category === BOARD_CATEGORY_ID || !!ins.grammage.trim();
 
 export const checklistCategory = (cl: GrrChecklist, id: string) => cl.categories.find(c => c.id === id) ?? null;
 
