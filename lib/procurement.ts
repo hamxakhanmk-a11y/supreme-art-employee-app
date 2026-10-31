@@ -60,6 +60,8 @@ export interface InspectionCategory { id: string; label: string; points: Inspect
 export interface GrrChecklist { general: InspectionPoint[]; categories: InspectionCategory[] }
 // The board's grammage is only asked for on a GRR whose category is this one.
 export const BOARD_CATEGORY_ID = "board";
+// UV varnish and water base coating are one category; its viscosity reading is asked for the same way.
+export const COATING_CATEGORY_ID = "coating";
 const pts = (group: string, texts: string[]): InspectionPoint[] => texts.map((text, i) => ({ key: `${group}.${i + 1}`, text }));
 const DEFAULT_GENERAL: InspectionPoint[] = pts("g", [
   "Supplier, challan and invoice match the PO",
@@ -92,16 +94,13 @@ const DEFAULT_CATEGORIES: InspectionCategory[] = [
     "Ink type (offset, UV) and shade are correct",
     "Colour matches the approved sample (drawdown test)",
   ]) },
-  { id: "uv", label: "UV Varnish / Coating", points: pts("uv", [
-    "Viscosity and clarity normal, no gel or lumps",
+  { id: COATING_CATEGORY_ID, label: "UV Varnish / Water Base Coating", points: pts(COATING_CATEGORY_ID, [
+    "Clear and smooth: no gel, lumps or settled particles",
+    "Trial coating on board gives good gloss and rub resistance",
   ]) },
   { id: "fount", label: "Fount Solution", points: pts("fount", [
     "Concentration and pH correct",
     "No contamination",
-  ]) },
-  { id: "waterbase", label: "Water Base Coating", points: pts("waterbase", [
-    "Smooth, no settled particles",
-    "Trial coating gives good gloss and rub resistance",
   ]) },
   { id: "uvcleaner", label: "UV Cleaner", points: pts("uvcleaner", [
     "Suitable for UV use",
@@ -136,6 +135,9 @@ export const DEFAULT_CHECKLIST: GrrChecklist = { general: DEFAULT_GENERAL, categ
 
 /** Grammage belongs to board; a GRR that already has one written keeps showing it. */
 export const showsGrammage = (ins: { categories: string[]; grammage: string }) => ins.categories.includes(BOARD_CATEGORY_ID) || !!ins.grammage.trim();
+
+/** The viscosity reading belongs to the coating category; a GRR that already has one keeps showing it. */
+export const showsViscosity = (ins: { categories: string[]; viscosity: string }) => ins.categories.includes(COATING_CATEGORY_ID) || !!ins.viscosity.trim();
 
 /** The names of the categories a GRR is checked against, in the order given. */
 export const checklistLabels = (cl: GrrChecklist, ids: string[]) =>
@@ -200,6 +202,7 @@ export interface GrnInspection {
   approvedSample: boolean;    // as per approved sample
   approvedSupplier: boolean;  // as per approved supplier
   grammage: string;           // board grammage, as written
+  viscosity: string;          // viscosity of a coating, as measured and written
   result: InspectionResult;
   remarks: string;
   checkedBy: string;
@@ -211,7 +214,7 @@ export const INSPECTION_RESULTS: Record<Exclude<InspectionResult, "">, { label: 
 };
 const blankInspection = (): GrnInspection => ({
   date: "", categories: [], checks: {}, designSpec: false, approvedSample: false, approvedSupplier: false,
-  grammage: "", result: "", remarks: "", checkedBy: "",
+  grammage: "", viscosity: "", result: "", remarks: "", checkedBy: "",
 });
 // Only the known fields, each the right kind — whatever was stored or sent.
 export function cleanInspection(v: unknown): GrnInspection {
@@ -236,6 +239,7 @@ export function cleanInspection(v: unknown): GrnInspection {
     approvedSample: o.approvedSample === true,
     approvedSupplier: o.approvedSupplier === true,
     grammage: text(o.grammage, 60),
+    viscosity: text(o.viscosity, 60),
     result: result in INSPECTION_RESULTS ? (result as InspectionResult) : "",
     remarks: text(o.remarks, 500),
     checkedBy: text(o.checkedBy, 120),

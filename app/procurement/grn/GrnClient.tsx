@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
-import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, showsGrammage, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, showsGrammage, showsViscosity, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
 import ChecklistSettings from "./ChecklistSettings";
 
 interface Grn {
@@ -163,7 +163,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
         <button onClick={() => setSettingsOpen(v => !v)} className="btn btn-sm" title="The inspection checklist: categories and their points">⚙ Settings</button>
         {open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>}
       </> : null} tabs={<>
@@ -294,6 +294,11 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
               <Field label="Date of inspection (filled by the inspector)">
                 <input type="date" value={inspection.date} onChange={e => setInsp({ date: e.target.value })} className="auth-input" />
               </Field>
+              {showsViscosity(inspection) && (
+                <Field label="Viscosity (checked value)">
+                  <input value={inspection.viscosity} onChange={e => setInsp({ viscosity: e.target.value })} className="auth-input" placeholder="e.g. 25 sec, Zahn cup 2" />
+                </Field>
+              )}
               {showsGrammage(inspection) && (
                 <Field label="Board grammage">
                   <input value={inspection.grammage} onChange={e => setInsp({ grammage: e.target.value })} className="auth-input" placeholder="e.g. 350 gsm" />
