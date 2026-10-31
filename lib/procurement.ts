@@ -49,8 +49,139 @@ export interface GrnItem { srNo: number; item: string; quantity: string; remarks
 // JSON) — the paper inspection report the store fills when goods arrive. Its
 // date stays empty until the inspector writes it in.
 export type InspectionResult = "" | "accepted" | "partial" | "rejected";
+
+// The inspection points, from the Incoming Material Inspection Checklist. The
+// general ones apply to every item; the rest belong to one category of material,
+// picked on the GRR. The list is kept in procurement_settings and edited under
+// GRR → Settings; what follows is what it starts as. A point's key ("<group>.<n>")
+// is what `checks` records a tick against, so rewording a point keeps its ticks.
+export interface InspectionPoint { key: string; text: string }
+export interface InspectionCategory { id: string; label: string; points: InspectionPoint[] }
+export interface GrrChecklist { general: InspectionPoint[]; categories: InspectionCategory[] }
+const pts = (group: string, texts: string[]): InspectionPoint[] => texts.map((text, i) => ({ key: `${group}.${i + 1}`, text }));
+const DEFAULT_GENERAL: InspectionPoint[] = pts("g", [
+  "Supplier, challan and invoice match the PO",
+  "Item name, brand, type and specification match the PO",
+  "Quantity matches the invoice (note any difference)",
+  "Packing and container intact: sealed, no damage, leakage, dents, rust or wet",
+]);
+const DEFAULT_CATEGORIES: InspectionCategory[] = [
+  { id: "die", label: "Cutting Die", points: pts("die", [
+    "Matches the approved drawing or artwork (size, layout, design)",
+    "Blades and rules sharp, straight, no rust",
+    "Cutting and creasing rule positions correct",
+  ]) },
+  { id: "emboss", label: "Embossing Die (male and female)", points: pts("emboss", [
+    "Design matches the approved artwork",
+    "Depth and edge sharpness match the specification",
+    "Male and female fit together properly",
+  ]) },
+  { id: "foil", label: "Hot Stamping Foil", points: pts("foil", [
+    "Shade matches the approved sample",
+    "Roll width, length and core size fit the machine",
+    "No scratches, pinholes or uneven coating",
+  ]) },
+  { id: "ink", label: "Inks", points: pts("ink", [
+    "Ink type (offset, UV) and shade are correct",
+    "Colour matches the approved sample (drawdown test)",
+  ]) },
+  { id: "uv", label: "UV Varnish / Coating", points: pts("uv", [
+    "Viscosity and clarity normal, no gel or lumps",
+  ]) },
+  { id: "fount", label: "Fount Solution", points: pts("fount", [
+    "Concentration and pH correct",
+    "No contamination",
+  ]) },
+  { id: "waterbase", label: "Water Base Coating", points: pts("waterbase", [
+    "Smooth, no settled particles",
+    "Trial coating gives good gloss and rub resistance",
+  ]) },
+  { id: "uvcleaner", label: "UV Cleaner", points: pts("uvcleaner", [
+    "Suitable for UV use",
+    "No unusual smell, no contamination",
+  ]) },
+  { id: "blanco", label: "Blanco (Blanket Wash)", points: pts("blanco", [
+    "Correct type for the machine and ink (UV or conventional)",
+    "No unusual smell, no contamination",
+  ]) },
+  { id: "plate", label: "CTCP / CTP Plates", points: pts("plate", [
+    "Type (CTCP or CTP), thickness and size fit the machine",
+    "No scratches, dents, fingerprints or oxidation",
+  ]) },
+  { id: "developer", label: "Developer", points: pts("developer", [
+    "Compatible with the plate type",
+    "Clear, no crystals or sediment",
+  ]) },
+  { id: "platecleaner", label: "Plate Cleaner", points: pts("platecleaner", [
+    "Suitable for the plate type",
+    "Clear, no contamination",
+  ]) },
+  { id: "blanket", label: "Rubber Blanket", points: pts("blanket", [
+    "Size, thickness and type (conventional or UV) match the machine",
+    "Surface smooth: no cuts, bubbles, dents or uneven thickness",
+  ]) },
+  { id: "glue", label: "Glue", points: pts("glue", [
+    "Type matches the use (pasting, lamination, pocket or window gluing)",
+    "Consistency, colour and smell normal: no lumps, skin or separation",
+  ]) },
+];
+export const DEFAULT_CHECKLIST: GrrChecklist = { general: DEFAULT_GENERAL, categories: DEFAULT_CATEGORIES };
+
+export const checklistCategory = (cl: GrrChecklist, id: string) => cl.categories.find(c => c.id === id) ?? null;
+
+// Whatever was stored or sent, made into a well-formed checklist: trimmed text,
+// no empty points or nameless categories, unique keys and ids. A point without a
+// key (a new one) gets the next free number in its group; a new category an id
+// made from its name.
+export function cleanChecklist(v: unknown): GrrChecklist {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  const text = (x: unknown, max: number) => String(x ?? "").trim().replace(/\s+/g, " ").slice(0, max);
+  const cleanPoints = (raw: unknown, group: string): InspectionPoint[] => {
+    const list = (Array.isArray(raw) ? raw : []).slice(0, 40).map(p => {
+      const q = (p && typeof p === "object" ? p : {}) as Record<string, unknown>;
+      const key = String(q.key ?? "");
+      return { key: key.startsWith(group + ".") && /^[a-z0-9]+\.\d{1,4}$/.test(key) ? key : "", text: text(q.text, 200) };
+    }).filter(p => p.text);
+    const used = new Set<string>();
+    let next = 1 + Math.max(0, ...list.map(p => (p.key ? parseInt(p.key.split(".")[1], 10) : 0)));
+    return list.map(p => {
+      let key = p.key;
+      if (!key || used.has(key)) key = `${group}.${next++}`;
+      used.add(key);
+      return { key, text: p.text };
+    });
+  };
+  const ids = new Set<string>();
+  const categories: InspectionCategory[] = [];
+  for (const c of (Array.isArray(o.categories) ? o.categories : []).slice(0, 60)) {
+    const q = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
+    const label = text(q.label, 80);
+    if (!label) continue;
+    let id = /^[a-z0-9]{1,24}$/.test(String(q.id ?? "")) ? String(q.id) : "";
+    if (!id || ids.has(id) || id === "g") {
+      const base = label.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 14) || "cat";
+      id = base; let n = 2;
+      while (ids.has(id) || id === "g") id = `${base}${n++}`;
+    }
+    ids.add(id);
+    categories.push({ id, label, points: cleanPoints(q.points, id) });
+  }
+  return { general: cleanPoints(o.general, "g"), categories };
+}
+
+// The checklist as set under GRR → Settings (the default until someone saves one).
+export async function loadChecklist(): Promise<GrrChecklist> {
+  await ensureProcurementTables();
+  const res = await db.execute(sql`SELECT value FROM procurement_settings WHERE key = 'grr_checklist'`);
+  const raw = (res.rows[0] as { value?: string } | undefined)?.value;
+  if (!raw) return DEFAULT_CHECKLIST;
+  try { return cleanChecklist(JSON.parse(raw)); } catch { return DEFAULT_CHECKLIST; }
+}
+
 export interface GrnInspection {
   date: string;
+  category: string;           // id of one of the checklist's categories, or "" (not chosen)
+  checks: Record<string, "ok" | "no">;   // per point key; absent = not checked yet
   designSpec: boolean;        // as per required design specification
   approvedSample: boolean;    // as per approved sample
   approvedSupplier: boolean;  // as per approved supplier
@@ -65,7 +196,7 @@ export const INSPECTION_RESULTS: Record<Exclude<InspectionResult, "">, { label: 
   rejected: { choice: "Rejected",        label: "GOOD RECEIVED – REJECTED",        color: "#991B1B", bg: "#fee2e2" },
 };
 const blankInspection = (): GrnInspection => ({
-  date: "", designSpec: false, approvedSample: false, approvedSupplier: false,
+  date: "", category: "", checks: {}, designSpec: false, approvedSample: false, approvedSupplier: false,
   grammage: "", result: "", remarks: "", checkedBy: "",
 });
 // Only the known fields, each the right kind — whatever was stored or sent.
@@ -74,8 +205,17 @@ export function cleanInspection(v: unknown): GrnInspection {
   const text = (x: unknown, max: number) => String(x ?? "").trim().slice(0, max);
   const date = text(o.date, 10);
   const result = String(o.result ?? "");
+  const category = /^[a-z0-9]{1,24}$/.test(String(o.category ?? "")) ? String(o.category) : "";
+  // Each point's ok / no, by key. Which points exist is the checklist's say.
+  const given = (o.checks && typeof o.checks === "object" ? o.checks : {}) as Record<string, unknown>;
+  const checks: Record<string, "ok" | "no"> = {};
+  for (const [k, v] of Object.entries(given).slice(0, 300)) {
+    if (/^[a-z0-9]+\.\d{1,4}$/.test(k) && (v === "ok" || v === "no")) checks[k] = v;
+  }
   return {
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
+    category,
+    checks,
     designSpec: o.designSpec === true,
     approvedSample: o.approvedSample === true,
     approvedSupplier: o.approvedSupplier === true,
@@ -460,6 +600,12 @@ DO $$ BEGIN
   );
   CREATE UNIQUE INDEX IF NOT EXISTS supplier_product_rates_key
     ON supplier_product_rates (product, supplier);
+  -- Settings for the procurement screens, one row per key. grr_checklist: the
+  -- inspection points on a GRR (general ones and per category), set under GRR → Settings.
+  CREATE TABLE IF NOT EXISTS procurement_settings (
+    key varchar(60) PRIMARY KEY,
+    value text NOT NULL
+  );
   -- Columns added after their tables already existed.
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_address text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_contact varchar(160);

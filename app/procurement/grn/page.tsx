@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { desc, notInArray } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, computePoReceipts, type PoItem, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, loadChecklist, parseItems, computePoReceipts, type PoItem, type GrnItem } from "@/lib/procurement";
 import GrnClient from "./GrnClient";
 
 export const dynamic = "force-dynamic";
@@ -10,12 +10,13 @@ export const dynamic = "force-dynamic";
 export default async function GrnPage() {
   await requireModule("grn");
   await ensureProcurementTables();
-  const [rows, pos] = await Promise.all([
+  const [rows, pos, checklist] = await Promise.all([
     db.select().from(grns).orderBy(desc(grns.grnNo)),
     // POs still awaiting goods — fully received & closed ones drop out of the picker.
     db.select().from(purchaseOrders)
       .where(notInArray(purchaseOrders.status, ["received", "closed"]))
       .orderBy(desc(purchaseOrders.poNo)),
+    loadChecklist(),
   ]);
 
   // For each open PO, work out which lines are still outstanding (and by how
@@ -35,5 +36,5 @@ export default async function GrnPage() {
     return { id: p.id, poNo: p.poNo, registered: p.registered, supplierName: p.supplierName, outstanding };
   }).filter(p => p.outstanding.length > 0);
 
-  return <GrnClient rows={rows} openPos={openPos} />;
+  return <GrnClient rows={rows} openPos={openPos} checklist={checklist} />;
 }

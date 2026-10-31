@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
-import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, type GrnItem, type GrnInspection } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistCategory, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
+import ChecklistSettings from "./ChecklistSettings";
 
 interface Grn {
   id: number; grnNo: number; gatePassNo: string | null; invNo: string | null; dcNo: string | null; poNo: number | null;
@@ -20,12 +21,13 @@ interface OpenPo {
 
 const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "", invoiceQty: "" });
 
-export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: OpenPo[] }) {
+export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; openPos: OpenPo[]; checklist: GrrChecklist }) {
   const router = useRouter();
   const reportRange = useReportRange(rows);
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("grn");
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -155,7 +157,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>) : null} tabs={<>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistCategory(checklist,ins.category)?.label??"",yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
+        <button onClick={() => setSettingsOpen(v => !v)} className="btn btn-sm" title="The inspection checklist: categories and their points">⚙ Settings</button>
+        {open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>}
+      </> : null} tabs={<>
         <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
@@ -165,6 +170,11 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
         <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
       </>} />
 
+
+      {settingsOpen && canEdit && (
+        <ChecklistSettings checklist={checklist} onClose={() => setSettingsOpen(false)}
+          onSaved={() => { setSettingsOpen(false); router.refresh(); }} />
+      )}
 
       {open && canEdit && (
         <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
@@ -288,6 +298,18 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 </select>
               </Field>
             </div>
+            <div style={{ marginTop: 12, maxWidth: 360 }}>
+              <Field label="Category of material">
+                <select value={inspection.category} onChange={e => setInsp({ category: e.target.value, checks: {} })} className="auth-input">
+                  <option value="">— choose to add its checks —</option>
+                  {checklist.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </Field>
+            </div>
+            <PointsTable title="General checks (all items)" points={checklist.general} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
+            {checklistCategory(checklist, inspection.category) && (
+              <PointsTable title={checklistCategory(checklist, inspection.category)!.label} points={checklistCategory(checklist, inspection.category)!.points} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
+            )}
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", margin: "12px 0 4px", fontSize: 13 }}>
               {([
                 ["designSpec", "As per required design specification"],
@@ -319,10 +341,10 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
 
       <div className="card fit-card">
         <table>
-          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th style={{ textAlign: "center" }}>Design Spec</th><th style={{ textAlign: "center" }}>Appr. Sample</th><th style={{ textAlign: "center" }}>Appr. Supplier</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th>Category</th><th style={{ textAlign: "center" }}>Design Spec</th><th style={{ textAlign: "center" }}>Appr. Sample</th><th style={{ textAlign: "center" }}>Appr. Supplier</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={13} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={14} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(g => (
               <tr
                 key={g.id}
@@ -340,6 +362,7 @@ export default function GrnClient({ rows, openPos }: { rows: Grn[]; openPos: Ope
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
                 <td style={{ textAlign: "center" }}><QcBadge result={parseInspection(g.inspection).result} /></td>
+                <td>{checklistCategory(checklist, parseInspection(g.inspection).category)?.label ?? <span style={{ color: "var(--text3)" }}>—</span>}</td>
                 <QcPoints raw={g.inspection} />
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
@@ -369,6 +392,35 @@ function QcPoints({ raw }: { raw: string | null }) {
       <td style={{ textAlign: "center" }}>{point(ins.approvedSupplier)}</td>
       <td>{ins.grammage || <span style={{ color: "var(--text3)" }}>—</span>}</td>
     </>
+  );
+}
+
+// A block of inspection points, each OK or Not OK; clicking the chosen one again clears it.
+function PointsTable({ title, points, checks, onChange }: {
+  title: string; points: InspectionPoint[]; checks: GrnInspection["checks"]; onChange: (c: GrnInspection["checks"]) => void;
+}) {
+  const set = (key: string, v: "ok" | "no") => {
+    const next = { ...checks };
+    if (next[key] === v) delete next[key]; else next[key] = v;
+    onChange(next);
+  };
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>{title}</div>
+      <table style={{ width: "100%" }}>
+        <thead><tr><th style={{ width: 36 }}>No.</th><th>Inspection point</th><th style={{ width: 56, textAlign: "center" }}>OK</th><th style={{ width: 70, textAlign: "center" }}>Not OK</th></tr></thead>
+        <tbody>
+          {points.map((p, i) => (
+            <tr key={p.key}>
+              <td style={{ textAlign: "center", color: "var(--text3)" }}>{i + 1}</td>
+              <td>{p.text}</td>
+              <td style={{ textAlign: "center" }}><input type="checkbox" checked={checks[p.key] === "ok"} onChange={() => set(p.key, "ok")} aria-label={`OK: ${p.text}`} /></td>
+              <td style={{ textAlign: "center" }}><input type="checkbox" checked={checks[p.key] === "no"} onChange={() => set(p.key, "no")} aria-label={`Not OK: ${p.text}`} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
