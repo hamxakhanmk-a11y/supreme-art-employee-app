@@ -133,11 +133,17 @@ const DEFAULT_CATEGORIES: InspectionCategory[] = [
 ];
 export const DEFAULT_CHECKLIST: GrrChecklist = { general: DEFAULT_GENERAL, categories: DEFAULT_CATEGORIES };
 
-/** Grammage belongs to board; a GRR that already has one written keeps showing it. */
-export const showsGrammage = (ins: { categories: string[]; grammage: string }) => ins.categories.includes(BOARD_CATEGORY_ID) || !!ins.grammage.trim();
-
-/** The viscosity reading belongs to the coating category; a GRR that already has one keeps showing it. */
-export const showsViscosity = (ins: { categories: string[]; viscosity: string }) => ins.categories.includes(COATING_CATEGORY_ID) || !!ins.viscosity.trim();
+/** A category's own value row, last in its table: the inspector writes a reading instead of ticking OK / Not OK. */
+export const CATEGORY_VALUES: Record<string, { field: "grammage" | "viscosity"; label: string; hint: string }> = {
+  [BOARD_CATEGORY_ID]: { field: "grammage", label: "Board grammage (gsm)", hint: "e.g. 350" },
+  [COATING_CATEGORY_ID]: { field: "viscosity", label: "Viscosity", hint: "e.g. 22 sec" },
+};
+/** A GRR saved with a reading but without its category (before these rows existed) gets the category back. */
+export function withValueCategories<T extends { categories: string[]; grammage: string; viscosity: string }>(ins: T): T {
+  const categories = [...ins.categories];
+  for (const [id, v] of Object.entries(CATEGORY_VALUES)) if (ins[v.field].trim() && !categories.includes(id)) categories.push(id);
+  return { ...ins, categories };
+}
 
 /** The names of the categories a GRR is checked against, in the order given. */
 export const checklistLabels = (cl: GrrChecklist, ids: string[]) =>

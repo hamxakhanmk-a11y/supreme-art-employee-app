@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
-import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, showsGrammage, showsViscosity, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, CATEGORY_VALUES, withValueCategories, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
 import ChecklistSettings from "./ChecklistSettings";
 
 interface Grn {
@@ -79,7 +79,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
     setPoNoManual(g.poNo != null ? String(g.poNo) : "");
     setManualGrnNo(g.registered === false ? String(g.grnNo) : "");
     setGatePassNo(g.gatePassNo || ""); setInvNo(g.invNo || ""); setDcNo(g.dcNo || "");
-    setInspection(parseInspection(g.inspection));
+    setInspection(withValueCategories(parseInspection(g.inspection)));
     setDate((g.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10));
     setVerifiedBy(g.verifiedBy || ""); setReceivedBy(g.receivedBy || "");
     const its = parseItems<GrnItem>(g.items);
@@ -294,16 +294,6 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
               <Field label="Date of inspection (filled by the inspector)">
                 <input type="date" value={inspection.date} onChange={e => setInsp({ date: e.target.value })} className="auth-input" />
               </Field>
-              {showsViscosity(inspection) && (
-                <Field label="Viscosity (checked value)">
-                  <input value={inspection.viscosity} onChange={e => setInsp({ viscosity: e.target.value })} className="auth-input" placeholder="e.g. 25 sec, Zahn cup 2" />
-                </Field>
-              )}
-              {showsGrammage(inspection) && (
-                <Field label="Board grammage">
-                  <input value={inspection.grammage} onChange={e => setInsp({ grammage: e.target.value })} className="auth-input" placeholder="e.g. 350 gsm" />
-                </Field>
-              )}
               <Field label="Result">
                 <select value={inspection.result} onChange={e => setInsp({ result: e.target.value as GrnInspection["result"] })} className="auth-input">
                   <option value="">— not inspected yet —</option>
@@ -329,9 +319,13 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
               </div>
             </div>
             <PointsTable title="General checks (all items)" points={checklist.general} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
-            {checklist.categories.filter(c => inspection.categories.includes(c.id)).map(c => (
-              <PointsTable key={c.id} title={c.label} points={c.points} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
-            ))}
+            {checklist.categories.filter(c => inspection.categories.includes(c.id)).map(c => {
+              const v = CATEGORY_VALUES[c.id];
+              return (
+                <PointsTable key={c.id} title={c.label} points={c.points} checks={inspection.checks} onChange={checks => setInsp({ checks })}
+                  value={v ? { label: v.label, hint: v.hint, text: inspection[v.field], onChange: t => setInsp({ [v.field]: t }) } : undefined} />
+              );
+            })}
             <div style={{ marginTop: 12 }}>
             <Field label="Remarks">
               <input value={inspection.remarks} onChange={e => setInsp({ remarks: e.target.value })} className="auth-input" placeholder="e.g. GOOD" />
@@ -399,8 +393,10 @@ function QcPoints({ raw }: { raw: string | null }) {
 }
 
 // A block of inspection points, each OK or Not OK; clicking the chosen one again clears it.
-function PointsTable({ title, points, checks, onChange }: {
+// `value`: the category's own row, where the reading is written instead of ticked.
+function PointsTable({ title, points, checks, onChange, value }: {
   title: string; points: InspectionPoint[]; checks: GrnInspection["checks"]; onChange: (c: GrnInspection["checks"]) => void;
+  value?: { label: string; hint: string; text: string; onChange: (t: string) => void };
 }) {
   const set = (key: string, v: "ok" | "no") => {
     const next = { ...checks };
@@ -421,6 +417,16 @@ function PointsTable({ title, points, checks, onChange }: {
               <td style={{ textAlign: "center" }}><input type="checkbox" checked={checks[p.key] === "no"} onChange={() => set(p.key, "no")} aria-label={`Not OK: ${p.text}`} /></td>
             </tr>
           ))}
+          {value && (
+            <tr>
+              <td style={{ textAlign: "center", color: "var(--text3)" }}>{points.length + 1}</td>
+              <td>{value.label}</td>
+              <td colSpan={2} style={{ padding: "4px 8px" }}>
+                <input value={value.text} onChange={e => value.onChange(e.target.value)} className="auth-input" placeholder={value.hint}
+                  style={{ width: "100%", minWidth: 110 }} maxLength={60} aria-label={value.label} />
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

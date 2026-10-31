@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, showsGrammage, showsViscosity, loadChecklist, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, CATEGORY_VALUES, withValueCategories, loadChecklist, type GrnItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -23,10 +23,15 @@ export default async function GrnView({ params, searchParams }: { params: Promis
         .from(purchaseOrders).where(eq(purchaseOrders.id, g.poId))
     : [];
   const m = FORM_META.grn;
-  const ins = parseInspection(g.inspection);
+  const ins = withValueCategories(parseInspection(g.inspection));
   const result = ins.result ? INSPECTION_RESULTS[ins.result] : null;
   const checklist = await loadChecklist();
   const cats = checklist.categories.filter(c => ins.categories.includes(c.id));
+  type Extra = (typeof CATEGORY_VALUES)[string] | undefined;
+  const groups = [
+    { title: "General checks (all items)", points: checklist.general, extra: undefined as Extra },
+    ...cats.map(c => ({ title: c.label, points: c.points, extra: CATEGORY_VALUES[c.id] as Extra })),
+  ];
 
   return (
     <div className="fade-up">
@@ -101,7 +106,7 @@ export default async function GrnView({ params, searchParams }: { params: Promis
             <span className="pf-insp-title">Incoming Material Inspection</span>
             <span>Date of Inspection: <span className="u">{ins.date ? fmtDate(ins.date) : ""}</span></span>
           </div>
-          {[{ title: "General checks (all items)", points: checklist.general }, ...cats.map(c => ({ title: c.label, points: c.points }))].map(grp => (
+          {groups.map(grp => (
             <table key={grp.title} className="pf-table pf-points">
               <thead>
                 <tr><th style={{ width: 28 }}>No.</th><th>{grp.title}</th><th style={{ width: 38 }}>OK</th><th style={{ width: 52 }}>Not OK</th></tr>
@@ -115,15 +120,16 @@ export default async function GrnView({ params, searchParams }: { params: Promis
                     <td className="c">{ins.checks[p.key] === "no" ? "☑" : "☐"}</td>
                   </tr>
                 ))}
+                {grp.extra && (
+                  <tr>
+                    <td className="c">{grp.points.length + 1}</td>
+                    <td>{grp.extra.label}</td>
+                    <td className="c" colSpan={2}>{ins[grp.extra.field]}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           ))}
-          {(showsGrammage(ins) || showsViscosity(ins)) && (
-            <div className="pf-insp-checks">
-              {showsGrammage(ins) && <span>Board Grammage: <span className="u">{ins.grammage}</span></span>}
-              {showsViscosity(ins) && <span>Viscosity: <span className="u">{ins.viscosity}</span></span>}
-            </div>
-          )}
           {result ? (
             <div className="pf-insp-result" style={{ color: result.color, background: result.bg, borderColor: result.color }}>
               RESULT: {result.label}.
