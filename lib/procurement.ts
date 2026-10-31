@@ -51,7 +51,7 @@ export interface GrnItem { srNo: number; item: string; quantity: string; remarks
 export type InspectionResult = "" | "accepted" | "partial" | "rejected";
 
 // The inspection points, from the Incoming Material Inspection Checklist. The
-// general ones apply to every item; the rest belong to one category of material,
+// general ones apply to every item; the rest belong to a category of material,
 // picked on the GRR. The list is kept in procurement_settings and edited under
 // GRR → Settings; what follows is what it starts as. A point's key ("<group>.<n>")
 // is what `checks` records a tick against, so rewording a point keeps its ticks.
@@ -135,7 +135,11 @@ const DEFAULT_CATEGORIES: InspectionCategory[] = [
 export const DEFAULT_CHECKLIST: GrrChecklist = { general: DEFAULT_GENERAL, categories: DEFAULT_CATEGORIES };
 
 /** Grammage belongs to board; a GRR that already has one written keeps showing it. */
-export const showsGrammage = (ins: { category: string; grammage: string }) => ins.category === BOARD_CATEGORY_ID || !!ins.grammage.trim();
+export const showsGrammage = (ins: { categories: string[]; grammage: string }) => ins.categories.includes(BOARD_CATEGORY_ID) || !!ins.grammage.trim();
+
+/** The names of the categories a GRR is checked against, in the order given. */
+export const checklistLabels = (cl: GrrChecklist, ids: string[]) =>
+  ids.map(id => checklistCategory(cl, id)?.label).filter(Boolean).join(", ");
 
 export const checklistCategory = (cl: GrrChecklist, id: string) => cl.categories.find(c => c.id === id) ?? null;
 
@@ -190,7 +194,7 @@ export async function loadChecklist(): Promise<GrrChecklist> {
 
 export interface GrnInspection {
   date: string;
-  category: string;           // id of one of the checklist's categories, or "" (not chosen)
+  categories: string[];       // ids of the checklist's categories this GRR is checked against (none, one or several)
   checks: Record<string, "ok" | "no">;   // per point key; absent = not checked yet
   designSpec: boolean;        // as per required design specification
   approvedSample: boolean;    // as per approved sample
@@ -206,7 +210,7 @@ export const INSPECTION_RESULTS: Record<Exclude<InspectionResult, "">, { label: 
   rejected: { choice: "Rejected",        label: "GOOD RECEIVED – REJECTED",        color: "#991B1B", bg: "#fee2e2" },
 };
 const blankInspection = (): GrnInspection => ({
-  date: "", category: "", checks: {}, designSpec: false, approvedSample: false, approvedSupplier: false,
+  date: "", categories: [], checks: {}, designSpec: false, approvedSample: false, approvedSupplier: false,
   grammage: "", result: "", remarks: "", checkedBy: "",
 });
 // Only the known fields, each the right kind — whatever was stored or sent.
@@ -215,7 +219,9 @@ export function cleanInspection(v: unknown): GrnInspection {
   const text = (x: unknown, max: number) => String(x ?? "").trim().slice(0, max);
   const date = text(o.date, 10);
   const result = String(o.result ?? "");
-  const category = /^[a-z0-9]{1,24}$/.test(String(o.category ?? "")) ? String(o.category) : "";
+  // Several categories can apply to one GRR; `category` is how the first version saved the one it had.
+  const idOk = (x: unknown) => /^[a-z0-9]{1,24}$/.test(String(x ?? ""));
+  const categories = [...new Set([...(Array.isArray(o.categories) ? o.categories : []), o.category].filter(idOk).map(String))].slice(0, 20);
   // Each point's ok / no, by key. Which points exist is the checklist's say.
   const given = (o.checks && typeof o.checks === "object" ? o.checks : {}) as Record<string, unknown>;
   const checks: Record<string, "ok" | "no"> = {};
@@ -224,7 +230,7 @@ export function cleanInspection(v: unknown): GrnInspection {
   }
   return {
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
-    category,
+    categories,
     checks,
     designSpec: o.designSpec === true,
     approvedSample: o.approvedSample === true,

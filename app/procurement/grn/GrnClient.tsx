@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
-import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistCategory, showsGrammage, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
+import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, showsGrammage, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
 import ChecklistSettings from "./ChecklistSettings";
 
 interface Grn {
@@ -48,6 +48,12 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   // The incoming-material inspection. Its date starts empty: the inspector writes it.
   const [inspection, setInspection] = useState<GrnInspection>(() => parseInspection(null));
   const setInsp = (patch: Partial<GrnInspection>) => setInspection(x => ({ ...x, ...patch }));
+  // Ticking a category adds its points; unticking drops it and whatever was ticked in it.
+  const toggleCategory = (id: string, on: boolean) => setInspection(x => {
+    const checks = { ...x.checks };
+    if (!on) for (const k of Object.keys(checks)) if (k.startsWith(id + ".")) delete checks[k];
+    return { ...x, categories: on ? [...x.categories, id] : x.categories.filter(c => c !== id), checks };
+  });
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [verifiedBy, setVerifiedBy] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
@@ -157,7 +163,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistCategory(checklist,ins.category)?.label??"",yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
         <button onClick={() => setSettingsOpen(v => !v)} className="btn btn-sm" title="The inspection checklist: categories and their points">⚙ Settings</button>
         {open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>}
       </> : null} tabs={<>
@@ -300,18 +306,27 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
                 </select>
               </Field>
             </div>
-            <div style={{ marginTop: 12, maxWidth: 360 }}>
-              <Field label="Category of material">
-                <select value={inspection.category} onChange={e => setInsp({ category: e.target.value, checks: {} })} className="auth-input">
-                  <option value="">— choose to add its checks —</option>
-                  {checklist.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
-              </Field>
+            <div style={{ marginTop: 12 }}>
+              <span className="auth-field-label">Category of material — tick every one that applies</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px", marginTop: 4 }}>
+                {checklist.categories.map(c => {
+                  const on = inspection.categories.includes(c.id);
+                  return (
+                    <label key={c.id} style={{
+                      display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13,
+                      padding: "4px 10px", borderRadius: 8, border: `1px solid ${on ? "var(--brand)" : "var(--border)"}`,
+                      background: on ? "var(--brand-light, #fbeaea)" : "var(--bg)",
+                    }}>
+                      <input type="checkbox" checked={on} onChange={e => toggleCategory(c.id, e.target.checked)} /> {c.label}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
             <PointsTable title="General checks (all items)" points={checklist.general} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
-            {checklistCategory(checklist, inspection.category) && (
-              <PointsTable title={checklistCategory(checklist, inspection.category)!.label} points={checklistCategory(checklist, inspection.category)!.points} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
-            )}
+            {checklist.categories.filter(c => inspection.categories.includes(c.id)).map(c => (
+              <PointsTable key={c.id} title={c.label} points={c.points} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
+            ))}
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", margin: "12px 0 4px", fontSize: 13 }}>
               {([
                 ["designSpec", "As per required design specification"],
@@ -364,7 +379,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
                 <td>{fmtDate(g.date)}</td>
                 <td className="num">{parseItems<GrnItem>(g.items).length}</td>
                 <td style={{ textAlign: "center" }}><QcBadge result={parseInspection(g.inspection).result} /></td>
-                <td>{checklistCategory(checklist, parseInspection(g.inspection).category)?.label ?? <span style={{ color: "var(--text3)" }}>—</span>}</td>
+                <td>{checklistLabels(checklist, parseInspection(g.inspection).categories) || <span style={{ color: "var(--text3)" }}>—</span>}</td>
                 <QcPoints raw={g.inspection} />
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>

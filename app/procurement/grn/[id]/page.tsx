@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, showsGrammage, loadChecklist, checklistCategory, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, docNoLabel, FORM_META, FORM_COPIES, parseInspection, qtyDifference, INSPECTION_RESULTS, showsGrammage, loadChecklist, type GrnItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export default async function GrnView({ params, searchParams }: { params: Promis
   const ins = parseInspection(g.inspection);
   const result = ins.result ? INSPECTION_RESULTS[ins.result] : null;
   const checklist = await loadChecklist();
-  const cat = checklistCategory(checklist, ins.category);
+  const cats = checklist.categories.filter(c => ins.categories.includes(c.id));
 
   return (
     <div className="fade-up">
@@ -101,7 +101,7 @@ export default async function GrnView({ params, searchParams }: { params: Promis
             <span className="pf-insp-title">Incoming Material Inspection</span>
             <span>Date of Inspection: <span className="u">{ins.date ? fmtDate(ins.date) : ""}</span></span>
           </div>
-          {[{ title: "General checks (all items)", points: checklist.general }, ...(cat ? [{ title: cat.label, points: cat.points }] : [])].map(grp => (
+          {[{ title: "General checks (all items)", points: checklist.general }, ...cats.map(c => ({ title: c.label, points: c.points }))].map(grp => (
             <table key={grp.title} className="pf-table pf-points">
               <thead>
                 <tr><th style={{ width: 28 }}>No.</th><th>{grp.title}</th><th style={{ width: 38 }}>OK</th><th style={{ width: 52 }}>Not OK</th></tr>
