@@ -198,9 +198,6 @@ export interface GrnInspection {
   date: string;
   categories: string[];       // ids of the checklist's categories this GRR is checked against (none, one or several)
   checks: Record<string, "ok" | "no">;   // per point key; absent = not checked yet
-  designSpec: boolean;        // as per required design specification
-  approvedSample: boolean;    // as per approved sample
-  approvedSupplier: boolean;  // as per approved supplier
   grammage: string;           // board grammage, as written
   viscosity: string;          // viscosity of a coating, as measured and written
   result: InspectionResult;
@@ -213,7 +210,7 @@ export const INSPECTION_RESULTS: Record<Exclude<InspectionResult, "">, { label: 
   rejected: { choice: "Rejected",        label: "GOOD RECEIVED – REJECTED",        color: "#991B1B", bg: "#fee2e2" },
 };
 const blankInspection = (): GrnInspection => ({
-  date: "", categories: [], checks: {}, designSpec: false, approvedSample: false, approvedSupplier: false,
+  date: "", categories: [], checks: {},
   grammage: "", viscosity: "", result: "", remarks: "", checkedBy: "",
 });
 // Only the known fields, each the right kind — whatever was stored or sent.
@@ -235,9 +232,6 @@ export function cleanInspection(v: unknown): GrnInspection {
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "",
     categories,
     checks,
-    designSpec: o.designSpec === true,
-    approvedSample: o.approvedSample === true,
-    approvedSupplier: o.approvedSupplier === true,
     grammage: text(o.grammage, 60),
     viscosity: text(o.viscosity, 60),
     result: result in INSPECTION_RESULTS ? (result as InspectionResult) : "",

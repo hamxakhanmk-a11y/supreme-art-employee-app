@@ -163,7 +163,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Design Spec","Approved Sample","Approved Supplier","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,14,16,18,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";const yn=(b:boolean)=>ins.result?(b?"Yes":"No"):"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),yn(ins.designSpec),yn(ins.approvedSample),yn(ins.approvedSupplier),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
         <button onClick={() => setSettingsOpen(v => !v)} className="btn btn-sm" title="The inspection checklist: categories and their points">⚙ Settings</button>
         {open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>}
       </> : null} tabs={<>
@@ -332,20 +332,11 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
             {checklist.categories.filter(c => inspection.categories.includes(c.id)).map(c => (
               <PointsTable key={c.id} title={c.label} points={c.points} checks={inspection.checks} onChange={checks => setInsp({ checks })} />
             ))}
-            <div style={{ display: "flex", gap: 18, flexWrap: "wrap", margin: "12px 0 4px", fontSize: 13 }}>
-              {([
-                ["designSpec", "As per required design specification"],
-                ["approvedSample", "As per approved sample"],
-                ["approvedSupplier", "As per approved supplier"],
-              ] as const).map(([k, label]) => (
-                <label key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                  <input type="checkbox" checked={inspection[k]} onChange={e => setInsp({ [k]: e.target.checked })} /> {label}
-                </label>
-              ))}
-            </div>
+            <div style={{ marginTop: 12 }}>
             <Field label="Remarks">
               <input value={inspection.remarks} onChange={e => setInsp({ remarks: e.target.value })} className="auth-input" placeholder="e.g. GOOD" />
             </Field>
+            </div>
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", margin: "14px 0 6px" }}>SIGN-OFF</div>
@@ -363,10 +354,10 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 
       <div className="card fit-card">
         <table>
-          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th>Category</th><th style={{ textAlign: "center" }}>Design Spec</th><th style={{ textAlign: "center" }}>Appr. Sample</th><th style={{ textAlign: "center" }}>Appr. Supplier</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <thead><tr><th>Gate Pass No</th><th>GRR #</th><th>Inv No</th><th>DC No</th><th>PO #</th><th>Date</th><th className="num">Items</th><th style={{ textAlign: "center" }}>QC</th><th>Category</th><th>Grammage</th><th className="no-print" style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={14} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={11} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No GRRs match your search." : invFilter === "pending" ? "No GRRs pending an invoice." : invFilter === "final" ? "No finalised GRRs yet." : `No GRRs${listFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(g => (
               <tr
                 key={g.id}
@@ -404,17 +395,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 // once it has been inspected, so until then they read "—".
 function QcPoints({ raw }: { raw: string | null }) {
   const ins = parseInspection(raw);
-  const point = (ok: boolean) => !ins.result
-    ? <span style={{ color: "var(--text3)" }}>—</span>
-    : ok ? <b style={{ color: "#15803D" }} title="Yes">✓</b> : <b style={{ color: "#DC2626" }} title="No">✗</b>;
-  return (
-    <>
-      <td style={{ textAlign: "center" }}>{point(ins.designSpec)}</td>
-      <td style={{ textAlign: "center" }}>{point(ins.approvedSample)}</td>
-      <td style={{ textAlign: "center" }}>{point(ins.approvedSupplier)}</td>
-      <td>{ins.grammage || <span style={{ color: "var(--text3)" }}>—</span>}</td>
-    </>
-  );
+  return <td>{ins.grammage || <span style={{ color: "var(--text3)" }}>—</span>}</td>;
 }
 
 // A block of inspection points, each OK or Not OK; clicking the chosen one again clears it.

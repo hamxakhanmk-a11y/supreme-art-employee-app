@@ -118,13 +118,12 @@ export default async function GrnView({ params, searchParams }: { params: Promis
               </tbody>
             </table>
           ))}
-          <div className="pf-insp-checks">
-            <span>{ins.designSpec ? "☑" : "☐"} As per required design specification</span>
-            <span>{ins.approvedSample ? "☑" : "☐"} As per approved sample</span>
-            <span>{ins.approvedSupplier ? "☑" : "☐"} As per approved supplier</span>
-            {showsGrammage(ins) && <span>Board Grammage: <span className="u">{ins.grammage}</span></span>}
-            {showsViscosity(ins) && <span>Viscosity: <span className="u">{ins.viscosity}</span></span>}
-          </div>
+          {(showsGrammage(ins) || showsViscosity(ins)) && (
+            <div className="pf-insp-checks">
+              {showsGrammage(ins) && <span>Board Grammage: <span className="u">{ins.grammage}</span></span>}
+              {showsViscosity(ins) && <span>Viscosity: <span className="u">{ins.viscosity}</span></span>}
+            </div>
+          )}
           {result ? (
             <div className="pf-insp-result" style={{ color: result.color, background: result.bg, borderColor: result.color }}>
               RESULT: {result.label}.
