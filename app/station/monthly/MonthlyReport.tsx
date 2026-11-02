@@ -135,16 +135,16 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
                       </Link>
                     ) : pkr(r.consumption)
                   ) : (
-                    <span title={r.consumptionTyped === null
+                    <span className="cons-cell" title={r.consumptionTyped === null
                       ? "From the card's fuel records. Type a figure to use instead."
                       : `Typed for the month. The card's fuel records add up to ${pkr(r.consumptionCards)}. Clear the box to use them.`}>
                       <EditCell type="number" align="right" minWidth={90} readOnly={readOnly} placeholder={pkr(r.consumptionCards)}
                         value={String(r.consumption)} print={pkr(r.consumption)}
                         onSave={v => saveNote(r.vehicleId!, { consumption: v })} />
-                      {r.consumptionTyped !== null && <span className="no-print" style={{ color: "var(--text3)", fontSize: 11, marginLeft: 4 }}>typed</span>}
-                      {canOpenCards && r.consumptionCards > 0 && r.cardIds.length > 0 && (
-                        <Link href={consumptionHref(data.month, r)} className="consumption-link no-print" style={{ marginLeft: 6, fontSize: 12 }} title="Show the card's fuel records in the Cards Logbook">↗</Link>
-                      )}
+                      {r.consumptionTyped !== null && <span className="no-print" style={{ color: "var(--text3)", fontSize: 11 }}>typed</span>}
+                      {canOpenCards && (r.consumptionCards > 0 && r.cardIds.length > 0 ? (
+                        <Link href={consumptionHref(data.month, r)} className="cons-open no-print" title="Open this vehicle's fuel records in the Cards Logbook" aria-label="Open fuel records in the Cards Logbook">↗</Link>
+                      ) : <span className="cons-open-gap no-print" aria-hidden="true" />)}
                     </span>
                   )}
                 </td>

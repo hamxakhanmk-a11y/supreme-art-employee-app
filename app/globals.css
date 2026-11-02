@@ -1099,6 +1099,11 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .fleet-month tbody td.reg { position: sticky; left: 0; z-index: 2; }
 .fleet-month tfoot td { position: sticky; bottom: 0; z-index: 2; }
 .fleet-month tbody tr:hover { transform: none; }
+/* Consumption: the figure to type, and the way into the card's fuel records, both inside the cell. */
+.fleet-month .cons-cell { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.cons-open, .cons-open-gap { flex: none; width: 26px; height: 26px; }
+.cons-open { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--brand); border-radius: 6px; background: #fff; color: var(--brand); font-size: 15px; font-weight: 800; line-height: 1; text-decoration: none; }
+.cons-open:hover { background: var(--brand); color: #fff; }
 .fleet-month thead th { background: var(--bg2); font-size: 11px; text-transform: uppercase; text-align: center; white-space: normal; line-height: 1.2; }
 .fleet-month td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fleet-month td.strong { font-weight: 700; }
