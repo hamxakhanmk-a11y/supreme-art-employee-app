@@ -250,6 +250,9 @@ DO $$ BEGIN
     updated_at timestamptz NOT NULL DEFAULT now()
   );
   CREATE UNIQUE INDEX IF NOT EXISTS fleet_month_notes_key ON fleet_month_notes (vehicle_id, month);
+  -- A month's consumption typed in for a vehicle (a CEO's car has no card fills to add up);
+  -- when set it replaces what the card's fuel records add up to.
+  ALTER TABLE fleet_month_notes ADD COLUMN IF NOT EXISTS consumption double precision;
 
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL

@@ -54,7 +54,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
   const t = data.totals;
 
   // One figure at a time, straight from its cell; false puts the old value back.
-  const saveNote = async (vehicleId: number, patch: { fuelRate?: string; maintenance?: string }): Promise<boolean> => {
+  const saveNote = async (vehicleId: number, patch: { fuelRate?: string; maintenance?: string; consumption?: string }): Promise<boolean> => {
     setErr("");
     try {
       const res = await fetch("/api/fleet/monthly", {
@@ -100,7 +100,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
       <div className="no-print toolbar-row">
         <strong style={{ fontSize: 15 }}>📊 {monthName(data.month)}</strong>
         <span style={{ fontSize: 12, color: "var(--text3)" }}>
-          Type the month&apos;s fuel rate and any maintenance into their cells; litres and km/l work themselves out.
+          Type the month&apos;s fuel rate and any maintenance into their cells; litres and km/l work themselves out. Consumption comes from the card&apos;s fuel records. Type a figure to use instead (a car with no card), clear it to go back.
         </span>
         <span style={{ flex: 1 }} />
         <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
@@ -128,11 +128,25 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
                 </td>
                 <td className="n">{pkr(r.topup)}</td>
                 <td className="n">
-                  {canOpenCards && r.consumption > 0 && r.cardIds.length > 0 ? (
-                    <Link href={consumptionHref(data.month, r)} className="consumption-link" title="Show these fuel records in the Cards Logbook">
-                      {pkr(r.consumption)}
-                    </Link>
-                  ) : pkr(r.consumption)}
+                  {r.vehicleId === null || readOnly ? (
+                    canOpenCards && r.consumptionTyped === null && r.consumption > 0 && r.cardIds.length > 0 ? (
+                      <Link href={consumptionHref(data.month, r)} className="consumption-link" title="Show these fuel records in the Cards Logbook">
+                        {pkr(r.consumption)}
+                      </Link>
+                    ) : pkr(r.consumption)
+                  ) : (
+                    <span title={r.consumptionTyped === null
+                      ? "From the card's fuel records. Type a figure to use instead."
+                      : `Typed for the month. The card's fuel records add up to ${pkr(r.consumptionCards)}. Clear the box to use them.`}>
+                      <EditCell type="number" align="right" minWidth={90} readOnly={readOnly} placeholder={pkr(r.consumptionCards)}
+                        value={String(r.consumption)} print={pkr(r.consumption)}
+                        onSave={v => saveNote(r.vehicleId!, { consumption: v })} />
+                      {r.consumptionTyped !== null && <span className="no-print" style={{ color: "var(--text3)", fontSize: 11, marginLeft: 4 }}>typed</span>}
+                      {canOpenCards && r.consumptionCards > 0 && r.cardIds.length > 0 && (
+                        <Link href={consumptionHref(data.month, r)} className="consumption-link no-print" style={{ marginLeft: 6, fontSize: 12 }} title="Show the card's fuel records in the Cards Logbook">↗</Link>
+                      )}
+                    </span>
+                  )}
                 </td>
                 <td className="n">
                   {r.vehicleId === null ? null : (
@@ -180,7 +194,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
       <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>
         Opening is last month&apos;s closing; in the month a card&apos;s opening balance is set, it is that balance as at the
         start of the opening&apos;s date, and everything from that day on counts. Top-ups count by their date, fuel by the
-        day it was entered. Closing for the current month matches the balance on PSO Cards.
+        day it was entered. Closing for the current month matches the balance on PSO Cards, unless a consumption was typed in, which closing then follows.
       </div>
     </div>
   );

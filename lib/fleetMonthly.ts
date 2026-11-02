@@ -21,7 +21,9 @@ export type FleetMonthRow = {
   vehicleType: string;
   opening: number | null;       // null until the card's opening balance is set
   topup: number;
-  consumption: number;
+  consumption: number;          // what the sheet uses: the typed figure if there is one, else the card's
+  consumptionTyped: number | null;   // typed by the office for this month (fleet_month_notes)
+  consumptionCards: number;     // what the card's fuel records add up to
   km: number;
   closing: number | null;
   openedOn: string | null;      // when the opening was set inside this month
@@ -68,7 +70,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
       FROM fleet_trips WHERE date >= ${start}::date AND date < ${end}::date
       GROUP BY vehicle_id
     `),
-    db.execute(sql`SELECT vehicle_id AS "vehicleId", fuel_rate AS "fuelRate", maintenance FROM fleet_month_notes WHERE month = ${month}`),
+    db.execute(sql`SELECT vehicle_id AS "vehicleId", fuel_rate AS "fuelRate", maintenance, consumption FROM fleet_month_notes WHERE month = ${month}`),
   ]);
 
   type Entry = { cardId: number; day: string; amount: number; at: number };
@@ -78,7 +80,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
   const fills: Entry[] = rowsOf(fillRes).map(r => ({ cardId: Number(r.cardId), day: String(r.day), amount: Number(r.amount), at: Number(r.at) }));
   const kmBy = new Map(rowsOf(kmRes).map(r => [Number(r.vehicleId), Number(r.km)]));
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-  const notesBy = new Map(rowsOf(notesRes).map(r => [Number(r.vehicleId), { fuelRate: num(r.fuelRate), maintenance: num(r.maintenance) }]));
+  const notesBy = new Map(rowsOf(notesRes).map(r => [Number(r.vehicleId), { fuelRate: num(r.fuelRate), maintenance: num(r.maintenance), consumption: num(r.consumption) }]));
 
   // Litres from what was spent and the month's rate; km/l from those litres.
   const fuelFigures = (consumption: number, km: number, fuelRate: number | null) => {
@@ -120,22 +122,27 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const parts = cards.filter(c => c.vehicleId === id).map(c => cardMonth(c.id));
     const km = kmBy.get(id) ?? 0;
     const topup = parts.reduce((s, p) => s + p.topup, 0);
-    const consumption = parts.reduce((s, p) => s + p.consumption, 0);
+    const consumptionCards = parts.reduce((s, p) => s + p.consumption, 0);
     // A retired vehicle only appears in a month it was used in.
-    if (!v.active && !km && !topup && !consumption && !notesBy.has(id)) continue;
+    if (!v.active && !km && !topup && !consumptionCards && !notesBy.has(id)) continue;
     // Known only when every card on the vehicle has its opening set.
     const known = parts.length > 0 && parts.every(p => p.opening !== null);
-    const note = notesBy.get(id) ?? { fuelRate: null, maintenance: null };
+    const note = notesBy.get(id) ?? { fuelRate: null, maintenance: null, consumption: null };
+    // A typed month replaces the card's records (a CEO's car has none); closing follows it.
+    const consumption = note.consumption ?? consumptionCards;
+    const openingSum = parts.reduce((s, p) => s + (p.opening ?? 0), 0);
     rows.push({
       vehicleId: id,
       cardIds: cards.filter(c => c.vehicleId === id).map(c => c.id),
       vehicleNo: String(v.vehicleNo),
       vehicleType: String(v.name).trim() || VEHICLE_TYPE_LABEL[String(v.type)] || String(v.type),
-      opening: known ? money(parts.reduce((s, p) => s + (p.opening ?? 0), 0)) : null,
+      opening: known ? money(openingSum) : null,
       topup: money(topup),
       consumption: money(consumption),
+      consumptionTyped: note.consumption === null ? null : money(note.consumption),
+      consumptionCards: money(consumptionCards),
       km,
-      closing: known ? money(parts.reduce((s, p) => s + (p.closing ?? 0), 0)) : null,
+      closing: known ? money(openingSum + topup - consumption) : null,
       openedOn: parts.map(p => p.openedOn).filter(Boolean).sort().pop() ?? null,
       fuelRate: note.fuelRate,
       ...fuelFigures(consumption, km, note.fuelRate),
@@ -150,7 +157,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     rows.push({
       vehicleId: null, cardIds: [c.id], vehicleNo: c.sn, vehicleType: "No vehicle",
       opening: p.opening === null ? null : money(p.opening),
-      topup: money(p.topup), consumption: money(p.consumption), km: 0,
+      topup: money(p.topup), consumption: money(p.consumption), consumptionTyped: null, consumptionCards: money(p.consumption), km: 0,
       closing: p.closing === null ? null : money(p.closing),
       openedOn: p.openedOn,
       fuelRate: null, litres: null, kmPerLitre: null, maintenance: null,
