@@ -244,16 +244,36 @@ export default function SupplierDirectoryClient({
       .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo);
   }, [rows, historyFor]);
 
-  // The H that sits beside a rate. Stops the click so it doesn't also open the
-  // PO or start an inline edit of the cell it's in.
-  const historyBtn = (product: string, supplier: string) => (
-    <button
-      className="btn btn-xs"
-      onClick={e => { e.stopPropagation(); setHistoryFor({ product, supplier }); }}
-      title="Rate history — every order of this product from this supplier"
-      style={{ marginLeft: 6, minWidth: 22, padding: "0 6px", fontWeight: 800, lineHeight: 1.5 }}
-    >H</button>
-  );
+  // The rate it was before: the latest earlier order's rate that differs from the one
+  // shown, in yellow beside it. Nothing when the rate has never changed. Clicking it
+  // opens the full history; the click is stopped so it doesn't also open the PO or
+  // start an inline edit of the cell it's in.
+  const ratesByPair = useMemo(() => {
+    const m = new Map<string, { rate: number; uom: string }[]>();
+    for (const r of [...rows].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo)) {
+      if (r.rate == null) continue;
+      const k = noteKey(r.product, r.supplier);
+      const list = m.get(k) ?? [];
+      list.push({ rate: r.rate, uom: r.uom });
+      m.set(k, list);
+    }
+    return m;
+  }, [rows]);
+  const oldRateTag = (product: string, supplier: string, shown: number | null) => {
+    const old = ratesByPair.get(noteKey(product, supplier))?.find(x => x.rate !== shown);
+    if (!old) return null;
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); setHistoryFor({ product, supplier }); }}
+        title="Old rate — click for every order of this product from this supplier"
+        style={{
+          marginLeft: 8, padding: "0 7px", borderRadius: 6, border: "1px solid #EAB308", background: "#FEF08A",
+          color: "#713F12", fontSize: 11.5, fontWeight: 700, lineHeight: 1.6, cursor: "pointer",
+          printColorAdjust: "exact", WebkitPrintColorAdjust: "exact",
+        }}
+      >{rateLabel(old.rate, old.uom)}</button>
+    );
+  };
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -419,7 +439,7 @@ export default function SupplierDirectoryClient({
                   <td style={{ fontSize: 12 }}>{r.agg.brand || "—"}</td>
                   {!canEditRates ? (
                     <>
-                      <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}{historyBtn(r.product, r.supplier)}</td>
+                      <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}{oldRateTag(r.product, r.supplier, r.shownRate)}</td>
                       <td>{taxPctLabel(r.shownRate, r.shownTaxPct)}</td>
                     </>
                   ) : editKey === noteKey(r.product, r.supplier) ? (
@@ -457,7 +477,7 @@ export default function SupplierDirectoryClient({
                           ? "Your noted rate — click to change it. Clear both fields to go back to the PO's rate."
                           : "From this product's latest PO. Click to note your own rate — the PO won't change."}
                       >
-                        {rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>{historyBtn(r.product, r.supplier)}
+                        {rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>{oldRateTag(r.product, r.supplier, r.shownRate)}
                       </td>
                       <td
                         onClick={e => { e.stopPropagation(); startEdit(r); }}
