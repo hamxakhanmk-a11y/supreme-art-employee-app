@@ -418,6 +418,8 @@ th.num, th.num-strong { text-align: right; }
 .rpt-table-wrap--fit { width: fit-content; max-width: 100%; }
 .rpt-table-wrap--fit .rpt-table { width: auto; }
 .rpt-table-wrap--fit .rpt-table th, .rpt-table-wrap--fit .rpt-table td { padding: 7px 10px; }
+/* Long names wrap instead of widening the table, so it fits the screen without sideways scrolling. */
+.rpt-table-wrap--fit .rpt-table th.wrap, .rpt-table-wrap--fit .rpt-table td.wrap { white-space: normal; min-width: 120px; max-width: 420px; }
 .rpt-total-row td {
   position: sticky; bottom: 0; z-index: 2;
   background: var(--bg2); font-weight: 700; color: var(--text);

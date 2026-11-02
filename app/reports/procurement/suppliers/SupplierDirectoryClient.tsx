@@ -360,8 +360,8 @@ export default function SupplierDirectoryClient({
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Product / Description</th>
-                <th>Supplier</th>
+                <th className="wrap">Product / Description</th>
+                <th className="wrap">Supplier</th>
                 <th>Brand</th>
                 <th>Rate</th>
                 <th>Tax %</th>
@@ -382,8 +382,8 @@ export default function SupplierDirectoryClient({
                   title="Tap to open this Purchase Order"
                 >
                   <td>{r.date ? fmtDate(r.date) : "—"}</td>
-                  <td>{r.product}</td>
-                  <td>{r.supplier}</td>
+                  <td className="wrap">{r.product}</td>
+                  <td className="wrap">{r.supplier}</td>
                   <td style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
                   <td>{taxPctLabel(r.rate, r.taxPct)}</td>
@@ -408,8 +408,8 @@ export default function SupplierDirectoryClient({
           <table className="rpt-table">
             <thead>
               <tr>
-                <th>Product / Description</th>
-                <th>Supplier</th>
+                <th className="wrap">Product / Description</th>
+                <th className="wrap">Supplier</th>
                 <th>Brand</th>
                 <th>Rate</th>
                 <th>Tax %</th>
@@ -429,6 +429,7 @@ export default function SupplierDirectoryClient({
                 >
                   {r.isFirstOfProduct && (
                     <td
+                      className="wrap"
                       rowSpan={r.groupSize}
                       style={{
                         verticalAlign: "top",
@@ -439,7 +440,7 @@ export default function SupplierDirectoryClient({
                       {r.product}
                     </td>
                   )}
-                  <td>
+                  <td className="wrap">
                     {r.supplier}
                     {r.agg.count > 1 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--text3)" }}>×{r.agg.count}</span>}
                   </td>
