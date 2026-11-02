@@ -177,6 +177,19 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .ig-flag.low{background:#fef3c7;color:#92400E}
 .ig-flag.out{background:#fee2e2;color:#991B1B}
 .ink-combo select{width:100%}
+.sb-tabs{display:flex;gap:6px;margin-bottom:12px}
+.sb-tab{border:1px solid #d9c4c0;background:#fff;border-radius:999px;padding:4px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.sb-tab.on{background:#8C2326;color:#fff;border-color:#8C2326}
+.sb-box{max-height:50vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px}
+.sb-box table{width:100%;font-size:13px}
+.sb-box th{position:sticky;top:0;background:#fbf6ee;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#888;padding:6px 10px}
+.sb-box td{padding:7px 10px;border-top:1px solid #eee3d6}
+.sb-row{cursor:pointer}
+.sb-row:hover td{background:#fbefef}
+.sb-none{color:#aaa;font-style:italic}
+.sb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.sb-bar select,.sb-bar input[type=text]{width:auto;min-width:190px}
+.sb-count{font-size:12px;color:#777;min-width:80px}
 .combo-empty{padding:18px;text-align:center;color:#aaa;font-size:12px}
 .combo-item.combo-add{background:#fdfaf5;position:sticky;top:0;z-index:2;border-bottom:1px solid #f1ead9}
 .combo-item.combo-add .combo-name{color:#8C2326;display:flex;align-items:center;gap:6px}
@@ -452,6 +465,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div class="search-bar no-print">
         <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
         <span class="toolbar-spacer"></span>
+        <button class="btn btn-sm write-only consumables-only" title="See which suppliers and brands have how many items, and change them" onclick="openSupBrand()"><i class="ti ti-settings"></i> Suppliers &amp; Brands</button>
         <button class="btn btn-sm btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
       </div>
       <div class="search-bar no-print">
@@ -914,6 +928,15 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="modal-title"><i class="ti ti-settings"></i> <span id="ml-title">Manage</span></div>
     <div id="ml-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('manageList')">Done</button></div>
+  </div>
+</div>
+
+<!-- SUPPLIERS & BRANDS (Inks & Consumables) -->
+<div class="modal-overlay" id="modal-supBrand">
+  <div class="modal" style="width:820px">
+    <div class="modal-title"><i class="ti ti-settings"></i> Suppliers &amp; Brands</div>
+    <div id="sb-body"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('supBrand')">Done</button></div>
   </div>
 </div>
 
@@ -2940,6 +2963,119 @@ async function setDropHidden(field,value,hide){
   if(hide)state.hiddenDrops.add(field+'::'+value);else state.hiddenDrops.delete(field+'::'+value);
   openManageList(field);
   syncInkCombos();
+}
+
+// ---- Suppliers & Brands (Inks & Consumables) ----
+// Every supplier (or brand) with how many items use it; click one to see those items and move
+// the ticked ones to another name, or rename it everywhere. The rows with no supplier / brand
+// are listed too, so they can be given one.
+const _sb={field:'supplier',key:null,sel:new Set()};
+function openSupBrand(){_sb.key=null;_sb.sel=new Set();renderSupBrand();document.getElementById('modal-supBrand').classList.add('open');}
+function sbTab(field){_sb.field=field;_sb.key=null;_sb.sel=new Set();renderSupBrand();}
+function sbOpen(key){_sb.key=key;_sb.sel=new Set();renderSupBrand();}
+function sbBack(){_sb.key=null;_sb.sel=new Set();renderSupBrand();}
+function sbToggle(id,on){if(on)_sb.sel.add(id);else _sb.sel.delete(id);sbUpdateBar();}
+function sbAll(on){
+  document.querySelectorAll('#sb-body .sb-chk').forEach(c=>{c.checked=on;const id=parseInt(c.dataset.id);if(on)_sb.sel.add(id);else _sb.sel.delete(id);});
+  sbUpdateBar();
+}
+function sbUpdateBar(){
+  const n=_sb.sel.size;
+  const c=document.getElementById('sb-count');if(c)c.textContent=n?n+' selected':'none selected';
+  const a=document.getElementById('sb-apply');if(a)a.disabled=!n;
+}
+function sbTargetPick(sel){
+  const nw=document.getElementById('sb-new');
+  if(!nw)return;
+  nw.style.display=sel.value==='__new__'?'':'none';
+  if(sel.value==='__new__'){nw.value='';nw.focus();}
+}
+function renderSupBrand(){
+  const e=_escHtml;
+  const f=_sb.field;
+  const label=f==='supplier'?'supplier':'brand';
+  const other=f==='supplier'?'brand':'supplier';
+  const tabs='<div class="sb-tabs"><button class="sb-tab'+(f==='supplier'?' on':'')+'" onclick="sbTab(\'supplier\')">Suppliers</button><button class="sb-tab'+(f==='brand'?' on':'')+'" onclick="sbTab(\'brand\')">Brands</button></div>';
+  const body=document.getElementById('sb-body');
+  if(_sb.key===null){
+    const groups=new Map();
+    state.parts.forEach(p=>{const k=(p[f]||'').trim();if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
+    const keys=[...groups.keys()].sort((a,b)=>a===''?-1:b===''?1:a.localeCompare(b,undefined,{sensitivity:'base'}));
+    const rows=keys.map(k=>{
+      const list=groups.get(k);
+      const products=new Set(list.map(inkKey)).size;
+      return '<tr class="sb-row" data-k="'+e(k)+'" onclick="sbOpen(this.dataset.k)"><td>'+(k?'<b>'+e(k)+'</b>':'<span class="sb-none">No '+label+'</span>')+'</td>'
+        +'<td style="text-align:right;white-space:nowrap"><b>'+list.length+'</b> item'+(list.length===1?'':'s')+'</td>'
+        +'<td style="text-align:right;color:#888;white-space:nowrap">'+products+' product'+(products===1?'':'s')+'</td><td style="width:24px;color:#bbb">\u203A</td></tr>';
+    }).join('');
+    body.innerHTML=tabs
+      +'<div style="font-size:12px;color:#777;margin-bottom:8px">'+keys.filter(k=>k).length+' '+label+(keys.filter(k=>k).length===1?'':'s')+' across '+state.parts.length+' items. Click one to see its items and change them.</div>'
+      +'<div class="sb-box"><table><thead><tr><th>'+(f==='supplier'?'Supplier':'Brand')+'</th><th style="text-align:right">Items</th><th style="text-align:right">Products</th><th></th></tr></thead><tbody>'
+      +(rows||'<tr><td colspan="4" style="padding:16px;text-align:center;color:#999">Nothing in the store yet.</td></tr>')+'</tbody></table></div>';
+    return;
+  }
+  const key=_sb.key;
+  const items=state.parts.filter(p=>(p[f]||'').trim()===key)
+    .sort((a,b)=>inkKey(a).localeCompare(inkKey(b))||(a[other]||'').localeCompare(b[other]||'',undefined,{sensitivity:'base'}));
+  if(!items.length){_sb.key=null;renderSupBrand();return;}
+  const names=[...new Set(state.parts.map(p=>(p[f]||'').trim()).filter(v=>v&&v!==key))].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+  const rows=items.map(p=>'<tr><td style="width:28px"><input type="checkbox" class="sb-chk" data-id="'+p.id+'"'+(_sb.sel.has(p.id)?' checked':'')+' onchange="sbToggle('+p.id+',this.checked)"></td>'
+    +'<td><b>'+e(p.name)+'</b>'+(p.sku&&!(p.name||'').startsWith('['+p.sku+']')?' <span style="color:#999;font-family:monospace;font-size:11.5px">['+e(p.sku)+']</span>':'')+'</td>'
+    +'<td>'+((p[other]||'').trim()?e(p[other]):'<span class="sb-none">no '+other+'</span>')+'</td>'
+    +'<td style="text-align:right;white-space:nowrap">'+fmtQty(p.qty)+' '+e(p.unit)+'</td></tr>').join('');
+  body.innerHTML=tabs
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="btn btn-sm" onclick="sbBack()"><i class="ti ti-arrow-left"></i> All '+label+'s</button>'
+    +'<div style="font-size:15px">'+(key?'<b>'+e(key)+'</b>':'<span class="sb-none">No '+label+'</span>')+' <span style="color:#888;font-size:12.5px">\u00B7 '+items.length+' item'+(items.length===1?'':'s')+'</span></div></div>'
+    +'<div class="sb-bar"><span class="sb-count" id="sb-count">'+(_sb.sel.size?_sb.sel.size+' selected':'none selected')+'</span>'
+    +'<select id="sb-target" onchange="sbTargetPick(this)"><option value="__ph__">Change the '+label+' of the ticked to\u2026</option>'
+    +names.map(n=>'<option value="'+e(n)+'">'+e(n)+'</option>').join('')
+    +'<option value="__none__">\u2014 No '+label+' \u2014</option><option value="__new__">+ A new name\u2026</option></select>'
+    +'<input type="text" id="sb-new" placeholder="New '+label+' name" autocomplete="off" style="display:none">'
+    +'<button class="btn btn-sm btn-primary" id="sb-apply" onclick="sbApply()"'+(_sb.sel.size?'':' disabled')+'>Change</button>'
+    +'<span style="flex:1"></span>'
+    +(key?'<button class="btn btn-sm" onclick="sbRename()" title="Rename this '+label+' on all its items">Rename everywhere\u2026</button>':'')+'</div>'
+    +'<div class="sb-box"><table><thead><tr><th><input type="checkbox" onchange="sbAll(this.checked)" title="Tick all"></th><th>Item</th><th>'+(other==='brand'?'Brand':'Supplier')+'</th><th style="text-align:right">On hand</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+async function sbRelabel(ids,value,summary,nextKey){
+  const f=_sb.field;
+  if(!await confirmDialog({title:'Change '+f+'?',message:summary,confirmText:'Change',variant:'confirm'}))return;
+  try{await apiFetch('/api/store/parts/relabel','POST',{ids,field:f,value});}
+  catch(err){await errorDialog('Could not change it',err.message);return;}
+  state.parts.forEach(p=>{if(ids.indexOf(p.id)>=0)p[f]=value;});
+  _sb.sel=new Set();
+  if(nextKey!==undefined)_sb.key=nextKey;
+  refresh();
+  syncInkCombos();
+  renderSupBrand();
+}
+async function sbApply(){
+  const f=_sb.field;
+  const label=f==='supplier'?'supplier':'brand';
+  const ids=[..._sb.sel];
+  if(!ids.length)return;
+  const pick=document.getElementById('sb-target').value;
+  let value='';
+  if(pick==='__ph__'){await warnDialog('Choose a '+label,'Pick the '+label+' to move the ticked items to, or choose a new name.');return;}
+  if(pick==='__new__'){
+    const typed=document.getElementById('sb-new').value.trim();
+    if(!typed){await warnDialog('Type the new '+label,'Enter the name of the new '+label+'.');return;}
+    const same=inkDistinct(f).find(v=>v.toLowerCase()===typed.toLowerCase());
+    value=same||typed;
+  }else if(pick!=='__none__')value=pick;
+  const from=_sb.key?'"'+_sb.key+'"':'no '+label;
+  await sbRelabel(ids,value,ids.length+' item'+(ids.length===1?'':'s')+': '+label+' from '+from+' to '+(value?'"'+value+'"':'no '+label)+'.');
+}
+async function sbRename(){
+  const f=_sb.field;
+  const label=f==='supplier'?'supplier':'brand';
+  const key=_sb.key;
+  if(!key)return;
+  const typed=((await promptDialog({title:'Rename '+label,message:'The new name replaces "'+key+'" on every item that has it.',defaultValue:key,confirmText:'Next'}))||'').trim();
+  if(!typed||typed===key)return;
+  const same=inkDistinct(f).find(v=>v.toLowerCase()===typed.toLowerCase());
+  const value=same||typed;
+  const ids=state.parts.filter(p=>(p[f]||'').trim()===key).map(p=>p.id);
+  await sbRelabel(ids,value,'All '+ids.length+' item'+(ids.length===1?'':'s')+' of "'+key+'" will have the '+label+' "'+value+'".',value);
 }
 
 // One card per product: its name, category, brand count and total, then a row per supplier + brand
