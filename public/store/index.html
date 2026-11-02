@@ -514,7 +514,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Reason</th><th class="machinery-only">Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th class="machinery-only">Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
         </table>
       </div>
@@ -543,7 +543,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Reason</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
         </table>
       </div>
@@ -1868,8 +1868,8 @@ function getHeaders(sec){
     ? ['#','SKU / Part No.','Part Name','Category','Supplier','Brand','Rack No.','Unit','Qty on Hand','Min Qty','Status']
     : ['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
   const sb=isInks()?['Supplier','Brand']:[];
-  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance','Reason',...(isInks()?[]:['Supplier / Ref']),'Notes','Done by'];
-  if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Reason','Issued To','Purpose','Done by'];
+  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance',...(isInks()?[]:['Supplier / Ref']),'Notes','Done by'];
+  if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Issued To','Purpose','Done by'];
   if(sec==='issuance')  return['#','Date','Challan No.','Part Name',...sb,'Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
   return[];
 }
@@ -1884,8 +1884,8 @@ function rowCells(sec,item,i){
     return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),...(isInks()?[]:[userText(item.ref)||'—']),userText(item.notes)||'—',item.createdBy||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),userText(item.issuedTo)||'—',userText(item.purpose)||'—',item.createdBy||'—'];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),...(isInks()?[]:[userText(item.ref)||'—']),userText(item.notes)||'—',item.createdBy||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.issuedTo)||'—',userText(item.purpose)||'—',item.createdBy||'—'];
   if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.type==='in'?item.ref:item.issuedTo)||'—',userText(item.type==='in'?item.notes:item.purpose)||'—'];
   return[];
 }
@@ -3375,7 +3375,7 @@ function renderStockIn(){
   const bal=computeBalances();
   const tb=document.getElementById('stockin-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="15"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-in" data-id="${t.id}" onchange="updateBulkInfo('in')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
@@ -3385,7 +3385,6 @@ function renderStockIn(){
     <td>${getPartCat(t.partId)}</td>
     <td class="qty-positive">+${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
-    <td>${txnReason(t)}</td>
     <td class="machinery-only">${userText(t.ref)||'—'}</td>
     <td style="color:#888">${userText(t.notes)||'—'}</td>
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
@@ -3405,7 +3404,7 @@ function renderStockOut(){
   const bal=computeBalances();
   const tb=document.getElementById('stockout-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="15"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-out" data-id="${t.id}" onchange="updateBulkInfo('out')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
@@ -3415,7 +3414,6 @@ function renderStockOut(){
     <td>${getPartCat(t.partId)}</td>
     <td class="qty-negative">−${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
-    <td>${txnReason(t)}</td>
     <td>${userText(t.issuedTo)||'—'}</td>
     <td style="color:#888">${userText(t.purpose)||'—'}</td>
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
