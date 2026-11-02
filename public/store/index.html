@@ -134,36 +134,37 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .combo-qty.low{color:#854F0B}.combo-qty.out{color:#A32D2D}
 .combo-group{padding:6px 12px;background:#f5f0e8;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;gap:10px;color:#555;border-bottom:1px solid #eadfce}
 .combo-item.indent{padding-left:26px}
-/* Inks & Consumables inventory: one card per product, a row for each supplier + brand. */
-.inv-groups{display:grid;grid-template-columns:minmax(0,1100px);gap:14px;align-items:start}
-.ig{background:#fff;border:1px solid #e8e1d3;border-radius:14px;padding:14px 18px 6px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.ig-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px dashed #e0d6c6}
-.ig-title{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
-.ig-name{font-size:17px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
-.ig-chip{background:#f5f0e8;border-radius:8px;padding:3px 10px;font-weight:700;font-size:13px}
-.ig-badge{background:#f5f0e8;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#777}
-.ig-total{text-align:right}
-.ig-total b{font-size:24px;font-weight:800;display:block;line-height:1.1}
-.ig-total small{font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.04em}
-.ig-hbtns{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
-.ig-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #eee3d6;flex-wrap:wrap}
+/* Inks & Consumables inventory: one compact card per product, a row for each supplier + brand. */
+.inv-groups{display:grid;grid-template-columns:minmax(0,980px);gap:8px;align-items:start}
+.ig{background:#fff;border:1px solid #e8e1d3;border-radius:10px;padding:8px 14px 2px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.ig-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-bottom:6px;border-bottom:1px dashed #e0d6c6}
+.ig-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
+.ig-name{font-size:14px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.ig-chip{background:#f5f0e8;border-radius:6px;padding:1px 8px;font-weight:700;font-size:11.5px}
+.ig-badge{background:#f5f0e8;border-radius:999px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#777}
+.ig-total{display:flex;align-items:center;gap:8px}
+.ig-total .tot{text-align:right;line-height:1.1;margin-right:4px;white-space:nowrap}
+.ig-total b{font-size:17px;font-weight:800}
+.ig-total small{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.04em;margin-left:4px}
+.ig-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #eee3d6;flex-wrap:wrap}
 .ig-row:last-child{border-bottom:none}
-.ig-who{flex:1;min-width:220px;font-size:14px}
-.ig-who b{text-transform:uppercase;font-weight:800}
-.ig-who span{color:#777}
-.ig-meta{font-size:11.5px;color:#999;margin-top:2px;font-family:monospace}
-.ig-qty{text-align:right;min-width:90px}
-.ig-qty b{font-size:18px;font-weight:800;display:block;line-height:1.15}
-.ig-qty small{font-size:11.5px;color:#777}
-.ig-btns{display:flex;gap:6px;flex-wrap:wrap}
-.ig-b{border:1px solid;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ig-who{flex:1;min-width:200px;font-size:12.5px;color:#777}
+.ig-who b{color:#111;font-weight:800;text-transform:uppercase;font-size:13px}
+.ig-who i{font-style:italic;font-weight:400;color:#aaa;text-transform:none}
+.ig-meta{font-size:11px;color:#999;margin-top:1px;font-family:monospace}
+.ig-qty{text-align:right;min-width:80px;line-height:1.1;white-space:nowrap}
+.ig-qty b{font-size:15px;font-weight:800}
+.ig-qty small{font-size:11px;color:#777;margin-left:3px}
+.ig-btns{display:flex;gap:5px;flex-wrap:nowrap}
+.ig-b{border:1px solid;border-radius:6px;padding:3px 10px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1.5}
 .ig-b.in{background:#2d6a10;color:#fff;border-color:#2d6a10}
 .ig-b.out{background:#d93a1d;color:#fff;border-color:#d93a1d}
 .ig-b.edit,.ig-b.ghost{background:#fff;color:#111;border-color:#d9c4c0}
 .ig-b.del{background:#111;color:#fff;border-color:#111}
-.ig-flag{display:inline-block;margin-left:8px;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;vertical-align:middle}
+.ig-flag{display:inline-block;margin-left:8px;font-size:10px;font-weight:700;padding:0 6px;border-radius:999px;vertical-align:middle;text-transform:none}
 .ig-flag.low{background:#fef3c7;color:#92400E}
 .ig-flag.out{background:#fee2e2;color:#991B1B}
+.ink-combo select{width:100%}
 .combo-empty{padding:18px;text-align:center;color:#aaa;font-size:12px}
 .combo-item.combo-add{background:#fdfaf5;position:sticky;top:0;z-index:2;border-bottom:1px solid #f1ead9}
 .combo-item.combo-add .combo-name{color:#8C2326;display:flex;align-items:center;gap:6px}
@@ -456,7 +457,6 @@ body:not(.role-admin) .admin-only{display:none!important}
         </table>
       </div>
       <div class="inv-groups consumables-only" id="inv-groups"></div>
-      <datalist id="dl-supplier"></datalist><datalist id="dl-brand"></datalist>
     </div>
 
     <!-- STOCK IN -->
@@ -634,8 +634,8 @@ body:not(.role-admin) .admin-only{display:none!important}
       <span class="multi-add" onclick="addMachineInline('f-part-machine')"><i class="ti ti-plus"></i> Add new machine</span>
     </div>
     <div class="two-col consumables-only" id="g-part-brandsup">
-      <div class="form-group"><label class="form-label">Supplier</label><input id="f-part-supplier" list="dl-supplier" autocomplete="off" placeholder="e.g. Ali Traders"></div>
-      <div class="form-group"><label class="form-label">Brand</label><input id="f-part-brand" list="dl-brand" autocomplete="off" placeholder="e.g. Sun Chemical"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><div class="ink-combo" id="f-part-supplier__combo" data-field="supplier"></div><input type="hidden" id="f-part-supplier"></div>
+      <div class="form-group"><label class="form-label">Brand</label><div class="ink-combo" id="f-part-brand__combo" data-field="brand"></div><input type="hidden" id="f-part-brand"></div>
     </div>
     <div class="form-group"><label class="form-label">Unit of Measure</label>
       <select id="f-part-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
@@ -866,8 +866,8 @@ body:not(.role-admin) .admin-only{display:none!important}
       <span class="multi-add" onclick="addMachineInline('f-edit-machine')"><i class="ti ti-plus"></i> Add new machine</span>
     </div>
     <div class="two-col consumables-only" id="g-edit-brandsup">
-      <div class="form-group"><label class="form-label">Supplier</label><input id="f-edit-supplier" list="dl-supplier" autocomplete="off" placeholder="e.g. Ali Traders"></div>
-      <div class="form-group"><label class="form-label">Brand</label><input id="f-edit-brand" list="dl-brand" autocomplete="off" placeholder="e.g. Sun Chemical"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><div class="ink-combo" id="f-edit-supplier__combo" data-field="supplier"></div><input type="hidden" id="f-edit-supplier"></div>
+      <div class="form-group"><label class="form-label">Brand</label><div class="ink-combo" id="f-edit-brand__combo" data-field="brand"></div><input type="hidden" id="f-edit-brand"></div>
     </div>
     <div class="form-group"><label class="form-label">Unit of Measure</label>
       <select id="f-edit-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
@@ -891,6 +891,15 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="modal-title"><i class="ti ti-history"></i> <span id="ph-title">History</span></div>
     <div id="ph-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('partHistory')">Close</button></div>
+  </div>
+</div>
+
+<!-- MANAGE SUPPLIERS / BRANDS -->
+<div class="modal-overlay" id="modal-manageList">
+  <div class="modal" style="width:520px">
+    <div class="modal-title"><i class="ti ti-settings"></i> <span id="ml-title">Manage</span></div>
+    <div id="ml-body"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('manageList')">Done</button></div>
   </div>
 </div>
 
@@ -1028,6 +1037,10 @@ async function loadAll(){
     const ig=await apiFetch('/api/store/ledger');
     state.ledgerIgnores=new Map(ig.map(x=>[x.partId,Number(x.diff)]));
   }catch(e){state.ledgerIgnores=new Map();}
+  try{
+    const hd=await apiFetch('/api/store/dropdown-hidden');
+    state.hiddenDrops=new Set(hd.map(r=>r.field+'::'+r.value));
+  }catch(e){state.hiddenDrops=new Set();}
   if(state.user && state.user.role==='admin'){
     try{state.users=await apiFetch('/api/store/users');}catch(e){state.users=[];}
   } else {
@@ -1154,6 +1167,7 @@ function openModal(id){
   if(id==='bulkIn')resetBulkModal('bulkin');
   if(id==='bulkOut')resetBulkModal('bulkout');
   if(id==='addPart'){populateCatSelect('f-part-cat');populateMachineSelect('f-part-machine','');resetImagePick('add')}
+  if(id==='addPart'||id==='editPart')syncInkCombos();
   document.getElementById('modal-'+id).classList.add('open');
 }
 function closeModal(id){document.getElementById('modal-'+id).classList.remove('open')}
@@ -1263,10 +1277,10 @@ function inkSort(a,b){
   return (a.supplier||'').localeCompare(b.supplier||'',undefined,{sensitivity:'base'})
       || (a.brand||'').localeCompare(b.brand||'',undefined,{sensitivity:'base'});
 }
-// " — BRAND · supplier", so a movement says which brand it was for.
+// " — supplier · brand", so a movement says which supplier and brand it was for.
 function inkTag(p){
   if(!isInks()||!(p.brand||p.supplier))return '';
-  return ' — '+(p.brand||'no brand')+(p.supplier?' · '+p.supplier:'');
+  return ' — '+(p.supplier||'no supplier')+(p.brand?' · '+p.brand:'');
 }
 function inkGroupTotal(rows){
   const units=[...new Set(rows.map(p=>p.unit||''))];
@@ -1298,7 +1312,7 @@ function renderInkCombo(prefix,query){
     }
     last=k;
     const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
-    const who=e(p.brand||'No brand')+(p.supplier?' · '+e(p.supplier):'');
+    const who=e(p.supplier||'No supplier')+(p.brand?' · '+e(p.brand):'');
     html+='<div class="combo-item'+(multi?' indent':'')+'" data-id="'+p.id+'" data-label="'+partLabel(p).replace(/"/g,'&quot;')+'">'
       +'<div class="combo-main"><div class="combo-name">'+(multi?who:(p.sku?'<span class="combo-sku">'+e(p.sku)+'</span>':'')+e(p.name))+'</div>'
       +'<div class="combo-sub">'+(multi?[p.sku?e(p.sku):'',e(p.category||'')].filter(Boolean).join(' · ')||'—':who+(p.category?' · '+e(p.category):''))+'</div></div>'
@@ -1596,7 +1610,7 @@ function pickBulkGroup(prefix,k){
   const e=_escHtml;
   const lines=members.map(p=>{
     const none=!(Number(p.qty)>0);
-    return '<label class="bulk-split-line"><span class="who"><b>'+e(p.brand||'No brand')+'</b>'+(p.supplier?' \u00B7 '+e(p.supplier):'')
+    return '<label class="bulk-split-line"><span class="who"><b>'+e(p.supplier||'No supplier')+'</b>'+(p.brand?' \u00B7 '+e(p.brand):'')
       +'<small class="'+(none?'out':'')+'">'+(none?'out of stock':'avail '+fmtQty(p.qty)+' '+e(p.unit))+'</small></span>'
       +'<input type="number" class="bulk-split-qty" data-id="'+p.id+'" min="0" step="any" placeholder="0"'+(none?' disabled':'')+'></label>';
   }).join('');
@@ -2796,15 +2810,88 @@ function openPartHistory(pid){
   document.getElementById('modal-partHistory').classList.add('open');
 }
 
+// ---- Supplier and brand pickers (Inks & Consumables), as in the Tracker's inventory ----
+// A dropdown of what the store already has, "+ Add new…" for a name that isn't there yet, and
+// "Manage…" to hide a name (a typo duplicate) from the list. The chosen value is kept in a
+// hidden input with the field's id, so saving reads it like any other field.
+function inkDistinct(field){
+  const hidden=state.hiddenDrops||new Set();
+  return [...new Set(state.parts.map(p=>(p[field]||'').trim()).filter(Boolean))]
+    .filter(v=>!hidden.has(field+'::'+v))
+    .sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+}
+function syncInkCombo(id){
+  const host=document.getElementById(id+'__combo');
+  const hidden=document.getElementById(id);
+  if(!host||!hidden)return;
+  const field=host.dataset.field;
+  const label=field==='supplier'?'supplier':'brand';
+  const cur=hidden.value.trim();
+  const e=_escHtml;
+  const opts=inkDistinct(field);
+  host.innerHTML='<select id="'+id+'__select" onchange="inkComboPick(this,\''+id+'\')">'
+    +'<option value=""'+(cur?'':' selected')+'>\u2014 None \u2014</option>'
+    +opts.map(o=>'<option value="'+e(o)+'"'+(o===cur?' selected':'')+'>'+e(o)+'</option>').join('')
+    +((cur&&!opts.includes(cur))?'<option value="'+e(cur)+'" selected>'+e(cur)+'</option>':'')
+    +'<option value="__add_new__">+ Add new '+label+'&hellip;</option>'
+    +'<option value="__manage__">&#9881;&#65039; Manage '+label+'s&hellip;</option>'
+    +'</select>'
+    +'<input type="text" id="'+id+'__new" placeholder="New '+label+'" autocomplete="off" style="display:none;margin-top:6px" oninput="inkComboNew(this,\''+id+'\')">';
+}
+function syncInkCombos(){['f-part-supplier','f-part-brand','f-edit-supplier','f-edit-brand'].forEach(syncInkCombo);}
+function inkComboPick(sel,id){
+  const hidden=document.getElementById(id);
+  const nw=document.getElementById(id+'__new');
+  const field=document.getElementById(id+'__combo').dataset.field;
+  if(sel.value==='__manage__'){sel.value=hidden.value||'';openManageList(field);return;}
+  if(sel.value==='__add_new__'){nw.style.display='';nw.value='';hidden.value='';setTimeout(()=>nw.focus(),0);return;}
+  nw.style.display='none';nw.value='';hidden.value=sel.value;
+}
+// A typed name that matches one already there (ignoring case) takes the existing spelling.
+function inkComboNew(inp,id){
+  const field=document.getElementById(id+'__combo').dataset.field;
+  const typed=inp.value.trim();
+  const same=inkDistinct(field).find(v=>v.toLowerCase()===typed.toLowerCase());
+  document.getElementById(id).value=same||typed;
+}
+// Manage suppliers / brands: every name with how many rows use it, and Hide. Hiding only takes the
+// name off the dropdown; the rows keep it and their stock history is untouched. Hidden names can be shown again.
+function openManageList(field){
+  const label=field==='supplier'?'supplier':'brand';
+  const e=_escHtml;
+  const hiddenSet=state.hiddenDrops||new Set();
+  const used=v=>state.parts.filter(p=>(p[field]||'').trim()===v).length;
+  const all=[...new Set(state.parts.map(p=>(p[field]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}));
+  const shown=all.filter(v=>!hiddenSet.has(field+'::'+v));
+  const gone=[...hiddenSet].filter(k=>k.indexOf(field+'::')===0).map(k=>k.slice(field.length+2)).sort((a,b)=>a.localeCompare(b));
+  const td='padding:6px 10px;border-bottom:1px solid #eee3d6';
+  const btn=(v,hide)=>'<button class="btn btn-sm" data-field="'+field+'" data-value="'+e(v)+'" data-hide="'+(hide?1:0)+'" onclick="setDropHidden(this.dataset.field,this.dataset.value,this.dataset.hide===\'1\')">'+(hide?'Hide':'Show again')+'</button>';
+  const rows=list=>list.map(v=>'<tr><td style="'+td+'"><b>'+e(v)+'</b></td><td style="'+td+';color:#888;text-align:right;white-space:nowrap">'+used(v)+(used(v)===1?' row':' rows')+'</td><td style="'+td+';text-align:right">'+btn(v,!hiddenSet.has(field+'::'+v))+'</td></tr>').join('');
+  document.getElementById('ml-title').textContent='Manage '+label+'s';
+  document.getElementById('ml-body').innerHTML=
+    '<p style="font-size:12px;color:#777;margin:0 0 10px">Hide a '+label+' to stop it showing in the dropdown for new rows. Rows that already use it keep it, and their stock history is untouched. Useful for a typo duplicate.</p>'
+    +'<div style="max-height:46vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:13px"><tbody>'
+    +(shown.length?rows(shown):'<tr><td style="padding:16px;text-align:center;color:#999">No '+label+'s yet.</td></tr>')
+    +'</tbody></table></div>'
+    +(gone.length?'<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px">Hidden</div><div style="border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:13px"><tbody>'+rows(gone)+'</tbody></table></div>':'');
+  document.getElementById('modal-manageList').classList.add('open');
+}
+async function setDropHidden(field,value,hide){
+  if(hide&&!await confirmDialog({title:'Hide "'+value+'"?',message:'It stops showing in the '+field+' dropdown for new rows. Rows that already use it keep it. You can show it again from this screen.',confirmText:'Hide',variant:'confirm'}))return;
+  try{await apiFetch('/api/store/dropdown-hidden','POST',{action:hide?'hide':'show',field,value});}
+  catch(e){await errorDialog('Could not update the list',e.message);return;}
+  if(!state.hiddenDrops)state.hiddenDrops=new Set();
+  if(hide)state.hiddenDrops.add(field+'::'+value);else state.hiddenDrops.delete(field+'::'+value);
+  openManageList(field);
+  syncInkCombos();
+}
+
 // One card per product: its name, category, brand count and total, then a row per supplier + brand
 // with that brand's own stock and its + Stock / − Stock / Edit / Delete.
 function renderInkGroups(visible){
   const host=document.getElementById('inv-groups');
   if(!host)return;
   const e=_escHtml;
-  const fill=(id,vals)=>{const dl=document.getElementById(id);if(dl)dl.innerHTML=[...new Set(vals.map(v=>(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(v=>'<option value="'+e(v)+'">').join('');};
-  fill('dl-supplier',state.parts.map(p=>p.supplier));
-  fill('dl-brand',state.parts.map(p=>p.brand));
   const groups=new Map();
   visible.forEach(p=>{const k=inkKey(p);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
   if(!groups.size){host.innerHTML='<div class="empty"><i class="ti ti-search"></i>No items found</div>';return;}
@@ -2817,7 +2904,7 @@ function renderInkGroups(visible){
       const flag=p.qty===0?'<span class="ig-flag out">Out</span>':(p.qty<=p.minQty?'<span class="ig-flag low">Low</span>':'');
       const meta=[p.sku?'['+e(p.sku)+']':'',p.rackNo?'Rack '+e(p.rackNo):''].filter(Boolean).join(' · ');
       return '<div class="ig-row">'
-        +'<div class="ig-who"><b>'+e(p.brand||'No brand')+'</b>'+(p.supplier?' · <span>'+e(p.supplier)+'</span>':'')+flag+(meta?'<div class="ig-meta">'+meta+'</div>':'')+'</div>'
+        +'<div class="ig-who"><b>'+(p.supplier?e(p.supplier):'<i>No supplier</i>')+'</b> · '+(p.brand?e(p.brand):'<i>no brand</i>')+flag+(meta?'<div class="ig-meta">'+meta+'</div>':'')+'</div>'
         +'<div class="ig-qty"><b>'+fmtQty(p.qty)+'</b><small>'+e(p.unit)+'</small></div>'
         +'<div class="ig-btns">'
         +'<button class="ig-b in write-only" title="Stock in this brand" onclick="openSingleIn('+p.id+')">+ Stock</button>'
@@ -2829,9 +2916,9 @@ function renderInkGroups(visible){
     return '<div class="ig">'
       +'<div class="ig-head">'
       +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span></div>'
-      +'<div class="ig-total"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>Total '+e(t.mixed?'(mixed units)':t.unit)+'</small>'
-      +'<div class="ig-hbtns"><button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
-      +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div></div>'
+      +'<div class="ig-total"><span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
+      +'<button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all suppliers and brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
+      +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div>'
       +'</div>'+rowHtml+'</div>';
   }).join('');
 }
@@ -2845,7 +2932,8 @@ function openAddBrand(k){
   document.getElementById('f-part-name').value=first.name;
   document.getElementById('f-part-cat').value=first.category;
   document.getElementById('f-part-unit').value=first.unit;
-  document.getElementById('f-part-supplier').focus();
+  syncInkCombos();
+  document.getElementById('f-part-supplier__select').focus();
 }
 
 // History of a product: the movements of every brand under it, newest first, each naming its
@@ -2875,7 +2963,7 @@ function openGroupHistory(k,brandId){
     const before=bal[t.id]==null?'—':fmtQty(Math.round((bal[t.id]-(t.type==='in'?Number(t.qty):-Number(t.qty)))*1000)/1000)+un;
     return '<tr class="txn-row-link" onclick="closeModal(\'partHistory\');openTxnInReport('+t.id+',{page:\'inventory\',groupKey:_ghKey,brandId:'+(brandId?"\'"+brandId+"\'":'null')+'})" title="Open this entry in the '+(t.type==='in'?'Stock In':'Stock Out')+' report">'
       +'<td style="'+cell+';white-space:nowrap">'+whenHtml(t)+'</td>'
-      +'<td style="'+cell+';white-space:nowrap"><b>'+e(p?(p.brand||'No brand'):'—')+'</b>'+(p&&p.supplier?' · '+e(p.supplier):'')+'</td>'
+      +'<td style="'+cell+';white-space:nowrap"><b>'+e(p?(p.supplier||'No supplier'):'—')+'</b>'+(p&&p.brand?' · '+e(p.brand):'')+'</td>'
       +'<td style="'+cell+';color:#666;white-space:nowrap">'+before+'</td>'
       +'<td class="'+(t.type==='in'?'qty-positive':'qty-negative')+'" style="'+cell+';white-space:nowrap">'+(t.type==='in'?'+':'\u2212')+fmtQty(t.qty)+un+'</td>'
       +'<td style="'+cell+';font-weight:600;white-space:nowrap">'+(bal[t.id]==null?'—':fmtQty(bal[t.id])+un)+'</td>'
@@ -2886,15 +2974,15 @@ function openGroupHistory(k,brandId){
       +'<td style="'+cell+';white-space:nowrap">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
       +'</tr>';
   }).join(''):'<tr><td colspan="10"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
-  const pick='<select onchange="openGroupHistory(_ghKey,this.value)" style="margin-bottom:12px;max-width:100%"><option value="">All brands ('+members.length+')</option>'
-    +members.map(p=>'<option value="'+p.id+'"'+(String(p.id)===String(brandId||'')?' selected':'')+'>'+e((p.brand||'No brand')+(p.supplier?' · '+p.supplier:''))+'</option>').join('')+'</select>';
+  const pick='<select onchange="openGroupHistory(_ghKey,this.value)" style="margin-bottom:12px;max-width:100%"><option value="">All suppliers / brands ('+members.length+')</option>'
+    +members.map(p=>'<option value="'+p.id+'"'+(String(p.id)===String(brandId||'')?' selected':'')+'>'+e((p.supplier||'No supplier')+(p.brand?' · '+p.brand:''))+'</option>').join('')+'</select>';
   document.getElementById('ph-title').textContent=members[0].name+' - history';
   document.getElementById('ph-body').innerHTML=
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
     +stat('On hand',fmtQty(have)+(u?' '+u:''))+stat('Total in','+'+fmtQty(totIn)+(u?' '+u:''),'#2d6a10')+stat('Total out','\u2212'+fmtQty(totOut)+(u?' '+u:''),'#993C1D')+'</div>'
     +(members.length>1?pick:'')
     +'<div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:12.5px"><thead><tr>'
-    +['When','Brand · Supplier','Before','Change','After','Reason','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
+    +['When','Supplier · Brand','Before','Change','After','Reason','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   document.getElementById('modal-partHistory').classList.add('open');
 }

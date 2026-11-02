@@ -57,6 +57,16 @@ DO $$ BEGIN
     ignored_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
+  -- Supplier and brand names hidden from the Add / Edit dropdowns (Inks & Consumables),
+  -- e.g. a typo duplicate. The items keep their supplier / brand; only the suggestion goes.
+  CREATE TABLE IF NOT EXISTS store_dropdown_hidden (
+    field TEXT NOT NULL,
+    value TEXT NOT NULL,
+    hidden_by TEXT NOT NULL DEFAULT '',
+    hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (field, value)
+  );
+
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'parts' AND column_name = 'qty' AND data_type = 'integer'
