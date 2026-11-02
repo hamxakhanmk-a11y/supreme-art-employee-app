@@ -4,7 +4,7 @@ import { storeParts, storeTransactions } from "@/lib/schema";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureStoreSchema, roundQty } from "@/lib/store";
+import { ensureStoreSchema, roundQty, batchBalances, ordinal } from "@/lib/store";
 
 // GET — only returns transactions whose part isn't in the trash.
 export async function GET() {
@@ -25,6 +25,7 @@ export async function GET() {
              t.issued_to AS "issuedTo",
              t.purpose,
              t.challan_no AS "challanNo",
+             t.batch,
              t.created_by AS "createdBy",
              t.created_at AS "createdAt"
       FROM transactions t
@@ -66,6 +67,34 @@ export async function POST(req: NextRequest) {
     if (type === "out" && p.qty < qty) {
       return NextResponse.json({ error: `Not enough stock! Available: ${p.qty}` }, { status: 400 });
     }
+    // Inks & Consumables keep batches: a stock in opens the next batch (or adds to the one named), a
+    // stock out names the batch it takes from. The Parts Store has none.
+    let batch: number | null = null;
+    if (p.module === "consumables") {
+      const { batches, any } = await batchBalances(partId);
+      const want = parseInt(b?.batch);
+      if (type === "in") {
+        if (want > 0) {
+          if (!(batches.some(x => x.n === want) && (any || want === 1))) {
+            return NextResponse.json({ error: `There is no ${ordinal(want)} batch of this item to add to.` }, { status: 400 });
+          }
+          batch = want;
+        } else {
+          batch = any ? batches[batches.length - 1].n + 1 : 1;
+        }
+      } else if (want > 0) {
+        const hit = batches.find(x => x.n === want);
+        if (!hit) return NextResponse.json({ error: `There is no ${ordinal(want)} batch of this item.` }, { status: 400 });
+        if (hit.qty < qty - 0.0005) {
+          return NextResponse.json({ error: `Only ${hit.qty} ${p.unit || ""} left in the ${ordinal(want)} batch.`.replace("  ", " ") }, { status: 400 });
+        }
+        batch = want;
+      } else if (batches.length <= 1) {
+        batch = 1;
+      } else {
+        return NextResponse.json({ error: "This item has more than one batch. Choose which batch to take it from." }, { status: 400 });
+      }
+    }
     // The quantity and the record are ONE statement, so they stand or fall
     // together: a failed save can no longer move the stock without a record
     // (or the reverse), and two entries at the same moment each add to the
@@ -79,10 +108,10 @@ export async function POST(req: NextRequest) {
         WHERE id = ${partId} ${type === "out" ? sql`AND qty >= ${qty}` : sql``}
         RETURNING id
       )
-      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, created_by, created_at)
-      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${guard.name || ""}, now() FROM upd
+      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, batch, created_by, created_at)
+      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${batch}::integer, ${guard.name || ""}, now() FROM upd
       RETURNING id, type, part_id AS "partId", qty, date::text AS date, ref, notes,
-                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", created_by AS "createdBy", created_at AS "createdAt"
+                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", batch, created_by AS "createdBy", created_at AS "createdAt"
     `);
     const row = ((saved as any).rows ?? (saved as any))[0];
     if (!row) {
@@ -93,7 +122,7 @@ export async function POST(req: NextRequest) {
     const logLabel = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
     await logActivity({
       user: guard, action: `store.${p.module}.txn.${type}`,
-      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${logLabel}"${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
+      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${logLabel}"${batch ? ` (${ordinal(batch)} batch)` : ""}${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
     });
     return NextResponse.json(row);
   } catch (e: any) {
@@ -147,6 +176,16 @@ export async function DELETE(req: NextRequest) {
           return NextResponse.json({
             error: `Cannot delete: would make "${p.name}" go below zero (current ${p.qty}, net reversal ${delta.get(pid)}). Adjust stock first or use 'Delete from History' to purge without reversing qty.`,
           }, { status: 400 });
+        }
+        if (p.module === "consumables") {
+          const mine = txns.filter(t => t.partId === pid).map(t => t.id);
+          const { batches } = await batchBalances(pid, { skipTxns: mine, qtyOverride: projected });
+          const low = batches.find(x => x.qty < -0.0005);
+          if (low) {
+            return NextResponse.json({
+              error: `Cannot reverse this: it would leave the ${ordinal(low.n)} batch of "${p.name}" below zero, because stock was already issued from it. Reverse those issues first.`,
+            }, { status: 400 });
+          }
         }
       }
       // The records go and the quantities come back in ONE statement, so a

@@ -152,6 +152,9 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .bp-opt .who b{text-transform:uppercase}
 .bp-opt small{color:#2d6a10;font-weight:600;white-space:nowrap}
 .bp-opt small.out{color:#A32D2D}
+.ig-batches{color:#8a6d3b;font-family:Arial,sans-serif}
+.bulk-batch,.bulk-split-batch{font-size:11.5px;padding:3px 6px;margin-top:4px;max-width:100%}
+.bulk-split-batch{margin-top:0;width:auto}
 /* Inks & Consumables inventory: one compact card per product, a row for each supplier + brand. */
 .inv-groups{display:grid;grid-template-columns:minmax(0,980px);gap:8px;align-items:start}
 .ig{background:#fff;border:1px solid #e8e1d3;border-radius:10px;padding:8px 14px 2px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -514,7 +517,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th class="machinery-only">Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th class="machinery-only">Supplier / Ref</th><th class="machinery-only">Notes</th><th class="consumables-only">Batch</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
         </table>
       </div>
@@ -543,7 +546,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Issued To</th><th class="machinery-only">Purpose</th><th class="consumables-only">Batch</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
         </table>
       </div>
@@ -572,7 +575,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="movement-output"></div>
       <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th class="machinery-only">Purpose / Notes</th><th class="consumables-only">Batch</th></tr></thead>
           <tbody id="issuance-table"></tbody>
         </table>
       </div>
@@ -699,6 +702,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <div class="combo-dropdown" id="f-in-part-dropdown"></div>
       </div>
       <div id="f-in-part-pick"></div>
+      <div id="f-in-part-batch"></div>
     </div>
     <div class="two-col">
       <div class="form-group"><label class="form-label">Quantity *</label><input id="f-in-qty" type="number" min="0" step="any" placeholder="0"></div>
@@ -730,6 +734,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <div class="combo-dropdown" id="f-out-part-dropdown"></div>
       </div>
       <div id="f-out-part-pick"></div>
+      <div id="f-out-part-batch"></div>
     </div>
     <div class="two-col">
       <div class="form-group"><label class="form-group"><label class="form-label">Quantity *</label><input id="f-out-qty" type="number" min="0" step="any" placeholder="0"></div>
@@ -934,6 +939,15 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="modal-title"><i class="ti ti-settings"></i> <span id="ml-title">Manage</span></div>
     <div id="ml-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('manageList')">Done</button></div>
+  </div>
+</div>
+
+<!-- BATCHES OF ONE ROW (Inks & Consumables) -->
+<div class="modal-overlay" id="modal-batches">
+  <div class="modal" style="width:820px">
+    <div class="modal-title"><i class="ti ti-stack-2"></i> <span id="bt-title">Batches</span></div>
+    <div id="bt-body"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('batches')">Done</button></div>
   </div>
 </div>
 
@@ -1332,6 +1346,139 @@ function inkGroupTotal(rows){
   return {sum,unit:units.length===1?units[0]:'',mixed:units.length>1};
 }
 
+// ---- Batches (Inks & Consumables) ----
+// Everything that was in the store before batches were kept is the 1st batch; each stock in opens the
+// next one (or is added to one the keeper names); a stock out names the batch it takes from.
+function ordinal(n){const v=n%100,s=['th','st','nd','rd'];return n+(s[(v-20)%10]||s[v]||s[0]);}
+function ordBatch(n){return ordinal(n)+' batch';}
+function txnBatch(t){return t.batch||1;}
+// The batches of one part with what is left in each. A later batch is what came into it less what went
+// out of it; the 1st batch is whatever on hand is not in a later one, so they add up to the quantity on
+// hand. Empty for a part that has never had stock.
+function partBatches(p){
+  const per=new Map();
+  const blank=n=>({n,inQty:0,outQty:0,first:'',ref:'',challan:''});
+  state.transactions.forEach(t=>{
+    if(t.partId!==p.id)return;
+    const n=txnBatch(t);
+    if(!per.has(n))per.set(n,blank(n));
+    const b=per.get(n);
+    if(t.type==='in'){
+      b.inQty+=Number(t.qty);
+      if(!b.first||t.date<b.first){b.first=t.date;b.ref=t.ref||'';b.challan=t.challanNo||'';}
+    }else b.outQty+=Number(t.qty);
+  });
+  if(!per.size&&!(Number(p.qty)>0))return [];
+  if(!per.has(1))per.set(1,blank(1));
+  const list=[...per.values()].sort((a,b)=>a.n-b.n);
+  const later=list.filter(b=>b.n>=2).reduce((t,b)=>t+(b.inQty-b.outQty),0);
+  list.forEach(b=>{b.qty=Math.round((b.n===1?Number(p.qty)-later:b.inQty-b.outQty)*1000)/1000;});
+  return list;
+}
+function batchCell(t){
+  return isInks()?'<td class="consumables-only" style="font-weight:700;white-space:nowrap">'+ordinal(txnBatch(t))+'</td>':'';
+}
+function selectedBatch(which){
+  const r=document.querySelector('input[name="bt-'+which+'"]:checked');
+  return r?r.value:null;
+}
+function batchPicked(which){
+  document.querySelectorAll('input[name="bt-'+which+'"]').forEach(r=>{r.closest('label').classList.toggle('on',r.checked);});
+}
+// Under the part in the single Stock In / Stock Out forms: which batch the stock goes into / comes out of.
+function renderBatchPick(prefix){
+  const host=document.getElementById(prefix+'-batch');
+  if(!host)return;
+  const hidden=document.getElementById(prefix);
+  const p=state.parts.find(x=>String(x.id)===String(hidden.value));
+  const want=window._wantBatch;window._wantBatch=null;
+  if(!isInks()||!p){host.innerHTML='';return;}
+  const list=partBatches(p);
+  const e=_escHtml;
+  if(prefix==='f-in-part'){
+    const nextN=list.length?list[list.length-1].n+1:1;
+    host.innerHTML='<div class="brand-pick"><div class="bp-title">Which batch?</div>'
+      +'<label class="bp-opt on"><input type="radio" name="bt-in" value="new" checked onchange="batchPicked(\'in\')"><span class="who"><b>New batch</b> \u00B7 '+ordBatch(nextN)+'</span></label>'
+      +list.map(b=>'<label class="bp-opt"><input type="radio" name="bt-in" value="'+b.n+'" onchange="batchPicked(\'in\')"><span class="who">Add to the <b>'+ordBatch(b.n)+'</b></span><small>'+fmtQty(b.qty)+' '+e(p.unit)+' on hand</small></label>').join('')
+      +'</div>';
+    return;
+  }
+  if(list.length<2){host.innerHTML='';return;}    // one batch: nothing to choose
+  const have=list.filter(b=>b.qty>0);
+  const pick=(want&&have.some(b=>b.n===want))?want:(have[0]?have[0].n:0);   // the oldest with stock, unless one was asked for
+  host.innerHTML='<div class="brand-pick"><div class="bp-title">Take from which batch?</div>'
+    +list.map(b=>{
+      const none=!(b.qty>0);
+      return '<label class="bp-opt'+(b.n===pick?' on':'')+(none?' off':'')+'"><input type="radio" name="bt-out" value="'+b.n+'"'+(b.n===pick?' checked':'')+(none?' disabled':'')+' onchange="batchPicked(\'out\')">'
+        +'<span class="who"><b>'+ordBatch(b.n)+'</b></span><small class="'+(none?'out':'')+'">'+(none?'used up':fmtQty(b.qty)+' '+e(p.unit)+' left')+'</small></label>';
+    }).join('')+'</div>';
+}
+// A bulk stock out row (Inks & Consumables): the batch it takes from, "oldest first" unless one is named.
+function renderBulkBatch(prefix){
+  const wrap=document.getElementById(prefix+'-batchwrap');
+  if(!wrap)return;
+  const p=state.parts.find(x=>String(x.id)===String(document.getElementById(prefix).value));
+  const list=(isInks()&&p?partBatches(p):[]).filter(b=>b.qty>0);
+  if(list.length<2){wrap.innerHTML='';return;}
+  wrap.innerHTML='<select class="bulk-batch" title="Which batch to take from"><option value="auto">Oldest batch first</option>'
+    +list.map(b=>'<option value="'+b.n+'">'+ordBatch(b.n)+' \u2014 '+fmtQty(b.qty)+' '+_escHtml(p.unit)+'</option>').join('')+'</select>';
+}
+// Bulk stock out: the rows broken down by batch. A named batch takes exactly that; "oldest first" takes
+// from the oldest batch with stock and carries on into the next. Checked against what is left in each
+// batch before anything is saved.
+function planBatchOut(rows){
+  const round=n=>Math.round(n*1000)/1000;
+  const left=new Map();
+  const of=pid=>{
+    if(!left.has(pid)){const p=state.parts.find(x=>x.id===pid);left.set(pid,new Map((p?partBatches(p):[]).map(b=>[b.n,b.qty])));}
+    return left.get(pid);
+  };
+  const items=[];
+  const add=(partId,batch,qty)=>{
+    const ex=items.find(i=>i.partId===partId&&i.batch===batch);
+    if(ex)ex.qty=round(ex.qty+qty);else items.push({partId,qty:round(qty),batch});
+  };
+  const unit=pid=>{const p=state.parts.find(x=>x.id===pid);return p?p.unit:'';};
+  for(const r of rows.filter(r=>r.batch!=='auto')){
+    const m=of(r.partId),b=Number(r.batch),have=m.get(b)||0;
+    if(have<r.qty-0.0005)return {error:getPartName(r.partId)+' \u2014 issuing '+fmtQty(r.qty)+' from the '+ordBatch(b)+', only '+fmtQty(Math.max(have,0))+' '+unit(r.partId)+' left in it'};
+    m.set(b,round(have-r.qty));add(r.partId,b,r.qty);
+  }
+  for(const r of rows.filter(r=>r.batch==='auto')){
+    const m=of(r.partId);
+    let need=r.qty;
+    for(const [b,have] of [...m.entries()].sort((a,c)=>a[0]-c[0])){
+      if(need<=0.0005)break;
+      if(have<=0)continue;
+      const take=Math.min(have,need);
+      m.set(b,round(have-take));add(r.partId,b,take);need=round(need-take);
+    }
+    if(need>0.0005)return {error:getPartName(r.partId)+' \u2014 issuing '+fmtQty(r.qty)+', only '+fmtQty(round(r.qty-need))+' '+unit(r.partId)+' on hand'};
+  }
+  return {items};
+}
+function openBatches(partId){
+  const p=state.parts.find(x=>x.id===partId);
+  if(!p)return;
+  const e=_escHtml,u=e(p.unit||''),cell='padding:6px 10px';
+  const list=partBatches(p);
+  document.getElementById('bt-title').textContent='Batches \u2014 '+(p.supplier||'No supplier')+(p.brand?' \u00B7 '+p.brand:'')+' \u2014 '+p.name;
+  const rows=list.length?list.map(b=>'<tr>'
+    +'<td style="'+cell+'"><b>'+ordBatch(b.n)+'</b>'+(b.n===1&&!b.inQty?'<div style="font-size:11px;color:#999">the stock already in the store</div>':'')+'</td>'
+    +'<td style="'+cell+';text-align:right;font-weight:800;font-size:15px;white-space:nowrap'+(b.qty<0?';color:#A32D2D':'')+'">'+fmtQty(b.qty)+' '+u+'</td>'
+    +'<td style="'+cell+';text-align:right;color:#2d6a10;white-space:nowrap">'+(b.inQty?'+'+fmtQty(b.inQty):'\u2014')+'</td>'
+    +'<td style="'+cell+';text-align:right;color:#993C1D;white-space:nowrap">'+(b.outQty?'\u2212'+fmtQty(b.outQty):'\u2014')+'</td>'
+    +'<td style="'+cell+';white-space:nowrap">'+(b.first?fmtDate(b.first):'\u2014')+'</td>'
+    +'<td style="'+cell+'">'+e(userText(b.ref)||'\u2014')+(b.challan?' <span style="color:#999;font-family:monospace">'+e(b.challan)+'</span>':'')+'</td>'
+    +'<td style="'+cell+'" class="write-only">'+(b.qty>0?'<button class="btn btn-sm" onclick="closeModal(\'batches\');openSingleOut('+p.id+','+b.n+')">\u2212 Stock</button>':'')+'</td></tr>').join('')
+    :'<tr><td colspan="7" style="padding:18px;text-align:center;color:#999">No stock yet. The first stock in will be the 1st batch.</td></tr>';
+  document.getElementById('bt-body').innerHTML=
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">On hand</div><div style="font-size:16px;font-weight:700">'+fmtQty(p.qty)+' '+u+'</div></div>'
+    +'<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">Batches</div><div style="font-size:16px;font-weight:700">'+list.length+'</div></div></div>'
+    +'<div class="sb-box"><table><thead><tr><th>Batch</th><th style="text-align:right">On hand</th><th style="text-align:right">Received</th><th style="text-align:right">Issued</th><th>First received</th><th>From</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  document.getElementById('modal-batches').classList.add('open');
+}
+
 // The picker for Inks & Consumables: a product with several brands shows a heading with its
 // total, then one line per brand; a single-brand product is one line.
 function renderInkCombo(prefix,query){
@@ -1399,6 +1546,7 @@ function getActiveComboIndex(dd){
 
 function pickComboItem(prefix,item){
   if(!item)return;
+  const bwClear=document.getElementById(prefix+'-batchwrap');if(bwClear)bwClear.innerHTML='';
   if(item.hasAttribute('data-gk')){
     if(prefix.indexOf('f-bulk')===0)pickBulkGroup(prefix,item.getAttribute('data-gk'));
     else pickSingleGroup(prefix,item.getAttribute('data-gk'));
@@ -1409,12 +1557,14 @@ function pickComboItem(prefix,item){
   document.getElementById(prefix+'-input').value=item.dataset.label;
   document.getElementById(prefix+'-dropdown').classList.remove('open');
   renderBrandPick(prefix);
+  renderBulkBatch(prefix);
 }
 
 // Stock in / out of a product that comes from several suppliers or brands: once a row is picked
 // (or just the product), every supplier / brand of it is listed with its balance, so which one
 // it is for is always a visible choice.
-function renderBrandPick(prefix,key){
+function renderBrandPick(prefix,key){renderBrandPickInner(prefix,key);renderBatchPick(prefix);}
+function renderBrandPickInner(prefix,key){
   const host=document.getElementById(prefix+'-pick');
   if(!host)return;
   const hidden=document.getElementById(prefix);
@@ -1461,7 +1611,7 @@ function setupPartCombo(prefix){
 
   input.addEventListener('focus',()=>{renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('click',()=>{dd.classList.add('open');});
-  input.addEventListener('input',()=>{hidden.value='';clearBulkGroup(prefix);const pk=document.getElementById(prefix+'-pick');if(pk)pk.innerHTML='';renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
+  input.addEventListener('input',()=>{hidden.value='';clearBulkGroup(prefix);const pk=document.getElementById(prefix+'-pick');if(pk)pk.innerHTML='';const bk=document.getElementById(prefix+'-batch');if(bk)bk.innerHTML='';const bw=document.getElementById(prefix+'-batchwrap');if(bw)bw.innerHTML='';renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('keydown',e=>{
     if(!dd.classList.contains('open'))return;
     const items=dd.querySelectorAll('.combo-item');
@@ -1642,7 +1792,7 @@ function bulkRowHtml(kind,idx){
     +'<div class="combo-input-wrap"><input type="text" id="'+prefix+'-input" placeholder="Click to choose, or type to search..." autocomplete="off"><i class="ti ti-chevron-down combo-icon"></i></div>'
     +'<input type="hidden" id="'+prefix+'" class="bulk-part">'
     +'<div class="combo-dropdown" id="'+prefix+'-dropdown"></div>'
-    +'</div></td>'
+    +'</div>'+(kind==='bulkout'?'<div class="bulk-batch-wrap" id="'+prefix+'-batchwrap"></div>':'')+'</td>'
     +'<td class="col-qty"><input type="number" class="bulk-qty" min="0" step="any" placeholder="0"></td>'
     +'<td class="col-del"><button type="button" class="bulk-row-del" title="Remove this row">&times;</button></td>'
     +'</tr>';
@@ -1697,6 +1847,7 @@ function pickBulkGroup(prefix,k){
     const none=out&&!(Number(p.qty)>0);
     return '<label class="bulk-split-line"><span class="who"><b>'+e(p.supplier||'No supplier')+'</b>'+(p.brand?' \u00B7 '+e(p.brand):'')
       +'<small class="'+(none?'out':'')+'">'+(none?'out of stock':(out?'avail ':'on hand ')+fmtQty(p.qty)+' '+e(p.unit))+'</small></span>'
+      +(out?(()=>{const bl=partBatches(p).filter(b=>b.qty>0);return bl.length>1?'<select class="bulk-split-batch" data-id="'+p.id+'" title="Which batch to take from"><option value="auto">Oldest first</option>'+bl.map(b=>'<option value="'+b.n+'">'+ordBatch(b.n)+' \u2014 '+fmtQty(b.qty)+'</option>').join('')+'</select>':'';})():'')
       +'<input type="number" class="bulk-split-qty" data-id="'+p.id+'" min="0" step="any" placeholder="0"'+(none?' disabled':'')+'></label>';
   }).join('');
   tr.insertAdjacentHTML('afterend','<tr class="bulk-split"><td></td><td colspan="3"><div class="bulk-split-box">'+lines+'</div></td></tr>');
@@ -1751,7 +1902,7 @@ function resetBulkModal(kind){
 // The same single-entry form as before, with the part already filled in so it
 // doesn't have to be searched for again.
 function openSingleIn(partId){openModal('addIn');presetPartCombo('f-in-part',partId,'f-in-qty');}
-function openSingleOut(partId){openModal('addOut');presetPartCombo('f-out-part',partId,'f-out-qty');}
+function openSingleOut(partId,batch){window._wantBatch=batch||null;openModal('addOut');presetPartCombo('f-out-part',partId,'f-out-qty');}
 
 function presetPartCombo(prefix,partId,focusId){
   const p=state.parts.find(x=>x.id===partId);
@@ -1770,6 +1921,8 @@ function resetPartCombo(prefix){
   document.getElementById(prefix+'-dropdown').classList.remove('open');
   const pk=document.getElementById(prefix+'-pick');
   if(pk)pk.innerHTML='';
+  const bk=document.getElementById(prefix+'-batch');
+  if(bk)bk.innerHTML='';
 }
 
 function getPartName(id){
@@ -1868,9 +2021,9 @@ function getHeaders(sec){
     ? ['#','SKU / Part No.','Part Name','Category','Supplier','Brand','Rack No.','Unit','Qty on Hand','Min Qty','Status']
     : ['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
   const sb=isInks()?['Supplier','Brand']:[];
-  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance',...(isInks()?[]:['Supplier / Ref']),'Notes','Done by'];
-  if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Issued To','Purpose','Done by'];
-  if(sec==='issuance')  return['#','Date','Challan No.','Part Name',...sb,'Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
+  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance',...(isInks()?[]:['Supplier / Ref']),isInks()?'Batch':'Notes','Done by'];
+  if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Issued To',isInks()?'Batch':'Purpose','Done by'];
+  if(sec==='issuance')  return['#','Date','Challan No.','Part Name',...sb,'Type','Qty','Balance','Issued To / Supplier',isInks()?'Batch':'Purpose / Notes'];
   return[];
 }
 
@@ -1884,9 +2037,9 @@ function rowCells(sec,item,i){
     return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),...(isInks()?[]:[userText(item.ref)||'—']),userText(item.notes)||'—',item.createdBy||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.issuedTo)||'—',userText(item.purpose)||'—',item.createdBy||'—'];
-  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.type==='in'?item.ref:item.issuedTo)||'—',userText(item.type==='in'?item.notes:item.purpose)||'—'];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),...(isInks()?[]:[userText(item.ref)||'—']),isInks()?ordinal(txnBatch(item)):(userText(item.notes)||'—'),item.createdBy||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.issuedTo)||'—',isInks()?ordinal(txnBatch(item)):(userText(item.purpose)||'—'),item.createdBy||'—'];
+  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.type==='in'?item.ref:item.issuedTo)||'—',isInks()?ordinal(txnBatch(item)):(userText(item.type==='in'?item.notes:item.purpose)||'—')];
   return[];
 }
 
@@ -2371,7 +2524,8 @@ async function saveBulkStock(type){
         if(!inp.value.trim())continue;
         const q=parseFloat(inp.value);
         if(!(q>0)){await warnDialog('Quantity required','Every brand you fill in needs a quantity greater than zero (decimals like 2.5 are fine).');return;}
-        rows.push({partId:parseInt(inp.dataset.id),qty:q});any=true;
+        const bsel=split.querySelector('.bulk-split-batch[data-id="'+inp.dataset.id+'"]');
+        rows.push({partId:parseInt(inp.dataset.id),qty:q,batch:bsel?bsel.value:'auto'});any=true;
       }
       if(!any){await warnDialog('Nothing entered','Enter a quantity against at least one brand of "'+document.getElementById(tr.querySelector('.bulk-part').id+'-input').value.replace(/ \u2014 split by brand$/,'')+'", or clear that row.');return;}
       continue;
@@ -2382,18 +2536,25 @@ async function saveBulkStock(type){
     if(!partId&&!qtyRaw)continue;   // untouched row — skip it
     if(!partId){await warnDialog('Pick a part','Every filled-in row needs a part selected — or clear that row.');return;}
     if(!(qty>0)){await warnDialog('Quantity required','Every filled-in row needs a quantity greater than zero (decimals like 2.5 are fine).');return;}
-    rows.push({partId,qty});
+    rows.push({partId,qty,batch:(tr.querySelector('.bulk-batch')||{}).value||'auto'});
   }
   if(!rows.length){await warnDialog('Nothing to save','Add at least one row with a part and a quantity.');return;}
 
   // The same part twice on one challan is a single movement, not two — folding
   // them together also keeps the stock check below honest.
-  const merged=[];
-  rows.forEach(r=>{
-    const ex=merged.find(m=>m.partId===r.partId);
-    if(ex)ex.qty=Math.round((ex.qty+r.qty)*1000)/1000;
-    else merged.push({partId:r.partId,qty:r.qty});
-  });
+  let merged=[];
+  if(type==='out'&&isInks()){
+    // Inks & Consumables: broken down by batch, and checked against what is left in each.
+    const plan=planBatchOut(rows);
+    if(plan.error){await warnDialog('Not enough stock',plan.error);return;}
+    merged=plan.items;
+  }else{
+    rows.forEach(r=>{
+      const ex=merged.find(m=>m.partId===r.partId);
+      if(ex)ex.qty=Math.round((ex.qty+r.qty)*1000)/1000;
+      else merged.push({partId:r.partId,qty:r.qty});
+    });
+  }
 
   // Check the whole entry against stock on hand before saving any of it, so a
   // bulk issue can't get halfway through and then stop on the short row.
@@ -2411,6 +2572,7 @@ async function saveBulkStock(type){
     try{
       const body=Object.assign({type,partId:r.partId,qty:r.qty,date,challanNo},shared);
       if(type==='in'&&isInks()){const pp=state.parts.find(x=>x.id===r.partId);body.ref=pp&&pp.supplier?pp.supplier:'';}
+      if(r.batch)body.batch=r.batch;
       const txn=await apiFetch('/api/store/transactions','POST',body);
       const p=state.parts.find(x=>x.id===r.partId);
       if(p)p.qty=Math.round((type==='in'?p.qty+r.qty:p.qty-r.qty)*1000)/1000;
@@ -2440,7 +2602,8 @@ async function saveStockIn(){
       type:'in',partId,qty,date,
       ref:isInks()?((state.parts.find(x=>x.id===partId)||{}).supplier||''):document.getElementById('f-in-supplier').value.trim(),
       notes:document.getElementById('f-in-notes').value.trim(),
-      challanNo:document.getElementById('f-in-challan').value.trim()
+      challanNo:document.getElementById('f-in-challan').value.trim(),
+      batch:isInks()?(selectedBatch('in')&&selectedBatch('in')!=='new'?Number(selectedBatch('in')):0):undefined
     });
     const p=state.parts.find(x=>x.id===partId);
     if(p)p.qty+=qty;
@@ -2464,7 +2627,8 @@ async function saveStockOut(){
     const txn=await apiFetch('/api/store/transactions','POST',{
       type:'out',partId,qty,date,issuedTo,
       purpose:document.getElementById('f-out-purpose').value.trim(),
-      challanNo:document.getElementById('f-out-challan').value.trim()
+      challanNo:document.getElementById('f-out-challan').value.trim(),
+      batch:isInks()&&selectedBatch('out')?Number(selectedBatch('out')):undefined
     });
     const p=state.parts.find(x=>x.id===partId);
     if(p)p.qty-=qty;
@@ -2903,6 +3067,7 @@ function openPartHistory(pid){
       <td class="${t.type==='in'?'qty-positive':'qty-negative'}" style="${cell};white-space:nowrap">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${u}</td>
       <td style="${cell};font-weight:600;white-space:nowrap">${fmtQty(bal[t.id])??'—'} ${u}</td>
       <td style="${cell};white-space:nowrap"><span class="badge badge-${t.type}">${txnReason(t)}</span></td>
+      ${isInks()?`<td style="${cell};font-weight:700;white-space:nowrap">${ordinal(txnBatch(t))}</td>`:''}
       <td style="${cell};font-family:monospace;color:#555">${t.challanNo||'—'}</td>
       <td style="${cell}">${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
       <td style="${cell};color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>
@@ -2920,7 +3085,7 @@ function openPartHistory(pid){
     </div>
     ${warn}
     <div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px">
-      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">When</th><th style="${cell}">Before</th><th style="${cell}">Change</th><th style="${cell}">After</th><th style="${cell}">Reason</th><th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th><th style="${cell}">By</th></tr></thead><tbody>${rows}</tbody></table>
+      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">When</th><th style="${cell}">Before</th><th style="${cell}">Change</th><th style="${cell}">After</th><th style="${cell}">Reason</th>${isInks()?`<th style="${cell}">Batch</th>`:''}<th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th><th style="${cell}">By</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   document.getElementById('modal-partHistory').classList.add('open');
 }
@@ -3131,10 +3296,13 @@ function renderInkGroups(visible){
     const rowHtml=rows.map(p=>{
       const flag=p.qty===0?'<span class="ig-flag out">Out</span>':(p.qty<=p.minQty?'<span class="ig-flag low">Low</span>':'');
       const meta=[p.sku?'['+e(p.sku)+']':'',p.rackNo?'Rack '+e(p.rackNo):''].filter(Boolean).join(' · ');
+      const bl=partBatches(p);
+      const bmeta=bl.length>1?'<span class="ig-batches">'+bl.map(b=>ordinal(b.n)+' '+fmtQty(b.qty)).join(' \u00B7 ')+'</span>':'';
       return '<div class="ig-row">'
-        +'<div class="ig-who"><b>'+(p.supplier?e(p.supplier):'<i>No supplier</i>')+'</b> · '+(p.brand?e(p.brand):'<i>no brand</i>')+flag+(meta?'<div class="ig-meta">'+meta+'</div>':'')+'</div>'
+        +'<div class="ig-who"><b>'+(p.supplier?e(p.supplier):'<i>No supplier</i>')+'</b> · '+(p.brand?e(p.brand):'<i>no brand</i>')+flag+((meta||bmeta)?'<div class="ig-meta">'+meta+(meta&&bmeta?' \u00B7 ':'')+bmeta+'</div>':'')+'</div>'
         +'<div class="ig-qty"><b>'+fmtQty(p.qty)+'</b><small>'+e(p.unit)+'</small></div>'
         +'<div class="ig-btns">'
+        +'<button class="ig-b ghost" title="How much is in each batch" onclick="openBatches('+p.id+')">Batch'+(bl.length>1?' ('+bl.length+')':'')+'</button>'
         +'<button class="ig-b in write-only" title="Stock in this brand" onclick="openSingleIn('+p.id+')">+ Stock</button>'
         +'<button class="ig-b out write-only" title="Issue / stock out this brand" onclick="openSingleOut('+p.id+')">\u2212 Stock</button>'
         +'<button class="ig-b edit write-only" title="Edit this row" onclick="openEditPart('+p.id+')">Edit</button>'
@@ -3196,12 +3364,13 @@ function openGroupHistory(k,brandId){
       +'<td class="'+(t.type==='in'?'qty-positive':'qty-negative')+'" style="'+cell+';white-space:nowrap">'+(t.type==='in'?'+':'\u2212')+fmtQty(t.qty)+un+'</td>'
       +'<td style="'+cell+';font-weight:600;white-space:nowrap">'+(bal[t.id]==null?'—':fmtQty(bal[t.id])+un)+'</td>'
       +'<td style="'+cell+';white-space:nowrap"><span class="badge badge-'+t.type+'">'+txnReason(t)+'</span></td>'
+      +'<td style="'+cell+';font-weight:700;white-space:nowrap">'+ordinal(txnBatch(t))+'</td>'
       +'<td style="'+cell+';font-family:monospace;color:#555">'+(t.challanNo||'—')+'</td>'
       +'<td style="'+cell+'">'+e(userText(t.type==='in'?t.ref:t.issuedTo)||'—')+'</td>'
       +'<td style="'+cell+';color:#888">'+e(userText(t.type==='in'?t.notes:t.purpose)||'—')+'</td>'
       +'<td style="'+cell+';white-space:nowrap">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
       +'</tr>';
-  }).join(''):'<tr><td colspan="10"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
+  }).join(''):'<tr><td colspan="11"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
   const pick='<select onchange="openGroupHistory(_ghKey,this.value)" style="margin-bottom:12px;max-width:100%"><option value="">All suppliers / brands ('+members.length+')</option>'
     +members.map(p=>'<option value="'+p.id+'"'+(String(p.id)===String(brandId||'')?' selected':'')+'>'+e((p.supplier||'No supplier')+(p.brand?' · '+p.brand:''))+'</option>').join('')+'</select>';
   document.getElementById('ph-title').textContent=members[0].name+' - history';
@@ -3210,7 +3379,7 @@ function openGroupHistory(k,brandId){
     +stat('On hand',fmtQty(have)+(u?' '+u:''))+stat('Total in','+'+fmtQty(totIn)+(u?' '+u:''),'#2d6a10')+stat('Total out','\u2212'+fmtQty(totOut)+(u?' '+u:''),'#993C1D')+'</div>'
     +(members.length>1?pick:'')
     +'<div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:12.5px"><thead><tr>'
-    +['When','Supplier · Brand','Before','Change','After','Reason','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
+    +['When','Supplier · Brand','Before','Change','After','Reason','Batch','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   document.getElementById('modal-partHistory').classList.add('open');
 }
@@ -3386,7 +3555,7 @@ function renderStockIn(){
     <td class="qty-positive">+${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td class="machinery-only">${userText(t.ref)||'—'}</td>
-    <td style="color:#888">${userText(t.notes)||'—'}</td>
+    <td class="machinery-only" style="color:#888">${userText(t.notes)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
@@ -3415,7 +3584,7 @@ function renderStockOut(){
     <td class="qty-negative">−${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${userText(t.issuedTo)||'—'}</td>
-    <td style="color:#888">${userText(t.purpose)||'—'}</td>
+    <td class="machinery-only" style="color:#888">${userText(t.purpose)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
@@ -3446,7 +3615,7 @@ function renderIssuance(){
     <td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
-    <td style="color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>
+    <td class="machinery-only" style="color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>${batchCell(t)}
   </tr>`).join('');
   updateBulkInfo('iss');
 }

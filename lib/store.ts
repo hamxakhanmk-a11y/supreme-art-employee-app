@@ -28,6 +28,11 @@ DO $$ BEGIN
   -- have none recorded.
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by TEXT;
 
+  -- Inks & Consumables batches: the batch a stock in puts the stock into, or a stock out
+  -- takes it from (1 = 1st batch, 2 = 2nd ...). Empty means the 1st batch: everything that
+  -- was in the store before batches were kept is the 1st batch.
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS batch INTEGER;
+
   -- When it was entered (date AND time; the movement's own "date" has no time).
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
 
@@ -197,6 +202,37 @@ async function backfillDoneByOnce() {
 // Quantities are held as floats, so repeatedly adding and subtracting values
 // like 1.3 would otherwise drift into 4.699999999999999 and show that way.
 // Three decimals is well past anything weighed out in practice.
+const ORD = ["th", "st", "nd", "rd"];
+/** 1 → "1st", 2 → "2nd", 11 → "11th". */
+export function ordinal(n: number): string {
+  const v = n % 100;
+  return n + (ORD[(v - 20) % 10] || ORD[v] || ORD[0]);
+}
+
+// Batches of an Inks & Consumables part. A stock in opens a new batch (or adds to one); a stock out
+// takes from one. A later batch (2nd, 3rd ...) holds what came into it less what went out of it. The
+// 1st batch is whatever is on hand that is not in a later one, so the batches always add up to the
+// quantity on hand even where older movements do not (stock before batches were kept, adjustments).
+//   skipTxns / qtyOverride: the same sum as it would be without those movements, at that quantity
+//   (used to check a reversal before it is made).
+export async function batchBalances(partId: number, opts: { skipTxns?: number[]; qtyOverride?: number } = {}) {
+  await ensureStoreSchema();   // the batch column
+  const rowsOf = (r: any): any[] => (r as any).rows ?? (r as any);
+  const [part] = rowsOf(await db.execute(sql`SELECT qty FROM parts WHERE id = ${partId}`));
+  const qty = opts.qtyOverride ?? Number(part?.qty ?? 0);
+  const skip = opts.skipTxns?.length ? sql`AND id NOT IN (${sql.join(opts.skipTxns.map(i => sql`${i}`), sql`, `)})` : sql``;
+  const rows = rowsOf(await db.execute(sql`
+    SELECT COALESCE(batch, 1) AS b, SUM(CASE WHEN type = 'in' THEN qty ELSE -qty END) AS bal
+    FROM transactions WHERE part_id = ${partId} ${skip} GROUP BY 1`));
+  const later = rows.filter(r => Number(r.b) >= 2).map(r => ({ n: Number(r.b), qty: roundQty(Number(r.bal)) })).sort((a, b) => a.n - b.n);
+  const laterSum = later.reduce((s, x) => s + x.qty, 0);
+  return {
+    batches: [{ n: 1, qty: roundQty(qty - laterSum) }, ...later],
+    // False for a part that has never had any stock: its first stock in is the 1st batch.
+    any: rows.length > 0 || qty > 0,
+  };
+}
+
 export function roundQty(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
