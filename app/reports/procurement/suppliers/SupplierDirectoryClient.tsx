@@ -282,11 +282,10 @@ export default function SupplierDirectoryClient({
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By product", title: "SUPPLIER DIRECTORY — BY PRODUCT",
-          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,28,20,36,18,18,20,24,18,12,18],
-          headers: ["Product / Description", "Supplier", "Brand", "Location", "NTN", "STRN", "Contact #", "Concerned Person", "Rate", "Tax %", "Rate source"],
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,28,20,18,12,18],
+          headers: ["Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Rate source"],
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
-            r.agg.address || "", r.agg.ntn || "", r.agg.strn || "", r.agg.phone || "", r.agg.concernedPerson || "",
             rateLabel(r.shownRate, r.agg.uom), taxPctLabel(r.shownRate, r.shownTaxPct),
             r.noted ? "Noted here" : "From PO",
           ]),
@@ -386,18 +385,13 @@ export default function SupplierDirectoryClient({
                 <th>Product / Description</th>
                 <th>Supplier</th>
                 <th>Brand</th>
-                <th>Location</th>
-                <th>NTN</th>
-                <th>STRN</th>
-                <th>Contact #</th>
-                <th>Concerned Person</th>
                 <th>Rate</th>
                 <th>Tax %</th>
               </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={10} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={5} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((r, i) => (
                 <tr
@@ -423,11 +417,6 @@ export default function SupplierDirectoryClient({
                     {r.agg.count > 1 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--text3)" }}>×{r.agg.count}</span>}
                   </td>
                   <td style={{ fontSize: 12 }}>{r.agg.brand || "—"}</td>
-                  <td style={{ fontSize: 12, whiteSpace: "normal", maxWidth: 220 }}>{r.agg.address || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{r.agg.ntn || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{r.agg.strn || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{r.agg.phone || "—"}</td>
-                  <td style={{ fontSize: 12 }}>{r.agg.concernedPerson || "—"}</td>
                   {!canEditRates ? (
                     <>
                       <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}{historyBtn(r.product, r.supplier)}</td>
