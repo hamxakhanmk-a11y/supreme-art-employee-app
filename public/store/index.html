@@ -712,6 +712,10 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div class="form-group machinery-only"><label class="form-label">Supplier / Reference No.</label><input id="f-in-supplier" placeholder="Supplier name or PO number"></div>
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-in-challan" placeholder="e.g. CH-2026-042"></div>
     </div>
+    <div class="two-col consumables-only">
+      <div class="form-group"><label class="form-label">P.O. No.</label><input id="f-in-po" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">Invoice No.</label><input id="f-in-invoice" placeholder="Optional"></div>
+    </div>
     <div class="form-group"><label class="form-label">Notes</label><input id="f-in-notes" placeholder="Optional notes"></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('addIn')">Cancel</button>
@@ -772,6 +776,10 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-bulkin-challan" placeholder="e.g. CH-2026-042"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-bulkin-date" type="date"></div>
       <div class="form-group machinery-only"><label class="form-label">Supplier / Reference No.</label><input id="f-bulkin-supplier" placeholder="Supplier or PO number"></div>
+    </div>
+    <div class="two-col consumables-only">
+      <div class="form-group"><label class="form-label">P.O. No.</label><input id="f-bulkin-po" placeholder="Optional — applied to every row"></div>
+      <div class="form-group"><label class="form-label">Invoice No.</label><input id="f-bulkin-invoice" placeholder="Optional — applied to every row"></div>
     </div>
     <div class="form-group"><label class="form-label">Notes</label><input id="f-bulkin-notes" placeholder="Optional — applied to every row"></div>
     <table class="bulk-table">
@@ -948,6 +956,29 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="modal-title"><i class="ti ti-stack-2"></i> <span id="bt-title">Batches</span></div>
     <div id="bt-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('batches')">Done</button></div>
+  </div>
+</div>
+
+<!-- STOCK IN STICKER (Inks & Consumables) -->
+<div class="modal-overlay" id="modal-sticker">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-printer"></i> Print sticker</div>
+    <div id="st-summary" style="font-size:13.5px;margin-bottom:12px"></div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Received on</label><input id="st-date" type="date"></div>
+      <div class="form-group"><label class="form-label">Quantity</label><input id="st-qty" type="number" min="0" step="any"></div>
+    </div>
+    <div class="three-col">
+      <div class="form-group"><label class="form-label">P.O. No.</label><input id="st-po" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">DC No.</label><input id="st-dc" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">Invoice No.</label><input id="st-inv" placeholder="Optional"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Number of stickers</label><input id="st-count" type="number" min="1" max="500" step="1">
+      <div id="st-hint" style="font-size:11.5px;color:#888;margin-top:4px"></div></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('sticker')">Cancel</button>
+      <button class="btn btn-primary" onclick="printSticker()"><i class="ti ti-printer"></i> Print</button>
+    </div>
   </div>
 </div>
 
@@ -1487,7 +1518,7 @@ function openBatches(partId){
     +'<td style="'+cell+';text-align:right;color:#993C1D;white-space:nowrap">'+(b.outQty?'\u2212'+fmtQty(b.outQty):'\u2014')+'</td>'
     +'<td style="'+cell+';white-space:nowrap">'+(b.first?fmtDate(b.first):'\u2014')+'</td>'
     +'<td style="'+cell+'">'+e(userText(b.ref)||'\u2014')+(b.challan?' <span style="color:#999;font-family:monospace">'+e(b.challan)+'</span>':'')+'</td>'
-    +'<td style="'+cell+'" class="write-only">'+(b.qty>0?'<button class="btn btn-sm" onclick="closeModal(\'batches\');openSingleOut('+p.id+','+b.n+')">\u2212 Stock</button>':'')+'</td></tr>').join('')
+    +'<td style="'+cell+';white-space:nowrap"><button class="btn btn-sm" title="Print the sticker for this batch" onclick="openBatchSticker('+p.id+','+b.n+')"><i class="ti ti-printer"></i> Sticker</button>'+(b.qty>0?' <span class="write-only"><button class="btn btn-sm" onclick="closeModal(\'batches\');openSingleOut('+p.id+','+b.n+')">\u2212 Stock</button></span>':'')+'</td></tr>').join('')
     :'<tr><td colspan="7" style="padding:18px;text-align:center;color:#999">No stock yet. The first stock in will be the 1st batch.</td></tr>';
   document.getElementById('bt-body').innerHTML=
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">On hand</div><div style="font-size:16px;font-weight:700">'+fmtQty(p.qty)+' '+u+'</div></div>'
@@ -1901,7 +1932,7 @@ function renumberBulkRows(kind){
 // Fresh modal: blank shared fields, today's date, three empty rows.
 function resetBulkModal(kind){
   const ids=kind==='bulkin'
-    ? ['f-bulkin-challan','f-bulkin-supplier','f-bulkin-notes']
+    ? ['f-bulkin-challan','f-bulkin-supplier','f-bulkin-notes','f-bulkin-po','f-bulkin-invoice']
     : ['f-bulkout-challan','f-bulkout-issued','f-bulkout-purpose'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
   if(kind==='bulkout')resetEmpCombo('f-bulkout-issued');
@@ -2525,7 +2556,8 @@ async function saveBulkStock(type){
   const challanNo=document.getElementById('f-'+kind+'-challan').value.trim();
   if(!date){await warnDialog('Date required','Please choose a date for this entry.');return;}
   const shared=type==='in'
-    ? {ref:document.getElementById('f-bulkin-supplier').value.trim(),notes:document.getElementById('f-bulkin-notes').value.trim()}
+    ? {ref:document.getElementById('f-bulkin-supplier').value.trim(),notes:document.getElementById('f-bulkin-notes').value.trim(),
+       poNo:isInks()?document.getElementById('f-bulkin-po').value.trim():'',invoiceNo:isInks()?document.getElementById('f-bulkin-invoice').value.trim():''}
     : {issuedTo:document.getElementById('f-bulkout-issued').value.trim(),purpose:document.getElementById('f-bulkout-purpose').value.trim()};
   if(type==='out'&&!shared.issuedTo){await warnDialog('Issued To required','Enter the person, department, or machine receiving these items.');return;}
 
@@ -2621,13 +2653,15 @@ async function saveStockIn(){
       ref:isInks()?((state.parts.find(x=>x.id===partId)||{}).supplier||''):document.getElementById('f-in-supplier').value.trim(),
       notes:document.getElementById('f-in-notes').value.trim(),
       challanNo:document.getElementById('f-in-challan').value.trim(),
-      batch:isInks()?(selectedBatch('in')&&selectedBatch('in')!=='new'?Number(selectedBatch('in')):0):undefined
+      batch:isInks()?(selectedBatch('in')&&selectedBatch('in')!=='new'?Number(selectedBatch('in')):0):undefined,
+      poNo:isInks()?document.getElementById('f-in-po').value.trim():'',
+      invoiceNo:isInks()?document.getElementById('f-in-invoice').value.trim():''
     });
     const p=state.parts.find(x=>x.id===partId);
     if(p)p.qty+=qty;
     state.transactions.unshift(txn);
     closeModal('addIn');
-    ['f-in-qty','f-in-supplier','f-in-notes','f-in-challan'].forEach(id=>document.getElementById(id).value='');
+    ['f-in-qty','f-in-supplier','f-in-notes','f-in-challan','f-in-po','f-in-invoice'].forEach(id=>document.getElementById(id).value='');
     refresh();
   }catch(e){await errorDialog('Could not record stock in',e.message);}
 }
@@ -3184,6 +3218,161 @@ async function setDropHidden(field,value,hide){
   syncInkCombos();
 }
 
+// ---- Stock In stickers (Inks & Consumables) ----
+// A 4 x 3 in label for the boxes of a stock in: the batch, the day it was received (what first in, first out
+// goes by), what it is, who it came from, the PO / DC / invoice numbers, the quantity, and which box of how
+// many. One sticker per box.
+const _st={partId:0,batch:1,txnId:0,po:'',inv:''};
+function stickerDay(iso){return iso?String(iso).split('-').reverse().join('-'):'';}
+function openSticker(txnId){
+  const t=state.transactions.find(x=>x.id===txnId);
+  if(!t)return;
+  showStickerDialog({partId:t.partId,batch:txnBatch(t),txnId:t.id,date:t.date,qty:Number(t.qty),po:t.poNo||'',dc:t.challanNo||'',inv:t.invoiceNo||''});
+}
+// From a batch in the Batch window: the stock in that opened it supplies the numbers, the batch its quantity.
+function openBatchSticker(partId,n){
+  const p=state.parts.find(x=>x.id===partId);
+  const b=p&&partBatches(p).find(x=>x.n===n);
+  if(!b)return;
+  const first=state.transactions.filter(t=>t.partId===partId&&t.type==='in'&&txnBatch(t)===n)
+    .sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.id-y.id)[0];
+  showStickerDialog({partId,batch:n,txnId:first?first.id:0,date:first?first.date:today(),
+    qty:b.inQty>0?b.inQty:Math.max(b.qty,0),po:(first&&first.poNo)||'',dc:(first&&first.challanNo)||'',inv:(first&&first.invoiceNo)||''});
+}
+function showStickerDialog(o){
+  const p=state.parts.find(x=>x.id===o.partId);
+  if(!p)return;
+  Object.assign(_st,{partId:o.partId,batch:o.batch,txnId:o.txnId||0,po:o.po||'',inv:o.inv||''});
+  const e=_escHtml;
+  document.getElementById('st-summary').innerHTML='<b>'+e(p.name)+'</b><div style="color:#777;margin-top:2px">'+e(p.supplier||'No supplier')+(p.brand?' \u00B7 '+e(p.brand):'')+' \u00B7 <b>'+ordBatch(o.batch)+'</b></div>';
+  document.getElementById('st-date').value=o.date||today();
+  document.getElementById('st-qty').value=o.qty>0?String(Math.round(o.qty*1000)/1000):'';
+  document.getElementById('st-po').value=o.po||'';
+  document.getElementById('st-dc').value=o.dc||'';
+  document.getElementById('st-inv').value=o.inv||'';
+  const whole=Number.isInteger(o.qty)&&o.qty>=1;
+  document.getElementById('st-count').value=whole?String(Math.min(o.qty,500)):'1';
+  document.getElementById('st-hint').textContent=whole
+    ?'One sticker for each box or piece; the first reads "1 OF '+Math.min(o.qty,500)+'". Change it to label fewer or more boxes.'
+    :'The quantity has a fraction. Type how many boxes or cans to label.';
+  document.getElementById('modal-sticker').classList.add('open');
+}
+async function printSticker(){
+  const p=state.parts.find(x=>x.id===_st.partId);
+  if(!p)return;
+  const val=id=>document.getElementById(id).value.trim();
+  const date=val('st-date'),qty=parseFloat(val('st-qty')),count=parseInt(val('st-count'),10);
+  if(!date){await warnDialog('Date required','Choose the day the stock was received.');return;}
+  if(!(qty>0)){await warnDialog('Quantity required','Enter the quantity for the sticker.');return;}
+  if(!(count>=1&&count<=500)){await warnDialog('Number of stickers','Enter a number from 1 to 500.');return;}
+  if(count>50&&!await confirmDialog({title:'Print '+count+' stickers?',message:'That is '+count+' labels, one page each.',confirmText:'Print',variant:'confirm'}))return;
+  const po=val('st-po'),inv=val('st-inv'),dc=val('st-dc');
+  // The PO and invoice numbers stay with the stock in they belong to, so a reprint has them.
+  if(_st.txnId&&(po!==_st.po||inv!==_st.inv)){
+    try{
+      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:inv});
+      const t=state.transactions.find(x=>x.id===_st.txnId);
+      if(t){t.poNo=po;t.invoiceNo=inv;}
+      _st.po=po;_st.inv=inv;
+    }catch(err){/* printing goes ahead; the numbers just are not kept */}
+  }
+  closeModal('sticker');
+  printStickerDoc(stickerDocHtml({batch:_st.batch,date:stickerDay(date),desc:p.name,code:p.sku||'',supplier:p.supplier||'\u2014',brand:p.brand||'\u2014',po,dc,inv,qty,unit:p.unit||'',count}));
+}
+// Printed from a hidden frame, so no pop-up is needed; the page size is 4 x 3 in, one sticker a page.
+function printStickerDoc(html){
+  const old=document.getElementById('sticker-frame');
+  if(old)old.remove();
+  const fr=document.createElement('iframe');
+  fr.id='sticker-frame';
+  fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(fr);
+  const d=fr.contentWindow.document;
+  d.open();d.write(html);d.close();
+  const go=()=>{
+    try{
+      if(fr.contentWindow.fitAll)fr.contentWindow.fitAll();
+      fr.contentWindow.focus();fr.contentWindow.print();
+    }catch(err){warnDialog('Could not print','The sticker could not be sent to the printer: '+err.message);}
+  };
+  const img=d.querySelector('img');
+  if(img&&!img.complete){img.onload=img.onerror=()=>setTimeout(go,100);}
+  else setTimeout(go,200);
+}
+function stickerDocHtml(d){
+  const e=_escHtml;
+  const icon={
+    batch:'<path d="M4 7h16v13H4zM8 7V4h8v3M9 12h6"/>',
+    desc:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/>',
+    supplier:'<path d="M2 6h12v10H2zM14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+    brand:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+    po:'<path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+    dc:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+    inv:'<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M8 8h8M8 12h8"/>',
+    qty:'<path d="M3 8l9-5 9 5v9l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/>',
+    cas:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>'
+  };
+  const ic=k=>'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">'+icon[k]+'</svg>';
+  const cell=(k,label,value,cls)=>'<div class="cell '+(cls||'')+'"><div class="l">'+ic(k)+'<span>'+label+'</span></div><div class="v">'+value+'</div></div>';
+  const logo=location.origin+'/logo-urdu.png';
+  const one=i=>'<div class="sticker">'
+    +'<div class="head"><div class="logo"><img src="'+logo+'" alt=""></div>'
+    +'<div class="batch"><span class="bl">'+ic('batch')+'BATCH NO.</span><b class="fit0">'+ordinal(d.batch)+'</b></div>'
+    +'<div class="date"><small>RECEIVED ON</small><b>'+e(d.date)+'</b></div></div>'
+    +'<div class="line desc">'+cell('desc','DESCRIPTION','<span class="clamp">'+e(d.desc)+'</span><em>'+e(d.code)+'</em>','desc')+'</div>'
+    +'<div class="line">'+cell('supplier','SUPPLIER','<span class="fit2">'+e(d.supplier)+'</span>')+cell('brand','BRAND','<span class="fit2">'+e(d.brand)+'</span>')+'</div>'
+    +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+cell('inv','INVOICE #','<span class="fit2">'+e(d.inv)+'</span>')+'</div>'
+    +'<div class="line">'+cell('qty','QUANTITY','<span class="fit1">'+fmtQty(d.qty)+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas','CASE #','<span class="fit1">'+i+' OF '+d.count+'</span>')+'</div>'
+    +'</div>';
+  const pages=[];
+  for(let i=1;i<=d.count;i++)pages.push(one(i));
+  const css=`
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
+    .sticker{width:4in;height:3in;background:#fff;border:2px solid #000;display:flex;flex-direction:column;overflow:hidden;break-after:page;page-break-after:always}
+    .sticker:last-child{break-after:auto;page-break-after:auto}
+    .head{height:0.64in;display:flex;align-items:stretch;border-bottom:2px solid #000;flex:none}
+    .logo{width:1.2in;display:flex;align-items:center;justify-content:center;padding:0 6px;border-right:2px solid #000}
+    .logo img{width:100%;height:auto;max-height:0.54in;object-fit:contain}
+    .batch{flex:1;min-width:0;padding:4px 8px 2px;display:flex;flex-direction:column;justify-content:center}
+    .bl{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;line-height:1.1}
+    .batch b{display:block;font-size:27px;font-weight:900;letter-spacing:.3px;line-height:1.1;white-space:nowrap}
+    .date{border-left:2px solid #000;padding:0 8px;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#111;color:#fff;min-width:1.22in;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .date small{font-size:8.5px;letter-spacing:.1em}
+    .date b{font-size:19px;font-weight:900;margin-top:1px;white-space:nowrap}
+    .line{flex:1;display:flex;border-bottom:1.5px solid #000;min-height:0}
+    .line:last-child{border-bottom:none}
+    .line.desc{flex:1.3}
+    .cell{flex:1;min-width:0;padding:3px 8px 2px;border-right:1.5px solid #000;display:flex;flex-direction:column;justify-content:space-between}
+    .cell:last-child{border-right:none}
+    .l{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;line-height:1;flex:none}
+    .ic{width:11px;height:11px;flex:none}
+    .v{font-size:18px;font-weight:800;line-height:1.05;overflow:hidden;white-space:nowrap;flex:1;min-height:0;display:flex;align-items:flex-end}
+    .v .fit1{display:inline-block;white-space:nowrap}
+    .v .fit2{display:block;width:100%;white-space:normal;overflow-wrap:anywhere}
+    .cell.desc .v{white-space:normal;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;flex:1;min-height:0;font-size:16px}
+    .cell.desc .clamp{display:block;overflow:hidden;font-size:17px;line-height:1.16;padding-bottom:1px;word-break:break-word}
+    .cell.desc em{font-style:normal;font-weight:600;font-size:10.5px;color:#333;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cell.qty .v{font-size:30px;font-weight:900}
+    .cell.qty .v i{font-style:normal;font-size:.5em;font-weight:700;margin-left:5px}
+    @page{size:4in 3in;margin:0}
+  `;
+  // Long text shrinks to fit its box instead of being cut off (the description may take up to three lines).
+  const script=`
+    function fitWidth(el,box,min){el.style.fontSize='';var size=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>box.clientWidth+0.5&&size>min){size-=0.5;el.style.fontSize=size+'px';}}
+    function fitWrap(el,box,min){el.style.fontSize='';var size=parseFloat(getComputedStyle(el).fontSize);while((el.scrollHeight>box.clientHeight+0.5||el.scrollWidth>box.clientWidth+0.5)&&size>min){size-=0.5;el.style.fontSize=size+'px';}}
+    function fitDesc(clamp){var v=clamp.parentElement;clamp.style.fontSize='';var size=parseFloat(getComputedStyle(clamp).fontSize),em=v.querySelector('em');var room=v.clientHeight-(em?em.offsetHeight+2:0)-3;while((clamp.scrollHeight>room+0.5||clamp.scrollHeight>size*1.16*3+2)&&size>9){size-=0.5;clamp.style.fontSize=size+'px';}}
+    function fitAll(){document.querySelectorAll('.sticker').forEach(function(s){
+      s.querySelectorAll('.fit0').forEach(function(el){fitWidth(el,el.parentElement,12);});
+      s.querySelectorAll('.fit1').forEach(function(el){fitWidth(el,el.parentElement,8);});
+      s.querySelectorAll('.fit2').forEach(function(el){fitWrap(el,el.parentElement,9);});
+      s.querySelectorAll('.clamp').forEach(fitDesc);
+    });}
+    window.addEventListener('load',fitAll);
+  `;
+  return '<!doctype html><html><head><meta charset="utf-8"><title>Stock In sticker</title><style>'+css+'</style></head><body>'+pages.join('')+'<scr'+'ipt>'+script+'</scr'+'ipt></body></html>';
+}
+
 // ---- Suppliers & Brands (Inks & Consumables) ----
 // Every supplier (or brand) with how many items use it; click one to see those items and move
 // the ticked ones to another name, or rename it everywhere. The rows with no supplier / brand
@@ -3575,7 +3764,7 @@ function renderStockIn(){
     <td class="machinery-only">${userText(t.ref)||'—'}</td>
     <td class="machinery-only" style="color:#888">${userText(t.notes)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
-    <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
+    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('in');
 }
@@ -3604,7 +3793,7 @@ function renderStockOut(){
     <td>${userText(t.issuedTo)||'—'}</td>
     <td class="machinery-only" style="color:#888">${userText(t.purpose)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
-    <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
+    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('out');
 }

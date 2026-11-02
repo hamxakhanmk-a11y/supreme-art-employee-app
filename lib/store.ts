@@ -33,6 +33,10 @@ DO $$ BEGIN
   -- was in the store before batches were kept is the 1st batch.
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS batch INTEGER;
 
+  -- The purchase order and supplier invoice a stock in came with. Optional; printed on its sticker.
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS po_no TEXT;
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS invoice_no TEXT;
+
   -- When it was entered (date AND time; the movement's own "date" has no time).
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
 

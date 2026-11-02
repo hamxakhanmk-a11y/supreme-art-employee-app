@@ -26,6 +26,8 @@ export async function GET() {
              t.purpose,
              t.challan_no AS "challanNo",
              t.batch,
+             t.po_no AS "poNo",
+             t.invoice_no AS "invoiceNo",
              t.created_by AS "createdBy",
              t.created_at AS "createdAt"
       FROM transactions t
@@ -102,16 +104,17 @@ export async function POST(req: NextRequest) {
     const ref = (b?.ref || "").toString(), notes = (b?.notes || "").toString();
     const issuedTo = (b?.issuedTo || "").toString(), purpose = (b?.purpose || "").toString();
     const challanNo = (b?.challanNo || "").toString();
+    const poNo = (b?.poNo || "").toString().trim().slice(0, 60), invoiceNo = (b?.invoiceNo || "").toString().trim().slice(0, 60);
     const saved = await db.execute(sql`
       WITH upd AS (
         UPDATE parts SET qty = ROUND((qty ${type === "in" ? sql`+` : sql`-`} ${qty})::numeric, 3)::double precision
         WHERE id = ${partId} ${type === "out" ? sql`AND qty >= ${qty}` : sql``}
         RETURNING id
       )
-      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, batch, created_by, created_at)
-      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${batch}::integer, ${guard.name || ""}, now() FROM upd
+      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, batch, po_no, invoice_no, created_by, created_at)
+      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${batch}::integer, ${poNo}, ${invoiceNo}, ${guard.name || ""}, now() FROM upd
       RETURNING id, type, part_id AS "partId", qty, date::text AS date, ref, notes,
-                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", batch, created_by AS "createdBy", created_at AS "createdAt"
+                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", batch, po_no AS "poNo", invoice_no AS "invoiceNo", created_by AS "createdBy", created_at AS "createdAt"
     `);
     const row = ((saved as any).rows ?? (saved as any))[0];
     if (!row) {
