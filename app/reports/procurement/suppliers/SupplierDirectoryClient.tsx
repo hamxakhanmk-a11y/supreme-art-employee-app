@@ -35,6 +35,11 @@ function rateLabel(rate: number | null, uom: string): string {
   return uom ? `${money} / ${uom}` : money;
 }
 
+// The rate with its sales tax added, same shape as the rate: "4,956.00 / Pcs".
+function rateWithTaxLabel(rate: number | null, taxPct: number, uom: string): string {
+  return rate == null ? "—" : rateLabel(Math.round(rate * (1 + taxPct / 100) * 100) / 100, uom);
+}
+
 // Plain currency, blank when the underlying value is null (rate or qty
 // was never entered, so Gross/Net would be a meaningless 0).
 function moneyOrDash(n: number | null): string {
@@ -302,11 +307,12 @@ export default function SupplierDirectoryClient({
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By product", title: "SUPPLIER DIRECTORY — BY PRODUCT",
-          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,28,20,18,12,18],
-          headers: ["Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Rate source"],
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,28,20,18,12,22,18],
+          headers: ["Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Total (Rate + Tax)", "Rate source"],
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
             rateLabel(r.shownRate, r.agg.uom), taxPctLabel(r.shownRate, r.shownTaxPct),
+            rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.agg.uom),
             r.noted ? "Noted here" : "From PO",
           ]),
         }],
@@ -407,11 +413,12 @@ export default function SupplierDirectoryClient({
                 <th>Brand</th>
                 <th>Rate</th>
                 <th>Tax %</th>
+                <th>Total</th>
               </tr>
             </thead>
             <tbody>
               {byProduct.length === 0 && (
-                <tr><td colSpan={5} className="empty">No matching products.</td></tr>
+                <tr><td colSpan={6} className="empty">No matching products.</td></tr>
               )}
               {byProduct.map((r, i) => (
                 <tr
@@ -490,6 +497,7 @@ export default function SupplierDirectoryClient({
                       </td>
                     </>
                   )}
+                  <td style={{ fontWeight: 700 }} title="Rate plus sales tax">{rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.agg.uom)}</td>
                 </tr>
               ))}
             </tbody>
