@@ -9,6 +9,11 @@ import {
   boolean,
   doublePrecision,
   uniqueIndex,
+  index,
+  primaryKey,
+  bigint,
+  bigserial,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // =====================
@@ -275,6 +280,56 @@ export const attendanceDays = pgTable("attendance_days", {
   closedAt: timestamp("closed_at").defaultNow().notNull(),
   closedBy: varchar("closed_by", { length: 80 }),
 });
+
+// =====================
+// BIOMETRIC DEVICE (ZKTeco, fed by the bridge on the factory LAN)
+// =====================
+// Tables are created on first use by ensureDeviceTables() in lib/deviceServer.ts.
+
+// One row per device: latest health from the bridge's heartbeat.
+export const attendanceDevices = pgTable("attendance_devices", {
+  serial: varchar("serial", { length: 40 }).primaryKey(),
+  name: varchar("name", { length: 80 }),
+  firmware: varchar("firmware", { length: 80 }),
+  ip: varchar("ip", { length: 45 }),
+  bridgeVersion: varchar("bridge_version", { length: 20 }),
+  deviceTime: timestamp("device_time", { withTimezone: true }),
+  clockDriftSeconds: integer("clock_drift_seconds"),
+  counts: jsonb("counts"),
+  invalidPunchCount: integer("invalid_punch_count"),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Users enrolled on a device. employeeId links a device user to an ERP
+// employee; null until HR maps them. Refreshed by every heartbeat.
+export const attendanceDeviceUsers = pgTable("attendance_device_users", {
+  deviceSerial: varchar("device_serial", { length: 40 }).notNull(),
+  deviceUserId: varchar("device_user_id", { length: 24 }).notNull(),
+  name: varchar("name", { length: 80 }),
+  card: bigint("card", { mode: "number" }),
+  privilege: varchar("privilege", { length: 10 }),
+  employeeId: integer("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.deviceSerial, t.deviceUserId] }),
+}));
+
+// Raw punches exactly as the device recorded them. The unique index makes
+// re-sent punches a no-op (the bridge deliberately overlaps and retries).
+export const devicePunches = pgTable("device_punches", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  deviceSerial: varchar("device_serial", { length: 40 }).notNull(),
+  deviceUserId: varchar("device_user_id", { length: 24 }).notNull(),
+  punchedAt: timestamp("punched_at", { withTimezone: true }).notNull(),
+  verifyMethod: varchar("verify_method", { length: 16 }),
+  verifyCode: integer("verify_code"),
+  punchState: integer("punch_state"),
+  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  uq: uniqueIndex("device_punches_uq").on(t.deviceSerial, t.deviceUserId, t.punchedAt),
+  byTime: index("device_punches_punched_at_idx").on(t.punchedAt),
+}));
 
 // =====================
 // LEAVE TYPES

@@ -10,6 +10,9 @@ const PUBLIC_API_PREFIXES = [
   "/api/auth/google",   // start + callback (unauthenticated by nature)
   "/api/auth/logout",
   "/api/auth/me",
+  // Biometric device bridge: no session, checks its own Bearer key in the route.
+  "/api/attendance/punches",
+  "/api/attendance/heartbeat",
 ];
 
 export function middleware(req: NextRequest) {
