@@ -181,6 +181,16 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .bulk-row-del{border:1px solid #e8e1d3;background:#fff;color:#A32D2D;border-radius:6px;width:28px;height:34px;cursor:pointer;font-size:16px;line-height:1}
 .bulk-row-del:hover{background:#fbefef}
 .bulk-hint{font-size:11px;color:#999;margin-top:10px;line-height:1.55}
+/* Bulk stock out, one product split across its brands: a box per brand under the row. */
+.bulk-table .bulk-split td{padding:0 4px 8px 4px}
+.bulk-split-box{background:#fbf6ee;border:1px solid #eadfce;border-radius:8px;padding:6px 10px;display:grid;gap:6px}
+.bulk-split-line{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.bulk-split-line .who{flex:1;min-width:0;font-size:12.5px}
+.bulk-split-line .who b{text-transform:uppercase}
+.bulk-split-line small{color:#777;margin-left:8px}
+.bulk-split-line small.out{color:#A32D2D}
+.bulk-table .bulk-split-line input{width:120px;text-align:right}
+.bulk-table .bulk-qty[readonly]{background:#f3ece0;font-weight:700}
 .row-actions{display:flex;flex-wrap:wrap;gap:4px}
 .return-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #e8e1d3;border-left:4px solid #8C2326;border-radius:10px;padding:9px 12px;margin-bottom:12px}
 .return-bar span{font-size:12px;color:#666}
@@ -761,7 +771,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <tbody id="bulkout-rows"></tbody>
     </table>
     <div style="margin-top:8px"><button class="btn btn-sm" onclick="bulkAddRow('bulkout')"><i class="ti ti-plus"></i> Add Row</button></div>
-    <div class="bulk-hint">Challan no., date, issued-to and purpose apply to every row. Decimals are fine (2.5 kg). Rows left blank are skipped.</div>
+    <div class="bulk-hint">Challan no., date, issued-to and purpose apply to every row. Decimals are fine (2.5 kg). Rows left blank are skipped.<span class="consumables-only"> To take one product from several brands, pick the product's heading in the list and enter a quantity for each brand.</span></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('bulkOut')">Cancel</button>
       <button class="btn" style="background:#A32D2D;color:#fff;border-color:#A32D2D" onclick="saveBulkStock('out')">Save All</button>
@@ -1273,6 +1283,7 @@ function renderInkCombo(prefix,query){
     .sort((a,b)=>inkKey(a).localeCompare(inkKey(b))||inkSort(a,b)).slice(0,80);
   if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching items</div>';return;}
   const e=_escHtml;
+  const bulkOut=prefix.indexOf('f-bulkout-part-')===0;   // there the heading itself can be picked, to split one issue across brands
   let last=null,html='';
   items.forEach(p=>{
     const k=inkKey(p);
@@ -1280,7 +1291,10 @@ function renderInkCombo(prefix,query){
     const multi=all.length>1;
     if(multi&&k!==last){
       const t=inkGroupTotal(all);
-      html+='<div class="combo-group"><span>'+e(p.name)+'</span><span>'+all.length+' brands'+(t.mixed?'':' · '+fmtQty(t.sum)+' '+e(t.unit))+'</span></div>';
+      const info=all.length+' brands'+(t.mixed?'':' · '+fmtQty(t.sum)+' '+e(t.unit));
+      html+=bulkOut
+        ?'<div class="combo-item combo-group" data-gk="'+e(k)+'" title="Pick to take from several brands at once"><span>'+e(p.name)+'</span><span>'+info+' · split by brand \u25B8</span></div>'
+        :'<div class="combo-group"><span>'+e(p.name)+'</span><span>'+info+'</span></div>';
     }
     last=k;
     const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
@@ -1326,6 +1340,8 @@ function getActiveComboIndex(dd){
 
 function pickComboItem(prefix,item){
   if(!item)return;
+  if(item.hasAttribute('data-gk')){pickBulkGroup(prefix,item.getAttribute('data-gk'));return;}
+  clearBulkGroup(prefix);
   document.getElementById(prefix).value=item.dataset.id;
   document.getElementById(prefix+'-input').value=item.dataset.label;
   document.getElementById(prefix+'-dropdown').classList.remove('open');
@@ -1347,7 +1363,7 @@ function setupPartCombo(prefix){
 
   input.addEventListener('focus',()=>{renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('click',()=>{dd.classList.add('open');});
-  input.addEventListener('input',()=>{hidden.value='';renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
+  input.addEventListener('input',()=>{hidden.value='';clearBulkGroup(prefix);renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('keydown',e=>{
     if(!dd.classList.contains('open'))return;
     const items=dd.querySelectorAll('.combo-item');
@@ -1551,19 +1567,65 @@ function bulkRemoveRow(kind,idx){
   const row=tb&&tb.querySelector('tr[data-row="'+idx+'"]');
   if(!row)return;
   // Never leave the table with nothing in it — clear the last row instead.
-  if(tb.children.length<=1){
+  if(tb.querySelectorAll('tr[data-row]').length<=1){
+    clearBulkGroup('f-'+kind+'-part-'+idx);
     row.querySelectorAll('input').forEach(i=>i.value='');
     return;
   }
   _comboInited.delete('f-'+kind+'-part-'+idx);
+  clearBulkGroup('f-'+kind+'-part-'+idx);
   row.remove();
   renumberBulkRows(kind);
+}
+
+// Bulk stock out, Inks & Consumables: picking a product's heading turns the row into one box per
+// brand, each with that brand's balance. The row's quantity becomes their total, and each brand
+// is saved as its own stock-out.
+function pickBulkGroup(prefix,k){
+  const members=state.parts.filter(p=>inkKey(p)===k).sort(inkSort);
+  if(!members.length)return;
+  const hidden=document.getElementById(prefix);
+  const tr=hidden.closest('tr');
+  clearBulkGroup(prefix);
+  hidden.value='';
+  document.getElementById(prefix+'-input').value=members[0].name+' \u2014 split by brand';
+  document.getElementById(prefix+'-dropdown').classList.remove('open');
+  tr.dataset.group=k;
+  const qty=tr.querySelector('.bulk-qty');
+  qty.readOnly=true;qty.value='';qty.placeholder='total';
+  const e=_escHtml;
+  const lines=members.map(p=>{
+    const none=!(Number(p.qty)>0);
+    return '<label class="bulk-split-line"><span class="who"><b>'+e(p.brand||'No brand')+'</b>'+(p.supplier?' \u00B7 '+e(p.supplier):'')
+      +'<small class="'+(none?'out':'')+'">'+(none?'out of stock':'avail '+fmtQty(p.qty)+' '+e(p.unit))+'</small></span>'
+      +'<input type="number" class="bulk-split-qty" data-id="'+p.id+'" min="0" step="any" placeholder="0"'+(none?' disabled':'')+'></label>';
+  }).join('');
+  tr.insertAdjacentHTML('afterend','<tr class="bulk-split"><td></td><td colspan="3"><div class="bulk-split-box">'+lines+'</div></td></tr>');
+  const split=tr.nextElementSibling;
+  split.addEventListener('input',()=>{
+    const sum=Array.from(split.querySelectorAll('.bulk-split-qty')).reduce((t,i)=>t+(parseFloat(i.value)||0),0);
+    qty.value=sum>0?String(Math.round(sum*1000)/1000):'';
+  });
+  const first=split.querySelector('.bulk-split-qty:not([disabled])');
+  if(first)first.focus();
+}
+
+// Back to a plain row: drop the brand boxes and let the quantity be typed again.
+function clearBulkGroup(prefix){
+  const hidden=document.getElementById(prefix);
+  const tr=hidden&&hidden.closest('tr');
+  if(!tr||tr.dataset.group===undefined)return;
+  delete tr.dataset.group;
+  const split=tr.nextElementSibling;
+  if(split&&split.classList.contains('bulk-split'))split.remove();
+  const qty=tr.querySelector('.bulk-qty');
+  if(qty){qty.readOnly=false;qty.value='';qty.placeholder='0';}
 }
 
 function renumberBulkRows(kind){
   const tb=document.getElementById(kind+'-rows');
   if(!tb)return;
-  Array.from(tb.querySelectorAll('tr')).forEach((tr,i)=>{
+  Array.from(tb.querySelectorAll('tr[data-row]')).forEach((tr,i)=>{
     const c=tr.querySelector('.col-num');
     if(c)c.textContent=i+1;
   });
@@ -2178,7 +2240,20 @@ async function saveBulkStock(type){
   const tb=document.getElementById(kind+'-rows');
   if(!tb)return;
   const rows=[];
-  for(const tr of tb.querySelectorAll('tr')){
+  for(const tr of tb.querySelectorAll('tr[data-row]')){
+    if(tr.dataset.group!==undefined){
+      // A product split across its brands: every brand with a quantity is its own row.
+      const split=tr.nextElementSibling;
+      let any=false;
+      for(const inp of split.querySelectorAll('.bulk-split-qty')){
+        if(!inp.value.trim())continue;
+        const q=parseFloat(inp.value);
+        if(!(q>0)){await warnDialog('Quantity required','Every brand you fill in needs a quantity greater than zero (decimals like 2.5 are fine).');return;}
+        rows.push({partId:parseInt(inp.dataset.id),qty:q});any=true;
+      }
+      if(!any){await warnDialog('Nothing entered','Enter a quantity against at least one brand of "'+document.getElementById(tr.querySelector('.bulk-part').id+'-input').value.replace(/ \u2014 split by brand$/,'')+'", or clear that row.');return;}
+      continue;
+    }
     const partId=parseInt(tr.querySelector('.bulk-part').value);
     const qtyRaw=tr.querySelector('.bulk-qty').value.trim();
     const qty=parseFloat(qtyRaw);
