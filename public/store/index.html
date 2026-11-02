@@ -134,6 +134,18 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .combo-qty.low{color:#854F0B}.combo-qty.out{color:#A32D2D}
 .combo-group{padding:6px 12px;background:#f5f0e8;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;gap:10px;color:#555;border-bottom:1px solid #eadfce}
 .combo-item.indent{padding-left:26px}
+/* Stock in / out, Inks & Consumables: which supplier / brand of the product. */
+.brand-pick{margin-top:8px;border:1px solid #eadfce;border-radius:8px;background:#fbf6ee;padding:6px 10px}
+.bp-title{font-size:11px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.bp-opt{display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;border-radius:6px;font-size:13px}
+.bp-opt:hover{background:#f3ead9}
+.bp-opt.on{background:#efe3cf}
+.bp-opt.off{opacity:.5;cursor:not-allowed}
+.bp-opt input{width:auto;margin:0}
+.bp-opt .who{flex:1;min-width:0}
+.bp-opt .who b{text-transform:uppercase}
+.bp-opt small{color:#2d6a10;font-weight:600;white-space:nowrap}
+.bp-opt small.out{color:#A32D2D}
 /* Inks & Consumables inventory: one compact card per product, a row for each supplier + brand. */
 .inv-groups{display:grid;grid-template-columns:minmax(0,980px);gap:8px;align-items:start}
 .ig{background:#fff;border:1px solid #e8e1d3;border-radius:10px;padding:8px 14px 2px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -666,13 +678,14 @@ body:not(.role-admin) .admin-only{display:none!important}
         <input type="hidden" id="f-in-part">
         <div class="combo-dropdown" id="f-in-part-dropdown"></div>
       </div>
+      <div id="f-in-part-pick"></div>
     </div>
     <div class="two-col">
       <div class="form-group"><label class="form-label">Quantity *</label><input id="f-in-qty" type="number" min="0" step="any" placeholder="0"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-in-date" type="date"></div>
     </div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">Supplier / Reference No.</label><input id="f-in-supplier" placeholder="Supplier name or PO number"></div>
+      <div class="form-group machinery-only"><label class="form-label">Supplier / Reference No.</label><input id="f-in-supplier" placeholder="Supplier name or PO number"></div>
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-in-challan" placeholder="e.g. CH-2026-042"></div>
     </div>
     <div class="form-group"><label class="form-label">Notes</label><input id="f-in-notes" placeholder="Optional notes"></div>
@@ -696,6 +709,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <input type="hidden" id="f-out-part">
         <div class="combo-dropdown" id="f-out-part-dropdown"></div>
       </div>
+      <div id="f-out-part-pick"></div>
     </div>
     <div class="two-col">
       <div class="form-group"><label class="form-group"><label class="form-label">Quantity *</label><input id="f-out-qty" type="number" min="0" step="any" placeholder="0"></div>
@@ -732,7 +746,7 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="three-col">
       <div class="form-group"><label class="form-label">Challan No.</label><input id="f-bulkin-challan" placeholder="e.g. CH-2026-042"></div>
       <div class="form-group"><label class="form-label">Date *</label><input id="f-bulkin-date" type="date"></div>
-      <div class="form-group"><label class="form-label">Supplier / Reference No.</label><input id="f-bulkin-supplier" placeholder="Supplier or PO number"></div>
+      <div class="form-group machinery-only"><label class="form-label">Supplier / Reference No.</label><input id="f-bulkin-supplier" placeholder="Supplier or PO number"></div>
     </div>
     <div class="form-group"><label class="form-label">Notes</label><input id="f-bulkin-notes" placeholder="Optional — applied to every row"></div>
     <table class="bulk-table">
@@ -1265,7 +1279,8 @@ document.addEventListener('mousedown',e=>{
   });
 });
 
-function partLabel(p){return (p.sku?'['+p.sku+'] ':'')+p.name+inkTag(p);}
+function skuPrefix(p){return p.sku&&!(p.name||'').trim().startsWith('['+p.sku+']')?'['+p.sku+'] ':'';}
+function partLabel(p){return skuPrefix(p)+p.name+inkTag(p);}
 function partSearchString(p){
   return ((p.sku||'')+' '+p.name+' '+(p.category||'')+' '+parseMachines(p.machine).join(' ')+' '+(isInks()?(p.brand||'')+' '+(p.supplier||''):'')).toLowerCase();
 }
@@ -1297,7 +1312,8 @@ function renderInkCombo(prefix,query){
     .sort((a,b)=>inkKey(a).localeCompare(inkKey(b))||inkSort(a,b)).slice(0,80);
   if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching items</div>';return;}
   const e=_escHtml;
-  const bulkOut=prefix.indexOf('f-bulkout-part-')===0;   // there the heading itself can be picked, to split one issue across brands
+  const pickable=prefix.indexOf('f-bulk')===0||prefix==='f-in-part'||prefix==='f-out-part';   // the heading itself can be picked, to choose the supplier / brand
+  const hint=prefix.indexOf('f-bulk')===0?'split by brand':'choose supplier / brand';
   let last=null,html='';
   items.forEach(p=>{
     const k=inkKey(p);
@@ -1306,15 +1322,15 @@ function renderInkCombo(prefix,query){
     if(multi&&k!==last){
       const t=inkGroupTotal(all);
       const info=all.length+' brands'+(t.mixed?'':' · '+fmtQty(t.sum)+' '+e(t.unit));
-      html+=bulkOut
-        ?'<div class="combo-item combo-group" data-gk="'+e(k)+'" title="Pick to take from several brands at once"><span>'+e(p.name)+'</span><span>'+info+' · split by brand \u25B8</span></div>'
+      html+=pickable
+        ?'<div class="combo-item combo-group" data-gk="'+e(k)+'" title="Pick the product, then choose the supplier / brand"><span>'+e(p.name)+'</span><span>'+info+' · '+hint+' \u25B8</span></div>'
         :'<div class="combo-group"><span>'+e(p.name)+'</span><span>'+info+'</span></div>';
     }
     last=k;
     const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
     const who=e(p.supplier||'No supplier')+(p.brand?' · '+e(p.brand):'');
     html+='<div class="combo-item'+(multi?' indent':'')+'" data-id="'+p.id+'" data-label="'+partLabel(p).replace(/"/g,'&quot;')+'">'
-      +'<div class="combo-main"><div class="combo-name">'+(multi?who:(p.sku?'<span class="combo-sku">'+e(p.sku)+'</span>':'')+e(p.name))+'</div>'
+      +'<div class="combo-main"><div class="combo-name">'+(multi?who:(p.sku&&!(p.name||'').startsWith('['+p.sku+']')?'<span class="combo-sku">'+e(p.sku)+'</span>':'')+e(p.name))+'</div>'
       +'<div class="combo-sub">'+(multi?[p.sku?e(p.sku):'',e(p.category||'')].filter(Boolean).join(' · ')||'—':who+(p.category?' · '+e(p.category):''))+'</div></div>'
       +'<div class="combo-qty '+cls+'">'+fmtQty(p.qty)+' '+e(p.unit)+'</div></div>';
   });
@@ -1354,17 +1370,56 @@ function getActiveComboIndex(dd){
 
 function pickComboItem(prefix,item){
   if(!item)return;
-  if(item.hasAttribute('data-gk')){pickBulkGroup(prefix,item.getAttribute('data-gk'));return;}
+  if(item.hasAttribute('data-gk')){
+    if(prefix.indexOf('f-bulk')===0)pickBulkGroup(prefix,item.getAttribute('data-gk'));
+    else pickSingleGroup(prefix,item.getAttribute('data-gk'));
+    return;
+  }
   clearBulkGroup(prefix);
   document.getElementById(prefix).value=item.dataset.id;
   document.getElementById(prefix+'-input').value=item.dataset.label;
   document.getElementById(prefix+'-dropdown').classList.remove('open');
-  // Stock in for Inks & Consumables: the brand's own supplier is the usual one.
-  if(prefix==='f-in-part'&&isInks()){
-    const p=state.parts.find(x=>x.id===parseInt(item.dataset.id));
-    const sf=document.getElementById('f-in-supplier');
-    if(p&&sf&&!sf.value.trim()&&p.supplier)sf.value=p.supplier;
-  }
+  renderBrandPick(prefix);
+}
+
+// Stock in / out of a product that comes from several suppliers or brands: once a row is picked
+// (or just the product), every supplier / brand of it is listed with its balance, so which one
+// it is for is always a visible choice.
+function renderBrandPick(prefix,key){
+  const host=document.getElementById(prefix+'-pick');
+  if(!host)return;
+  const hidden=document.getElementById(prefix);
+  const cur=state.parts.find(x=>String(x.id)===String(hidden.value));
+  const k=key||(cur?inkKey(cur):'');
+  if(!isInks()||!k){host.innerHTML='';return;}
+  const members=state.parts.filter(p=>inkKey(p)===k).sort(inkSort);
+  if(members.length<2){host.innerHTML='';return;}
+  const out=prefix==='f-out-part';
+  const e=_escHtml;
+  host.innerHTML='<div class="brand-pick"><div class="bp-title">'+(out?'Take from which supplier / brand?':'Which supplier / brand is this stock from?')+'</div>'
+    +members.map(p=>{
+      const on=!!cur&&p.id===cur.id;
+      const none=out&&!(Number(p.qty)>0)&&!on;
+      return '<label class="bp-opt'+(on?' on':'')+(none?' off':'')+'"><input type="radio" name="bp-'+prefix+'" value="'+p.id+'"'+(on?' checked':'')+(none?' disabled':'')+' onchange="pickBrandOption(\''+prefix+'\','+p.id+')">'
+        +'<span class="who"><b>'+e(p.supplier||'No supplier')+'</b>'+(p.brand?' \u00B7 '+e(p.brand):'')+'</span>'
+        +'<small class="'+(Number(p.qty)>0?'':'out')+'">'+(none?'out of stock':fmtQty(p.qty)+' '+e(p.unit)+' on hand')+'</small></label>';
+    }).join('')+'</div>';
+}
+function pickBrandOption(prefix,id){
+  const p=state.parts.find(x=>x.id===id);
+  if(!p)return;
+  document.getElementById(prefix).value=p.id;
+  document.getElementById(prefix+'-input').value=partLabel(p);
+  renderBrandPick(prefix);
+}
+// The product's heading was picked in a single form: nothing is chosen until a supplier / brand is.
+function pickSingleGroup(prefix,k){
+  const first=state.parts.find(p=>inkKey(p)===k);
+  if(!first)return;
+  document.getElementById(prefix).value='';
+  document.getElementById(prefix+'-input').value=first.name+' \u2014 choose supplier / brand';
+  document.getElementById(prefix+'-dropdown').classList.remove('open');
+  renderBrandPick(prefix,k);
 }
 
 function setupPartCombo(prefix){
@@ -1377,7 +1432,7 @@ function setupPartCombo(prefix){
 
   input.addEventListener('focus',()=>{renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('click',()=>{dd.classList.add('open');});
-  input.addEventListener('input',()=>{hidden.value='';clearBulkGroup(prefix);renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
+  input.addEventListener('input',()=>{hidden.value='';clearBulkGroup(prefix);const pk=document.getElementById(prefix+'-pick');if(pk)pk.innerHTML='';renderComboList(prefix,input.value);dd.classList.add('open');setActiveComboItem(dd,0);});
   input.addEventListener('keydown',e=>{
     if(!dd.classList.contains('open'))return;
     const items=dd.querySelectorAll('.combo-item');
@@ -1598,6 +1653,7 @@ function bulkRemoveRow(kind,idx){
 function pickBulkGroup(prefix,k){
   const members=state.parts.filter(p=>inkKey(p)===k).sort(inkSort);
   if(!members.length)return;
+  const out=prefix.indexOf('f-bulkout-part-')===0;
   const hidden=document.getElementById(prefix);
   const tr=hidden.closest('tr');
   clearBulkGroup(prefix);
@@ -1609,9 +1665,9 @@ function pickBulkGroup(prefix,k){
   qty.readOnly=true;qty.value='';qty.placeholder='total';
   const e=_escHtml;
   const lines=members.map(p=>{
-    const none=!(Number(p.qty)>0);
+    const none=out&&!(Number(p.qty)>0);
     return '<label class="bulk-split-line"><span class="who"><b>'+e(p.supplier||'No supplier')+'</b>'+(p.brand?' \u00B7 '+e(p.brand):'')
-      +'<small class="'+(none?'out':'')+'">'+(none?'out of stock':'avail '+fmtQty(p.qty)+' '+e(p.unit))+'</small></span>'
+      +'<small class="'+(none?'out':'')+'">'+(none?'out of stock':(out?'avail ':'on hand ')+fmtQty(p.qty)+' '+e(p.unit))+'</small></span>'
       +'<input type="number" class="bulk-split-qty" data-id="'+p.id+'" min="0" step="any" placeholder="0"'+(none?' disabled':'')+'></label>';
   }).join('');
   tr.insertAdjacentHTML('afterend','<tr class="bulk-split"><td></td><td colspan="3"><div class="bulk-split-box">'+lines+'</div></td></tr>');
@@ -1673,10 +1729,7 @@ function presetPartCombo(prefix,partId,focusId){
   if(!p)return;
   document.getElementById(prefix).value=p.id;
   document.getElementById(prefix+'-input').value=partLabel(p);
-  if(prefix==='f-in-part'&&isInks()){
-    const sf=document.getElementById('f-in-supplier');
-    if(sf&&!sf.value.trim()&&p.supplier)sf.value=p.supplier;
-  }
+  renderBrandPick(prefix);
   const q=document.getElementById(focusId);
   if(q)setTimeout(()=>q.focus(),60);
 }
@@ -1686,12 +1739,14 @@ function resetPartCombo(prefix){
   document.getElementById(prefix).value='';
   document.getElementById(prefix+'-input').value='';
   document.getElementById(prefix+'-dropdown').classList.remove('open');
+  const pk=document.getElementById(prefix+'-pick');
+  if(pk)pk.innerHTML='';
 }
 
 function getPartName(id){
   const p=state.parts.find(x=>x.id===id);
   if(!p)return 'Unknown';
-  return (p.sku?'['+p.sku+'] ':'')+p.name+inkTag(p);
+  return skuPrefix(p)+p.name+inkTag(p);
 }
 function getPartLabel(id){
   const p=state.parts.find(x=>x.id===id);
@@ -2302,6 +2357,7 @@ async function saveBulkStock(type){
   for(const r of merged){
     try{
       const body=Object.assign({type,partId:r.partId,qty:r.qty,date,challanNo},shared);
+      if(type==='in'&&isInks()){const pp=state.parts.find(x=>x.id===r.partId);body.ref=pp&&pp.supplier?pp.supplier:'';}
       const txn=await apiFetch('/api/store/transactions','POST',body);
       const p=state.parts.find(x=>x.id===r.partId);
       if(p)p.qty=Math.round((type==='in'?p.qty+r.qty:p.qty-r.qty)*1000)/1000;
@@ -2323,13 +2379,13 @@ async function saveStockIn(){
   const partId=parseInt(document.getElementById('f-in-part').value);
   const qty=parseFloat(document.getElementById('f-in-qty').value);
   const date=document.getElementById('f-in-date').value;
-  if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
+  if(!partId){await warnDialog(isInks()?'Pick the supplier / brand':'Pick a part',isInks()?'Choose the part, and which supplier / brand it is for.':'Please select a part from the list.');return;}
   if(!(qty>0)){await warnDialog('Quantity required','Enter a quantity greater than zero (decimals like 2.5 are fine).');return;}
   if(!date){await warnDialog('Date required','Please choose a date.');return;}
   try{
     const txn=await apiFetch('/api/store/transactions','POST',{
       type:'in',partId,qty,date,
-      ref:document.getElementById('f-in-supplier').value.trim(),
+      ref:isInks()?((state.parts.find(x=>x.id===partId)||{}).supplier||''):document.getElementById('f-in-supplier').value.trim(),
       notes:document.getElementById('f-in-notes').value.trim(),
       challanNo:document.getElementById('f-in-challan').value.trim()
     });
@@ -2347,7 +2403,7 @@ async function saveStockOut(){
   const qty=parseFloat(document.getElementById('f-out-qty').value);
   const date=document.getElementById('f-out-date').value;
   const issuedTo=document.getElementById('f-out-issued').value.trim();
-  if(!partId){await warnDialog('Pick a part','Please select a part from the list.');return;}
+  if(!partId){await warnDialog(isInks()?'Pick the supplier / brand':'Pick a part',isInks()?'Choose the part, and which supplier / brand it is for.':'Please select a part from the list.');return;}
   if(!(qty>0)){await warnDialog('Quantity required','Enter a quantity greater than zero (decimals like 2.5 are fine).');return;}
   if(!date){await warnDialog('Date required','Please choose a date.');return;}
   if(!issuedTo){await warnDialog('Issued To required','Enter the person, department, or machine receiving the item.');return;}
