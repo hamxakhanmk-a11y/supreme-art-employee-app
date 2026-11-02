@@ -508,7 +508,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Reason</th><th>Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Reason</th><th>Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
         </table>
       </div>
@@ -537,7 +537,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Reason</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Reason</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
         </table>
       </div>
@@ -566,7 +566,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div id="movement-output"></div>
       <div class="card fit-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
           <tbody id="issuance-table"></tbody>
         </table>
       </div>
@@ -1771,6 +1771,29 @@ function getPartName(id){
   if(!p)return 'Unknown';
   return skuPrefix(p)+p.name+inkTag(p);
 }
+// Supplier and brand of a part, for the reports of Inks & Consumables (none for the Parts Store).
+function getPartPlain(id){
+  const p=state.parts.find(x=>x.id===id);
+  return p?skuPrefix(p)+p.name:'Unknown';
+}
+function inkSB(id){
+  if(!isInks())return [];
+  const p=state.parts.find(x=>x.id===id);
+  return [(p&&p.supplier)||'—',(p&&p.brand)||'—'];
+}
+function inkSBCells(id){
+  if(!isInks())return '';
+  const sb=inkSB(id);
+  return '<td style="font-weight:700">'+_escHtml(sb[0])+'</td><td>'+_escHtml(sb[1])+'</td>';
+}
+function inkTagHtml(p){
+  const t=p?inkTag(p):'';
+  return t?'<span style="color:#888;font-weight:400">'+_escHtml(t)+'</span>':'';
+}
+// The label with its supplier · brand, where the part itself is all the line says.
+function getPartLabelFull(id){
+  return getPartLabel(id)+inkTagHtml(state.parts.find(x=>x.id===id));
+}
 function getPartLabel(id){
   const p=state.parts.find(x=>x.id===id);
   if(!p)return 'Unknown';
@@ -1836,11 +1859,12 @@ function getSectionData(sec){
 
 function getHeaders(sec){
   if(sec==='inventory') return isInks()
-    ? ['#','SKU / Part No.','Part Name','Category','Brand','Supplier','Rack No.','Unit','Qty on Hand','Min Qty','Status']
+    ? ['#','SKU / Part No.','Part Name','Category','Supplier','Brand','Rack No.','Unit','Qty on Hand','Min Qty','Status']
     : ['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
-  if(sec==='stockin')   return['#','Date','Challan No.','Part Name','Category','Qty Added','Balance','Reason','Supplier / Ref','Notes','Done by'];
-  if(sec==='stockout')  return['#','Date','Challan No.','Part Name','Category','Qty Issued','Balance','Reason','Issued To','Purpose','Done by'];
-  if(sec==='issuance')  return['#','Date','Challan No.','Part Name','Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
+  const sb=isInks()?['Supplier','Brand']:[];
+  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance','Reason','Supplier / Ref','Notes','Done by'];
+  if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Reason','Issued To','Purpose','Done by'];
+  if(sec==='issuance')  return['#','Date','Challan No.','Part Name',...sb,'Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
   return[];
 }
 
@@ -1849,14 +1873,14 @@ function rowCells(sec,item,i){
     const s=stockStatus(item);
     const head=[i+1,item.sku||'—',item.name,item.category];
     const mid=isInks()
-      ? [item.brand||'—',item.supplier||'—',item.rackNo||'—']
+      ? [item.supplier||'—',item.brand||'—',item.rackNo||'—']
       : [parseMachines(item.machine).join(', ')||'—'];
     return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.ref||'—',item.notes||'—',item.createdBy||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartName(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.issuedTo||'—',item.purpose||'—',item.createdBy||'—'];
-  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartName(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.ref||'—',item.notes||'—',item.createdBy||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.issuedTo||'—',item.purpose||'—',item.createdBy||'—'];
+  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
   return[];
 }
 
@@ -2722,10 +2746,10 @@ function renderDashboard(){
     </div>`;
   const lsl=document.getElementById('low-stock-list');
   const lp=state.parts.filter(p=>p.qty<=p.minQty);
-  if(lsl)lsl.innerHTML=lp.length?`<table><thead><tr><th>Part</th><th>Category</th><th>Current Qty</th><th>Min Qty</th><th>Status</th></tr></thead><tbody>${lp.map(p=>{const s=stockStatus(p);return`<tr><td style="font-weight:600">${p.sku?`<span class="part-sku">[${p.sku}]</span>`:''}${p.name}</td><td>${p.category}</td><td>${fmtQty(p.qty)} ${p.unit}</td><td>${p.minQty}</td><td><span class="badge ${s.cls}">${s.label}</span></td></tr>`}).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-circle-check" style="color:#2d6a10;font-size:28px"></i>All stock levels are healthy</div>';
+  if(lsl)lsl.innerHTML=lp.length?`<table><thead><tr><th>Part</th><th>Category</th><th>Current Qty</th><th>Min Qty</th><th>Status</th></tr></thead><tbody>${lp.map(p=>{const s=stockStatus(p);return`<tr><td style="font-weight:600">${p.sku?`<span class="part-sku">[${p.sku}]</span>`:''}${p.name}${inkTagHtml(p)}</td><td>${p.category}</td><td>${fmtQty(p.qty)} ${p.unit}</td><td>${p.minQty}</td><td><span class="badge ${s.cls}">${s.label}</span></td></tr>`}).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-circle-check" style="color:#2d6a10;font-size:28px"></i>All stock levels are healthy</div>';
   const rt=document.getElementById('recent-txns');
   const recent=[...state.transactions].sort((a,b)=>b.id-a.id).slice(0,6);
-  if(rt)rt.innerHTML=recent.length?`<table><thead><tr><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Details</th></tr></thead><tbody>${recent.map(t=>`<tr><td>${fmtDate(t.date)}</td><td style="font-weight:600">${getPartLabel(t.partId)}</td><td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td><td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td><td style="color:#888">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-file-off"></i>No transactions yet</div>';
+  if(rt)rt.innerHTML=recent.length?`<table><thead><tr><th>Date</th><th>Part</th><th>Type</th><th>Qty</th><th>Details</th></tr></thead><tbody>${recent.map(t=>`<tr><td>${fmtDate(t.date)}</td><td style="font-weight:600">${getPartLabelFull(t.partId)}</td><td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td><td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td><td style="color:#888">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="empty"><i class="ti ti-file-off"></i>No transactions yet</div>';
 }
 
 // True while the Inks & Consumables module is open. Consumables swap the
@@ -2782,7 +2806,7 @@ function renderLedgerCheck(){
   const off=all.filter(m=>!isIgnored(m)), ignored=all.filter(isIgnored);
   const sgn=d=>(d>0?'+':'')+fmtQty(d);
   const th='padding:4px 8px';
-  const rowHtml=(m,btns)=>`<tr><td style="${th}">${getPartLabel(m.p.id)}</td><td style="${th};text-align:right">${fmtQty(m.bal)} ${m.p.unit}</td><td style="${th};text-align:right">${fmtQty(m.sum)} ${m.p.unit}</td><td style="${th};text-align:right;font-weight:700;color:#991b1b">${sgn(m.diff)} ${m.p.unit}</td><td style="${th};white-space:nowrap">${btns}</td></tr>`;
+  const rowHtml=(m,btns)=>`<tr><td style="${th}">${getPartLabelFull(m.p.id)}</td><td style="${th};text-align:right">${fmtQty(m.bal)} ${m.p.unit}</td><td style="${th};text-align:right">${fmtQty(m.sum)} ${m.p.unit}</td><td style="${th};text-align:right;font-weight:700;color:#991b1b">${sgn(m.diff)} ${m.p.unit}</td><td style="${th};white-space:nowrap">${btns}</td></tr>`;
   const histBtn=m=>`<button class="btn btn-sm" title="Stock in / out history of this part" onclick="openPartHistory(${m.p.id})"><i class="ti ti-history"></i> History</button>`;
   const head=`<tr style="background:#fee2e2"><th style="text-align:left;${th}">Part</th><th style="text-align:right;${th}">Qty on hand</th><th style="text-align:right;${th}">Movements add up to</th><th style="text-align:right;${th}">Difference</th><th style="${th}"></th></tr>`;
   let html;
@@ -2877,7 +2901,7 @@ function openPartHistory(pid){
     ?`<div style="margin:0 0 12px;padding:8px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px;color:#7f1d1d">&#9888; The movements add up to ${fmtQty(sum)} ${u} but ${fmtQty(have)} ${u} is on hand (difference ${diff>0?'+':''}${fmtQty(diff)} ${u}).
         ${canReconcile()?`<button class="btn btn-sm btn-restricted" style="margin-left:8px" onclick="ledgerReconcile(${p.id})">Reconcile</button>`:''}</div>`
     :'';
-  document.getElementById('ph-title').textContent=(p.sku?'['+p.sku+'] ':'')+p.name+' - history';
+  document.getElementById('ph-title').textContent=partLabel(p)+' - history';
   document.getElementById('ph-body').innerHTML=`
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
       ${stat('On hand',fmtQty(have)+' '+u)}${stat('Total in','+'+fmtQty(totIn)+' '+u,'#2d6a10')}${stat('Total out','−'+fmtQty(totOut)+' '+u,'#993C1D')}${stat('Movements add up to',fmtQty(sum)+' '+u)}
@@ -3339,13 +3363,13 @@ function renderStockIn(){
   const bal=computeBalances();
   const tb=document.getElementById('stockin-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="13"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="15"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-in" data-id="${t.id}" onchange="updateBulkInfo('in')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
     <td style="font-family:monospace;color:#555">${t.challanNo||'—'}</td>
-    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>${inkSBCells(t.partId)}
     <td>${getPartCat(t.partId)}</td>
     <td class="qty-positive">+${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
@@ -3369,13 +3393,13 @@ function renderStockOut(){
   const bal=computeBalances();
   const tb=document.getElementById('stockout-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="13"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="15"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr>
     <td class="no-print"><input type="checkbox" class="txn-chk-out" data-id="${t.id}" onchange="updateBulkInfo('out')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
     <td style="font-family:monospace;color:#555">${t.challanNo||'—'}</td>
-    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>${inkSBCells(t.partId)}
     <td>${getPartCat(t.partId)}</td>
     <td class="qty-negative">−${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
@@ -3401,13 +3425,13 @@ function renderIssuance(){
   const bal=computeBalances();
   const tb=document.getElementById('issuance-table');
   if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><i class="ti ti-search"></i>No records found</div></td></tr>';updateBulkInfo('iss');return;}
+  if(!txns.length){tb.innerHTML='<tr><td colspan="12"><div class="empty"><i class="ti ti-search"></i>No records found</div></td></tr>';updateBulkInfo('iss');return;}
   tb.innerHTML=txns.map((t,i)=>`<tr class="txn-row-link" onclick="openTxnInReport(${t.id})" title="Open this movement in the ${t.type==='in'?'Stock In':'Stock Out'} report">
     <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" class="txn-chk-iss" data-id="${t.id}" onchange="updateBulkInfo('iss')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
     <td style="font-family:monospace;color:#555">${t.challanNo||'—'}</td>
-    <td style="font-weight:600">${getPartLabel(t.partId)}</td>
+    <td style="font-weight:600">${getPartLabel(t.partId)}</td>${inkSBCells(t.partId)}
     <td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td>
     <td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>

@@ -58,7 +58,9 @@
           balance = round(balance + incoming - outgoing); totalOut += outgoing;
           return { incoming, outgoing, balance };
         });
-        return { id:p.id, name:(p.sku ? '[' + p.sku + '] ' : '') + p.name,
+        // Inks & Consumables keep a row per supplier + brand, so the row says which.
+        const tag = (p.supplier || p.brand) ? ' \u2014 ' + (p.supplier || 'no supplier') + (p.brand ? ' \u00B7 ' + p.brand : '') : '';
+        return { id:p.id, name:(p.sku && !String(p.name || '').trim().startsWith('[' + p.sku + ']') ? '[' + p.sku + '] ' : '') + p.name + tag,
           unit:p.unit || '', opening, values, totalOut:round(totalOut), stockNow:number(p.qty) };
       }).sort((a,b) => a.name.localeCompare(b.name));
     return { from,to,mode,groups,rows,category };
