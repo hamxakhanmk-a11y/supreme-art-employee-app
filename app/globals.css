@@ -977,6 +977,12 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
    header is pinned whole (thead, not each th) so the log book's two-row header
    — Time and Meter Reading over their From/To — stays together. */
 .scroll-box { overflow: auto; -webkit-overflow-scrolling: touch; }
+/* Station books (Log Book, Cards register, Cards list): columns sized to what they hold and headings
+   that wrap, so the whole book fits the screen with no sideways scrolling. */
+.fit-book { width: 100%; font-size: 12px; }
+.fit-book th, .fit-book td { padding: 5px 6px; }
+.fit-book th { white-space: normal; line-height: 1.15; }
+.fit-book input.edit-cell, .fit-book select.edit-cell { padding: 4px 4px; }
 .scroll-box thead { position: sticky; top: 0; z-index: 3; }
 .scroll-box thead th { background: var(--bg2); }
 .scroll-box tfoot { position: sticky; bottom: 0; z-index: 3; }
@@ -1087,8 +1093,9 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 
 /* Station → Vehicles → Monthly Report: a ruled sheet like the paper one,
    blank cells left open to be written in. */
-.fleet-month { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
-.fleet-month th, .fleet-month td { border-right: 1px solid var(--border2); border-bottom: 1px solid var(--border2); padding: 6px 8px; }
+.fleet-month { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.fleet-month th, .fleet-month td { border-right: 1px solid var(--border2); border-bottom: 1px solid var(--border2); padding: 4px 6px; }
+.fleet-month input.edit-cell { padding: 4px 4px; }
 .fleet-month th:first-child, .fleet-month td:first-child { border-left: 1px solid var(--border2); }
 .fleet-month thead th { border-top: 1px solid var(--border2); }
 /* The sheet scrolls inside its own box, so its sideways scrollbar is always in view; the

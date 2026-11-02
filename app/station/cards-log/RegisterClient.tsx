@@ -136,14 +136,14 @@ export default function RegisterClient({
       )}
 
       <ScrollBox>
-        <table style={{ fontSize: 12.5 }}>
+        <table className="fit-book">
           <thead>
             <tr>
               <th>Sr</th><th>Driver Name</th><th>Veh No.</th>
               <th>Collection Date</th><th>Time</th>
               <th>Date submitted</th><th>Time</th>
               <th>Card / Slip</th><th className="num">Fuel (PKR)</th><th>Notes</th>
-              {!readOnly && <th className="no-print" style={{ width: 120 }}>Actions</th>}
+              {!readOnly && <th className="no-print" style={{ width: 70 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -158,13 +158,13 @@ export default function RegisterClient({
                 <td>
                   {/* Typing a name here records it as typed: matching it back to an
                       employee would be a guess. */}
-                  <EditCell value={r.driver === "—" ? "" : r.driver} minWidth={140} bold readOnly={readOnly} placeholder="—"
+                  <EditCell value={r.driver === "—" ? "" : r.driver} minWidth={90} bold readOnly={readOnly} placeholder="—"
                     onSave={v => saveRecord(r.id, { driverId: null, driverName: v })} />
                 </td>
                 <td>
                   {readOnly ? <span style={{ fontFamily: "monospace" }}>{r.vehicleNo}</span> : (
                     <>
-                      <select className="edit-cell no-print" value={r.vehicleId ?? ""} style={{ minWidth: 110, fontFamily: "monospace" }}
+                      <select className="edit-cell no-print" value={r.vehicleId ?? ""} style={{ minWidth: 80, fontFamily: "monospace" }}
                         onChange={e => saveRecord(r.id, { vehicleId: e.target.value ? Number(e.target.value) : null })}>
                         <option value="">—</option>
                         {vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicleNo}</option>)}
@@ -174,15 +174,15 @@ export default function RegisterClient({
                   )}
                 </td>
                 <td>
-                  <EditCell type="date" value={r.collectedDate} minWidth={130} readOnly={readOnly} print={fmt(r.collectedDate)}
+                  <EditCell type="date" value={r.collectedDate} minWidth={125} readOnly={readOnly} print={fmt(r.collectedDate)}
                     onSave={v => saveRecord(r.id, { collectedDate: v })} />
                 </td>
                 <td>
-                  <EditCell type="time" value={r.collectedTime} minWidth={100} readOnly={readOnly}
+                  <EditCell type="time" value={r.collectedTime} minWidth={84} readOnly={readOnly}
                     onSave={v => saveRecord(r.id, { collectedTime: v })} />
                 </td>
                 <td>
-                  <EditCell type="date" value={r.submittedDate ?? ""} minWidth={130} readOnly={readOnly}
+                  <EditCell type="date" value={r.submittedDate ?? ""} minWidth={125} readOnly={readOnly}
                     print={r.submittedDate ? fmt(r.submittedDate) : "pending"}
                     onSave={v => saveRecord(r.id, { submittedDate: v })} />
                   {!r.submittedDate && (
@@ -191,22 +191,22 @@ export default function RegisterClient({
                   )}
                 </td>
                 <td>
-                  <EditCell type="time" value={r.submittedTime} minWidth={100} readOnly={readOnly || !r.submittedDate}
+                  <EditCell type="time" value={r.submittedTime} minWidth={84} readOnly={readOnly || !r.submittedDate}
                     onSave={v => saveRecord(r.id, { submittedTime: v })} />
                 </td>
                 <td>
                   <div style={{ fontFamily: "monospace", paddingLeft: readOnly ? 0 : 6 }}>{r.sn}</div>
-                  <EditCell value={r.slipNo} minWidth={110} readOnly={readOnly} placeholder="slip no."
+                  <EditCell value={r.slipNo} minWidth={80} readOnly={readOnly} placeholder="slip no."
                     print={r.slipNo ? <div style={{ fontSize: 11 }}>slip {r.slipNo}</div> : null}
                     onSave={v => saveRecord(r.id, { slipNo: v })} />
                 </td>
                 <td className="num">
-                  <EditCell type="number" value={r.amount === null ? "" : String(r.amount)} minWidth={105} align="right" bold
+                  <EditCell type="number" value={r.amount === null ? "" : String(r.amount)} minWidth={80} align="right" bold
                     readOnly={readOnly} print={r.amount === null ? "" : r.amount.toLocaleString("en-PK")}
                     onSave={v => saveRecord(r.id, { amount: v })} />
                 </td>
                 <td>
-                  <EditCell value={r.notes} minWidth={140} readOnly={readOnly} placeholder="—"
+                  <EditCell value={r.notes} minWidth={80} readOnly={readOnly} placeholder="—"
                     onSave={v => saveRecord(r.id, { notes: v })} />
                 </td>
                 {!readOnly && (

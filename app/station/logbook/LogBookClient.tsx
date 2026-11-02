@@ -177,7 +177,7 @@ export default function LogBookClient({
           </div>
 
           <ScrollBox>
-            <table style={{ fontSize: 12.5 }}>
+            <table className="fit-book">
               <thead>
                 <tr>
                   <th rowSpan={2}>Date</th>
@@ -189,7 +189,7 @@ export default function LogBookClient({
                   <th rowSpan={2} className="num">K.M.</th>
                   <th rowSpan={2}>Signature</th>
                   <th rowSpan={2}>Remarks</th>
-                  {!readOnly && <th rowSpan={2} className="no-print" style={{ width: 120 }}>Actions</th>}
+                  {!readOnly && <th rowSpan={2} className="no-print" style={{ width: 70 }}>Actions</th>}
                 </tr>
                 <tr>
                   <th style={{ fontWeight: 400 }}>From</th>
@@ -213,54 +213,54 @@ export default function LogBookClient({
                     <tr key={t.id}>
                       <td>
                         {/* Moving the day moves both times with it. */}
-                        <EditCell type="date" value={t.date} minWidth={130} readOnly={readOnly} print={bookDate(t.date)}
+                        <EditCell type="date" value={t.date} minWidth={118} readOnly={readOnly} print={bookDate(t.date)}
                           onSave={v => saveTrip(t.id, { date: v, outTime: hm(t.outAt), inTime: hm(t.inAt) })} />
                       </td>
                       <td>
-                        <EditCell type="time" value={hm(t.outAt)} minWidth={100} readOnly={readOnly}
+                        <EditCell type="time" value={hm(t.outAt)} minWidth={78} readOnly={readOnly}
                           onSave={v => saveTrip(t.id, { outTime: v })} />
                       </td>
                       <td>
                         {open && !readOnly ? (
                           <>
-                            <input type="time" className="edit-cell no-print" value={c.inTime} style={{ minWidth: 100 }}
+                            <input type="time" className="edit-cell no-print" value={c.inTime} style={{ minWidth: 78 }}
                               onChange={e => setC({ inTime: e.target.value })} onBlur={() => tryClose(t)} />
                             {!c.inTime && <div className="no-print" style={{ color: "#DC2626", fontWeight: 700, fontSize: 11, paddingLeft: 6 }}>out</div>}
                           </>
                         ) : open ? (
                           <span className="no-print" style={{ color: "#DC2626", fontWeight: 700 }}>out</span>
                         ) : (
-                          <EditCell type="time" value={hm(t.inAt)} minWidth={100} readOnly={readOnly}
+                          <EditCell type="time" value={hm(t.inAt)} minWidth={78} readOnly={readOnly}
                             onSave={v => saveTrip(t.id, { inTime: v })} />
                         )}
                       </td>
                       <td>
-                        <EditCell value={t.destination} minWidth={150} readOnly={readOnly} placeholder="—"
+                        <EditCell value={t.destination} minWidth={80} readOnly={readOnly} placeholder="—"
                           onSave={v => saveTrip(t.id, { destination: v })} />
                       </td>
                       <td>
-                        <EditCell value={t.purpose} minWidth={130} readOnly={readOnly} placeholder="—"
+                        <EditCell value={t.purpose} minWidth={80} readOnly={readOnly} placeholder="—"
                           onSave={v => saveTrip(t.id, { purpose: v })} />
                       </td>
                       <td>
                         {/* The driver comes from the gate; who rode along is editable. */}
                         <div style={{ fontWeight: 600, paddingLeft: readOnly ? 0 : 6 }}>{t.driver}</div>
-                        <EditCell value={ridingWith(t).join(", ")} minWidth={150} readOnly={readOnly}
+                        <EditCell value={ridingWith(t).join(", ")} minWidth={80} readOnly={readOnly}
                           placeholder="+ who else went"
                           print={ridingWith(t).length ? <div style={{ fontSize: 11.5 }}>with {ridingWith(t).join(", ")}</div> : null}
                           onSave={v => saveTrip(t.id, { officers: officersFrom(v) })} />
                       </td>
                       <td className="num">
-                        <EditCell type="number" value={String(t.meterOut)} minWidth={95} align="right" readOnly={readOnly}
+                        <EditCell type="number" value={String(t.meterOut)} minWidth={64} align="right" readOnly={readOnly}
                           onSave={v => saveTrip(t.id, { meterOut: v })} />
                       </td>
                       <td className="num">
                         {open && !readOnly ? (
                           <input type="number" className="edit-cell no-print" value={c.meterIn} placeholder="—"
-                            style={{ minWidth: 95, textAlign: "right" }}
+                            style={{ minWidth: 64, textAlign: "right" }}
                             onChange={e => setC({ meterIn: e.target.value })} onBlur={() => tryClose(t)} />
                         ) : (
-                          <EditCell type="number" value={t.meterIn === null ? "" : String(t.meterIn)} minWidth={95}
+                          <EditCell type="number" value={t.meterIn === null ? "" : String(t.meterIn)} minWidth={64}
                             align="right" readOnly={readOnly || open}
                             onSave={v => saveTrip(t.id, { meterIn: v })} />
                         )}
@@ -269,7 +269,7 @@ export default function LogBookClient({
                       {/* Signed in ink once the page is printed and filed. */}
                       <td />
                       <td>
-                        <EditCell value={t.remarks} minWidth={140} readOnly={readOnly} placeholder="—"
+                        <EditCell value={t.remarks} minWidth={80} readOnly={readOnly} placeholder="—"
                           onSave={v => saveTrip(t.id, { remarks: v })} />
                       </td>
                       {!readOnly && (

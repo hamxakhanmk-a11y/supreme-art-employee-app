@@ -138,7 +138,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
                     <span className="cons-cell" title={r.consumptionTyped === null
                       ? "From the card's fuel records. Type a figure to use instead."
                       : `Typed for the month. The card's fuel records add up to ${pkr(r.consumptionCards)}. Clear the box to use them.`}>
-                      <EditCell type="number" align="right" minWidth={90} readOnly={readOnly} placeholder={pkr(r.consumptionCards)}
+                      <EditCell type="number" align="right" minWidth={72} readOnly={readOnly} placeholder={pkr(r.consumptionCards)}
                         value={String(r.consumption)} print={pkr(r.consumption)}
                         onSave={v => saveNote(r.vehicleId!, { consumption: v })} />
                       {r.consumptionTyped !== null && <span className="no-print" style={{ color: "var(--text3)", fontSize: 11 }}>typed</span>}
@@ -150,7 +150,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
                 </td>
                 <td className="n">
                   {r.vehicleId === null ? null : (
-                    <EditCell type="number" align="right" minWidth={80} readOnly={readOnly} placeholder="rate"
+                    <EditCell type="number" align="right" minWidth={60} readOnly={readOnly} placeholder="rate"
                       value={r.fuelRate === null ? "" : String(r.fuelRate)} print={pkr(r.fuelRate)}
                       onSave={v => saveNote(r.vehicleId!, { fuelRate: v })} />
                   )}
@@ -161,7 +161,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
                 <td className="n strong">{pkr(r.closing)}</td>
                 <td className="n">
                   {r.vehicleId === null ? null : (
-                    <EditCell type="number" align="right" minWidth={90} readOnly={readOnly} placeholder="—"
+                    <EditCell type="number" align="right" minWidth={70} readOnly={readOnly} placeholder="—"
                       value={r.maintenance === null ? "" : String(r.maintenance)} print={pkr(r.maintenance)}
                       onSave={v => saveNote(r.vehicleId!, { maintenance: v })} />
                   )}

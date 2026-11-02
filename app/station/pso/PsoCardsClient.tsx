@@ -130,7 +130,7 @@ export default function PsoCardsClient({
             Who had which card on {date} <span style={{ color: "var(--text3)", fontWeight: 400 }}>({custody.length})</span>
           </h2>
           <div className="card" style={{ padding: 0, overflow: "auto" }}>
-            <table style={{ fontSize: 12.5 }}>
+            <table className="fit-book">
               <thead>
                 <tr>
                   <th>Card SN</th><th>Vehicle</th><th>Held by</th>

@@ -185,11 +185,11 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto" }}>
-        <table>
+        <table className="fit-book">
           <thead>
             <tr>
               <th>Card SN</th><th>Vehicle</th><th>Vehicle PIN</th><th>Status</th><th className="num">Balance</th><th>Where it is</th><th>Notes</th>
-              {!readOnly && <th style={{ width: 140 }}>Actions</th>}
+              {!readOnly && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -237,7 +237,7 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                   <td style={{ fontSize: 12, color: "var(--text2)" }}>{c.notes || "—"}</td>
                   {!readOnly && (
                     <td>
-                      <div style={{ display: "flex", gap: 6, whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => openMoney(c)}>
                           {c.balance === null ? "Set opening balance" : "⊕ Top up"}
                         </button>
