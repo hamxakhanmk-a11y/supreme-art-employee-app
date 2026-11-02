@@ -132,6 +132,38 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .combo-sub{font-size:11px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .combo-qty{font-size:12px;color:#2d6a10;font-weight:600;white-space:nowrap;flex-shrink:0}
 .combo-qty.low{color:#854F0B}.combo-qty.out{color:#A32D2D}
+.combo-group{padding:6px 12px;background:#f5f0e8;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;gap:10px;color:#555;border-bottom:1px solid #eadfce}
+.combo-item.indent{padding-left:26px}
+/* Inks & Consumables inventory: one card per product, a row for each supplier + brand. */
+.inv-groups{display:grid;grid-template-columns:minmax(0,1100px);gap:14px;align-items:start}
+.ig{background:#fff;border:1px solid #e8e1d3;border-radius:14px;padding:14px 18px 6px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ig-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px dashed #e0d6c6}
+.ig-title{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
+.ig-name{font-size:17px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+.ig-chip{background:#f5f0e8;border-radius:8px;padding:3px 10px;font-weight:700;font-size:13px}
+.ig-badge{background:#f5f0e8;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#777}
+.ig-total{text-align:right}
+.ig-total b{font-size:24px;font-weight:800;display:block;line-height:1.1}
+.ig-total small{font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.04em}
+.ig-hbtns{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.ig-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #eee3d6;flex-wrap:wrap}
+.ig-row:last-child{border-bottom:none}
+.ig-who{flex:1;min-width:220px;font-size:14px}
+.ig-who b{text-transform:uppercase;font-weight:800}
+.ig-who span{color:#777}
+.ig-meta{font-size:11.5px;color:#999;margin-top:2px;font-family:monospace}
+.ig-qty{text-align:right;min-width:90px}
+.ig-qty b{font-size:18px;font-weight:800;display:block;line-height:1.15}
+.ig-qty small{font-size:11.5px;color:#777}
+.ig-btns{display:flex;gap:6px;flex-wrap:wrap}
+.ig-b{border:1px solid;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ig-b.in{background:#2d6a10;color:#fff;border-color:#2d6a10}
+.ig-b.out{background:#d93a1d;color:#fff;border-color:#d93a1d}
+.ig-b.edit,.ig-b.ghost{background:#fff;color:#111;border-color:#d9c4c0}
+.ig-b.del{background:#111;color:#fff;border-color:#111}
+.ig-flag{display:inline-block;margin-left:8px;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;vertical-align:middle}
+.ig-flag.low{background:#fef3c7;color:#92400E}
+.ig-flag.out{background:#fee2e2;color:#991B1B}
 .combo-empty{padding:18px;text-align:center;color:#aaa;font-size:12px}
 .combo-item.combo-add{background:#fdfaf5;position:sticky;top:0;z-index:2;border-bottom:1px solid #f1ead9}
 .combo-item.combo-add .combo-name{color:#8C2326;display:flex;align-items:center;gap:6px}
@@ -407,12 +439,14 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
         <button class="btn btn-sm btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
-      <div class="card fit-card">
+      <div class="card fit-card machinery-only">
         <table>
           <thead id="inv-thead"></thead>
           <tbody id="inv-table"></tbody>
         </table>
       </div>
+      <div class="inv-groups consumables-only" id="inv-groups"></div>
+      <datalist id="dl-supplier"></datalist><datalist id="dl-brand"></datalist>
     </div>
 
     <!-- STOCK IN -->
@@ -590,8 +624,8 @@ body:not(.role-admin) .admin-only{display:none!important}
       <span class="multi-add" onclick="addMachineInline('f-part-machine')"><i class="ti ti-plus"></i> Add new machine</span>
     </div>
     <div class="two-col consumables-only" id="g-part-brandsup">
-      <div class="form-group"><label class="form-label">Brand</label><input id="f-part-brand" placeholder="e.g. Sun Chemical"></div>
-      <div class="form-group"><label class="form-label">Supplier</label><input id="f-part-supplier" placeholder="e.g. Ali Traders"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><input id="f-part-supplier" list="dl-supplier" autocomplete="off" placeholder="e.g. Ali Traders"></div>
+      <div class="form-group"><label class="form-label">Brand</label><input id="f-part-brand" list="dl-brand" autocomplete="off" placeholder="e.g. Sun Chemical"></div>
     </div>
     <div class="form-group"><label class="form-label">Unit of Measure</label>
       <select id="f-part-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
@@ -822,8 +856,8 @@ body:not(.role-admin) .admin-only{display:none!important}
       <span class="multi-add" onclick="addMachineInline('f-edit-machine')"><i class="ti ti-plus"></i> Add new machine</span>
     </div>
     <div class="two-col consumables-only" id="g-edit-brandsup">
-      <div class="form-group"><label class="form-label">Brand</label><input id="f-edit-brand" placeholder="e.g. Sun Chemical"></div>
-      <div class="form-group"><label class="form-label">Supplier</label><input id="f-edit-supplier" placeholder="e.g. Ali Traders"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><input id="f-edit-supplier" list="dl-supplier" autocomplete="off" placeholder="e.g. Ali Traders"></div>
+      <div class="form-group"><label class="form-label">Brand</label><input id="f-edit-brand" list="dl-brand" autocomplete="off" placeholder="e.g. Sun Chemical"></div>
     </div>
     <div class="form-group"><label class="form-label">Unit of Measure</label>
       <select id="f-edit-unit"><option>pcs</option><option>kg</option><option>liters</option><option>meters</option><option>rolls</option><option>boxes</option><option>sets</option><option>pairs</option></select>
@@ -1059,7 +1093,8 @@ function storeReturnBack(){
   if(!back)return;
   if(back.origin&&back.origin.page==='inventory'){
     showPage('inventory',navItemFor('inventory'));
-    openPartHistory(back.origin.partId);
+    if(back.origin.groupKey)openGroupHistory(back.origin.groupKey,back.origin.brandId);
+    else openPartHistory(back.origin.partId);
     return;
   }
   showPage('issuance',navItemFor('issuance'));
@@ -1206,12 +1241,60 @@ document.addEventListener('mousedown',e=>{
   });
 });
 
-function partLabel(p){return (p.sku?'['+p.sku+'] ':'')+p.name;}
+function partLabel(p){return (p.sku?'['+p.sku+'] ':'')+p.name+inkTag(p);}
 function partSearchString(p){
-  return ((p.sku||'')+' '+p.name+' '+(p.category||'')+' '+parseMachines(p.machine).join(' ')).toLowerCase();
+  return ((p.sku||'')+' '+p.name+' '+(p.category||'')+' '+parseMachines(p.machine).join(' ')+' '+(isInks()?(p.brand||'')+' '+(p.supplier||''):'')).toLowerCase();
+}
+
+// Inks & Consumables keep one stock row per product + supplier + brand. These helpers
+// name and group those rows; a product's rows share a name (compared without case).
+function inkKey(p){return (p.name||'').trim().toLowerCase();}
+function inkSort(a,b){
+  return (a.supplier||'').localeCompare(b.supplier||'',undefined,{sensitivity:'base'})
+      || (a.brand||'').localeCompare(b.brand||'',undefined,{sensitivity:'base'});
+}
+// " — BRAND · supplier", so a movement says which brand it was for.
+function inkTag(p){
+  if(!isInks()||!(p.brand||p.supplier))return '';
+  return ' — '+(p.brand||'no brand')+(p.supplier?' · '+p.supplier:'');
+}
+function inkGroupTotal(rows){
+  const units=[...new Set(rows.map(p=>p.unit||''))];
+  const sum=Math.round(rows.reduce((t,p)=>t+(Number(p.qty)||0),0)*1000)/1000;
+  return {sum,unit:units.length===1?units[0]:'',mixed:units.length>1};
+}
+
+// The picker for Inks & Consumables: a product with several brands shows a heading with its
+// total, then one line per brand; a single-brand product is one line.
+function renderInkCombo(prefix,query){
+  const dd=document.getElementById(prefix+'-dropdown');
+  const q=(query||'').trim().toLowerCase();
+  const items=state.parts.filter(p=>!q||partSearchString(p).includes(q))
+    .sort((a,b)=>inkKey(a).localeCompare(inkKey(b))||inkSort(a,b)).slice(0,80);
+  if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching items</div>';return;}
+  const e=_escHtml;
+  let last=null,html='';
+  items.forEach(p=>{
+    const k=inkKey(p);
+    const all=state.parts.filter(x=>inkKey(x)===k);
+    const multi=all.length>1;
+    if(multi&&k!==last){
+      const t=inkGroupTotal(all);
+      html+='<div class="combo-group"><span>'+e(p.name)+'</span><span>'+all.length+' brands'+(t.mixed?'':' · '+fmtQty(t.sum)+' '+e(t.unit))+'</span></div>';
+    }
+    last=k;
+    const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
+    const who=e(p.brand||'No brand')+(p.supplier?' · '+e(p.supplier):'');
+    html+='<div class="combo-item'+(multi?' indent':'')+'" data-id="'+p.id+'" data-label="'+partLabel(p).replace(/"/g,'&quot;')+'">'
+      +'<div class="combo-main"><div class="combo-name">'+(multi?who:(p.sku?'<span class="combo-sku">'+e(p.sku)+'</span>':'')+e(p.name))+'</div>'
+      +'<div class="combo-sub">'+(multi?[p.sku?e(p.sku):'',e(p.category||'')].filter(Boolean).join(' · ')||'—':who+(p.category?' · '+e(p.category):''))+'</div></div>'
+      +'<div class="combo-qty '+cls+'">'+fmtQty(p.qty)+' '+e(p.unit)+'</div></div>';
+  });
+  dd.innerHTML=html;
 }
 
 function renderComboList(prefix,query){
+  if(isInks())return renderInkCombo(prefix,query);
   const dd=document.getElementById(prefix+'-dropdown');
   const q=(query||'').trim().toLowerCase();
   const items=state.parts.filter(p=>!q||partSearchString(p).includes(q)).slice(0,60);
@@ -1246,6 +1329,12 @@ function pickComboItem(prefix,item){
   document.getElementById(prefix).value=item.dataset.id;
   document.getElementById(prefix+'-input').value=item.dataset.label;
   document.getElementById(prefix+'-dropdown').classList.remove('open');
+  // Stock in for Inks & Consumables: the brand's own supplier is the usual one.
+  if(prefix==='f-in-part'&&isInks()){
+    const p=state.parts.find(x=>x.id===parseInt(item.dataset.id));
+    const sf=document.getElementById('f-in-supplier');
+    if(p&&sf&&!sf.value.trim()&&p.supplier)sf.value=p.supplier;
+  }
 }
 
 function setupPartCombo(prefix){
@@ -1508,6 +1597,10 @@ function presetPartCombo(prefix,partId,focusId){
   if(!p)return;
   document.getElementById(prefix).value=p.id;
   document.getElementById(prefix+'-input').value=partLabel(p);
+  if(prefix==='f-in-part'&&isInks()){
+    const sf=document.getElementById('f-in-supplier');
+    if(sf&&!sf.value.trim()&&p.supplier)sf.value=p.supplier;
+  }
   const q=document.getElementById(focusId);
   if(q)setTimeout(()=>q.focus(),60);
 }
@@ -1522,7 +1615,7 @@ function resetPartCombo(prefix){
 function getPartName(id){
   const p=state.parts.find(x=>x.id===id);
   if(!p)return 'Unknown';
-  return (p.sku?'['+p.sku+'] ':'')+p.name;
+  return (p.sku?'['+p.sku+'] ':'')+p.name+inkTag(p);
 }
 function getPartLabel(id){
   const p=state.parts.find(x=>x.id===id);
@@ -1985,10 +2078,10 @@ async function savePart(){
   const qty=parseFloat(document.getElementById('f-part-qty').value)||0;
   const fields=['f-part-sku','f-part-name','f-part-qty','f-part-min','f-part-desc','f-part-brand','f-part-supplier','f-part-rack'];
 
-  async function mergeIntoExisting(existing){
+  async function mergeIntoExisting(existing,how){
     if(qty>0){
       try{
-        const txn=await apiFetch('/api/store/transactions','POST',{type:'in',partId:existing.id,qty,date:today(),ref:'Added to existing',notes:'Qty added (matched by SKU)'});
+        const txn=await apiFetch('/api/store/transactions','POST',{type:'in',partId:existing.id,qty,date:today(),ref:'Added to existing',notes:'Qty added (matched by '+(how||'SKU')+')'});
         const p=state.parts.find(x=>x.id===existing.id);
         if(p){p.qty+=qty;state.transactions.unshift(txn);}
       }catch(e){await errorDialog('Could not add qty',e.message);return;}
@@ -1999,6 +2092,17 @@ async function savePart(){
     refresh();
   }
 
+  if(isInks()){
+    const sup=document.getElementById('f-part-supplier').value.trim().toLowerCase();
+    const br=document.getElementById('f-part-brand').value.trim().toLowerCase();
+    const same=state.parts.find(p=>inkKey(p)===name.toLowerCase()&&(p.supplier||'').trim().toLowerCase()===sup&&(p.brand||'').trim().toLowerCase()===br);
+    if(same){
+      const msg='"'+same.name+'"'+inkTag(same)+' is already in the store — '+fmtQty(same.qty)+' '+same.unit+' on hand.\n\n'
+        +(qty>0?'Add '+qty+' '+same.unit+' to it?':'Use + Stock on that row instead of creating it again.');
+      if(!await confirmDialog({title:'This brand is already there',message:msg,confirmText:qty>0?'Add to existing':'OK',variant:'confirm'}))return;
+      return mergeIntoExisting(same,'supplier + brand');
+    }
+  }
   const local=sku?state.parts.find(p=>(p.sku||'').toLowerCase()===sku.toLowerCase()):null;
   if(local){
     const msg='Existing part: "'+local.name+'" — '+local.qty+' '+local.unit+' on hand.\n\n'
@@ -2237,6 +2341,12 @@ async function updatePart(){
   const sku=document.getElementById('f-edit-sku').value.trim();
   const name=document.getElementById('f-edit-name').value.trim();
   if(!name){await warnDialog('Part name required','Enter a name for this part.');return;}
+  if(isInks()){
+    const sup=document.getElementById('f-edit-supplier').value.trim().toLowerCase();
+    const br=document.getElementById('f-edit-brand').value.trim().toLowerCase();
+    const clash=state.parts.find(p=>p.id!==id&&inkKey(p)===name.toLowerCase()&&(p.supplier||'').trim().toLowerCase()===sup&&(p.brand||'').trim().toLowerCase()===br);
+    if(clash){await warnDialog('Already in the store','"'+clash.name+'"'+inkTag(clash)+' already exists as its own row. Change the supplier or brand, or use that row.');return;}
+  }
 
   // Resolve final image URL:
   //   - if a new file is picked, upload it
@@ -2611,6 +2721,109 @@ function openPartHistory(pid){
   document.getElementById('modal-partHistory').classList.add('open');
 }
 
+// One card per product: its name, category, brand count and total, then a row per supplier + brand
+// with that brand's own stock and its + Stock / − Stock / Edit / Delete.
+function renderInkGroups(visible){
+  const host=document.getElementById('inv-groups');
+  if(!host)return;
+  const e=_escHtml;
+  const fill=(id,vals)=>{const dl=document.getElementById(id);if(dl)dl.innerHTML=[...new Set(vals.map(v=>(v||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)).map(v=>'<option value="'+e(v)+'">').join('');};
+  fill('dl-supplier',state.parts.map(p=>p.supplier));
+  fill('dl-brand',state.parts.map(p=>p.brand));
+  const groups=new Map();
+  visible.forEach(p=>{const k=inkKey(p);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
+  if(!groups.size){host.innerHTML='<div class="empty"><i class="ti ti-search"></i>No items found</div>';return;}
+  host.innerHTML=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,rows])=>{
+    rows.sort(inkSort);
+    const all=state.parts.filter(p=>inkKey(p)===k);
+    const t=inkGroupTotal(all);
+    const n=all.length;
+    const rowHtml=rows.map(p=>{
+      const flag=p.qty===0?'<span class="ig-flag out">Out</span>':(p.qty<=p.minQty?'<span class="ig-flag low">Low</span>':'');
+      const meta=[p.sku?'['+e(p.sku)+']':'',p.rackNo?'Rack '+e(p.rackNo):''].filter(Boolean).join(' · ');
+      return '<div class="ig-row">'
+        +'<div class="ig-who"><b>'+e(p.brand||'No brand')+'</b>'+(p.supplier?' · <span>'+e(p.supplier)+'</span>':'')+flag+(meta?'<div class="ig-meta">'+meta+'</div>':'')+'</div>'
+        +'<div class="ig-qty"><b>'+fmtQty(p.qty)+'</b><small>'+e(p.unit)+'</small></div>'
+        +'<div class="ig-btns">'
+        +'<button class="ig-b in write-only" title="Stock in this brand" onclick="openSingleIn('+p.id+')">+ Stock</button>'
+        +'<button class="ig-b out write-only" title="Issue / stock out this brand" onclick="openSingleOut('+p.id+')">\u2212 Stock</button>'
+        +'<button class="ig-b edit write-only" title="Edit this row" onclick="openEditPart('+p.id+')">Edit</button>'
+        +'<button class="ig-b del write-only" title="Move this row to trash" onclick="deletePart('+p.id+')">Delete</button>'
+        +'</div></div>';
+    }).join('');
+    return '<div class="ig">'
+      +'<div class="ig-head">'
+      +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span></div>'
+      +'<div class="ig-total"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>Total '+e(t.mixed?'(mixed units)':t.unit)+'</small>'
+      +'<div class="ig-hbtns"><button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
+      +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div></div>'
+      +'</div>'+rowHtml+'</div>';
+  }).join('');
+}
+
+// "+ Brand": the add form, with the product's name, category and unit already in.
+function openAddBrand(k){
+  const first=state.parts.find(p=>inkKey(p)===k);
+  if(!first)return;
+  openModal('addPart');
+  ['f-part-sku','f-part-supplier','f-part-brand','f-part-rack','f-part-qty'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-part-name').value=first.name;
+  document.getElementById('f-part-cat').value=first.category;
+  document.getElementById('f-part-unit').value=first.unit;
+  document.getElementById('f-part-supplier').focus();
+}
+
+// History of a product: the movements of every brand under it, newest first, each naming its
+// supplier + brand. `brandId` narrows it to one brand row.
+let _ghKey='';
+function openGroupHistory(k,brandId){
+  const members=state.parts.filter(p=>inkKey(p)===k).sort(inkSort);
+  if(!members.length)return;
+  _ghKey=k;
+  const sel=brandId?members.filter(p=>String(p.id)===String(brandId)):members;
+  const ids=new Set(sel.map(p=>p.id));
+  const txs=state.transactions.filter(t=>ids.has(t.partId))
+    .sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id);
+  const bal=computeBalances();
+  const e=_escHtml;
+  const units=[...new Set(sel.map(p=>p.unit||''))];
+  const u=units.length===1?units[0]:'';
+  const cell='padding:6px 10px';
+  const part=id=>members.find(p=>p.id===id);
+  const totIn=Math.round(txs.filter(t=>t.type==='in').reduce((x,t)=>x+Number(t.qty),0)*1000)/1000;
+  const totOut=Math.round(txs.filter(t=>t.type==='out').reduce((x,t)=>x+Number(t.qty),0)*1000)/1000;
+  const have=Math.round(sel.reduce((x,p)=>x+(Number(p.qty)||0),0)*1000)/1000;
+  const stat=(label,val,color)=>'<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">'+label+'</div><div style="font-size:16px;font-weight:700;'+(color?'color:'+color:'')+'">'+val+'</div></div>';
+  const rows=txs.length?txs.map(t=>{
+    const p=part(t.partId);
+    const un=(p&&units.length>1)?' '+(p.unit||''):(u?' '+u:'');
+    const before=bal[t.id]==null?'—':fmtQty(Math.round((bal[t.id]-(t.type==='in'?Number(t.qty):-Number(t.qty)))*1000)/1000)+un;
+    return '<tr class="txn-row-link" onclick="closeModal(\'partHistory\');openTxnInReport('+t.id+',{page:\'inventory\',groupKey:_ghKey,brandId:'+(brandId?"\'"+brandId+"\'":'null')+'})" title="Open this entry in the '+(t.type==='in'?'Stock In':'Stock Out')+' report">'
+      +'<td style="'+cell+';white-space:nowrap">'+whenHtml(t)+'</td>'
+      +'<td style="'+cell+';white-space:nowrap"><b>'+e(p?(p.brand||'No brand'):'—')+'</b>'+(p&&p.supplier?' · '+e(p.supplier):'')+'</td>'
+      +'<td style="'+cell+';color:#666;white-space:nowrap">'+before+'</td>'
+      +'<td class="'+(t.type==='in'?'qty-positive':'qty-negative')+'" style="'+cell+';white-space:nowrap">'+(t.type==='in'?'+':'\u2212')+fmtQty(t.qty)+un+'</td>'
+      +'<td style="'+cell+';font-weight:600;white-space:nowrap">'+(bal[t.id]==null?'—':fmtQty(bal[t.id])+un)+'</td>'
+      +'<td style="'+cell+';white-space:nowrap"><span class="badge badge-'+t.type+'">'+txnReason(t)+'</span></td>'
+      +'<td style="'+cell+';font-family:monospace;color:#555">'+(t.challanNo||'—')+'</td>'
+      +'<td style="'+cell+'">'+e(t.type==='in'?(t.ref||'—'):(t.issuedTo||'—'))+'</td>'
+      +'<td style="'+cell+';color:#888">'+e(t.type==='in'?(t.notes||'—'):(t.purpose||'—'))+'</td>'
+      +'<td style="'+cell+';white-space:nowrap">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="10"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
+  const pick='<select onchange="openGroupHistory(_ghKey,this.value)" style="margin-bottom:12px;max-width:100%"><option value="">All brands ('+members.length+')</option>'
+    +members.map(p=>'<option value="'+p.id+'"'+(String(p.id)===String(brandId||'')?' selected':'')+'>'+e((p.brand||'No brand')+(p.supplier?' · '+p.supplier:''))+'</option>').join('')+'</select>';
+  document.getElementById('ph-title').textContent=members[0].name+' - history';
+  document.getElementById('ph-body').innerHTML=
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
+    +stat('On hand',fmtQty(have)+(u?' '+u:''))+stat('Total in','+'+fmtQty(totIn)+(u?' '+u:''),'#2d6a10')+stat('Total out','\u2212'+fmtQty(totOut)+(u?' '+u:''),'#993C1D')+'</div>'
+    +(members.length>1?pick:'')
+    +'<div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:12.5px"><thead><tr>'
+    +['When','Brand · Supplier','Before','Change','After','Reason','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  document.getElementById('modal-partHistory').classList.add('open');
+}
+
 function renderInventory(){
   renderLedgerCheck();
   const inks=isInks();
@@ -2645,6 +2858,8 @@ function renderInventory(){
     const rack=!rackF||(rackF==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rackF);
     return txt&&cat&&mach&&rack;
   });
+
+  if(inks){renderInkGroups(parts);return;}
 
   // Header follows the module.
   const th=document.getElementById('inv-thead');
