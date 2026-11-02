@@ -92,6 +92,12 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .fit-card{width:fit-content;max-width:100%;overflow:auto;padding:0}
 .fit-card table{width:auto}
 .fit-card th,.fit-card td{padding:7px 10px}
+/* Stock In / Stock Out / Issuance: columns sized to the text, long text wraps, so the table fits the screen. */
+.txn-card{overflow-x:auto}
+.txn-card th,.txn-card td{padding:6px 7px;font-size:12.5px;vertical-align:middle}
+.txn-card th{white-space:normal;line-height:1.15}
+.txn-card td{max-width:230px;overflow-wrap:anywhere}
+.txn-card .btn-sm{padding:3px 8px;font-size:11.5px}
 .empty{text-align:center;padding:3rem;color:#aaa;font-size:13px}
 .empty i{display:block;font-size:32px;margin-bottom:8px;opacity:0.4}
 .divider{height:1px;background:#f1ead9;margin:0.5rem 1rem}
@@ -506,9 +512,9 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="in-return-bar" class="no-print" style="display:none"></div>
-      <div class="card fit-card">
+      <div class="card fit-card txn-card">
         <table>
-          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Reason</th><th>Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
+          <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="in-chk-all" onchange="toggleAllTxns('in',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Added</th><th>Balance</th><th>Reason</th><th class="machinery-only">Supplier / Ref</th><th>Notes</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockin-table"></tbody>
         </table>
       </div>
@@ -535,7 +541,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <button class="btn btn-sm btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
       </div>
       <div id="out-return-bar" class="no-print" style="display:none"></div>
-      <div class="card fit-card">
+      <div class="card fit-card txn-card">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="out-chk-all" onchange="toggleAllTxns('out',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Category</th><th>Qty Issued</th><th>Balance</th><th>Reason</th><th>Issued To</th><th>Purpose</th><th>Done by</th><th class="no-print"></th></tr></thead>
           <tbody id="stockout-table"></tbody>
@@ -564,7 +570,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       </div>
       <div id="movement-categories" class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <div id="movement-output"></div>
-      <div class="card fit-card">
+      <div class="card fit-card txn-card">
         <table>
           <thead><tr><th class="no-print" style="width:32px"><input type="checkbox" id="iss-chk-all" onchange="toggleAllTxns('iss',this.checked)"></th><th>#</th><th>When</th><th>Challan No.</th><th>Part</th><th class="consumables-only">Supplier</th><th class="consumables-only">Brand</th><th>Type</th><th>Qty</th><th>Balance</th><th>Issued To / Supplier</th><th>Purpose / Notes</th></tr></thead>
           <tbody id="issuance-table"></tbody>
@@ -1862,7 +1868,7 @@ function getHeaders(sec){
     ? ['#','SKU / Part No.','Part Name','Category','Supplier','Brand','Rack No.','Unit','Qty on Hand','Min Qty','Status']
     : ['#','SKU / Part No.','Part Name','Category','Machine','Unit','Qty on Hand','Min Qty','Status'];
   const sb=isInks()?['Supplier','Brand']:[];
-  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance','Reason','Supplier / Ref','Notes','Done by'];
+  if(sec==='stockin')   return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Added','Balance','Reason',...(isInks()?[]:['Supplier / Ref']),'Notes','Done by'];
   if(sec==='stockout')  return['#','Date','Challan No.','Part Name',...sb,'Category','Qty Issued','Balance','Reason','Issued To','Purpose','Done by'];
   if(sec==='issuance')  return['#','Date','Challan No.','Part Name',...sb,'Type','Qty','Balance','Issued To / Supplier','Purpose / Notes'];
   return[];
@@ -1878,9 +1884,9 @@ function rowCells(sec,item,i){
     return[...head,...mid,item.unit,fmtQty(item.qty),item.minQty,s.label];
   }
   const bal=(window._balCache=window._balCache||computeBalances());
-  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.ref||'—',item.notes||'—',item.createdBy||'—'];
-  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),item.issuedTo||'—',item.purpose||'—',item.createdBy||'—'];
-  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),item.type==='in'?(item.ref||'—'):(item.issuedTo||'—'),item.type==='in'?(item.notes||'—'):(item.purpose||'—')];
+  if(sec==='stockin')  return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'+'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),...(isInks()?[]:[userText(item.ref)||'—']),userText(item.notes)||'—',item.createdBy||'—'];
+  if(sec==='stockout') return[i+1,fmtDate(item.date)+(fmtTxnTime(item)?' '+fmtTxnTime(item):''),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),getPartCat(item.partId),'-'+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),txnReason(item),userText(item.issuedTo)||'—',userText(item.purpose)||'—',item.createdBy||'—'];
+  if(sec==='issuance') return[i+1,fmtDate(item.date),item.challanNo||'—',getPartPlain(item.partId),...inkSB(item.partId),item.type==='in'?'Stock In':'Issue',(item.type==='in'?'+':'-')+fmtQty(item.qty)+' '+getPartUnit(item.partId),(bal[item.id]??'—')+' '+getPartUnit(item.partId),userText(item.type==='in'?item.ref:item.issuedTo)||'—',userText(item.type==='in'?item.notes:item.purpose)||'—'];
   return[];
 }
 
@@ -2770,10 +2776,16 @@ function fmtTxnTime(t){
 }
 // Why a movement happened, worked out from what it carries: a corrected count, a
 // reconcile adjustment, or an ordinary stock in / issue.
+// What the store typed. The app also writes a line of its own on an adjustment, a quantity
+// correction or an opening balance (the Reason column already says which); those are not shown
+// as notes, so the Notes, Purpose and Issued To columns only carry what a person wrote.
+const SYSTEM_TEXT=/^(Opening balance adjustment|Opening balance$|Qty corrected via Edit|Qty added \(matched by|Adjustment$|Qty Edit \(|Opening Stock$|Added to existing$)/i;
+function userText(v){const s=String(v==null?'':v).trim();return s&&!SYSTEM_TEXT.test(s)?s:'';}
 function txnReason(t){
   const ref=t.ref||'',iss=t.issuedTo||'';
   if(/^Qty Edit/.test(ref)||/^Qty Edit/.test(iss))return 'Qty correction';
   if((t.purpose||'')==='Adjustment')return 'Adjustment';
+  if(ref==='Opening Stock')return 'Opening stock';
   return t.type==='in'?'Stock in':'Issue';
 }
 // Date, and the time under it when there is one.
@@ -2892,8 +2904,8 @@ function openPartHistory(pid){
       <td style="${cell};font-weight:600;white-space:nowrap">${fmtQty(bal[t.id])??'—'} ${u}</td>
       <td style="${cell};white-space:nowrap"><span class="badge badge-${t.type}">${txnReason(t)}</span></td>
       <td style="${cell};font-family:monospace;color:#555">${t.challanNo||'—'}</td>
-      <td style="${cell}">${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td>
-      <td style="${cell};color:#888">${t.type==='in'?(t.notes||'—'):(t.purpose||'—')}</td>
+      <td style="${cell}">${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
+      <td style="${cell};color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>
       <td style="${cell};white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     </tr>`).join(''):`<tr><td colspan="9"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded for this part</div></td></tr>`;
   const stat=(label,val,color)=>`<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">${label}</div><div style="font-size:15px;font-weight:700;${color?'color:'+color:''}">${val}</div></div>`;
@@ -3185,8 +3197,8 @@ function openGroupHistory(k,brandId){
       +'<td style="'+cell+';font-weight:600;white-space:nowrap">'+(bal[t.id]==null?'—':fmtQty(bal[t.id])+un)+'</td>'
       +'<td style="'+cell+';white-space:nowrap"><span class="badge badge-'+t.type+'">'+txnReason(t)+'</span></td>'
       +'<td style="'+cell+';font-family:monospace;color:#555">'+(t.challanNo||'—')+'</td>'
-      +'<td style="'+cell+'">'+e(t.type==='in'?(t.ref||'—'):(t.issuedTo||'—'))+'</td>'
-      +'<td style="'+cell+';color:#888">'+e(t.type==='in'?(t.notes||'—'):(t.purpose||'—'))+'</td>'
+      +'<td style="'+cell+'">'+e(userText(t.type==='in'?t.ref:t.issuedTo)||'—')+'</td>'
+      +'<td style="'+cell+';color:#888">'+e(userText(t.type==='in'?t.notes:t.purpose)||'—')+'</td>'
       +'<td style="'+cell+';white-space:nowrap">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
       +'</tr>';
   }).join(''):'<tr><td colspan="10"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
@@ -3374,9 +3386,9 @@ function renderStockIn(){
     <td class="qty-positive">+${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${txnReason(t)}</td>
-    <td>${t.ref||'—'}</td>
-    <td style="color:#888">${t.notes||'—'}</td>
-    <td style="white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+    <td class="machinery-only">${userText(t.ref)||'—'}</td>
+    <td style="color:#888">${userText(t.notes)||'—'}</td>
+    <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('in');
@@ -3404,9 +3416,9 @@ function renderStockOut(){
     <td class="qty-negative">−${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${txnReason(t)}</td>
-    <td>${t.issuedTo||'—'}</td>
-    <td style="color:#888">${t.purpose||'—'}</td>
-    <td style="white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+    <td>${userText(t.issuedTo)||'—'}</td>
+    <td style="color:#888">${userText(t.purpose)||'—'}</td>
+    <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     <td class="no-print" style="white-space:nowrap"><span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('out');
@@ -3435,8 +3447,8 @@ function renderIssuance(){
     <td><span class="badge badge-${t.type}">${t.type==='in'?'Stock In':'Issue'}</span></td>
     <td class="${t.type==='in'?'qty-positive':'qty-negative'}">${t.type==='in'?'+':'−'}${fmtQty(t.qty)} ${getPartUnit(t.partId)}</td>
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
-    <td>${t.type==='in'?(t.ref||'—'):(t.issuedTo||'—')}</td>
-    <td style="color:#888">${t.type==='in'?(t.notes||'—'):(t.purpose||'—')}</td>
+    <td>${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
+    <td style="color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>
   </tr>`).join('');
   updateBulkInfo('iss');
 }
