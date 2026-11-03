@@ -114,10 +114,27 @@ export async function GET(req: NextRequest) {
       driversBy.set(l.vehicleId, arr);
     }
 
+    // The oil change: the meter reading it is due at (set by hand), and the vehicle's latest meter
+    // reading from its trips and fuel records — what the due reading is compared with.
+    const oilRes = await db.execute(sql`
+      SELECT v.id, v.oil_change_km AS "oilChangeKm",
+             NULLIF(GREATEST(
+               COALESCE((SELECT MAX(GREATEST(t.meter_out, COALESCE(t.meter_in, 0))) FROM fleet_trips t WHERE t.vehicle_id = v.id), 0),
+               COALESCE((SELECT MAX(f.meter_reading) FROM fuel_entries f WHERE f.vehicle_id = v.id), 0)
+             ), 0) AS "meterNow"
+      FROM vehicles v
+    `);
+    const oilBy = new Map((((oilRes as any).rows ?? oilRes) as any[]).map(r => [Number(r.id), {
+      oilChangeKm: r.oilChangeKm === null ? null : Number(r.oilChangeKm),
+      meterNow: r.meterNow === null ? null : Number(r.meterNow),
+    }]));
+
     return NextResponse.json(rows.map(v => {
       const o = openBy.get(v.id);
       return {
         ...v,
+        oilChangeKm: oilBy.get(v.id)?.oilChangeKm ?? null,
+        meterNow: oilBy.get(v.id)?.meterNow ?? null,
         drivers: driversBy.get(v.id) ?? [],
         openTrip: o ? {
           id: o.tripId, outAt: o.outAt, destination: o.destination, meterOut: o.meterOut,
@@ -223,6 +240,16 @@ export async function PUT(req: NextRequest) {
     }).where(eq(vehicles.id, id));
 
     if (Array.isArray(b?.drivers)) await setDrivers(id, b.drivers);
+
+    // Only when it was sent: a save that does not mention it leaves it as it was. Blank clears it.
+    if (b && "oilChangeKm" in b) {
+      const raw = b.oilChangeKm;
+      const km = raw === "" || raw === null || raw === undefined ? null : Math.round(Number(raw));
+      if (km !== null && (!Number.isFinite(km) || km < 0)) {
+        return NextResponse.json({ error: "The oil change reading must be a number of km" }, { status: 400 });
+      }
+      await db.execute(sql`UPDATE vehicles SET oil_change_km = ${km} WHERE id = ${id}`);
+    }
 
     const what = before.active !== active ? (active ? "put back in service" : "retired") : "edited";
     await logActivity({ user: guard, action: "station.vehicle.edit", summary: `${what} vehicle "${vehicleNo}"` });

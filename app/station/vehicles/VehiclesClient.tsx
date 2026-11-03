@@ -22,6 +22,8 @@ type Vehicle = {
   id: number; vehicleNo: string; pin: string | null; name: string; type: string;
   defaultDriverId: number | null; drivers: DriverEntry[]; active: boolean; notes: string;
   openTrip: OpenTrip | null;
+  oilChangeKm: number | null;   // the meter reading the oil change is due at
+  meterNow: number | null;      // the vehicle's latest meter reading
 };
 
 const BLANK = {
@@ -181,15 +183,38 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
     finally { setBusy(false); }
   };
 
+  // Oil change: due once the meter has reached the reading typed for the vehicle.
+  const oilDue = (v: Vehicle) => v.active && v.oilChangeKm !== null && v.meterNow !== null && v.meterNow >= v.oilChangeKm;
+
+  const saveOil = async (v: Vehicle, km: string) => {
+    if ((v.oilChangeKm === null ? "" : String(v.oilChangeKm)) === km) return true;
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/fleet/vehicles", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...v, oilChangeKm: km }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not save the oil change reading");
+      await load();
+      return true;
+    } catch (e: any) { setErr(e.message); return false; }
+    finally { setBusy(false); }
+  };
+
   const shown = list.filter(v => showRetired || v.active);
   const retiredCount = list.filter(v => !v.active).length;
 
   return (
     <div className="fade-up">
+      <style>{`
+        @keyframes oilBlink { 0%, 100% { background: #FACC15; color: #422006; box-shadow: 0 0 0 0 rgba(250, 204, 21, .9); } 50% { background: #FEF9C3; color: #A16207; box-shadow: 0 0 0 7px rgba(250, 204, 21, 0); } }
+        .oil-due { display: inline-block; padding: 5px 11px; border-radius: 8px; border: 2px solid #CA8A04; font-weight: 800; font-size: 12px; animation: oilBlink 1s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .oil-due { animation: none; background: #FACC15; color: #422006; } }
+      `}</style>
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>🚐 All vehicles</h2>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
+          <p style={{ color: "#888", margin: 0, fontSize: 13 }}>
             Every vehicle that has a log book. A vehicle needs a PIN, and a driver from the pool or its own, before it can go out at the gate. Retiring one keeps its journeys readable.
           </p>
         </div>
@@ -337,13 +362,13 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
           <thead>
             <tr>
               <th>Vehicle No.</th><th style={{ textAlign: "center" }}>PIN</th><th>Make / model</th>
-              <th>Own drivers</th><th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
+              <th>Own drivers</th><th>Oil change at (km)</th><th>Status</th>{!readOnly && <th style={{ width: 150 }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
+            {loading && <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>Loading…</td></tr>}
             {!loading && shown.length === 0 && (
-              <tr><td colSpan={readOnly ? 5 : 6} style={{ color: "var(--text3)", padding: 18 }}>
+              <tr><td colSpan={readOnly ? 6 : 7} style={{ color: "var(--text3)", padding: 18 }}>
                 No vehicles yet{readOnly ? "." : " — use “+ Add vehicle” above."}
               </td></tr>
             )}
@@ -367,6 +392,21 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
                   {(v.drivers?.length ?? 0) === 0
                     ? <span style={{ color: "var(--text3)" }}>pool only</span>
                     : <>{v.drivers.length} · <span style={{ color: "var(--text3)" }}>{driverName(v.defaultDriverId)}</span></>}
+                </td>
+                <td>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {readOnly
+                      ? <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{v.oilChangeKm !== null ? v.oilChangeKm.toLocaleString("en-PK") : "—"}</span>
+                      : <OilCell vehicle={v} busy={busy} onSave={saveOil} />}
+                    {oilDue(v) && (
+                      <span className="oil-due" title={`The meter is at ${v.meterNow!.toLocaleString("en-PK")} km. Type the next oil change reading to clear this.`}>
+                        ⚠ OIL CHANGE DUE{v.meterNow! > v.oilChangeKm! ? ` · ${(v.meterNow! - v.oilChangeKm!).toLocaleString("en-PK")} km over` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
+                    {v.meterNow !== null ? `meter now ${v.meterNow.toLocaleString("en-PK")} km` : "no meter reading yet"}
+                  </div>
                 </td>
                 <td style={{ fontSize: 12 }}>
                   {!v.active ? <span style={{ color: "var(--text3)" }}>Retired</span>
@@ -393,6 +433,43 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
         </table>
       </div>
     </div>
+  );
+}
+
+// The oil change column, editable where it stands: the meter reading it is due at. Saves when you leave
+// the box or press Enter; Escape puts back what was there; blank clears it.
+function OilCell({ vehicle, busy, onSave }: {
+  vehicle: { id: number; oilChangeKm: number | null };
+  busy: boolean;
+  onSave: (v: any, km: string) => Promise<boolean>;
+}) {
+  const shownKm = vehicle.oilChangeKm === null ? "" : String(vehicle.oilChangeKm);
+  const [value, setValue] = useState(shownKm);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { if (!dirty) setValue(shownKm); }, [shownKm, dirty]);
+
+  const commit = async () => {
+    if (!dirty) return;
+    const ok = await onSave(vehicle, value);
+    setDirty(false);
+    if (!ok) setValue(shownKm);
+  };
+
+  return (
+    <input
+      value={value}
+      inputMode="numeric"
+      disabled={busy}
+      placeholder="km"
+      onChange={e => { setValue(e.target.value.replace(/[^0-9]/g, "").slice(0, 7)); setDirty(true); }}
+      onBlur={commit}
+      onKeyDown={e => {
+        if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+        else if (e.key === "Escape") { setValue(shownKm); setDirty(false); }
+      }}
+      title="The meter reading the oil change is due at"
+      style={{ width: 96, textAlign: "right", padding: "6px 8px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
+    />
   );
 }
 
