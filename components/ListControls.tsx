@@ -8,7 +8,7 @@ export type SortOption<K extends string> = { value: K; label: string };
 // Solid yellow-orange with dark text, so the search box and the sort dropdown stand out on the page. A select gets its
 // own dark arrow (the native one is easy to lose on a coloured box); the placeholder and option colours are in globals.css.
 const ACCENT: React.CSSProperties = {
-  backgroundColor: "#F59E0B",
+  backgroundColor: "rgba(245, 158, 11, 0.5)",   // 50% opacity: the colour is half see-through, the text stays solid
   color: "#1f1300",
   border: "1px solid #B45309",
   boxShadow: "0 2px 6px rgba(245, 158, 11, 0.40)",
