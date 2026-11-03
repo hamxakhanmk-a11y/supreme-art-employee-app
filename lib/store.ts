@@ -39,6 +39,10 @@ DO $$ BEGIN
   -- The batch number as the keeper wrote it for the sticker (02-2026 unless typed over). Empty: the automatic one.
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS batch_label TEXT;
 
+  -- A part taken out of the Trash for good. The row stays, hidden everywhere, so the stock in and out
+  -- history it carries is kept (deleting the row would delete that history with it).
+  ALTER TABLE parts ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
   -- When it was entered (date AND time; the movement's own "date" has no time).
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
 

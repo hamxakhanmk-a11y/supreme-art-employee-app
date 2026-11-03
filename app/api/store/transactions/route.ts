@@ -6,7 +6,7 @@ import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema, roundQty, batchBalances, ordinal } from "@/lib/store";
 
-// GET — only returns transactions whose part isn't in the trash.
+// GET — every movement, including those of parts that were deleted: their history is kept.
 export async function GET() {
   const guard = await guardAuth();
   if (guard instanceof NextResponse) return guard;
@@ -33,7 +33,6 @@ export async function GET() {
              t.created_at AS "createdAt"
       FROM transactions t
       JOIN parts p ON p.id = t.part_id
-      WHERE p.deleted_at IS NULL
       ORDER BY t.id DESC
     `);
     const list = (rows as any).rows ?? (rows as any);

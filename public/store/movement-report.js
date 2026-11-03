@@ -40,7 +40,8 @@
       byPart.get(key).push(t);
     }
     const query = search.trim().toLowerCase();
-    const rows = parts.filter(p => (!category || p.category === category) &&
+    const rows = parts.filter(p => (!p.deleted || (byPart.get(String(p.id)) || []).some(t => day(t.date) >= from && day(t.date) <= to)) &&
+      (!category || p.category === category) &&
       (!query || [p.name,p.sku,p.category,p.brand,p.supplier].join(' ').toLowerCase().includes(query)))
       .map(p => {
         const txns = byPart.get(String(p.id)) || [];
@@ -60,7 +61,7 @@
         });
         // Inks & Consumables keep a row per supplier + brand, so the row says which.
         const tag = (p.supplier || p.brand) ? ' \u2014 ' + (p.supplier || 'no supplier') + (p.brand ? ' \u00B7 ' + p.brand : '') : '';
-        return { id:p.id, name:(p.sku && !String(p.name || '').trim().startsWith('[' + p.sku + ']') ? '[' + p.sku + '] ' : '') + p.name + tag,
+        return { id:p.id, name:(p.sku && !String(p.name || '').trim().startsWith('[' + p.sku + ']') ? '[' + p.sku + '] ' : '') + p.name + tag + (p.deleted ? ' (deleted)' : ''),
           unit:p.unit || '', opening, values, totalOut:round(totalOut), stockNow:number(p.qty) };
       }).sort((a,b) => a.name.localeCompare(b.name));
     return { from,to,mode,groups,rows,category };
@@ -126,7 +127,8 @@
       const from = el('iss-date-from').value || now.slice(0,7) + '-01';
       const to = el('iss-date-to').value || now;
       el('iss-date-from').value = from; el('iss-date-to').value = to;
-      api.current = build(state.parts,state.transactions,from,to,mode,api.category,el('iss-search').value);
+      // Parts that were deleted still have their history: they appear (marked) for the days they had movements.
+      api.current = build(state.parts.concat(state.gone || []),state.transactions,from,to,mode,api.category,el('iss-search').value);
       const visible = new Set(api.current.rows.map(r => String(r.id)));
       api.selected.forEach(id => { if (!visible.has(id)) api.selected.delete(id); });
       output.innerHTML = '<style>' + css + '</style><p style="font-size:12px;margin:8px 0">Balances are reconstructed from current stock and retained history. Stock now is current inventory. Deleted history or unlogged adjustments can affect historical balances.</p>' +

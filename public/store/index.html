@@ -199,6 +199,8 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .ig-flag{display:inline-block;margin-left:8px;font-size:10px;font-weight:700;padding:0 6px;border-radius:999px;vertical-align:middle;text-transform:none}
 .ig-flag.low{background:#fef3c7;color:#92400E}
 .ig-flag.out{background:#fee2e2;color:#991B1B}
+.del-tag{margin-left:6px;font-size:10px;font-weight:700;color:#A32D2D;background:#fee2e2;border-radius:999px;padding:0 6px;vertical-align:middle}
+.gone-row .rev-btn{display:none}
 .ink-combo select{width:100%}
 .sb-tabs{display:flex;gap:6px;margin-bottom:12px}
 .sb-tab{border:1px solid #d9c4c0;background:#fff;border-radius:999px;padding:4px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -641,11 +643,11 @@ body:not(.role-admin) .admin-only{display:none!important}
     <div class="page" id="page-trash">
       <div class="page-header">
         <div class="page-title">Trash</div>
-        <span style="font-size:12px;color:#888">Deleted parts are kept for 7 days, then permanently removed.</span>
+        <span style="font-size:12px;color:#888">A deleted part stays here until you remove it. Its stock in and stock out history stays in the reports either way.</span>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
-          <thead><tr><th>SKU / Part No.</th><th>Part Name</th><th>Category</th><th>Qty</th><th>Deleted</th><th>Auto-deletes</th><th style="width:180px">Actions</th></tr></thead>
+          <thead><tr><th>SKU / Part No.</th><th>Part Name</th><th>Category</th><th>Qty</th><th>Deleted</th><th style="width:200px">Actions</th></tr></thead>
           <tbody id="trash-table"></tbody>
         </table>
       </div>
@@ -1141,14 +1143,17 @@ async function loadAll(){
       apiFetch('/api/store/machines'+m),
       apiFetch('/api/store/parts'+m),
       apiFetch('/api/store/transactions'),
-      apiFetch('/api/store/trash'+m)
+      apiFetch('/api/store/trash'+m+'&all=1')
     ]);
     state.categories=categories;
     state.machines=machines;
     state.parts=parts;
-    state.trash=trash.items||[];
+    // Parts that were deleted keep their history: they are known here (marked deleted) so their stock in and
+    // out records are listed and named. Those still in the Trash are the Trash page's; archivedAt: removed from it.
+    state.gone=(trash.items||[]).map(p=>({...p,deleted:true}));
+    state.trash=state.gone.filter(p=>!p.archivedAt);
     // Only transactions for parts in this module
-    const partIds=new Set(parts.map(p=>p.id));
+    const partIds=new Set(parts.map(p=>p.id).concat(state.gone.map(p=>p.id)));
     state.transactions=transactions.filter(t=>partIds.has(t.partId));
   }catch(e){
     console.error('Failed to load data:',e);
@@ -2020,19 +2025,22 @@ function resetPartCombo(prefix){
   if(bk)bk.innerHTML='';
 }
 
+// A part by id: an active one, or one that was deleted (its old movements still have to be named).
+function partOf(id){return state.parts.find(x=>x.id===id)||(state.gone||[]).find(x=>x.id===id)||null;}
+function isGone(id){return !state.parts.some(x=>x.id===id);}
 function getPartName(id){
-  const p=state.parts.find(x=>x.id===id);
+  const p=partOf(id);
   if(!p)return 'Unknown';
-  return skuPrefix(p)+p.name+inkTag(p);
+  return skuPrefix(p)+p.name+inkTag(p)+(p.deleted?' (deleted)':'');
 }
 // Supplier and brand of a part, for the reports of Inks & Consumables (none for the Parts Store).
 function getPartPlain(id){
-  const p=state.parts.find(x=>x.id===id);
-  return p?skuPrefix(p)+p.name:'Unknown';
+  const p=partOf(id);
+  return p?skuPrefix(p)+p.name+(p.deleted?' (deleted)':''):'Unknown';
 }
 function inkSB(id){
   if(!isInks())return [];
-  const p=state.parts.find(x=>x.id===id);
+  const p=partOf(id);
   return [(p&&p.supplier)||'—',(p&&p.brand)||'—'];
 }
 function inkSBCells(id){
@@ -2046,15 +2054,15 @@ function inkTagHtml(p){
 }
 // The label with its supplier · brand, where the part itself is all the line says.
 function getPartLabelFull(id){
-  return getPartLabel(id)+inkTagHtml(state.parts.find(x=>x.id===id));
+  return getPartLabel(id)+inkTagHtml(partOf(id));
 }
 function getPartLabel(id){
-  const p=state.parts.find(x=>x.id===id);
+  const p=partOf(id);
   if(!p)return 'Unknown';
-  return (p.sku?`<span class="part-sku">[${p.sku}]</span>`:'')+p.name;
+  return (p.sku?`<span class="part-sku">[${p.sku}]</span>`:'')+p.name+(p.deleted?'<span class="del-tag">deleted</span>':'');
 }
-function getPartCat(id){const p=state.parts.find(x=>x.id===id);return p?p.category:''}
-function getPartUnit(id){const p=state.parts.find(x=>x.id===id);return p?p.unit:''}
+function getPartCat(id){const p=partOf(id);return p?p.category:''}
+function getPartUnit(id){const p=partOf(id);return p?p.unit:''}
 function stockStatus(p){
   if(p.qty===0)return{label:'Out of stock',cls:'badge-critical'};
   if(p.qty<=p.minQty)return{label:'Low stock',cls:'badge-low'};
@@ -2860,16 +2868,16 @@ async function updatePart(){
 }
 
 async function deletePart(id){
-  if(!await confirmDialog({title:'Move this part to Trash?',message:'It will be permanently deleted after 7 days. You can restore it from the Trash page before then.',variant:'danger',confirmText:'Move to Trash'}))return;
+  if(!await confirmDialog({title:'Move this part to Trash?',message:'It leaves the inventory. Its stock in and stock out history stays in the reports, and you can restore it from the Trash page.',variant:'danger',confirmText:'Move to Trash'}))return;
   try{
     await apiFetch('/api/store/parts?id='+id,'DELETE');
     const idx=state.parts.findIndex(p=>p.id===id);
     if(idx>=0){
       const p=state.parts.splice(idx,1)[0];
-      const now=new Date();
-      const purge=new Date(now.getTime()+7*86400000);
-      state.trash.unshift({...p,deletedAt:now.toISOString(),purgeAt:purge.toISOString()});
-      state.transactions=state.transactions.filter(t=>t.partId!==id);
+      // Its movements stay in state.transactions: the history is kept, the part is just known as deleted now.
+      const gone={...p,deleted:true,deletedAt:new Date().toISOString(),archivedAt:null};
+      state.gone=(state.gone||[]).concat([gone]);
+      state.trash.unshift(gone);
     }
     refresh();
   }catch(e){await errorDialog('Could not delete part',e.message);}
@@ -2883,10 +2891,15 @@ async function restoreTrashPart(id){
 }
 
 async function purgeTrashPart(id){
-  if(!await confirmDialog({title:'Permanently delete this part?',message:'The part and all its transaction records will be gone for good. This cannot be undone.',variant:'danger',confirmText:'Delete forever'}))return;
+  if(!await confirmDialog({title:'Remove this part from the Trash?',message:'It leaves the Trash and cannot be restored after this. Its stock in and stock out history stays in the reports.',variant:'danger',confirmText:'Remove from Trash'}))return;
   try{
-    await apiFetch('/api/store/trash?id='+id,'DELETE');
+    const r=await apiFetch('/api/store/trash?id='+id,'DELETE');
     state.trash=state.trash.filter(p=>p.id!==id);
+    const g=(state.gone||[]).find(p=>p.id===id);
+    if(r&&r.archived===false){
+      // It never had any movement, so it was deleted outright.
+      state.gone=state.gone.filter(p=>p.id!==id);
+    }else if(g)g.archivedAt=new Date().toISOString();
     refresh();
   }catch(e){await errorDialog('Could not delete part',e.message);}
 }
@@ -3301,7 +3314,7 @@ function openBatchSticker(partId,n){
     qty:b.inQty>0?b.inQty:Math.max(b.qty,0),po:(first&&first.poNo)||'',dc:(first&&first.challanNo)||'',inv:(first&&first.invoiceNo)||'',label:(first&&first.batchLabel)||''});
 }
 function showStickerDialog(o){
-  const p=state.parts.find(x=>x.id===o.partId);
+  const p=partOf(o.partId);
   if(!p)return;
   const e=_escHtml;
   const q=Math.round((o.qty||0)*1000)/1000;
@@ -3360,7 +3373,7 @@ function stickerPlan(strict){
   return {stickers:all.filter(s=>s.no>=from&&s.no<=to),total,from,to,sum:Math.round(ok.reduce((t,r)=>t+r.q*r.n,0)*1000)/1000};
 }
 function stickerData(stickers,total){
-  const p=state.parts.find(x=>x.id===_st.partId);
+  const p=partOf(_st.partId);
   return {batchNo:stVal('st-batch'),date:stickerDay(stVal('st-date')),desc:stVal('st-desc'),code:p.sku||'',supplier:stVal('st-supplier'),brand:stVal('st-brand'),
     po:stVal('st-po'),dc:stVal('st-dc'),inv:stVal('st-inv'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
 }
@@ -3372,7 +3385,7 @@ function stRefresh(){
   const hint=document.getElementById('st-hint');
   const prev=document.getElementById('st-preview');
   if(plan.error){hint.style.color='#777';hint.textContent=plan.error;prev.srcdoc='';return;}
-  const p=state.parts.find(x=>x.id===_st.partId);
+  const p=partOf(_st.partId);
   const same=p&&p.unit===uom&&_st.ref>0;
   const off=same&&Math.abs(plan.sum-_st.ref)>0.0005;
   hint.style.color=off?'#B45309':'#777';
@@ -3383,7 +3396,7 @@ function stRefresh(){
   prev.srcdoc=stickerDocHtml(stickerData([plan.stickers[0]],plan.total));
 }
 async function printSticker(){
-  const p=state.parts.find(x=>x.id===_st.partId);
+  const p=partOf(_st.partId);
   if(!p)return;
   if(!stVal('st-date')){await warnDialog('Date required','Choose the day the stock was received.');return;}
   if(!stVal('st-desc')){await warnDialog('Description required','Type what the sticker is for.');return;}
@@ -3840,7 +3853,7 @@ function computeBalances(){
   const delta=t=>t.type==='in'?t.qty:-t.qty;
   Object.keys(byPart).forEach(pid=>{
     const list=byPart[pid].slice().sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:a.id-b.id));
-    const part=state.parts.find(p=>String(p.id)===String(pid));
+    const part=state.parts.find(p=>String(p.id)===String(pid))||(state.gone||[]).find(p=>String(p.id)===String(pid));
     // No part row (shouldn't happen — loadAll filters to loaded parts) → fall
     // back to the old sum-from-zero so the column still shows something.
     let bal=part?part.qty:list.reduce((s,t)=>s+delta(t),0);
@@ -3880,7 +3893,7 @@ function renderStockIn(){
   const tb=document.getElementById('stockin-table');
   if(!tb)return;
   if(!txns.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>No matching stock in records</div></td></tr>';updateBulkInfo('in');return;}
-  tb.innerHTML=txns.map((t,i)=>`<tr>
+  tb.innerHTML=txns.map((t,i)=>`<tr class="${isGone(t.partId)?'gone-row':''}">
     <td class="no-print"><input type="checkbox" class="txn-chk-in" data-id="${t.id}" onchange="updateBulkInfo('in')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
@@ -3892,7 +3905,7 @@ function renderStockIn(){
     <td class="machinery-only">${userText(t.ref)||'—'}</td>
     <td class="machinery-only" style="color:#888">${userText(t.notes)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
-    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
+    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only rev-btn"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('in',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('in');
 }
@@ -3909,7 +3922,7 @@ function renderStockOut(){
   const tb=document.getElementById('stockout-table');
   if(!tb)return;
   if(!txns.length){tb.innerHTML='<tr><td colspan="14"><div class="empty"><i class="ti ti-search"></i>No matching stock out records</div></td></tr>';updateBulkInfo('out');return;}
-  tb.innerHTML=txns.map((t,i)=>`<tr>
+  tb.innerHTML=txns.map((t,i)=>`<tr class="${isGone(t.partId)?'gone-row':''}">
     <td class="no-print"><input type="checkbox" class="txn-chk-out" data-id="${t.id}" onchange="updateBulkInfo('out')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
@@ -3921,7 +3934,7 @@ function renderStockOut(){
     <td>${userText(t.issuedTo)||'—'}</td>
     <td class="machinery-only" style="color:#888">${userText(t.purpose)||'—'}</td>${batchCell(t)}
     <td>${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
-    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
+    <td class="no-print" style="white-space:nowrap">${isInks()&&t.type==='in'?`<button class="btn btn-sm" title="Print the sticker for this stock in" onclick="openSticker(${t.id})"><i class="ti ti-printer"></i> Sticker</button> `:''}<span class="write-only rev-btn"><button class="btn btn-sm" style="color:#854F0B" title="Reverse this entry — puts the quantity back" onclick="deleteTxn(${t.id})"><i class="ti ti-arrow-back-up"></i> Reverse</button></span>${canDelete()?` <button class="btn btn-sm btn-restricted" title="Delete this record from history - the quantity on hand is NOT changed" onclick="bulkDeleteTxns('out',true,[${t.id}])"><i class="ti ti-trash"></i> Delete</button>`:''}</td>
   </tr>`).join('');
   updateBulkInfo('out');
 }
@@ -4018,19 +4031,17 @@ function renderTrash(){
   const tb=document.getElementById('trash-table');
   if(!tb)return;
   const items=state.trash||[];
-  if(!items.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><i class="ti ti-trash-off"></i>Trash is empty</div></td></tr>';return;}
+  if(!items.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><i class="ti ti-trash-off"></i>Trash is empty</div></td></tr>';return;}
   const fmtTs=ts=>{if(!ts)return'';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
-  const daysLeft=ts=>{if(!ts)return'';const ms=new Date(ts)-new Date();const d=Math.ceil(ms/86400000);return d<=0?'soon':d+' day'+(d===1?'':'s')+' left'};
   tb.innerHTML=items.map(p=>`<tr>
     <td style="font-family:monospace;font-weight:600;color:#8C2326">${p.sku||'—'}</td>
     <td style="font-weight:600">${p.name}</td>
     <td>${p.category}</td>
     <td>${fmtQty(p.qty)} ${p.unit}</td>
     <td style="color:#888;font-size:12px">${fmtTs(p.deletedAt)}</td>
-    <td style="color:#854F0B;font-size:12px">${fmtTs(p.purgeAt)}<br><span style="color:#aaa">${daysLeft(p.purgeAt)}</span></td>
     <td>
       <button class="btn btn-sm write-only" onclick="restoreTrashPart(${p.id})"><i class="ti ti-arrow-back-up"></i> Restore</button>
-      <button class="btn btn-sm btn-danger-soft write-only" onclick="purgeTrashPart(${p.id})" style="margin-left:4px"><i class="ti ti-x"></i> Delete forever</button>
+      <button class="btn btn-sm btn-danger-soft write-only" onclick="purgeTrashPart(${p.id})" style="margin-left:4px"><i class="ti ti-x"></i> Remove from Trash</button>
     </td>
   </tr>`).join('');
 }

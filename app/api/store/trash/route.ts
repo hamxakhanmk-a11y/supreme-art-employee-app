@@ -4,36 +4,37 @@ import { storeParts } from "@/lib/schema";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { ensureStoreSchema } from "@/lib/store";
 
-const TRASH_RETENTION_DAYS = 7;
+// A deleted part stays in the Trash until someone removes it. Removing it from the Trash hides it for
+// good but keeps its row, so its stock in and out history stays in the reports; a part that never had
+// any movement is deleted outright. Nothing is deleted on a timer.
 function normalizeModule(m: string | null | undefined): "machinery" | "consumables" {
   return m === "consumables" ? "consumables" : "machinery";
 }
 
-async function purgeOldTrash() {
-  // Parts trashed > retention days ago are permanently deleted.
-  await db.execute(sql`DELETE FROM parts WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '7 days'`);
-}
-
-// GET /api/store/trash?module=machinery → { retentionDays, items: [...] }
+// GET /api/store/trash?module=machinery → { items: [...] }  (all=1 also lists those removed from the Trash,
+// which the reports still need to name the parts of old movements; archivedAt says which)
 export async function GET(req: NextRequest) {
   const guard = await guardAuth();
   if (guard instanceof NextResponse) return guard;
   try {
-    await purgeOldTrash();
+    await ensureStoreSchema();
     const mod = normalizeModule(req.nextUrl.searchParams.get("module"));
+    const all = req.nextUrl.searchParams.get("all") === "1";
     const rows = await db.execute(sql`
-      SELECT id, sku, name, category, machine, module, unit, qty,
+      SELECT id, sku, name, category, machine, module, unit, qty, brand, supplier,
+             rack_no     AS "rackNo",
              min_qty     AS "minQty",
              description AS "desc",
              deleted_at::text AS "deletedAt",
-             (deleted_at + INTERVAL '7 days')::text AS "purgeAt"
+             archived_at::text AS "archivedAt"
       FROM parts
-      WHERE module = ${mod} AND deleted_at IS NOT NULL
+      WHERE module = ${mod} AND deleted_at IS NOT NULL ${all ? sql`` : sql`AND archived_at IS NULL`}
       ORDER BY deleted_at DESC
     `);
     const items = (rows as any).rows ?? (rows as any);
-    return NextResponse.json({ retentionDays: TRASH_RETENTION_DAYS, items });
+    return NextResponse.json({ items });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -64,7 +65,8 @@ export async function POST(req: NextRequest) {
         }, { status: 409 });
       }
     }
-    await db.update(storeParts).set({ deletedAt: null }).where(eq(storeParts.id, id));
+    await ensureStoreSchema();
+    await db.execute(sql`UPDATE parts SET deleted_at = NULL, archived_at = NULL WHERE id = ${id}`);
     await logActivity({
       user: guard, action: `store.${target.module}.part.restore`,
       summary: `restored store part "${target.sku ? `[${target.sku}] ` : ""}${target.name}" from trash`,
@@ -75,7 +77,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/store/trash?id=42 — permanent delete (skip retention window)
+// DELETE /api/store/trash?id=42 — remove from the Trash for good. A part with stock in or out history is
+// kept (hidden) so that history stays; one with none is deleted.
 export async function DELETE(req: NextRequest) {
   const guard = await guardWrite("store");
   if (guard instanceof NextResponse) return guard;
@@ -85,9 +88,19 @@ export async function DELETE(req: NextRequest) {
     const id = parseInt(idParam);
     const [target] = await db.select({ module: storeParts.module }).from(storeParts)
       .where(and(eq(storeParts.id, id), isNotNull(storeParts.deletedAt)));
-    await db.execute(sql`DELETE FROM parts WHERE id = ${id} AND deleted_at IS NOT NULL`);
-    await logActivity({ user: guard, action: `store.${target?.module || "unknown"}.part.purge`, summary: `permanently deleted store part #${id}` });
-    return NextResponse.json({ ok: true });
+    await ensureStoreSchema();
+    const hist = ((await db.execute(sql`SELECT 1 FROM transactions WHERE part_id = ${id} LIMIT 1`)) as any);
+    const hasHistory = ((hist.rows ?? hist) as any[]).length > 0;
+    if (hasHistory) {
+      await db.execute(sql`UPDATE parts SET archived_at = now() WHERE id = ${id} AND deleted_at IS NOT NULL AND archived_at IS NULL`);
+    } else {
+      await db.execute(sql`DELETE FROM parts WHERE id = ${id} AND deleted_at IS NOT NULL`);
+    }
+    await logActivity({
+      user: guard, action: `store.${target?.module || "unknown"}.part.purge`,
+      summary: hasHistory ? `removed store part #${id} from the Trash (its history is kept)` : `permanently deleted store part #${id} (it had no history)`,
+    });
+    return NextResponse.json({ ok: true, archived: hasHistory });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
