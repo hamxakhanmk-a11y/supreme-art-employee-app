@@ -6,7 +6,7 @@ import { useState, useMemo } from "react";
 import EmployeesToolbar from "./EmployeesToolbar";
 import PrintHeader from "@/components/PrintHeader";
 import { useCanEdit } from "@/components/MeProvider";
-import { SortBy, type SortOption } from "@/components/ListControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText } from "@/lib/listTools";
 import type { employees } from "@/lib/schema";
 
@@ -107,66 +107,33 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
   return (
     <>
       <PrintHeader title="Employee Directory" subtitle={`${filtered.length} record${filtered.length !== 1 ? "s" : ""}`} />
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Employees</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            {filtered.length} of {rows.length} record{rows.length !== 1 ? "s" : ""}
-            {query && <span style={{ marginLeft: 6, color: "var(--primary)" }}>· filtered by "{query}"</span>}
-          </p>
+      {/* One row: who is shown, search and sort, then the actions at the right. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {([
+            ["active", `Active (${rows.filter(r => r.status === "active").length})`],
+            ["exited", `Exited (${rows.filter(r => r.status !== "active").length})`],
+            ["all", `All (${rows.length})`],
+          ] as [StatusFilter, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              style={{
+                padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer",
+                border: `1px solid ${statusFilter === key ? "var(--primary)" : "var(--border)"}`,
+                background: statusFilter === key ? "var(--primary)" : "var(--bg)",
+                color: statusFilter === key ? "#fff" : "var(--text)",
+              }}
+            >{label}</button>
+          ))}
         </div>
-        <EmployeesToolbar rows={filtered} />
-      </div>
-
-      {/* Status filter */}
-      <div className="no-print" style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-        {([
-          ["active", `Active (${rows.filter(r => r.status === "active").length})`],
-          ["exited", `Exited (${rows.filter(r => r.status !== "active").length})`],
-          ["all", `All (${rows.length})`],
-        ] as [StatusFilter, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setStatusFilter(key)}
-            style={{
-              padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer",
-              border: `1px solid ${statusFilter === key ? "var(--primary)" : "var(--border)"}`,
-              background: statusFilter === key ? "var(--primary)" : "var(--bg)",
-              color: statusFilter === key ? "#fff" : "var(--text)",
-            }}
-          >{label}</button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} accent={false} />
-      </div>
-
-      {/* Search bar */}
-      <div className="no-print" style={{ marginBottom: 14, position: "relative" }}>
-        <input
-          type="text"
-          placeholder="🔍  Search by name, ID, CNIC, designation, department, phone, email…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ width: "100%", padding: "11px 16px", fontSize: 13 }}
-        />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            style={{
-              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-              background: "transparent", border: "none", color: "#888", cursor: "pointer",
-              fontSize: 14, padding: 4,
-            }}
-            title="Clear search"
-          >✕</button>
-        )}
-      </div>
-
-      <div className="table-summary no-print">
-        <strong>{filtered.length}</strong> rows ·{" "}
-        <strong>{rows.filter(r => r.status === "active").length}</strong> active ·{" "}
-        <strong>{rows.filter(r => r.status === "inactive").length}</strong> inactive ·{" "}
-        <strong>{rows.filter(r => r.status === "resigned").length}</strong> exited
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox width={340} value={query} onChange={setQuery} placeholder="🔍  Search name, ID, CNIC, designation, department, phone…" />
+          <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} />
+        </div>
+        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+          <EmployeesToolbar rows={filtered} />
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
