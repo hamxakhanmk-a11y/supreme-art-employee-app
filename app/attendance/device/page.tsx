@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 // Live view of the biometric device feed: device health from the bridge's
 // heartbeat and the raw punches it delivered. Used to check that punches are
@@ -98,7 +99,10 @@ export default function DeviceLogPage() {
             {loadedAt ? ` · updated ${span(Math.max(0, Math.round((now - loadedAt) / 1000)))} ago` : ""}.
           </p>
         </div>
-        <button onClick={load} className="btn btn-sm">↻ Refresh</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/attendance/device/users" className="btn btn-sm">Link device users</Link>
+          <button onClick={load} className="btn btn-sm">↻ Refresh</button>
+        </div>
       </div>
 
       {error && (

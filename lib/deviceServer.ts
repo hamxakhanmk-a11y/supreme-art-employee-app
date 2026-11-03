@@ -50,6 +50,8 @@ export async function ensureDeviceTables() {
     )`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS device_punches_uq ON device_punches (device_serial, device_user_id, punched_at)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS device_punches_punched_at_idx ON device_punches (punched_at)`);
+  // An employee can be linked to at most one user per device.
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS attendance_device_users_employee_uq ON attendance_device_users (device_serial, employee_id) WHERE employee_id IS NOT NULL`);
   tablesEnsured = true;
 }
 

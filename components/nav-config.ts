@@ -87,6 +87,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/attendance", label: "Mark Today" },
         { href: "/attendance/overtime", label: "Overtime" },
         { href: "/attendance/device", label: "Device Log" },
+        { href: "/attendance/device/users", label: "Device Users" },
         { href: "/reports/attendance", label: "📊 Attendance Register", variant: "report", needs: "reports.attendance" },
         { href: "/reports/leaves", label: "📊 Leave History", variant: "report", needs: "reports.leaves" },
         { href: "/reports/half-day", label: "📊 Half-Day History", variant: "report", needs: "reports.halfday" },
