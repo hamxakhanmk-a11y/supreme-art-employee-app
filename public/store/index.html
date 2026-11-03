@@ -161,6 +161,12 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .st-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
 .st-row input{width:auto;flex:1;min-width:0}
 .st-prev{border:1px solid #e8e1d3;border-radius:8px;background:#fafafa;padding:5px;width:fit-content;max-width:100%;overflow:auto}
+/* History windows: wrapping, compact columns. */
+.hist-table{font-size:12px}
+.hist-table th{white-space:normal;line-height:1.15;font-size:10.5px}
+.hist-table td{overflow-wrap:break-word}
+.hist-group th:nth-child(1){width:92px}
+.hist-group th:nth-child(2){min-width:150px}
 /* The window can be taller than a small screen: Print and Cancel stay in view while it scrolls. */
 #modal-sticker .modal-actions{position:sticky;bottom:-1.75rem;background:#fff;z-index:2;margin-bottom:-1.75rem;padding-bottom:1.75rem}
 /* Inks & Consumables inventory: one compact card per product, a row for each supplier + brand. */
@@ -942,7 +948,7 @@ body:not(.role-admin) .admin-only{display:none!important}
 
 <!-- PART HISTORY MODAL -->
 <div class="modal-overlay" id="modal-partHistory">
-  <div class="modal" style="width:1080px">
+  <div class="modal" style="width:1000px">
     <div class="modal-title"><i class="ti ti-history"></i> <span id="ph-title">History</span></div>
     <div id="ph-body"></div>
     <div class="modal-actions"><button class="btn" onclick="closeModal('partHistory')">Close</button></div>
@@ -3153,7 +3159,7 @@ function openPartHistory(pid){
   const have=Math.round((Number(p.qty)||0)*1000)/1000;
   const diff=Math.round((have-sum)*1000)/1000;
   const u=p.unit||'';
-  const cell='padding:6px 10px';
+  const cell='padding:5px 6px';
   const rows=txs.length?txs.map(t=>`<tr class="txn-row-link" onclick="closeModal('partHistory');openTxnInReport(${t.id},{page:'inventory',partId:${p.id}})" title="Open this entry in the ${t.type==='in'?'Stock In':'Stock Out'} report">
       <td style="${cell};white-space:nowrap">${whenHtml(t)}</td>
       <td style="${cell};color:#666;white-space:nowrap">${bal[t.id]==null?'—':fmtQty(Math.round((bal[t.id]-(t.type==='in'?Number(t.qty):-Number(t.qty)))*1000)/1000)+' '+u}</td>
@@ -3164,7 +3170,7 @@ function openPartHistory(pid){
       <td style="${cell};font-family:monospace;color:#555">${t.challanNo||'—'}</td>
       <td style="${cell}">${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
       <td style="${cell};color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>
-      <td style="${cell};white-space:nowrap">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
+      <td style="${cell}">${t.createdBy?_escHtml(t.createdBy):'<span style="color:#bbb" title="Not recorded - entered before names were kept">—</span>'}</td>
     </tr>`).join(''):`<tr><td colspan="9"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded for this part</div></td></tr>`;
   const stat=(label,val,color)=>`<div style="padding:6px 12px;border:1px solid #e8e1d3;border-radius:8px;background:#fafafa"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#888;font-weight:600">${label}</div><div style="font-size:15px;font-weight:700;${color?'color:'+color:''}">${val}</div></div>`;
   const warn=Math.abs(diff)>0.0005
@@ -3178,7 +3184,7 @@ function openPartHistory(pid){
     </div>
     ${warn}
     <div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px">
-      <table style="width:100%;font-size:12.5px"><thead><tr><th style="${cell}">When</th><th style="${cell}">Before</th><th style="${cell}">Change</th><th style="${cell}">After</th><th style="${cell}">Reason</th>${isInks()?`<th style="${cell}">Batch</th>`:''}<th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th><th style="${cell}">By</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="hist-table" style="width:100%"><thead><tr><th style="${cell}">When</th><th style="${cell}">Before</th><th style="${cell}">Change</th><th style="${cell}">After</th><th style="${cell}">Reason</th>${isInks()?`<th style="${cell}">Batch</th>`:''}<th style="${cell}">Challan</th><th style="${cell}">Supplier / Issued to</th><th style="${cell}">Notes / Purpose</th><th style="${cell}">By</th></tr></thead><tbody>${rows}</tbody></table>
     </div>`;
   document.getElementById('modal-partHistory').classList.add('open');
 }
@@ -3676,7 +3682,7 @@ function openGroupHistory(k,brandId){
   const e=_escHtml;
   const units=[...new Set(sel.map(p=>p.unit||''))];
   const u=units.length===1?units[0]:'';
-  const cell='padding:6px 10px';
+  const cell='padding:5px 6px';
   const part=id=>members.find(p=>p.id===id);
   const totIn=Math.round(txs.filter(t=>t.type==='in').reduce((x,t)=>x+Number(t.qty),0)*1000)/1000;
   const totOut=Math.round(txs.filter(t=>t.type==='out').reduce((x,t)=>x+Number(t.qty),0)*1000)/1000;
@@ -3688,7 +3694,7 @@ function openGroupHistory(k,brandId){
     const before=bal[t.id]==null?'—':fmtQty(Math.round((bal[t.id]-(t.type==='in'?Number(t.qty):-Number(t.qty)))*1000)/1000)+un;
     return '<tr class="txn-row-link" onclick="closeModal(\'partHistory\');openTxnInReport('+t.id+',{page:\'inventory\',groupKey:_ghKey,brandId:'+(brandId?"\'"+brandId+"\'":'null')+'})" title="Open this entry in the '+(t.type==='in'?'Stock In':'Stock Out')+' report">'
       +'<td style="'+cell+';white-space:nowrap">'+whenHtml(t)+'</td>'
-      +'<td style="'+cell+';white-space:nowrap"><b>'+e(p?(p.supplier||'No supplier'):'—')+'</b>'+(p&&p.brand?' · '+e(p.brand):'')+'</td>'
+      +'<td style="'+cell+'"><b>'+e(p?(p.supplier||'No supplier'):'—')+'</b>'+(p&&p.brand?'<div style="color:#555">'+e(p.brand)+'</div>':'')+'</td>'
       +'<td style="'+cell+';color:#666;white-space:nowrap">'+before+'</td>'
       +'<td class="'+(t.type==='in'?'qty-positive':'qty-negative')+'" style="'+cell+';white-space:nowrap">'+(t.type==='in'?'+':'\u2212')+fmtQty(t.qty)+un+'</td>'
       +'<td style="'+cell+';font-weight:600;white-space:nowrap">'+(bal[t.id]==null?'—':fmtQty(bal[t.id])+un)+'</td>'
@@ -3697,7 +3703,7 @@ function openGroupHistory(k,brandId){
       +'<td style="'+cell+';font-family:monospace;color:#555">'+(t.challanNo||'—')+'</td>'
       +'<td style="'+cell+'">'+e(userText(t.type==='in'?t.ref:t.issuedTo)||'—')+'</td>'
       +'<td style="'+cell+';color:#888">'+e(userText(t.type==='in'?t.notes:t.purpose)||'—')+'</td>'
-      +'<td style="'+cell+';white-space:nowrap">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
+      +'<td style="'+cell+'">'+(t.createdBy?e(t.createdBy):'<span style="color:#bbb">—</span>')+'</td>'
       +'</tr>';
   }).join(''):'<tr><td colspan="11"><div class="empty" style="padding:1.5rem"><i class="ti ti-search"></i>No stock in or out recorded yet</div></td></tr>';
   const pick='<select onchange="openGroupHistory(_ghKey,this.value)" style="margin-bottom:12px;max-width:100%"><option value="">All suppliers / brands ('+members.length+')</option>'
@@ -3707,7 +3713,7 @@ function openGroupHistory(k,brandId){
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
     +stat('On hand',fmtQty(have)+(u?' '+u:''))+stat('Total in','+'+fmtQty(totIn)+(u?' '+u:''),'#2d6a10')+stat('Total out','\u2212'+fmtQty(totOut)+(u?' '+u:''),'#993C1D')+'</div>'
     +(members.length>1?pick:'')
-    +'<div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table style="width:100%;font-size:12.5px"><thead><tr>'
+    +'<div style="max-height:52vh;overflow:auto;border:1px solid #e8e1d3;border-radius:8px"><table class="hist-table hist-group" style="width:100%"><thead><tr>'
     +['When','Supplier · Brand','Before','Change','After','Reason','Batch','Challan','Supplier / Issued to','Notes / Purpose','By'].map(h=>'<th style="'+cell+'">'+h+'</th>').join('')
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   document.getElementById('modal-partHistory').classList.add('open');
