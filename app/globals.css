@@ -529,29 +529,29 @@ th.num, th.num-strong { text-align: right; }
   overflow: hidden;
   background: linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: #fff;
-  border-radius: 12px;
-  padding: 14px 24px;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 14px rgba(124,31,31,0.20);
+  border-radius: 10px;
+  padding: 7px 18px;
+  margin-bottom: 0.6rem;
+  box-shadow: 0 3px 10px rgba(124,31,31,0.18);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   min-height: 0;
   animation: heroIn 0.4s ease-out both;
 }
 .hero-greet {
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.9;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   font-weight: 600;
 }
-.hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero-cta { display: flex; gap: 8px; flex-wrap: wrap; }
 .hero-btn {
-  padding: 9px 18px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 7px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -565,9 +565,9 @@ th.num, th.num-strong { text-align: right; }
 .hero-btn-dark { background: rgba(0,0,0,0.18); color: #fff; border-color: rgba(255,255,255,0.35); }
 .hero-btn-dark:hover { background: rgba(0,0,0,0.28); transform: translateY(-1px); }
 
-.hero-mark { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; z-index: 1; }
-.hero-mark-img { height: 58px; width: auto; filter: brightness(0) invert(1); }
-.hero-mark-text { color: #fff; font-family: 'Georgia', 'Times New Roman', serif; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 2px; white-space: nowrap; }
+.hero-mark { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; z-index: 1; }
+.hero-mark-img { height: 32px; width: auto; filter: brightness(0) invert(1); }
+.hero-mark-text { color: #fff; font-family: 'Georgia', 'Times New Roman', serif; font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 1px; white-space: nowrap; }
 
 @media (max-width: 700px) {
   .hero { padding: 14px 18px; }
