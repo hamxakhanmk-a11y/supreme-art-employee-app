@@ -5,6 +5,9 @@ import { useMemo, useState } from "react";
 import { inReportRange, reportLetterhead } from "@/lib/report-export";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
+import { StatChip } from "@/components/ReportExportControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 
 export interface DirectoryRow {
   product: string;
@@ -27,6 +30,37 @@ export interface DirectoryRow {
 }
 
 type ViewMode = "orders" | "byProduct";
+
+// Sorting. "Every order" lists rows (newest first by default); "By product" lists product groups (A-Z by
+// default), so its choices reorder whole groups and keep each product's suppliers together.
+type DirSort = "date" | "dateAsc" | "product" | "supplier" | "rate" | "net" | "az" | "za" | "suppliers" | "ordered";
+const ORDER_SORT_OPTIONS: SortOption<DirSort>[] = [
+  { value: "date", label: "Latest order" },
+  { value: "dateAsc", label: "Oldest order" },
+  { value: "product", label: "Product A-Z" },
+  { value: "supplier", label: "Supplier A-Z" },
+  { value: "rate", label: "Rate (highest first)" },
+  { value: "net", label: "Net value (highest first)" },
+];
+const PRODUCT_SORT_OPTIONS: SortOption<DirSort>[] = [
+  { value: "az", label: "Product A-Z" },
+  { value: "za", label: "Product Z-A" },
+  { value: "suppliers", label: "Most suppliers" },
+  { value: "ordered", label: "Most ordered" },
+];
+const ORDER_SORTS: Partial<Record<DirSort, (a: DirectoryRow, b: DirectoryRow) => number>> = {
+  dateAsc: (a, b) => (a.date || "").localeCompare(b.date || ""),
+  product: (a, b) => cmpText(a.product, b.product),
+  supplier: (a, b) => cmpText(a.supplier, b.supplier),
+  rate: (a, b) => (b.rate ?? -1) - (a.rate ?? -1),
+  net: (a, b) => (b.net ?? -1) - (a.net ?? -1),
+};
+type ProductEntry = [string, Map<string, { count: number }>];
+const PRODUCT_SORTS: Partial<Record<DirSort, (a: ProductEntry, b: ProductEntry) => number>> = {
+  za: (a, b) => b[0].localeCompare(a[0]),
+  suppliers: (a, b) => b[1].size - a[1].size,
+  ordered: (a, b) => [...b[1].values()].reduce((s, x) => s + x.count, 0) - [...a[1].values()].reduce((s, x) => s + x.count, 0),
+};
 
 // "1,250.00 / Pcs" — blank when no rate was ever entered on the PO line.
 function rateLabel(rate: number | null, uom: string): string {
@@ -119,6 +153,8 @@ export default function SupplierDirectoryClient({
   // hiding the tabs alone would leave the per-order view one stray setView
   // away. Everything that branches on the view reads this, not `view`.
   const activeView: ViewMode = byProductOnly ? "byProduct" : view;
+  // Each view has its own sort choices; the first of each is the order that view has always had.
+  const [sort, setSort] = useState<DirSort>(byProductOnly ? "az" : "date");
 
   // ---- Inline rate / tax editing (By product view) ----
   // Saves a note against this product + supplier and nothing more: the PO the
@@ -164,7 +200,7 @@ export default function SupplierDirectoryClient({
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.product} ${r.supplier}`.toLowerCase().includes(s);
-  }).sort((a, b) => (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate]);
+  }).sort((a, b) => (ORDER_SORTS[sort]?.(a, b) ?? 0) || (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate, sort]);
 
   const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
     gross: s.gross + (r.gross ?? 0),
@@ -215,7 +251,7 @@ export default function SupplierDirectoryClient({
     if (supplierFilter) products = products.filter(([, m]) => m.has(supplierFilter));
     const s = q.trim().toLowerCase();
     if (s) products = products.filter(([product, m]) => product.toLowerCase().includes(s) || [...m.keys()].some(sp => sp.toLowerCase().includes(s)));
-    products.sort((a, b) => a[0].localeCompare(b[0]));
+    products.sort((a, b) => (PRODUCT_SORTS[sort]?.(a, b) ?? 0) || a[0].localeCompare(b[0]));
 
     const flat: FlatRow[] = [];
     for (const [product, suppliersMap] of products) {
@@ -235,7 +271,7 @@ export default function SupplierDirectoryClient({
       });
     }
     return flat;
-  }, [rows, rateNotes, q, supplierFilter, fromDate, toDate]);
+  }, [rows, rateNotes, q, supplierFilter, fromDate, toDate, sort]);
 
   // ---- Rate history (By product view) ----
   // Every order of one product from one supplier, newest first. Built from all
@@ -326,32 +362,37 @@ export default function SupplierDirectoryClient({
 
   return (
     <div className="fade-up">
-      {/* Row 1: search, supplier, and the way back. Row 2: the view tabs, the date range, Excel. */}
-      <div className="toolbar-row">
-        <input
-          value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Product or supplier…"
-          style={{ width: 240 }}
-        />
-        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} style={{ maxWidth: 220 }}>
-          <option value="">All suppliers</option>
-          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <div style={{ flex: 1 }} />
-        <Link href="/reports/procurement" className="btn btn-back btn-sm">← Back</Link>
-      </div>
-      <div className="toolbar-row">
+      {/* One row, wrapping group by group: the count chip, search + sort + supplier, the view tabs, the
+          date range, and at the right end Excel and the way back. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {activeView === "orders"
+            ? <StatChip label="Orders" value={filteredOrders.length} />
+            : <StatChip label="Products" value={new Set(byProduct.map(r => r.product)).size} />}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          <SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search product or supplier…" />
+          <SortBy options={activeView === "orders" ? ORDER_SORT_OPTIONS : PRODUCT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+          <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} style={{ maxWidth: 220, width: "auto" }}>
+            <option value="">All suppliers</option>
+            {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
         {!byProductOnly && (
-          <div className="tabs">
-            <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => setView("orders")}>Every order</button>
-            <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => setView("byProduct")}>By product</button>
+          <div className="tabs" style={{ flexShrink: 0 }}>
+            <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => { setView("orders"); setSort("date"); }}>Every order</button>
+            <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => { setView("byProduct"); setSort("az"); }}>By product</button>
           </div>
         )}
-        <label className="head-filter">From <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} style={{ width: 138 }} /></label>
-        <label className="head-filter">To <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} style={{ width: 138 }} /></label>
-        <div style={{ flex: 1 }} />
-        {(exportError || (fromDate && toDate && fromDate > toDate)) && <span role="alert">{exportError || "From date must be on or before To date."}</span>}
-        <button className="btn btn-sm" disabled={exporting || !!(fromDate && toDate && fromDate > toDate)} onClick={exportXlsx}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          <label className="head-filter">From <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} style={{ width: 138 }} /></label>
+          <label className="head-filter">To <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} style={{ width: 138 }} /></label>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          {(exportError || (fromDate && toDate && fromDate > toDate)) && <span role="alert">{exportError || "From date must be on or before To date."}</span>}
+          <button className="btn" disabled={exporting || !!(fromDate && toDate && fromDate > toDate)} onClick={exportXlsx}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
+          <Link href="/reports/procurement" className="btn btn-back">← Back</Link>
+        </div>
       </div>
 
       <div className="rpt-table-wrap rpt-table-wrap--fit">

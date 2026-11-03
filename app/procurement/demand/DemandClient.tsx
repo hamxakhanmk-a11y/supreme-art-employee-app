@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
-import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
+import ReportExportControls, { useReportRange, StatChip } from "@/components/ReportExportControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
@@ -15,6 +17,30 @@ interface Demand {
 
 const blankItem = (n: number): DemandItem => ({ srNo: n, material: "", requiredFor: "", quantity: "", remarks: "" });
 
+// "numDesc" (highest demand number first) is the order the page has always loaded in.
+type DemandSort = "numDesc" | "numAsc" | "latest" | "oldest" | "required" | "person" | "dept" | "status";
+const DEMAND_SORT_OPTIONS: SortOption<DemandSort>[] = [
+  { value: "numDesc", label: "Demand # (highest first)" },
+  { value: "numAsc", label: "Demand # (lowest first)" },
+  { value: "latest", label: "Latest date" },
+  { value: "oldest", label: "Oldest date" },
+  { value: "required", label: "Required by (soonest)" },
+  { value: "person", label: "Demand by" },
+  { value: "dept", label: "Department" },
+  { value: "status", label: "Status" },
+];
+const demandNewest = (a: Demand, b: Demand) => b.demandNo - a.demandNo;
+const DEMAND_SORTS: Record<DemandSort, (a: Demand, b: Demand) => number> = {
+  numDesc: demandNewest,
+  numAsc: (a, b) => a.demandNo - b.demandNo,
+  latest: (a, b) => (b.date || "").localeCompare(a.date || "") || demandNewest(a, b),
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || "") || demandNewest(a, b),
+  required: (a, b) => cmpText(a.requiredBy, b.requiredBy) || demandNewest(a, b),
+  person: (a, b) => cmpText(a.demandBy, b.demandBy) || demandNewest(a, b),
+  dept: (a, b) => cmpText(a.department, b.department) || demandNewest(a, b),
+  status: (a, b) => cmpText(a.status, b.status) || demandNewest(a, b),
+};
+
 export default function DemandClient({ rows }: { rows: Demand[] }) {
   const router = useRouter();
   const reportRange = useReportRange(rows);
@@ -26,6 +52,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<DemandSort>("numDesc");
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [requiredBy, setRequiredBy] = useState("");
@@ -86,8 +113,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   // required-for, remarks).
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return datedRows;
-    return datedRows.filter(d => {
+    const found = !s ? datedRows : datedRows.filter(d => {
       const items = parseItems<DemandItem>(d.items);
       const hay = [
         `#${d.demandNo}`, String(d.demandNo), d.demandBy, d.department, d.preparedBy, d.approvedBy,
@@ -95,11 +121,12 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
       ].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(s);
     });
-  }, [datedRows, q]);
+    return [...found].sort(DEMAND_SORTS[sort]);
+  }, [datedRows, q, sort]);
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Number, person, item…" title="Search demands — number, person, department, or item description" style={searchInput} />} actions={canEdit ? <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary btn-sm">{open ? "✕ Close" : "＋ New Demand"}</button> : null} />
+      <ReportExportControls range={reportRange} filename="demand-register" sheet={{sheetName:"Demands", title:"MATERIAL DEMAND REGISTER", headers:["Material","Demand #","Date","Required by","Requested by","Department","Required for","Quantity","Remarks","Status"], colWidths:[34,12,14,14,22,22,24,12,30,14], rows:shown.flatMap(d=>{const lines=parseItems<DemandItem>(d.items);return (lines.length?lines:[blankItem(1)]).map(it=>[it.material,d.demandNo,fmtDate(d.date),fmtDate(d.requiredBy),d.demandBy,d.department,it.requiredFor,it.quantity,it.remarks,d.status]);})}} chips={<StatChip label="Demands" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search number, person, item…" />} sort={<SortBy options={DEMAND_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? <button onClick={() => { resetForm(); setOpen(o => !o); }} className="btn btn-primary">{open ? "✕ Close" : "＋ New Demand"}</button> : null} />
 
       {open && canEdit && (
         <div className="card no-print" style={{ marginBottom: 18, padding: 18 }}>
@@ -222,4 +249,3 @@ function StatusBadge({ status }: { status: string }) {
   return <span style={{ padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{status}</span>;
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
-const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };

@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { fmtDate, type InspectionResult } from "@/lib/procurement";
 import QcBadge, { qcText } from "@/components/procurement/QcBadge";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
+import { StatChip } from "@/components/ReportExportControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 
 import PrintLandscape from "@/components/PrintLandscape";
 
@@ -31,10 +34,31 @@ const STATUS_META = {
 
 type Filter = "all" | "received" | "partial" | "none";
 
+// "default" keeps the order the page sends (newest PO first, then PO number, then line order).
+type RowSort = "default" | "oldest" | "item" | "supplier" | "po" | "status";
+const SORT_OPTIONS: SortOption<RowSort>[] = [
+  { value: "default", label: "Newest PO first" },
+  { value: "oldest", label: "Oldest PO first" },
+  { value: "item", label: "Description" },
+  { value: "supplier", label: "Supplier" },
+  { value: "po", label: "PO #" },
+  { value: "status", label: "Received status" },
+];
+const STATUS_ORDER = { none: 0, partial: 1, received: 2 } as const;
+const SORTS: Record<RowSort, (a: MasterRow, b: MasterRow) => number> = {
+  default: () => 0,
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || ""),
+  item: (a, b) => cmpText(a.description, b.description),
+  supplier: (a, b) => cmpText(a.supplier, b.supplier),
+  po: (a, b) => cmpText(a.poNo, b.poNo),
+  status: (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status],
+};
+
 export default function ProcurementReportClient({ rows, from, to }: { rows: MasterRow[]; from: string; to: string }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<RowSort>("default");
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -55,7 +79,7 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
     if (!s) return true;
     const grrHay = r.grns.map(g => `${g.label} ${g.gatePass} ${g.invNo} ${g.dcNo} ${qcText(g.qc)}`).join(" ");
     return `${r.description} ${r.supplier} ${r.demandNo} ${r.poNo} ${grrHay}`.toLowerCase().includes(s);
-  }), [rows, filter, supplierFilter, q]);
+  }).sort(SORTS[sort]), [rows, filter, supplierFilter, q, sort]);
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -105,35 +129,40 @@ export default function ProcurementReportClient({ rows, from, to }: { rows: Mast
           <div className="master-heading"><h2>PROCUREMENT MASTER REPORT</h2><div className="master-control"><span>{meta.code}</span><span>Date: {meta.date}</span><span>Issue Status: {meta.issue}</span></div></div>
         </div>
       </div>
-      {/* Row 1: search and supplier. Row 2: the received-status pills, the date range
-          (a GET form, laid out inline), and Excel / Print at the right end. */}
-      <div className="no-print toolbar-row">
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 Item, supplier, PO / GRR…" title="Description, supplier, demand / PO / GRR / gate pass / invoice / DC / QC"
-          style={{ borderRadius: 8, border: "1px solid var(--border)", width: 240 }} />
-        <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
-          style={{ borderRadius: 8, border: "1px solid var(--border)", maxWidth: 220 }}>
-          <option value="">All suppliers ({suppliers.length})</option>
-          {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      <div className="no-print toolbar-row">
-        {FILTERS.map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)} style={{
-            padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, cursor: "pointer",
-            border: `1px solid ${filter === f.key ? "var(--brand)" : "var(--border)"}`,
-            background: filter === f.key ? "var(--brand)" : "var(--bg)",
-            color: filter === f.key ? "#fff" : "var(--text)",
-          }}>{f.label} ({counts[f.key]})</button>
-        ))}
-        <form method="GET" style={{ display: "contents" }}>
+      {/* One row, wrapping group by group: the line count, search + sort + supplier, the received-status
+          pills, the date range (a GET form, laid out inline), and Print / Excel at the right end. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <StatChip label="Lines" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          <SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search item, supplier, PO / GRR…" />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+          <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}
+            style={{ borderRadius: 8, border: "1px solid var(--border)", maxWidth: 220, width: "auto" }}>
+            <option value="">All suppliers ({suppliers.length})</option>
+            {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {FILTERS.map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)} style={{
+              padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, cursor: "pointer",
+              border: `1px solid ${filter === f.key ? "var(--brand)" : "var(--border)"}`,
+              background: filter === f.key ? "var(--brand)" : "var(--bg)",
+              color: filter === f.key ? "#fff" : "var(--text)",
+            }}>{f.label} ({counts[f.key]})</button>
+          ))}
+        </div>
+        <form method="GET" style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <label className="head-filter">From <input type="date" name="from" defaultValue={from} style={{ width: 138 }} /></label>
           <label className="head-filter">To <input type="date" name="to" defaultValue={to} style={{ width: 138 }} /></label>
           <button type="submit" className="btn btn-primary btn-sm">Apply</button>
         </form>
-        <div style={{ flex: 1 }} />
-        <button onClick={exportXlsx} className="btn btn-sm" disabled={shown.length === 0 || exporting}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
-        <button onClick={() => window.print()} className="btn btn-sm btn-print">🖨 Print</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
+          <button onClick={exportXlsx} className="btn" disabled={shown.length === 0 || exporting}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
+        </div>
       </div>
 
       {exportError && <p className="no-print" role="alert">{exportError}</p>}

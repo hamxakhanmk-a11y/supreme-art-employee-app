@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
-import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
+import ReportExportControls, { useReportRange, StatChip } from "@/components/ReportExportControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
@@ -22,6 +24,30 @@ interface Supplier {
 }
 
 const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
+
+// "numDesc" (highest PO number first) is the order the page has always loaded in.
+type PoSort = "numDesc" | "numAsc" | "latest" | "oldest" | "supplier" | "delivery" | "demand" | "status";
+const PO_SORT_OPTIONS: SortOption<PoSort>[] = [
+  { value: "numDesc", label: "PO # (highest first)" },
+  { value: "numAsc", label: "PO # (lowest first)" },
+  { value: "latest", label: "Latest date" },
+  { value: "oldest", label: "Oldest date" },
+  { value: "supplier", label: "Supplier" },
+  { value: "delivery", label: "Delivery date" },
+  { value: "demand", label: "Demand #" },
+  { value: "status", label: "Status" },
+];
+const poNewest = (a: Po, b: Po) => b.poNo - a.poNo;
+const PO_SORTS: Record<PoSort, (a: Po, b: Po) => number> = {
+  numDesc: poNewest,
+  numAsc: (a, b) => a.poNo - b.poNo,
+  latest: (a, b) => (b.date || "").localeCompare(a.date || "") || poNewest(a, b),
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || "") || poNewest(a, b),
+  supplier: (a, b) => cmpText(a.supplierName, b.supplierName) || poNewest(a, b),
+  delivery: (a, b) => cmpText(a.expectedDate, b.expectedDate) || poNewest(a, b),
+  demand: (a, b) => (b.demandNo ?? 0) - (a.demandNo ?? 0) || poNewest(a, b),
+  status: (a, b) => cmpText(a.status, b.status) || poNewest(a, b),
+};
 
 export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[]; openDemands: OpenDemand[]; suppliers: Supplier[] }) {
   const router = useRouter();
@@ -56,6 +82,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
   const [taxFilter, setTaxFilter] = useState<"all" | "reg" | "unreg" | "unmarked">("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<PoSort>("numDesc");
 
   function resetForm() {
     setEditId(null); setEditNo(null);
@@ -227,7 +254,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   // Search PO#, supplier, demand ref, order-placed-by and every line description.
   const qs = q.trim().toLowerCase();
-  const shown = !qs ? shownRows : shownRows.filter(p => {
+  const found = !qs ? shownRows : shownRows.filter(p => {
     const its = parseItems<PoItem>(p.items);
     const hay = [
       `#${docNoLabel(p.poNo, p.registered)}`, String(p.poNo),
@@ -236,11 +263,12 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     ].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(qs);
   });
+  const shown = [...found].sort(PO_SORTS[sort]);
 
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 PO, supplier, item…" title="Search POs — number, supplier, or item description" style={searchInput} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary btn-sm">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn btn-sm" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
+      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} chips={<StatChip label="Purchase orders" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search PO, supplier, item…" />} sort={<SortBy options={PO_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
         <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
@@ -567,4 +595,3 @@ const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repea
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
 const numInput: React.CSSProperties = { width: "100%", minWidth: 50, textAlign: "right" };
 const calcCell: React.CSSProperties = { textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--text2)", whiteSpace: "nowrap", paddingRight: 6 };
-const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };

@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
-import ReportExportControls, { useReportRange } from "@/components/ReportExportControls";
+import ReportExportControls, { useReportRange, StatChip } from "@/components/ReportExportControls";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCanEdit } from "@/components/MeProvider";
@@ -21,6 +23,28 @@ interface OpenPo {
 
 const blankItem = (n: number): GrnItem => ({ srNo: n, item: "", quantity: "", remarks: "", invoiceQty: "" });
 
+// "numDesc" (highest GRR number first) is the order the page has always loaded in.
+type GrnSort = "numDesc" | "numAsc" | "latest" | "oldest" | "gatePass" | "po" | "invoice";
+const GRN_SORT_OPTIONS: SortOption<GrnSort>[] = [
+  { value: "numDesc", label: "GRR # (highest first)" },
+  { value: "numAsc", label: "GRR # (lowest first)" },
+  { value: "latest", label: "Latest date" },
+  { value: "oldest", label: "Oldest date" },
+  { value: "gatePass", label: "Gate pass No" },
+  { value: "po", label: "PO # (highest first)" },
+  { value: "invoice", label: "Invoice No" },
+];
+const grnNewest = (a: Grn, b: Grn) => b.grnNo - a.grnNo;
+const GRN_SORTS: Record<GrnSort, (a: Grn, b: Grn) => number> = {
+  numDesc: grnNewest,
+  numAsc: (a, b) => a.grnNo - b.grnNo,
+  latest: (a, b) => (b.date || "").localeCompare(a.date || "") || grnNewest(a, b),
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || "") || grnNewest(a, b),
+  gatePass: (a, b) => cmpText(a.gatePassNo, b.gatePassNo) || grnNewest(a, b),
+  po: (a, b) => (b.poNo ?? 0) - (a.poNo ?? 0) || grnNewest(a, b),
+  invoice: (a, b) => cmpText(a.invNo, b.invNo) || grnNewest(a, b),
+};
+
 export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; openPos: OpenPo[]; checklist: GrrChecklist }) {
   const router = useRouter();
   const reportRange = useReportRange(rows);
@@ -36,6 +60,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   // A GRR is "final" once its invoice number is in; without it, it's pending.
   const [invFilter, setInvFilter] = useState<"all" | "final" | "pending">("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<GrnSort>("numDesc");
 
   // Which list the GRR belongs to — fixes its sequence (15000 vs 15000u).
   const [registered, setRegistered] = useState<boolean | null>(null);
@@ -150,7 +175,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
 
   // Search GRR#, PO#, gate-pass, invoice, sign-off names and every item line.
   const qs = q.trim().toLowerCase();
-  const shown = !qs ? base : base.filter(g => {
+  const found = !qs ? base : base.filter(g => {
     const its = parseItems<GrnItem>(g.items);
     const hay = [
       `#${docNoLabel(g.grnNo, g.registered)}`, String(g.grnNo),
@@ -160,12 +185,13 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
     ].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(qs);
   });
+  const shown = [...found].sort(GRN_SORTS[sort]);
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} search={<input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 GRR, PO, gate pass, item…" title="Search GRRs — number, PO, gate pass, invoice, DC, or item" style={searchInput} />} actions={canEdit ? <>
-        <button onClick={() => setSettingsOpen(v => !v)} className="btn btn-sm" title="The inspection checklist: categories and their points">⚙ Settings</button>
-        {open ? <button onClick={() => setOpen(false)} className="btn btn-primary btn-sm">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary btn-sm">＋ New GRR</button>}
+      <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} chips={<StatChip label="GRRs" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search GRR, PO, gate pass, item…" />} sort={<SortBy options={GRN_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? <>
+        <button onClick={() => setSettingsOpen(v => !v)} className="btn" title="The inspection checklist: categories and their points">⚙ Settings</button>
+        {open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary">＋ New GRR</button>}
       </> : null} tabs={<>
         <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
@@ -450,4 +476,3 @@ function FilterTab({ label, n, active, onClick, color = "var(--brand)" }: {
   );
 }
 const cellInput: React.CSSProperties = { width: "100%", minWidth: 90 };
-const searchInput: React.CSSProperties = { width: 240, maxWidth: "100%", borderRadius: 8, border: "1px solid var(--border)" };
