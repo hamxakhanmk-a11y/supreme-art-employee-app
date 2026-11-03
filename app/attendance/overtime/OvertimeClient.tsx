@@ -85,7 +85,7 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
       {canEdit && (
         <div className="card" style={{ padding: 12 }}>
           <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-            <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
+            <SearchBox width={320} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
             <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} />
           </div>
           {shownEmps.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, padding: "8px 0" }}>No employee matches “{query}”.</div>}

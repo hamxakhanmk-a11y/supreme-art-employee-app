@@ -98,10 +98,14 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
         <button className="btn btn-sm" onClick={() => changeMonth(1)}>Next →</button>
         <Link href="/attendance/overtime" className="btn btn-sm">✎ Record overtime</Link>
         <div style={{ flex: 1 }} />
-        <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
-        <SortBy options={OT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
-        <button onClick={exportXlsx} className="btn btn-sm" disabled={gridEmps.length === 0}>⬇ Export Excel</button>
-        <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
+          <SortBy options={OT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
+          <button onClick={exportXlsx} className="btn btn-sm" disabled={gridEmps.length === 0}>⬇ Export Excel</button>
+        </div>
       </div>
 
       <div className="card ot-wrap" style={{ padding: 0, overflow: "auto" }}>

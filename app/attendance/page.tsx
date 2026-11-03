@@ -419,7 +419,7 @@ export default function AttendancePage() {
       )}
 
       <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, designation, department, status, notes…" />
+        <SearchBox width={340} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, designation, department, status, notes…" />
         <SortBy options={DAY_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
       </div>
       {query && !loading && <div className="no-print" style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>Showing {view.length} of {rows.length}</div>}

@@ -6,7 +6,7 @@ import SidebarSlot from "@/components/SidebarSlot";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { SearchBox } from "@/components/ListControls";
+import { SearchBox, SortBy } from "@/components/ListControls";
 import { empMatches } from "@/lib/listTools";
 import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
@@ -215,10 +215,14 @@ export default function MonthlyRegisterClient({
           </select>
           <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
           <div style={{ flex: 1 }} />
-          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
-          <SortSelect value={sort} onChange={setSort} />
-          <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
-          <button onClick={exportXlsx} className="btn btn-primary">⬇ Excel</button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
+            <SortSelect value={sort} onChange={setSort} />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
+            <button onClick={exportXlsx} className="btn btn-primary">⬇ Excel</button>
+          </div>
         </div>
       )}
 
@@ -507,10 +511,14 @@ export function RangeToolbar({
         <button onClick={() => presetYear(fy)} className="btn btn-sm" title="Full calendar year">Full year</button>
       </div>
       <div style={{ flex: 1 }} />
-      {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" width={180} />}
-      {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
-      <button onClick={onPrint} className="btn btn-print">🖨 Print</button>
-      <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" width={180} />}
+        {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button onClick={onPrint} className="btn btn-print">🖨 Print</button>
+        <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
+      </div>
     </div>
   );
 }
@@ -537,16 +545,7 @@ export function YieldNote() {
 }
 
 export function SortSelect({ value, onChange }: { value: SortKey; onChange: (s: SortKey) => void }) {
-  return (
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value as SortKey)}
-      title="Sort employees by"
-      style={{ width: 150 }}
-    >
-      {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
-    </select>
-  );
+  return <SortBy options={SORT_OPTIONS} value={value} onChange={onChange} minWidth={150} />;
 }
 
 // Live "time required" summary — required hours only count days marked so far

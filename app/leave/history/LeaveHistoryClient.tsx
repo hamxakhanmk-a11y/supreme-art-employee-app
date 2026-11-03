@@ -140,6 +140,7 @@ export default function LeaveHistoryClient({
       {/* One row of controls, then a thin row of counts. */}
       <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
         <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee, type, status, reason…" width={250} />
+        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
         <span style={LBL}>From</span>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 140 }} />
         <span style={LBL}>To</span>
@@ -154,10 +155,10 @@ export default function LeaveHistoryClient({
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
-        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
-        <div style={{ flex: 1 }} />
-        <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
-        <button onClick={exportCSV} className="btn btn-primary" disabled={!filtered.length}>⬇ Excel</button>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
+          <button onClick={exportCSV} className="btn btn-primary" disabled={!filtered.length}>⬇ Excel</button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>

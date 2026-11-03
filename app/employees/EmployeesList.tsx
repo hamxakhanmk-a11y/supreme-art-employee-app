@@ -137,7 +137,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
           >{label}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} />
+        <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} glass={false} />
       </div>
 
       {/* Search bar */}
