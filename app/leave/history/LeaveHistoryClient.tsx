@@ -44,7 +44,6 @@ export default function LeaveHistoryClient({
 
   const [from, setFrom] = useState(yearAgo);
   const [to, setTo] = useState(today);
-  const [employeeId, setEmployeeId] = useState("");
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<LeaveSort>("recent");
@@ -57,13 +56,12 @@ export default function LeaveHistoryClient({
       const p = new URLSearchParams();
       if (from) p.set("from", from);
       if (to) p.set("to", to);
-      if (employeeId) p.set("employeeId", employeeId);
       if (status) p.set("status", status);
       const res = await fetch(`/api/leave/requests?${p}`);
       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
     } finally { setLoading(false); }
-  }, [from, to, employeeId, status]);
+  }, [from, to, status]);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
@@ -124,10 +122,8 @@ export default function LeaveHistoryClient({
     );
   };
 
-  const empMeta = employeeId ? (() => {
-    const e = empById.get(parseInt(employeeId));
-    return e ? `Employee: ${e.firstName} ${e.lastName} (${e.employeeId})` : undefined;
-  })() : undefined;
+  // Said on the printout, so a search that narrowed the list is not mistaken for the whole history.
+  const empMeta = query.trim() ? `Search: ${query.trim()}` : undefined;
 
   return (
     <>
@@ -157,10 +153,6 @@ export default function LeaveHistoryClient({
           <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 138 }} />
         </div>
         <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} style={{ width: 160 }} title="Employee">
-            <option value="">All Employees</option>
-            {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-          </select>
           <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 110 }} title="Status">
             <option value="">All status</option>
             <option value="pending">Pending</option>

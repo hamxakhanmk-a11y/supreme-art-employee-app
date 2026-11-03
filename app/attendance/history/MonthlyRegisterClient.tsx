@@ -489,7 +489,8 @@ export function RangeToolbar({
   };
 
   return (
-    <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+    <div className="no-print" style={{ marginBottom: 12 }}>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
       <Link href="/attendance" className="btn btn-primary">＋ Mark Today</Link>
       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, marginLeft: 6 }}>FROM</span>
       <select value={fm} onChange={e => setFromMonth(parseInt(e.target.value))} style={{ width: 112 }}>
@@ -512,13 +513,14 @@ export function RangeToolbar({
       </div>
       <div style={{ flex: 1 }} />
       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-        {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" width={180} />}
-        {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
-      </div>
-      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
         <button onClick={onPrint} className="btn btn-print">🖨 Print</button>
         <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
       </div>
+    </div>
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" width={230} />}
+      {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
+    </div>
     </div>
   );
 }
