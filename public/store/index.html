@@ -155,6 +155,12 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .ig-batches{color:#8a6d3b;font-family:Arial,sans-serif}
 .bulk-batch,.bulk-split-batch{font-size:11.5px;padding:3px 6px;margin-top:4px;max-width:100%}
 .bulk-split-batch{margin-top:0;width:auto}
+/* Sticker window: the form on the left, a live preview of the first sticker on the right. */
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+@media (max-width:960px){.st-grid{grid-template-columns:1fr}}
+.st-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.st-row input{width:auto;flex:1;min-width:0}
+.st-prev{border:1px solid #e8e1d3;border-radius:8px;background:#fafafa;padding:5px;width:fit-content;max-width:100%;overflow:auto}
 /* Inks & Consumables inventory: one compact card per product, a row for each supplier + brand. */
 .inv-groups{display:grid;grid-template-columns:minmax(0,980px);gap:8px;align-items:start}
 .ig{background:#fff;border:1px solid #e8e1d3;border-radius:10px;padding:8px 14px 2px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
@@ -961,20 +967,45 @@ body:not(.role-admin) .admin-only{display:none!important}
 
 <!-- STOCK IN STICKER (Inks & Consumables) -->
 <div class="modal-overlay" id="modal-sticker">
-  <div class="modal">
+  <div class="modal" style="width:920px">
     <div class="modal-title"><i class="ti ti-printer"></i> Print sticker</div>
-    <div id="st-summary" style="font-size:13.5px;margin-bottom:12px"></div>
-    <div class="two-col">
-      <div class="form-group"><label class="form-label">Received on</label><input id="st-date" type="date"></div>
-      <div class="form-group"><label class="form-label">Quantity</label><input id="st-qty" type="number" min="0" step="any"></div>
+    <div class="st-grid">
+      <div>
+        <div id="st-summary" style="font-size:13.5px;margin-bottom:12px"></div>
+        <div class="two-col">
+          <div class="form-group"><label class="form-label">Received on</label><input id="st-date" type="date" onchange="stRefresh()"></div>
+          <div class="form-group"><label class="form-label">Per box, in</label>
+            <div style="display:flex;gap:8px"><select id="st-uom" onchange="stRefresh()" title="Unit of the quantity inside each box"></select>
+              <select id="st-per" onchange="stRefresh()" title="What the quantity is per">
+                <option value="">per box (no name)</option>
+                <option value="carton">per carton</option><option value="box">per box</option><option value="drum">per drum</option>
+                <option value="can">per can</option><option value="tin">per tin</option><option value="bag">per bag</option>
+                <option value="bottle">per bottle</option><option value="roll">per roll</option><option value="pail">per pail</option><option value="pack">per pack</option>
+              </select></div></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label"><span id="st-qlabel">Quantity in each box</span> <span style="color:#aaa;font-weight:400;text-transform:none">&times; how many boxes</span></label>
+          <div id="st-rows"></div>
+          <button type="button" class="btn btn-sm" onclick="stAddRow()"><i class="ti ti-plus"></i> Add another quantity</button>
+        </div>
+        <div class="three-col">
+          <div class="form-group"><label class="form-label">P.O. No.</label><input id="st-po" placeholder="Optional"></div>
+          <div class="form-group"><label class="form-label">DC No.</label><input id="st-dc" placeholder="Optional"></div>
+          <div class="form-group"><label class="form-label">Invoice No.</label><input id="st-inv" placeholder="Optional"></div>
+        </div>
+        <div style="border-top:1px dashed #e0d6c6;margin:2px 0 10px"></div>
+        <div class="form-label" style="margin-bottom:4px">Reprint range <span style="color:#aaa;font-weight:400;text-transform:none">(optional &mdash; leave empty to print all)</span></div>
+        <div class="two-col">
+          <div class="form-group"><label class="form-label">From #</label><input id="st-from" type="number" min="1" step="1" oninput="stRefresh()"></div>
+          <div class="form-group"><label class="form-label">To #</label><input id="st-to" type="number" min="1" step="1" oninput="stRefresh()"></div>
+        </div>
+        <div id="st-hint" style="font-size:12px;color:#777;line-height:1.5"></div>
+      </div>
+      <div>
+        <div class="form-label" style="margin-bottom:6px">Preview <span style="color:#aaa;font-weight:400;text-transform:none">(the first sticker)</span></div>
+        <div class="st-prev"><iframe id="st-preview" title="Sticker preview" style="width:388px;height:292px;border:0;background:#fff"></iframe></div>
+      </div>
     </div>
-    <div class="three-col">
-      <div class="form-group"><label class="form-label">P.O. No.</label><input id="st-po" placeholder="Optional"></div>
-      <div class="form-group"><label class="form-label">DC No.</label><input id="st-dc" placeholder="Optional"></div>
-      <div class="form-group"><label class="form-label">Invoice No.</label><input id="st-inv" placeholder="Optional"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Number of stickers</label><input id="st-count" type="number" min="1" max="500" step="1">
-      <div id="st-hint" style="font-size:11.5px;color:#888;margin-top:4px"></div></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('sticker')">Cancel</button>
       <button class="btn btn-primary" onclick="printSticker()"><i class="ti ti-printer"></i> Print</button>
@@ -3220,9 +3251,12 @@ async function setDropHidden(field,value,hide){
 
 // ---- Stock In stickers (Inks & Consumables) ----
 // A 4 x 3 in label for the boxes of a stock in: the batch, the day it was received (what first in, first out
-// goes by), what it is, who it came from, the PO / DC / invoice numbers, the quantity, and which box of how
-// many. One sticker per box.
-const _st={partId:0,batch:1,txnId:0,po:'',inv:''};
+// goes by), what it is, who it came from, the PO / DC / invoice numbers, the quantity INSIDE each box (a
+// carton, a drum ...) and which box of how many. One sticker per box. Boxes of different quantities are
+// separate lines, numbered on from one another; a range reprints just some of them.
+const STICKER_UOMS=['kg','g','liters','ml','pcs','meters','rolls','boxes','sets','pairs','sheets','packets'];
+const _st={partId:0,batch:1,txnId:0,po:'',inv:'',ref:0,rows:[{q:'',n:'1'}]};
+const stVal=id=>document.getElementById(id).value.trim();
 function stickerDay(iso){return iso?String(iso).split('-').reverse().join('-'):'';}
 function openSticker(txnId){
   const t=state.transactions.find(x=>x.id===txnId);
@@ -3242,31 +3276,87 @@ function openBatchSticker(partId,n){
 function showStickerDialog(o){
   const p=state.parts.find(x=>x.id===o.partId);
   if(!p)return;
-  Object.assign(_st,{partId:o.partId,batch:o.batch,txnId:o.txnId||0,po:o.po||'',inv:o.inv||''});
   const e=_escHtml;
-  document.getElementById('st-summary').innerHTML='<b>'+e(p.name)+'</b><div style="color:#777;margin-top:2px">'+e(p.supplier||'No supplier')+(p.brand?' \u00B7 '+e(p.brand):'')+' \u00B7 <b>'+ordBatch(o.batch)+'</b></div>';
+  const q=Math.round((o.qty||0)*1000)/1000;
+  // Starts as the whole stock in in one box; the keeper breaks it into the real cartons or drums.
+  Object.assign(_st,{partId:o.partId,batch:o.batch,txnId:o.txnId||0,po:o.po||'',inv:o.inv||'',ref:q,rows:[{q:q>0?String(q):'',n:'1'}]});
+  document.getElementById('st-summary').innerHTML='<b>'+e(p.name)+'</b><div style="color:#777;margin-top:2px">'+e(p.supplier||'No supplier')+(p.brand?' · '+e(p.brand):'')+' · <b>'+ordBatch(o.batch)+'</b></div>';
   document.getElementById('st-date').value=o.date||today();
-  document.getElementById('st-qty').value=o.qty>0?String(Math.round(o.qty*1000)/1000):'';
   document.getElementById('st-po').value=o.po||'';
   document.getElementById('st-dc').value=o.dc||'';
   document.getElementById('st-inv').value=o.inv||'';
-  const whole=Number.isInteger(o.qty)&&o.qty>=1;
-  document.getElementById('st-count').value=whole?String(Math.min(o.qty,500)):'1';
-  document.getElementById('st-hint').textContent=whole
-    ?'One sticker for each box or piece; the first reads "1 OF '+Math.min(o.qty,500)+'". Change it to label fewer or more boxes.'
-    :'The quantity has a fraction. Type how many boxes or cans to label.';
+  const uoms=STICKER_UOMS.includes(p.unit)||!p.unit?STICKER_UOMS:[p.unit].concat(STICKER_UOMS);
+  const uom=document.getElementById('st-uom');
+  uom.innerHTML=uoms.map(u=>'<option value="'+e(u)+'">'+e(u)+'</option>').join('');
+  uom.value=p.unit||'kg';
+  let per='';try{per=localStorage.getItem('storeStickerPer')||'';}catch(err){}
+  document.getElementById('st-per').value=per;
+  document.getElementById('st-from').value='';
+  document.getElementById('st-to').value='';
+  renderStickerRows();
+  stRefresh();
   document.getElementById('modal-sticker').classList.add('open');
+}
+function renderStickerRows(){
+  document.getElementById('st-rows').innerHTML=_st.rows.map((r,i)=>
+    '<div class="st-row"><input type="number" min="0" step="any" placeholder="Quantity in each box" value="'+_escHtml(r.q)+'" oninput="stRow('+i+',\'q\',this.value)">'
+    +'<span style="color:#999">×</span>'
+    +'<input type="number" min="1" step="1" placeholder="Boxes" value="'+_escHtml(r.n)+'" style="max-width:110px" oninput="stRow('+i+',\'n\',this.value)">'
+    +(_st.rows.length>1?'<button type="button" class="btn btn-sm" title="Remove this line" onclick="stRemoveRow('+i+')">✕</button>':'')+'</div>').join('');
+}
+function stRow(i,k,v){_st.rows[i][k]=v;stRefresh();}
+function stAddRow(){_st.rows.push({q:'',n:'1'});renderStickerRows();stRefresh();}
+function stRemoveRow(i){_st.rows.splice(i,1);renderStickerRows();stRefresh();}
+// The stickers the window describes: a line per quantity, each box numbered on from the last, then cut to the
+// range. strict: a half-filled line is an error (when printing) instead of being skipped (while typing).
+function stickerPlan(strict){
+  const rows=_st.rows.map(r=>({q:parseFloat(r.q),n:parseInt(r.n,10)}));
+  const ok=rows.filter(r=>r.q>0&&r.n>=1);
+  if(strict&&ok.length!==rows.length)return {error:'Every line needs a quantity and a number of boxes (at least 1), or remove it.'};
+  const all=[];
+  let no=0;
+  ok.forEach(r=>{for(let k=0;k<r.n;k++){no++;all.push({no,qty:r.q});}});
+  const total=all.length;
+  if(!total)return {error:'Enter the quantity in each box and how many boxes.'};
+  if(total>500)return {error:'That is '+total+' stickers; the most at a time is 500.'};
+  let from=parseInt(stVal('st-from'),10),to=parseInt(stVal('st-to'),10);
+  if(!(from>=1))from=1;
+  if(!(to>=1))to=total;
+  if(from>to||to>total)return {error:'The range has to sit within 1 to '+total+', with From no more than To.'};
+  return {stickers:all.filter(s=>s.no>=from&&s.no<=to),total,from,to,sum:Math.round(ok.reduce((t,r)=>t+r.q*r.n,0)*1000)/1000};
+}
+function stickerData(stickers,total){
+  const p=state.parts.find(x=>x.id===_st.partId);
+  return {batch:_st.batch,date:stickerDay(stVal('st-date')),desc:p.name,code:p.sku||'',supplier:p.supplier||'—',brand:p.brand||'—',
+    po:stVal('st-po'),dc:stVal('st-dc'),inv:stVal('st-inv'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
+}
+// What the window says and shows: the heading of the quantity, how many stickers and what they add up to, the preview.
+function stRefresh(){
+  const per=stVal('st-per'),uom=stVal('st-uom');
+  document.getElementById('st-qlabel').textContent='Quantity in each '+(per||'box')+' ('+uom+')';
+  const plan=stickerPlan(false);
+  const hint=document.getElementById('st-hint');
+  const prev=document.getElementById('st-preview');
+  if(plan.error){hint.style.color='#777';hint.textContent=plan.error;prev.srcdoc='';return;}
+  const p=state.parts.find(x=>x.id===_st.partId);
+  const same=p&&p.unit===uom&&_st.ref>0;
+  const off=same&&Math.abs(plan.sum-_st.ref)>0.0005;
+  hint.style.color=off?'#B45309':'#777';
+  hint.textContent=plan.stickers.length+' sticker'+(plan.stickers.length===1?'':'s')
+    +(plan.stickers.length!==plan.total?' (nos. '+plan.from+' to '+plan.to+' of '+plan.total+')':'')
+    +'. The boxes add up to '+fmtQty(plan.sum)+' '+uom
+    +(same?(off?'; this stock in is '+fmtQty(_st.ref)+' '+uom+', so they do not match.':', the same as this stock in.'):'.');
+  prev.srcdoc=stickerDocHtml(stickerData([plan.stickers[0]],plan.total));
 }
 async function printSticker(){
   const p=state.parts.find(x=>x.id===_st.partId);
   if(!p)return;
-  const val=id=>document.getElementById(id).value.trim();
-  const date=val('st-date'),qty=parseFloat(val('st-qty')),count=parseInt(val('st-count'),10);
-  if(!date){await warnDialog('Date required','Choose the day the stock was received.');return;}
-  if(!(qty>0)){await warnDialog('Quantity required','Enter the quantity for the sticker.');return;}
-  if(!(count>=1&&count<=500)){await warnDialog('Number of stickers','Enter a number from 1 to 500.');return;}
-  if(count>50&&!await confirmDialog({title:'Print '+count+' stickers?',message:'That is '+count+' labels, one page each.',confirmText:'Print',variant:'confirm'}))return;
-  const po=val('st-po'),inv=val('st-inv'),dc=val('st-dc');
+  if(!stVal('st-date')){await warnDialog('Date required','Choose the day the stock was received.');return;}
+  const plan=stickerPlan(true);
+  if(plan.error){await warnDialog('Check the stickers',plan.error);return;}
+  const n=plan.stickers.length;
+  if(n>50&&!await confirmDialog({title:'Print '+n+' stickers?',message:'That is '+n+' labels, one page each.',confirmText:'Print',variant:'confirm'}))return;
+  const po=stVal('st-po'),inv=stVal('st-inv');
   // The PO and invoice numbers stay with the stock in they belong to, so a reprint has them.
   if(_st.txnId&&(po!==_st.po||inv!==_st.inv)){
     try{
@@ -3276,8 +3366,9 @@ async function printSticker(){
       _st.po=po;_st.inv=inv;
     }catch(err){/* printing goes ahead; the numbers just are not kept */}
   }
+  try{localStorage.setItem('storeStickerPer',stVal('st-per'));}catch(err){}
   closeModal('sticker');
-  printStickerDoc(stickerDocHtml({batch:_st.batch,date:stickerDay(date),desc:p.name,code:p.sku||'',supplier:p.supplier||'\u2014',brand:p.brand||'\u2014',po,dc,inv,qty,unit:p.unit||'',count}));
+  printStickerDoc(stickerDocHtml(stickerData(plan.stickers,plan.total)));
 }
 // Printed from a hidden frame, so no pop-up is needed; the page size is 4 x 3 in, one sticker a page.
 function printStickerDoc(html){
@@ -3315,17 +3406,16 @@ function stickerDocHtml(d){
   const ic=k=>'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">'+icon[k]+'</svg>';
   const cell=(k,label,value,cls)=>'<div class="cell '+(cls||'')+'"><div class="l">'+ic(k)+'<span>'+label+'</span></div><div class="v">'+value+'</div></div>';
   const logo=location.origin+'/logo-urdu.png';
-  const one=i=>'<div class="sticker">'
+  const per=(d.per||'').toUpperCase();
+  const one=s=>'<div class="sticker">'
     +'<div class="head"><div class="logo"><img src="'+logo+'" alt=""></div>'
     +'<div class="batch"><span class="bl">'+ic('batch')+'BATCH NO.</span><b class="fit0">'+ordinal(d.batch)+'</b></div>'
     +'<div class="date"><small>RECEIVED ON</small><b>'+e(d.date)+'</b></div></div>'
     +'<div class="line desc">'+cell('desc','DESCRIPTION','<span class="clamp">'+e(d.desc)+'</span><em>'+e(d.code)+'</em>','desc')+'</div>'
     +'<div class="line">'+cell('supplier','SUPPLIER','<span class="fit2">'+e(d.supplier)+'</span>')+cell('brand','BRAND','<span class="fit2">'+e(d.brand)+'</span>')+'</div>'
     +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+cell('inv','INVOICE #','<span class="fit2">'+e(d.inv)+'</span>')+'</div>'
-    +'<div class="line">'+cell('qty','QUANTITY','<span class="fit1">'+fmtQty(d.qty)+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas','CASE #','<span class="fit1">'+i+' OF '+d.count+'</span>')+'</div>'
+    +'<div class="line">'+cell('qty','QUANTITY'+(per?' / '+e(per):''),'<span class="fit1">'+fmtQty(s.qty)+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas',(per?e(per):'CASE')+' #','<span class="fit1">'+s.no+' OF '+d.total+'</span>')+'</div>'
     +'</div>';
-  const pages=[];
-  for(let i=1;i<=d.count;i++)pages.push(one(i));
   const css=`
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
@@ -3345,7 +3435,7 @@ function stickerDocHtml(d){
     .line.desc{flex:1.3}
     .cell{flex:1;min-width:0;padding:3px 8px 2px;border-right:1.5px solid #000;display:flex;flex-direction:column;justify-content:space-between}
     .cell:last-child{border-right:none}
-    .l{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;line-height:1;flex:none}
+    .l{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.04em;line-height:1;flex:none;white-space:nowrap}
     .ic{width:11px;height:11px;flex:none}
     .v{font-size:18px;font-weight:800;line-height:1.05;overflow:hidden;white-space:nowrap;flex:1;min-height:0;display:flex;align-items:flex-end}
     .v .fit1{display:inline-block;white-space:nowrap}
@@ -3370,7 +3460,7 @@ function stickerDocHtml(d){
     });}
     window.addEventListener('load',fitAll);
   `;
-  return '<!doctype html><html><head><meta charset="utf-8"><title>Stock In sticker</title><style>'+css+'</style></head><body>'+pages.join('')+'<scr'+'ipt>'+script+'</scr'+'ipt></body></html>';
+  return '<!doctype html><html><head><meta charset="utf-8"><title>Stock In sticker</title><style>'+css+'</style></head><body>'+d.stickers.map(one).join('')+'<scr'+'ipt>'+script+'</scr'+'ipt></body></html>';
 }
 
 // ---- Suppliers & Brands (Inks & Consumables) ----
