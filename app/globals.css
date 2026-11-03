@@ -1168,3 +1168,17 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .lc-search::placeholder { color: rgba(31, 19, 0, 0.68); font-weight: 500; }
 .lc-search:focus { outline: 2px solid #7C2D12; outline-offset: 1px; }
 .lc-sort option { color: #1a1a1a; background: #fff; font-weight: 500; }
+
+/* Every search box in the app: yellow-orange at 30% opacity with solid dark text, the same look as the shared
+   SearchBox / SortBy (components/ListControls.tsx). Picked out by placeholder, so no page has to opt in. The Store
+   is its own page in an iframe and carries the same rule in public/store/index.html. */
+:root { --search-bg: rgba(245, 158, 11, 0.3); }
+:is(input[type="search"], input[placeholder^="🔍"], input[placeholder^="Search" i], input[placeholder^="Name, employee ID"]) {
+  background-color: var(--search-bg) !important;
+  border: 1px solid #B45309 !important;
+  color: #1f1300 !important;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.25);
+  font-weight: 600;
+}
+:is(input[type="search"], input[placeholder^="🔍"], input[placeholder^="Search" i], input[placeholder^="Name, employee ID"])::placeholder { color: rgba(31, 19, 0, 0.68); font-weight: 500; }
+:is(input[type="search"], input[placeholder^="🔍"], input[placeholder^="Search" i], input[placeholder^="Name, employee ID"]):focus { outline: 2px solid #7C2D12; outline-offset: 1px; }
