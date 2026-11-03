@@ -28,6 +28,7 @@ export async function GET() {
              t.batch,
              t.po_no AS "poNo",
              t.invoice_no AS "invoiceNo",
+             t.batch_label AS "batchLabel",
              t.created_by AS "createdBy",
              t.created_at AS "createdAt"
       FROM transactions t
