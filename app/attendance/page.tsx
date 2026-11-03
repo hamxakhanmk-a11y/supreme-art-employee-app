@@ -403,24 +403,24 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 10 }}>
-        <StatChip label="Present"  count={summary.present}  color="#15803D" bg="#e3f5e3" />
-        <StatChip label="Absent"   count={summary.absent}   color="#DC2626" bg="#fde2e2" />
-        <StatChip label="Leave"    count={summary.leave}    color="#D97706" bg="#fdebd0" />
-        <StatChip label="Half-day" count={summary.halfday}  color="#1D4ED8" bg="#dfe8fc" />
-        <StatChip label="Unmarked" count={summary.unmarked} color="#888"    bg="#f3f3f3" />
-      </div>
-
       {error && (
         <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 16 }}>
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <SearchBox width={340} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, designation, department, status, notes…" />
-        <SortBy options={DAY_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div className="no-print" style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+          <SearchBox width={340} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, designation, department, status, notes…" />
+          <SortBy options={DAY_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
+        </div>
+        <div style={{ display: "flex", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
+          <StatChip label="Present"  count={summary.present}  color="#15803D" bg="#e3f5e3" />
+          <StatChip label="Absent"   count={summary.absent}   color="#DC2626" bg="#fde2e2" />
+          <StatChip label="Leave"    count={summary.leave}    color="#D97706" bg="#fdebd0" />
+          <StatChip label="Half-day" count={summary.halfday}  color="#1D4ED8" bg="#dfe8fc" />
+          <StatChip label="Unmarked" count={summary.unmarked} color="#888"    bg="#f3f3f3" />
+        </div>
       </div>
       {query && !loading && <div className="no-print" style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>Showing {view.length} of {rows.length}</div>}
 
@@ -570,7 +570,7 @@ export default function AttendancePage() {
 
 function StatChip({ label, count, color, bg }: { label: string; count: number; color: string; bg: string }) {
   return (
-    <div className="card" style={{ background: bg, borderColor: `${color}33`, padding: "5px 10px", display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8 }}>
+    <div className="card" style={{ background: bg, borderColor: `${color}33`, padding: "5px 12px", display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8 }}>
       <span style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1 }}>{count}</span>
       <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>

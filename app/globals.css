@@ -1164,3 +1164,7 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .pf-2up .pf-sheet .pf-remarks { font-size: 8.5px !important; margin: 0 0 2px !important; }
   .pf-remarks { font-size: 10.5pt; }
 }
+/* The red search box and sort dropdown on the Attendance screens (components/ListControls.tsx) */
+.lc-search::placeholder { color: rgba(255, 255, 255, 0.85); font-weight: 500; }
+.lc-search:focus { outline: 2px solid #FACC15; outline-offset: 1px; }
+.lc-sort option { color: #1a1a1a; background: #fff; font-weight: 500; }

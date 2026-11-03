@@ -72,6 +72,8 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 160 }} />
             <button onClick={save} disabled={busy} className="btn btn-primary btn-sm">{busy ? "Saving…" : "Save"}</button>
             {msg && <span style={{ fontSize: 12.5, fontWeight: 600, color: msg.includes("✓") ? "#166534" : "#7C1F1F" }}>{msg}</span>}
+            <SearchBox width={280} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
+            <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} />
           </>
         )}
         <div style={{ flex: 1 }} />
@@ -84,10 +86,6 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
 
       {canEdit && (
         <div className="card" style={{ padding: 12 }}>
-          <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-            <SearchBox width={320} value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
-            <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} />
-          </div>
           {shownEmps.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, padding: "8px 0" }}>No employee matches “{query}”.</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 8 }}>
             {shownEmps.map(e => (

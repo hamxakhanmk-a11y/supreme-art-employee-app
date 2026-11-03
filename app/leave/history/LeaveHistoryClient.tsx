@@ -137,36 +137,41 @@ export default function LeaveHistoryClient({
         subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
         meta={empMeta}
       />
-      {/* One row of controls, then a thin row of counts. */}
-      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-        <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee, type, status, reason…" width={250} />
-        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
-        <span style={LBL}>From</span>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 140 }} />
-        <span style={LBL}>To</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 140 }} />
-        <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} style={{ width: 170 }} title="Employee">
-          <option value="">All Employees</option>
-          {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-        </select>
-        <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 112 }} title="Status">
-          <option value="">All status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+      {/* One row: the counts first, then the controls (each group wraps as a whole); Print and Excel stay together at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <Stat label="Total" value={totals.total} color="#1a1a1a" bg="#fafaf6" />
+          <Stat label="Days" value={totals.days} color="var(--primary)" bg="var(--primary-soft)" />
+          <Stat label="Approved" value={totals.approved} color="var(--success)" bg="var(--success-bg)" />
+          <Stat label="Pending" value={totals.pending} color="var(--warning)" bg="var(--warning-bg)" />
+          <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee, type, status, reason…" width={210} />
+          <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={LBL}>From</span>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 138 }} />
+          <span style={LBL}>To</span>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 138 }} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} style={{ width: 160 }} title="Employee">
+            <option value="">All Employees</option>
+            {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
+          </select>
+          <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 110 }} title="Status">
+            <option value="">All status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
           <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
           <button onClick={exportCSV} className="btn btn-primary" disabled={!filtered.length}>⬇ Excel</button>
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-        <Stat label="Total" value={totals.total} color="#1a1a1a" bg="#fafaf6" />
-        <Stat label="Days" value={totals.days} color="var(--primary)" bg="var(--primary-soft)" />
-        <Stat label="Approved" value={totals.approved} color="var(--success)" bg="var(--success-bg)" />
-        <Stat label="Pending" value={totals.pending} color="var(--warning)" bg="var(--warning-bg)" />
-        <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -223,7 +228,7 @@ const LBL: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--
 
 function Stat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "4px 12px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 9px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
       <span style={{ fontSize: 15, fontWeight: 700, color }}>{value}</span>
       <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>

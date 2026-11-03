@@ -5,20 +5,27 @@
 
 export type SortOption<K extends string> = { value: K; label: string };
 
-// See-through white with a faint brand-red edge, so the search box and the sort dropdown sit lightly on the page
-// instead of as solid white slabs. backgroundColor (not the shorthand) keeps a select's own arrow.
-const GLASS: React.CSSProperties = {
-  backgroundColor: "rgba(255, 255, 255, 0.45)",
-  border: "1px solid rgba(163, 45, 45, 0.28)",
-  backdropFilter: "blur(3px)",
+// Solid brand red with white text, so the search box and the sort dropdown stand out on the page. A select gets its
+// own white arrow (the native one is dark and disappears on red); the placeholder and option colours are in globals.css.
+const ACCENT: React.CSSProperties = {
+  backgroundColor: "var(--brand)",
+  color: "#fff",
+  border: "1px solid var(--brand-dark)",
+  boxShadow: "0 2px 6px rgba(163, 45, 45, 0.30)",
+};
+const ARROW = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
+const SELECT_ACCENT: React.CSSProperties = {
+  ...ACCENT, appearance: "none", WebkitAppearance: "none", fontWeight: 600,
+  backgroundImage: ARROW, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", backgroundSize: "12px 8px",
+  paddingRight: 32, cursor: "pointer",
 };
 
-export function SortBy<K extends string>({ options, value, onChange, minWidth = 150, glass = true }: {
-  options: readonly SortOption<K>[]; value: K; onChange: (v: K) => void; minWidth?: number; glass?: boolean;
+export function SortBy<K extends string>({ options, value, onChange, minWidth = 150, accent = true }: {
+  options: readonly SortOption<K>[]; value: K; onChange: (v: K) => void; minWidth?: number; accent?: boolean;
 }) {
   return (
-    <select value={value} onChange={e => onChange(e.target.value as K)} title="Sort by" className="no-print"
-      style={{ width: "auto", minWidth, ...(glass ? GLASS : null) }}>
+    <select value={value} onChange={e => onChange(e.target.value as K)} title="Sort by" className="no-print lc-sort"
+      style={{ width: "auto", minWidth, ...(accent ? SELECT_ACCENT : null) }}>
       {options.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
     </select>
   );
@@ -30,12 +37,12 @@ export function SearchBox({ value, onChange, placeholder = "🔍  Search…", bl
 }) {
   return (
     <span className="no-print" style={{ position: "relative", display: "inline-block", flex: block ? 1 : undefined, width: block ? undefined : width }}>
-      <input type="text" value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
-        style={{ width: "100%", padding: block ? "11px 34px 11px 16px" : "8px 30px 8px 12px", fontSize: 13, ...GLASS }} />
+      <input type="text" value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} className="lc-search"
+        style={{ width: "100%", padding: block ? "11px 34px 11px 16px" : "8px 30px 8px 12px", fontSize: 13, fontWeight: 600, ...ACCENT }} />
       {value && (
         <button type="button" onClick={() => onChange("")} title="Clear search" style={{
           position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-          background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 14, padding: 4,
+          background: "transparent", border: "none", color: "#fff", cursor: "pointer", fontSize: 14, padding: 4,
         }}>✕</button>
       )}
     </span>
