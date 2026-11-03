@@ -37,32 +37,40 @@ export default function InOutPage() {
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const loadedAt = useRef(0);
+  // Bumped to reload the same date (Refresh button, tab shown again).
+  const [reloads, setReloads] = useState(0);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/attendance/device-day?date=${date}`, { cache: "no-store" })
+      .then(async res => {
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+        return j as DayData;
+      })
+      .then(d => {
+        if (cancelled) return;
+        setData(d);
+        setError("");
+        loadedAt.current = Date.now();
+      })
+      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [date, reloads]);
+
+  const refresh = useCallback(() => {
     setLoading(true);
-    try {
-      const res = await fetch(`/api/attendance/device-day?date=${date}`, { cache: "no-store" });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
-      setData(j as DayData);
-      setError("");
-      loadedAt.current = Date.now();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }, [date]);
-
-  useEffect(() => { load(); }, [load]);
+    setReloads(n => n + 1);
+  }, []);
 
   useEffect(() => {
     const onShow = () => {
-      if (document.visibilityState === "visible" && Date.now() - loadedAt.current > RELOAD_ON_SHOW_AFTER_MS) load();
+      if (document.visibilityState === "visible" && Date.now() - loadedAt.current > RELOAD_ON_SHOW_AFTER_MS) refresh();
     };
     document.addEventListener("visibilitychange", onShow);
     return () => document.removeEventListener("visibilitychange", onShow);
-  }, [load]);
+  }, [refresh]);
 
   const toggle = (key: string) => setOpen(s => {
     const n = new Set(s);
@@ -91,7 +99,7 @@ export default function InOutPage() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href="/attendance/device" className="btn btn-sm">Device Log</Link>
-          <button onClick={load} disabled={loading} className="btn btn-sm">{loading ? "Loading…" : "↻ Refresh"}</button>
+          <button onClick={refresh} disabled={loading} className="btn btn-sm">{loading ? "Loading…" : "↻ Refresh"}</button>
         </div>
       </div>
 
