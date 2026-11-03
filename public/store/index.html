@@ -1105,10 +1105,9 @@ body:not(.role-admin) .admin-only{display:none!important}
           <div id="st-rows"></div>
           <button type="button" class="btn btn-sm" onclick="stAddRow()"><i class="ti ti-plus"></i> Add another quantity</button>
         </div>
-        <div class="three-col">
+        <div class="two-col">
           <div class="form-group"><label class="form-label">P.O. No.</label><input id="st-po" placeholder="Optional"></div>
           <div class="form-group"><label class="form-label">DC No.</label><input id="st-dc" placeholder="Optional"></div>
-          <div class="form-group"><label class="form-label">Invoice No.</label><input id="st-inv" placeholder="Optional"></div>
         </div>
         <div style="border-top:1px dashed #e0d6c6;margin:2px 0 10px"></div>
         <div class="form-label" style="margin-bottom:4px">Reprint range <span style="color:#aaa;font-weight:400;text-transform:none">(optional &mdash; leave empty to print all)</span></div>
@@ -3430,7 +3429,6 @@ function showStickerDialog(o){
   document.getElementById('st-brand').value=p.brand||'';
   document.getElementById('st-po').value=o.po||'';
   document.getElementById('st-dc').value=o.dc||'';
-  document.getElementById('st-inv').value=o.inv||'';
   const uoms=STICKER_UOMS.includes(p.unit)||!p.unit?STICKER_UOMS:[p.unit].concat(STICKER_UOMS);
   const uom=document.getElementById('st-uom');
   uom.innerHTML=uoms.map(u=>'<option value="'+e(u)+'">'+e(u)+'</option>').join('');
@@ -3474,7 +3472,7 @@ function stickerPlan(strict){
 function stickerData(stickers,total){
   const p=partOf(_st.partId);
   return {batchNo:stVal('st-batch'),date:stickerDay(stVal('st-date')),desc:stVal('st-desc'),code:p.sku||'',supplier:stVal('st-supplier'),brand:stVal('st-brand'),
-    po:stVal('st-po'),dc:stVal('st-dc'),inv:stVal('st-inv'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
+    po:stVal('st-po'),dc:stVal('st-dc'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
 }
 // What the window says and shows: the heading of the quantity, how many stickers and what they add up to, the preview.
 function stRefresh(){
@@ -3503,17 +3501,17 @@ async function printSticker(){
   if(plan.error){await warnDialog('Check the stickers',plan.error);return;}
   const n=plan.stickers.length;
   if(n>50&&!await confirmDialog({title:'Print '+n+' stickers?',message:'That is '+n+' labels, one page each.',confirmText:'Print',variant:'confirm'}))return;
-  const po=stVal('st-po'),inv=stVal('st-inv');
+  const po=stVal('st-po');
   // A batch number typed over the automatic one is kept too: '' means the automatic one.
   const bn=stVal('st-batch');
   const label=bn&&bn!==_st.autoBatch?bn:'';
-  // The PO, invoice and batch numbers stay with the stock in they belong to, so a reprint has them.
-  if(_st.txnId&&(po!==_st.po||inv!==_st.inv||label!==_st.label)){
+  // The PO and batch numbers stay with the stock in they belong to, so a reprint has them.
+  if(_st.txnId&&(po!==_st.po||label!==_st.label)){
     try{
-      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:inv,batchLabel:label});
+      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:_st.inv,batchLabel:label});
       const t=state.transactions.find(x=>x.id===_st.txnId);
-      if(t){t.poNo=po;t.invoiceNo=inv;t.batchLabel=label;}
-      _st.po=po;_st.inv=inv;_st.label=label;
+      if(t){t.poNo=po;t.batchLabel=label;}
+      _st.po=po;_st.label=label;
     }catch(err){/* printing goes ahead; the numbers just are not kept */}
   }
   try{localStorage.setItem('storeStickerPer',stVal('st-per'));}catch(err){}
@@ -3549,7 +3547,6 @@ function stickerDocHtml(d){
     brand:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
     po:'<path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/>',
     dc:'<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
-    inv:'<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M8 8h8M8 12h8"/>',
     qty:'<path d="M3 8l9-5 9 5v9l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v9"/>',
     cas:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>'
   };
@@ -3563,7 +3560,7 @@ function stickerDocHtml(d){
     +'<div class="date"><small>RECEIVED ON</small><b>'+e(d.date)+'</b></div></div>'
     +'<div class="line desc">'+cell('desc','DESCRIPTION','<span class="clamp">'+e(d.desc)+'</span><em>'+e(d.code)+'</em>','desc')+'</div>'
     +'<div class="line">'+cell('supplier','SUPPLIER','<span class="fit2">'+e(d.supplier)+'</span>')+cell('brand','BRAND','<span class="fit2">'+e(d.brand)+'</span>')+'</div>'
-    +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+cell('inv','INVOICE #','<span class="fit2">'+e(d.inv)+'</span>')+'</div>'
+    +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+'</div>'
     +'<div class="line">'+cell('qty','QUANTITY'+(per?' / '+e(per):''),'<span class="fit1">'+fmtQty(s.qty)+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas',(per?e(per):'CASE')+' #','<span class="fit1">'+s.no+' OF '+d.total+'</span>')+'</div>'
     +'</div>';
   const css=`
