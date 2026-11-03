@@ -10,7 +10,7 @@ type Device = {
   serial: string; name: string | null; firmware: string | null; ip: string | null;
   bridgeVersion: string | null; deviceTime: string | null; clockDriftSeconds: number | null;
   counts: Record<string, number> | null; invalidPunchCount: number | null;
-  lastSyncedAt: string | null; lastSeenAt: string;
+  lastSyncedAt: string | null; pollIntervalSeconds: number | null; lastSeenAt: string;
 };
 type Punch = {
   id: number; deviceSerial: string; deviceUserId: string; punchedAt: string;
@@ -19,9 +19,18 @@ type Punch = {
 };
 type Log = { date: string; devices: Device[]; punches: Punch[]; dayTotal: number; storedTotal: number };
 
-const REFRESH_MS = 15_000;
-// The bridge sends a heartbeat every poll; past this the device or bridge is likely down.
-const STALE_MS = 15 * 60_000;
+// The bridge syncs on its own interval (hourly by default) and every load wakes
+// the database, so the page reloads just after the next sync is due rather than
+// on a fixed timer, and not while the tab is hidden.
+const MIN_RELOAD_MS = 60_000;
+const OVERDUE_RELOAD_MS = 10 * 60_000;
+const RELOAD_AFTER_SYNC_MS = 90_000;
+
+const intervalMs = (d: Device) => (d.pollIntervalSeconds ?? 300) * 1000;
+// Heartbeats come every sync; one interval plus some slack without one means
+// the device or bridge is likely down.
+const staleAfterMs = (d: Device) => intervalMs(d) + Math.max(15 * 60_000, intervalMs(d) / 2);
+const nextSyncAt = (d: Device) => new Date(d.lastSeenAt).getTime() + intervalMs(d);
 
 const fmt = (iso: string | null, opts: Intl.DateTimeFormatOptions) =>
   iso ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hourCycle: "h23", ...opts }).format(new Date(iso)) : "—";
@@ -78,11 +87,28 @@ export default function DeviceLogPage() {
   // New filters start a new baseline, so nothing is flagged as just arrived.
   useEffect(() => { seen.current = null; }, [date, user]);
 
+  useEffect(() => { load(); }, [load]);
+
+  // Schedule the next reload for just after the earliest expected sync. Each
+  // load updates `log`, which schedules the one after.
   useEffect(() => {
-    load();
-    const t = setInterval(load, REFRESH_MS);
-    return () => clearInterval(t);
-  }, [load]);
+    if (!log) return;
+    const upcoming = log.devices.map(nextSyncAt).filter(t => t > Date.now());
+    const target = upcoming.length ? Math.min(...upcoming) + RELOAD_AFTER_SYNC_MS : Date.now() + OVERDUE_RELOAD_MS;
+    const t = setTimeout(() => {
+      if (document.visibilityState === "visible") load();
+    }, Math.max(MIN_RELOAD_MS, target - Date.now()));
+    return () => clearTimeout(t);
+  }, [log, load]);
+
+  // A reload skipped while the tab was hidden happens when it's shown again.
+  useEffect(() => {
+    const onShow = () => {
+      if (document.visibilityState === "visible" && Date.now() - loadedAt > MIN_RELOAD_MS) load();
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, [load, loadedAt]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -95,7 +121,7 @@ export default function DeviceLogPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Device Log</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Punches received from the fingerprint device. Refreshes every {REFRESH_MS / 1000}s
+            Punches received from the fingerprint device. Reloads after each sync
             {loadedAt ? ` · updated ${span(Math.max(0, Math.round((now - loadedAt) / 1000)))} ago` : ""}.
           </p>
         </div>
@@ -114,7 +140,8 @@ export default function DeviceLogPage() {
       )}
 
       {log?.devices.map(d => {
-        const stale = now - new Date(d.lastSeenAt).getTime() > STALE_MS;
+        const stale = now - new Date(d.lastSeenAt).getTime() > staleAfterMs(d);
+        const next = nextSyncAt(d);
         const drift = d.clockDriftSeconds;
         return (
           <div key={d.serial} className="card" style={{ padding: 16, marginBottom: 16 }}>
@@ -124,7 +151,8 @@ export default function DeviceLogPage() {
               <span className={`badge ${stale ? "badge-inactive" : "badge-active"}`}>{stale ? "Offline" : "Online"}</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-              <Tile label="Last heartbeat" value={ago(d.lastSeenAt, now)} sub={dateTime(d.lastSeenAt)} warn={stale} />
+              <Tile label="Last sync" value={ago(d.lastSeenAt, now)} warn={stale}
+                sub={stale ? `expected ${time(new Date(next).toISOString())}` : `every ${span(intervalMs(d) / 1000)} · next ~${fmt(new Date(next).toISOString(), { hour: "2-digit", minute: "2-digit" })}`} />
               <Tile label="Latest punch synced" value={time(d.lastSyncedAt)} sub={fmt(d.lastSyncedAt, { day: "2-digit", month: "short", year: "numeric" })} />
               <Tile label="Clock drift" value={drift === null ? "—" : `${drift > 0 ? "+" : ""}${drift}s`}
                 sub="device vs bridge PC" warn={drift !== null && Math.abs(drift) > 120} />

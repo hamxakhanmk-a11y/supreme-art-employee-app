@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     counts: asObject(body.counts),
     invalidPunchCount: int(body.invalidPunchCount),
     lastSyncedAt: parseTimestamp(body.lastSyncedTimestamp),
+    pollIntervalSeconds: int(body.pollIntervalSeconds),
     lastSeenAt: now,
   };
 

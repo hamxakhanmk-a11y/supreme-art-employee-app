@@ -298,6 +298,8 @@ export const attendanceDevices = pgTable("attendance_devices", {
   counts: jsonb("counts"),
   invalidPunchCount: integer("invalid_punch_count"),
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  // How often the bridge syncs, so the app knows when a heartbeat is overdue.
+  pollIntervalSeconds: integer("poll_interval_seconds"),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
