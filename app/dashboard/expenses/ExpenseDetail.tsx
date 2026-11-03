@@ -18,21 +18,24 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
 
   return (
     <>
-      <div className="od-tiles od-tiles-3">
-        <div className="od-tile od-tile-money">
-          <div className="od-tile-label">Total Expense</div>
-          <div className="od-tile-value">PKR {pkr(summary.total)}</div>
-          <div className="od-tile-period">{rangeLabel(summary.from, summary.to)}</div>
-        </div>
-        <div className="od-tile">
-          <div className="od-tile-label">Purchase</div>
-          <div className="od-tile-value">{pkr(summary.purchase)}</div>
-          <div className="od-tile-sub">Requisition lines, on the PR date</div>
-        </div>
-        <div className="od-tile">
-          <div className="od-tile-label">Procurement</div>
-          <div className="od-tile-value">{pkr(summary.procurement)}</div>
-          <div className="od-tile-sub">Received on GRRs × PO rate + tax, on the GRR date</div>
+      <div className="od-zone od-zone-1">
+        <div className="od-sec">Expense <small>· {rangeLabel(summary.from, summary.to)}</small></div>
+        <div className="od-grid">
+          <div className="od-tile od-money od-wide">
+            <div className="od-label">Total expense</div>
+            <div className="od-value">PKR {pkr(summary.total)}</div>
+            <div className="od-sub">Purchase + Procurement</div>
+          </div>
+          <div className="od-tile od-purchase">
+            <div className="od-label">Purchase</div>
+            <div className="od-value">{pkr(summary.purchase)}</div>
+            <div className="od-sub">Requisition lines, on the PR date</div>
+          </div>
+          <div className="od-tile od-proc">
+            <div className="od-label">Procurement</div>
+            <div className="od-value">{pkr(summary.procurement)}</div>
+            <div className="od-sub">GRR qty × PO rate + tax, on the GRR date</div>
+          </div>
         </div>
       </div>
 
@@ -54,7 +57,7 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
                       <span>{c.category}</span>
                       <span className="od-cat-total">{pkr(c.total)}</span>
                     </div>
-                    <div className="od-bar"><span style={{ width: `${max > 0 ? Math.max(1, (c.total / max) * 100) : 0}%` }} /></div>
+                    <div className="od-bar-fill"><span style={{ width: `${max > 0 ? Math.max(1, (c.total / max) * 100) : 0}%` }} /></div>
                     <div className="od-cat-split">
                       {c.purchase !== 0 && <span>Purchase {pkr(c.purchase)}</span>}
                       {c.procurement !== 0 && <span>Procurement {pkr(c.procurement)}</span>}
