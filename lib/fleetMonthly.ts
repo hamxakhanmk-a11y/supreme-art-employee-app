@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { ensureFleetSchema, VEHICLE_TYPE_LABEL } from "./fleet";
+import { typedAdjustments } from "./cardBalance";
 
 // The monthly fleet sheet (Fleet Management — Log Book Details): per vehicle,
 // what was on its PSO card at the start of the month, what was loaded, what
@@ -11,8 +12,10 @@ import { ensureFleetSchema, VEHICLE_TYPE_LABEL } from "./fleet";
 // is dated from that day on counts against it. A top-up is dated by the date
 // written on it, a fill by the day it was entered — a fill's own "collection
 // date" is when the card was handed out, which can be weeks before the fuel
-// was drawn, so it can't place a fill. For the current month the closing
-// figure is the balance PSO Cards shows.
+// was drawn, so it can't place a fill. A month's typed consumption counts as
+// spent on the card (lib/cardBalance.ts), so a month's closing is the next
+// month's opening, and for the current month the closing figure is the
+// balance PSO Cards shows.
 
 export type FleetMonthRow = {
   vehicleId: number | null;     // null: a card with no vehicle
@@ -52,6 +55,7 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
   const start = `${month}-01`;
   const end = nextMonthStart(month);   // exclusive
 
+  const typedBy = await typedAdjustments();
   const [vehicleRes, cardRes, moneyRes, fillRes, kmRes, notesRes] = await Promise.all([
     db.execute(sql`SELECT id, vehicle_no AS "vehicleNo", COALESCE(name, '') AS name, type, active FROM vehicles ORDER BY vehicle_no`),
     db.execute(sql`SELECT id, sn, vehicle_id AS "vehicleId" FROM pso_cards ORDER BY sn`),
@@ -108,7 +112,8 @@ export async function fleetMonth(month: string): Promise<FleetMonth> {
     const openedHere = o.day >= start;
     const opening = openedHere
       ? o.amount
-      : o.amount + sum(topups, e => after(e) && e.day < start) - sum(fills, e => after(e) && e.day < start);
+      : o.amount + sum(topups, e => after(e) && e.day < start) - sum(fills, e => after(e) && e.day < start)
+        - (typedBy.get(cardId) ?? []).filter(a => a.month < month).reduce((s, a) => s + a.amount, 0);
     const topup = sum(topups, e => after(e) && inMonth(e));
     const consumption = sum(fills, e => after(e) && inMonth(e));
     return { opening, topup, consumption, closing: opening + topup - consumption, openedOn: openedHere ? o.day : null };

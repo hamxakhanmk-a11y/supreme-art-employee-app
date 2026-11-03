@@ -14,8 +14,9 @@ export const dynamic = "force-dynamic";
 type SP = { date?: string; from?: string; to?: string; tab?: string; by?: string; cards?: string; label?: string; back?: string };
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-// PSO Cards, one tab with two views inside it: the Cards Logbook (who has a
-// card now, and every fill drawn) and All cards (the list, to add and edit).
+// PSO Cards, one tab with three views inside it: the Cards Logbook (who has a
+// card now, and every fill drawn), All cards (the list, to add and edit) and
+// Top-ups (the money loaded on every card, and a button to load more).
 export default async function PsoCardsPage({ searchParams }: { searchParams: Promise<SP> }) {
   await ensureFleetSchema();
   const sp = await searchParams;
@@ -25,7 +26,7 @@ export default async function PsoCardsPage({ searchParams }: { searchParams: Pro
   // The logbook's own range: this month so far, unless one was picked.
   const from = ISO.test(sp.from || "") ? sp.from! : `${today.slice(0, 8)}01`;
   const to = ISO.test(sp.to || "") ? sp.to! : today;
-  const tab = sp.tab === "cards" ? "cards" : "logbook";
+  const tab = sp.tab === "cards" ? "cards" : sp.tab === "topups" ? "topups" : "logbook";
   // Opened from a Monthly Report consumption: the fills it counted for one
   // vehicle's card(s), placed by the day each was entered.
   const focused = sp.by === "entered";

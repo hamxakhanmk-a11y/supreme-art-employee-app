@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { CustodyRow, PsoRow } from "@/lib/fleetServer";
 import CardsPanel from "./CardsPanel";
+import TopupsPanel from "./TopupsPanel";
 import PageTabs from "../PageTabs";
 import RegisterClient, { type LogbookFocus } from "../cards-log/RegisterClient";
 
@@ -24,7 +25,7 @@ type Card = {
 };
 
 
-type Tab = "logbook" | "cards";
+type Tab = "logbook" | "cards" | "topups";
 
 export default function PsoCardsClient({
   vehicles, people, readOnly, canDelete, custody, date, isToday, rows, from, to, tab: initialTab, focus = null,
@@ -96,6 +97,7 @@ export default function PsoCardsClient({
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
           { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
           { key: "cards", label: "💳 All cards", count: cards.length || undefined },
+          { key: "topups", label: "⊕ Top-ups" },
         ]} />
         <span className="spacer" />
         {/* Which day the cards out with someone are shown for. */}
@@ -118,6 +120,8 @@ export default function PsoCardsClient({
 
       {tab === "cards" ? (
         <CardsPanel vehicles={vehicles} readOnly={readOnly} canDelete={canDelete} onChanged={load} />
+      ) : tab === "topups" ? (
+        <TopupsPanel readOnly={readOnly} canDelete={canDelete} />
       ) : (
       <>
       {/* Who has a card — on screen only; the logbook below is what prints. */}

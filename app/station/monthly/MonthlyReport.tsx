@@ -194,7 +194,7 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
       <div className="no-print" style={{ fontSize: 11.5, color: "var(--text3)", marginTop: 8 }}>
         Opening is last month&apos;s closing; in the month a card&apos;s opening balance is set, it is that balance as at the
         start of the opening&apos;s date, and everything from that day on counts. Top-ups count by their date, fuel by the
-        day it was entered. Closing for the current month matches the balance on PSO Cards, unless a consumption was typed in, which closing then follows.
+        day it was entered. A consumption typed in counts as spent on the card, so closing follows it, and the current month's closing matches the balance on PSO Cards.
       </div>
     </div>
   );

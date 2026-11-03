@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { psoCards, psoCardTopups } from "@/lib/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema } from "@/lib/fleet";
@@ -26,13 +26,26 @@ const shape = (t: typeof psoCardTopups.$inferSelect) => ({
   refNo: t.refNo || "", createdBy: t.createdBy || "", createdAt: new Date(t.createdAt).toISOString(),
 });
 
-// GET ?cardId= — one card's history, newest first.
+// GET ?cardId= — one card's history, newest first. Without cardId: every card's, each with its card
+// number and vehicle (the Top-ups tab).
 export async function GET(req: NextRequest) {
   const guard = await guardView("station.cards");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
     const cardId = Number(req.nextUrl.searchParams.get("cardId"));
+    if (!req.nextUrl.searchParams.has("cardId")) {
+      const res = await db.execute(sql`
+        SELECT t.id, t.card_id AS "cardId", c.sn AS "cardSn", v.vehicle_no AS "vehicleNo", t.kind, t.date::text AS date,
+               t.amount, COALESCE(t.ref_no, '') AS "refNo", COALESCE(t.created_by, '') AS "createdBy", t.created_at AS "createdAt"
+        FROM pso_card_topups t
+        JOIN pso_cards c ON c.id = t.card_id
+        LEFT JOIN vehicles v ON v.id = c.vehicle_id
+        ORDER BY t.date DESC, t.created_at DESC, t.id DESC
+      `);
+      const all = ((res as any).rows ?? res) as any[];
+      return NextResponse.json(all.map(r => ({ ...r, id: Number(r.id), cardId: Number(r.cardId), amount: Number(r.amount), createdAt: new Date(r.createdAt).toISOString() })));
+    }
     if (!cardId) return NextResponse.json({ error: "cardId required" }, { status: 400 });
     const rows = await db.select().from(psoCardTopups)
       .where(eq(psoCardTopups.cardId, cardId))
