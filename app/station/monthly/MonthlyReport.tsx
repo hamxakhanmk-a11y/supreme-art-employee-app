@@ -42,8 +42,12 @@ function consumptionHref(month: string, r: FleetMonth["rows"][number]): string {
   })}`;
 }
 
-export default function MonthlyReport({ data, readOnly = false, canOpenCards = false }: {
+export default function MonthlyReport({ data, readOnly = false, canOpenCards = false, lead, nav }: {
   data: FleetMonth; readOnly?: boolean;
+  /** Controls shown at the start of the toolbar row (the month picker). */
+  lead?: React.ReactNode;
+  /** Navigation (the way back to the terminal), grouped with Print and Excel. */
+  nav?: React.ReactNode;
   /** Station · PSO Cards: Consumption opens the logbook rows behind it. */
   canOpenCards?: boolean;
 }) {
@@ -97,14 +101,18 @@ export default function MonthlyReport({ data, readOnly = false, canOpenCards = f
       <PrintLandscape />
       <ReportLetterhead title={TITLE} date={period} issue="01" />
 
+      {/* One row: the month (passed in), a hint, and at the right the way back, Print and Excel together. */}
       <div className="no-print toolbar-row">
-        <strong style={{ fontSize: 15 }}>📊 {monthName(data.month)}</strong>
-        <span style={{ fontSize: 12, color: "var(--text3)" }}>
-          Type the month&apos;s fuel rate and any maintenance into their cells; litres and km/l work themselves out. Consumption comes from the card&apos;s fuel records. Type a figure to use instead (a car with no card), clear it to go back.
-        </span>
-        <span style={{ flex: 1 }} />
-        <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
-        <button className="btn btn-xs" onClick={exportXlsx} disabled={busy || !data.rows.length}>{busy ? "Exporting…" : "📊 Excel"}</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          {lead}
+          <span style={{ fontSize: 15, color: "var(--text3)", cursor: "help" }}
+            title="Type the month's fuel rate and any maintenance into their cells; litres and km/l work themselves out. Consumption comes from the card's fuel records. Type a figure to use instead (a car with no card), clear it to go back.">ⓘ</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          {nav}
+          <button className="btn btn-print btn-xs" onClick={() => window.print()}>🖨 Print</button>
+          <button className="btn btn-primary btn-xs" onClick={exportXlsx} disabled={busy || !data.rows.length}>{busy ? "Exporting…" : "⬇ Excel"}</button>
+        </div>
       </div>
       {err && <p className="no-print" role="alert" style={{ color: "#DC2626", fontSize: 13 }}>{err}</p>}
 

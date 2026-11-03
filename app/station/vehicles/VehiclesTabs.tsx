@@ -39,7 +39,6 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
   return (
     <div className="fade-up">
       <div className="no-print page-head">
-        <h1>🚐 Vehicles</h1>
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
           { key: "logbook", label: "📖 Log Book" },
           { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },

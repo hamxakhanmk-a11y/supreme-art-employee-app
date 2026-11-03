@@ -93,7 +93,6 @@ export default function PsoCardsClient({
   return (
     <div className="fade-up">
       <div className="no-print page-head">
-        <h1>💳 PSO Cards</h1>
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
           { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
           { key: "cards", label: "💳 All cards", count: cards.length || undefined },

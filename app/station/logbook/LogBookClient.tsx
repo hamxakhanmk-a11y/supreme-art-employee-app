@@ -5,6 +5,7 @@ import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
 import ScrollBox from "../ScrollBox";
+import StatChip from "../StatChip";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { LogBookTrip, LogBookFuel } from "@/lib/fleetServer";
 import type { Person } from "../VehicleTripForms";
@@ -159,6 +160,12 @@ export default function LogBookClient({
           {/* One row: which page of the book, what it adds up to, and its
               buttons — so the entries start as high up the screen as they can. */}
           <div className="no-print toolbar-row">
+            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              <StatChip label="Trips" value={trips.length} />
+              <StatChip label="Km" value={totals.km} color="var(--primary)" bg="var(--primary-soft)" />
+              {/* Only when something needs doing: a trip not yet closed. */}
+              {totals.openTrips > 0 && <StatChip label="Still out" value={totals.openTrips} color="var(--danger)" bg="var(--danger-bg)" />}
+            </div>
             {!filtersInHead && (
               <>
                 <select value={vehicleId} onChange={e => go({ vehicle: Number(e.target.value) })} style={{ width: "auto", minWidth: 190 }}>
@@ -171,11 +178,10 @@ export default function LogBookClient({
                 <input type="month" value={month} onChange={e => e.target.value && go({ month: e.target.value })} style={{ width: "auto" }} />
               </>
             )}
-            {/* Only when something needs doing: a trip not yet closed. */}
-            {totals.openTrips > 0 && <span className="mini-stat danger">Still out <b>{totals.openTrips}</b></span>}
-            <span style={{ flex: 1 }} />
-            <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
-            <button className="btn btn-xs" onClick={exportXlsx} disabled={!trips.length}>📊 Excel</button>
+            <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+              <button className="btn btn-print" onClick={() => window.print()}>🖨 Print</button>
+              <button className="btn btn-primary" onClick={exportXlsx} disabled={!trips.length}>⬇ Excel</button>
+            </div>
           </div>
 
           <ScrollBox>

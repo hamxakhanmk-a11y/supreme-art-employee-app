@@ -5,6 +5,9 @@ import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
 import ReportLetterhead from "@/components/ReportLetterhead";
 import ScrollBox from "../ScrollBox";
+import StatChip from "../StatChip";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
 import { LEAVE_STYLE, formatMins } from "@/lib/station";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { reportLetterhead } from "@/lib/report-export";
@@ -18,6 +21,20 @@ export type VisitRow = {
   personal: Tally; official: Tally;
   outNow: boolean;
   personalReasons: Reason[]; officialReasons: Reason[];
+};
+
+type VisitSort = "time" | "name" | "empId" | "visits" | "personal" | "official";
+const SORT_OPTIONS: SortOption<VisitSort>[] = [
+  { value: "time", label: "Total time (most first)" },
+  { value: "name", label: "Employee (A–Z)" },
+  { value: "empId", label: "Employee ID" },
+  { value: "visits", label: "Visits (most first)" },
+  { value: "personal", label: "Personal time" },
+  { value: "official", label: "Official time" },
+];
+// What the printout says it is sorted by.
+const PRINT_SORT: Record<VisitSort, string> = {
+  time: "total time", name: "employee name", empId: "employee ID", visits: "visits", personal: "personal time", official: "official time",
 };
 
 const P = LEAVE_STYLE.personal;
@@ -60,12 +77,24 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
     return [...movers, ...everyone.filter(s => !went.has(s.id)).map(blank)];
   }, [movers, everyone, showAll]);
 
+  const [sort, setSort] = useState<VisitSort>("time");
+
   const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return base.filter(r =>
+    const found = base.filter(r =>
       (!empId || String(r.employeeId) === empId)
-      && (!q || `${r.empCode} ${r.name}`.toLowerCase().includes(q)));
-  }, [base, empId, search]);
+      && matchesQuery(search, [r.empCode, r.name, `${r.empCode} ${r.name}`]));
+    // "time" is the order the server sends (most total time first); the rest re-order a copy.
+    const tot = (r: VisitRow) => r.personal.minutes + r.official.minutes;
+    const cmp: Record<VisitSort, (a: VisitRow, b: VisitRow) => number> = {
+      time: () => 0,
+      name: (a, b) => cmpText(a.name, b.name),
+      empId: (a, b) => cmpText(a.empCode, b.empCode),
+      visits: (a, b) => (b.personal.visits + b.official.visits) - (a.personal.visits + a.official.visits) || tot(b) - tot(a),
+      personal: (a, b) => b.personal.minutes - a.personal.minutes,
+      official: (a, b) => b.official.minutes - a.official.minutes,
+    };
+    return sort === "time" ? found : [...found].sort(cmp[sort]);
+  }, [base, empId, search, sort]);
 
   // The list follows what's shown, by name; a pick that's dropped out of it
   // (another range, box unticked) stays listed so the filter can be seen and cleared.
@@ -138,53 +167,51 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
       <ReportLetterhead title={TITLE} code={letterhead.code} date={letterhead.date} issue={letterhead.issue} />
       <div className="print-only" style={{ fontSize: "9pt", margin: "0 0 6px" }}>
         {picked && <><strong>{picked.empCode} — {picked.name}</strong> · </>}
-        Sorted by total time · <strong style={{ color: P.color }}>P</strong> = Personal, <strong style={{ color: O.color }}>O</strong> = Official
+        Sorted by {PRINT_SORT[sort]} · <strong style={{ color: P.color }}>P</strong> = Personal, <strong style={{ color: O.color }}>O</strong> = Official
       </div>
 
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Outside Visits Report</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Who left the factory, how often, for how long and where they went — sorted by total time.{" "}
-            <strong style={{ color: P.color }}>P</strong> = Personal, <strong style={{ color: O.color }}>O</strong> = Official.
-          </p>
+      {/* One block of controls (each group wraps as a whole): the counts first, then search and sort, the
+          period, who's listed, and Print and Excel together at the right with the way to the trip list. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10, fontSize: 13, color: "var(--text2)" }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <StatChip label="Employees" value={rows.length} />
+          <StatChip label="Visits" value={pV + oV} color="var(--primary)" bg="var(--primary-soft)" />
+          <StatChip label="Personal" value={formatMins(pM)} color={P.color} bg={P.bg} />
+          <StatChip label="Official" value={formatMins(oM)} color={O.color} bg={O.bg} />
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn btn-sm" onClick={exportXlsx} disabled={!rows.length || exporting}>{exporting ? "Exporting…" : "⬇ Export Excel"}</button>
-          <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
-          <Link href="/station/out?tab=report" className="btn btn-sm">Every trip</Link>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={search} onChange={setSearch} placeholder="🔍  Search name or Emp ID" width={200} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          {presetBtn("today", "Today", today)}
+          {presetBtn("month", "This month", monthStart)}
+          <button className={`btn btn-sm${mode === "custom" ? " btn-primary" : ""}`} onClick={() => setCustomOpen(true)}>Custom</button>
+          {mode === "custom" && (
+            <>
+              <input type="date" value={from} max={to} onChange={e => e.target.value && go(e.target.value, to)} style={{ width: 138 }} />
+              <span>→</span>
+              <input type="date" value={to} min={from} onChange={e => e.target.value && go(from, e.target.value)} style={{ width: 138 }} />
+            </>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          <select value={empId} onChange={e => setEmpId(e.target.value)} style={{ width: 220 }}>
+            <option value="">{showAll ? "All employees" : `Everyone who went out (${movers.length})`}</option>
+            {pickList.map(r => <option key={r.employeeId} value={r.employeeId}>{r.empCode} — {r.name}</option>)}
+          </select>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }} title="Also list the employees who didn't go out, with dashes">
+            <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
+            Show all employees
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          <Link href="/station/out?tab=report" className="btn">Every trip</Link>
+          <button className="btn btn-print" onClick={() => window.print()}>🖨 Print</button>
+          <button className="btn btn-primary" onClick={exportXlsx} disabled={!rows.length || exporting}>{exporting ? "Exporting…" : "⬇ Excel"}</button>
         </div>
       </div>
       {exportError && <p className="no-print" role="alert" style={{ color: "#DC2626", fontSize: 13 }}>{exportError}</p>}
-
-      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10, fontSize: 13, color: "var(--text2)" }}>
-        {presetBtn("today", "Today", today)}
-        {presetBtn("month", "This month", monthStart)}
-        <button className={`btn btn-sm${mode === "custom" ? " btn-primary" : ""}`} onClick={() => setCustomOpen(true)}>Custom</button>
-        {mode === "custom" && (
-          <>
-            <span style={{ fontWeight: 600, marginLeft: 6 }}>From</span>
-            <input type="date" value={from} max={to} onChange={e => e.target.value && go(e.target.value, to)} style={{ width: 150 }} />
-            <span>→</span>
-            <input type="date" value={to} min={from} onChange={e => e.target.value && go(from, e.target.value)} style={{ width: 150 }} />
-          </>
-        )}
-      </div>
-
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, fontSize: 13, color: "var(--text2)" }}>
-        <select value={empId} onChange={e => setEmpId(e.target.value)} style={{ width: 260 }}>
-          <option value="">{showAll ? "All employees" : `Everyone who went out (${movers.length})`}</option>
-          {pickList.map(r => <option key={r.employeeId} value={r.employeeId}>{r.empCode} — {r.name}</option>)}
-        </select>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Search name or Emp ID" style={{ width: 220 }} />
-        <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-          <input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
-          Show all employees, including those who didn&apos;t go out
-        </label>
-        <span style={{ marginLeft: "auto" }}>
-          <strong>{rows.length}</strong> employee{rows.length === 1 ? "" : "s"} · <strong>{pV + oV}</strong> visit{pV + oV === 1 ? "" : "s"}
-        </span>
-      </div>
 
       <ScrollBox>
         <table className="visits-table">

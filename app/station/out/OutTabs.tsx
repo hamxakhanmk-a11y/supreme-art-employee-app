@@ -24,7 +24,6 @@ export default function OutTabs({ tab: initialTab, out, report }: {
   return (
     <div className="fade-up">
       <div className="no-print page-head">
-        <h1>🚶 Who&apos;s Out</h1>
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
           { key: "out", label: "🚶 Who's Out" },
           { key: "report", label: "📋 Report" },

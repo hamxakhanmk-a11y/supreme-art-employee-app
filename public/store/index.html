@@ -90,6 +90,24 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .search-bar input[type=date]{width:138px}
 .search-bar .lbl{font-size:12px;color:#666}
 .toolbar-spacer{flex:1}
+/* List toolbar: thin count chips, search + sort side by side, the filters, then the action buttons grouped at the far right. */
+.st-contents,.ledger-check{display:contents}
+.st-chip{display:inline-flex;align-items:baseline;gap:6px;padding:3px 10px;border-radius:999px;background:#fafaf6;border:1px solid #e8e1d3;white-space:nowrap;flex-shrink:0;line-height:1.3}
+.st-chip b{font-size:14px;font-weight:700;color:#1a1a1a}
+.st-chip small{font-size:10.5px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.st-chip.low{background:#faeeda;border-color:#ecd9b0}.st-chip.low b,.st-chip.low small{color:#854F0B}
+.st-chip.out{background:#fcebeb;border-color:#f0cfcf}.st-chip.out b,.st-chip.out small{color:#A32D2D}
+.st-chip.ok{background:#eaf3de;border-color:#cfe3b8}.st-chip.ok b,.st-chip.ok small{color:#2d6a10}
+.st-chip.info{cursor:help}
+.st-group{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.st-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+.search-bar .st-group input[type=text]{width:200px}
+.search-bar .st-group input[type=date]{width:128px}
+.search-bar select.st-sort{width:auto;min-width:150px;background-color:rgba(245,158,11,.3);border:1px solid #B45309;color:#1f1300;font-weight:600;box-shadow:0 2px 6px rgba(245,158,11,.25);cursor:pointer}
+.search-bar select.st-sort:focus{outline:2px solid #7C2D12;outline-offset:1px}
+.st-sort option{color:#1a1a1a;background:#fff;font-weight:400}
+.search-bar .bulk-info{padding:3px 10px;border-radius:999px;background:#fbefef;border:1px solid #e8c9ca;color:#8C2326;font-weight:600;white-space:nowrap;flex-shrink:0}
+.search-bar .bulk-info:empty{display:none}
 /* A list's table is as wide as its text: no stretched gaps, wrapping before it scrolls sideways. */
 .fit-card{width:fit-content;max-width:100%;overflow:auto;padding:0}
 .fit-card table{width:auto}
@@ -488,20 +506,29 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- INVENTORY -->
     <div class="page" id="page-inventory">
-      <div class="ledger-check no-print"></div>
       <div class="search-bar no-print">
-        <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
-        <span class="toolbar-spacer"></span>
-        <button class="btn btn-sm write-only consumables-only" title="See which suppliers and brands have how many items, and change them" onclick="openSupBrand()"><i class="ti ti-settings"></i> Suppliers &amp; Brands</button>
-        <button class="btn btn-sm btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
-      </div>
-      <div class="search-bar no-print">
-        <select id="inv-cat-filter" onchange="renderInventory()" style="width:170px"></select>
-        <select id="inv-machine-filter" onchange="renderInventory()" style="width:170px"></select>
-        <select id="inv-rack-filter" class="consumables-only" onchange="renderInventory()" style="width:170px"></select>
-        <span class="toolbar-spacer"></span>
-        <button class="btn btn-sm btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
-        <button class="btn btn-sm btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <div class="ledger-check"></div>
+        <span id="inv-chips" class="st-contents"></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search parts..." id="inv-search" oninput="renderInventory()">
+          <select id="inv-sort" class="st-sort" title="Sort by" onchange="renderInventory()">
+            <option value="">Sort: Default order</option>
+            <option value="name">Sort: Part name A-Z</option>
+            <option value="name-desc">Sort: Part name Z-A</option>
+            <option value="qty-desc">Sort: Qty high to low</option>
+            <option value="qty-asc">Sort: Qty low to high</option>
+            <option value="cat">Sort: Category</option>
+          </select>
+        </div>
+        <select id="inv-cat-filter" onchange="renderInventory()" style="width:150px"></select>
+        <select id="inv-machine-filter" onchange="renderInventory()" style="width:150px"></select>
+        <select id="inv-rack-filter" class="consumables-only" onchange="renderInventory()" style="width:150px"></select>
+        <div class="st-actions">
+          <button class="btn btn-sm write-only consumables-only" title="See which suppliers and brands have how many items, and change them" onclick="openSupBrand()"><i class="ti ti-settings"></i> Suppliers &amp; Brands</button>
+          <button class="btn btn-sm btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-sm btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-sm btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
+        </div>
       </div>
       <div class="card fit-card machinery-only">
         <table>
@@ -515,22 +542,33 @@ body:not(.role-admin) .admin-only{display:none!important}
     <!-- STOCK IN -->
     <div class="page" id="page-stockin">
       <div class="search-bar no-print">
-        <input type="text" placeholder="Search by part, supplier, notes..." id="in-search" oninput="renderStockIn()">
-        <span class="toolbar-spacer"></span>
-        <button class="btn btn-sm btn-success write-only" onclick="openModal('bulkIn')"><i class="ti ti-stack-2"></i> Bulk Stock In</button>
-      </div>
-      <div class="search-bar no-print">
-        <span class="lbl">From</span>
-        <input type="date" id="in-date-from" onchange="renderStockIn()">
-        <span class="lbl">To</span>
-        <input type="date" id="in-date-to" onchange="renderStockIn()">
-        <button class="btn btn-sm" onclick="clearLogFilters('in')">Clear</button>
-        <span class="toolbar-spacer"></span>
+        <span id="in-chips" class="st-contents"></span>
         <span class="bulk-info" id="in-bulk-info"></span>
-        <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
-        <button class="btn btn-sm btn-restricted" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
-        <button class="btn btn-sm btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
-        <button class="btn btn-sm btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <div class="st-group">
+          <input type="text" placeholder="Search by part, supplier, notes..." id="in-search" oninput="renderStockIn()">
+          <select id="in-sort" class="st-sort" title="Sort by" onchange="renderStockIn()">
+            <option value="">Sort: Newest first</option>
+            <option value="old">Sort: Oldest first</option>
+            <option value="name">Sort: Part name A-Z</option>
+            <option value="name-desc">Sort: Part name Z-A</option>
+            <option value="qty-desc">Sort: Qty high to low</option>
+            <option value="qty-asc">Sort: Qty low to high</option>
+          </select>
+        </div>
+        <div class="st-group">
+          <span class="lbl">From</span>
+          <input type="date" id="in-date-from" onchange="renderStockIn()">
+          <span class="lbl">To</span>
+          <input type="date" id="in-date-to" onchange="renderStockIn()">
+          <button class="btn btn-sm" onclick="clearLogFilters('in')">Clear</button>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-danger-soft write-only" id="in-bulk-delete" style="display:none" onclick="bulkDeleteTxns('in',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
+          <button class="btn btn-sm btn-restricted" id="in-bulk-purge" style="display:none" onclick="bulkDeleteTxns('in',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+          <button class="btn btn-sm btn-print" onclick="openPrintModal('stockin')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-sm btn-excel" onclick="openExportModal('stockin')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-sm btn-success write-only" onclick="openModal('bulkIn')"><i class="ti ti-stack-2"></i> Bulk Stock In</button>
+        </div>
       </div>
       <div id="in-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
@@ -544,22 +582,33 @@ body:not(.role-admin) .admin-only{display:none!important}
     <!-- STOCK OUT -->
     <div class="page" id="page-stockout">
       <div class="search-bar no-print">
-        <input type="text" placeholder="Search by part, issued to, purpose..." id="out-search" oninput="renderStockOut()">
-        <span class="toolbar-spacer"></span>
-        <button class="btn btn-sm btn-danger-soft write-only" onclick="openModal('bulkOut')"><i class="ti ti-stack-2"></i> Bulk Stock Out</button>
-      </div>
-      <div class="search-bar no-print">
-        <span class="lbl">From</span>
-        <input type="date" id="out-date-from" onchange="renderStockOut()">
-        <span class="lbl">To</span>
-        <input type="date" id="out-date-to" onchange="renderStockOut()">
-        <button class="btn btn-sm" onclick="clearLogFilters('out')">Clear</button>
-        <span class="toolbar-spacer"></span>
+        <span id="out-chips" class="st-contents"></span>
         <span class="bulk-info" id="out-bulk-info"></span>
-        <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
-        <button class="btn btn-sm btn-restricted" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
-        <button class="btn btn-sm btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
-        <button class="btn btn-sm btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <div class="st-group">
+          <input type="text" placeholder="Search by part, issued to, purpose..." id="out-search" oninput="renderStockOut()">
+          <select id="out-sort" class="st-sort" title="Sort by" onchange="renderStockOut()">
+            <option value="">Sort: Newest first</option>
+            <option value="old">Sort: Oldest first</option>
+            <option value="name">Sort: Part name A-Z</option>
+            <option value="name-desc">Sort: Part name Z-A</option>
+            <option value="qty-desc">Sort: Qty high to low</option>
+            <option value="qty-asc">Sort: Qty low to high</option>
+          </select>
+        </div>
+        <div class="st-group">
+          <span class="lbl">From</span>
+          <input type="date" id="out-date-from" onchange="renderStockOut()">
+          <span class="lbl">To</span>
+          <input type="date" id="out-date-to" onchange="renderStockOut()">
+          <button class="btn btn-sm" onclick="clearLogFilters('out')">Clear</button>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-danger-soft write-only" id="out-bulk-delete" style="display:none" onclick="bulkDeleteTxns('out',false)"><i class="ti ti-arrow-back-up"></i> Reverse Selected</button>
+          <button class="btn btn-sm btn-restricted" id="out-bulk-purge" style="display:none" onclick="bulkDeleteTxns('out',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+          <button class="btn btn-sm btn-print" onclick="openPrintModal('stockout')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-sm btn-excel" onclick="openExportModal('stockout')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-sm btn-danger-soft write-only" onclick="openModal('bulkOut')"><i class="ti ti-stack-2"></i> Bulk Stock Out</button>
+        </div>
       </div>
       <div id="out-return-bar" class="no-print" style="display:none"></div>
       <div class="card fit-card txn-card">
@@ -572,22 +621,35 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- ISSUANCE LOG -->
     <div class="page" id="page-issuance">
-      <div class="ledger-check no-print"></div>
       <div class="search-bar no-print">
-        <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
-      </div>
-      <div class="search-bar no-print">
-        <label class="lbl">View <select id="movement-view" onchange="StoreMovement.change()" style="width:auto"><option value="weekly">Weekly report</option><option value="daily">Daily report</option><option value="monthly">Monthly report</option><option value="history">Transaction history</option></select></label>
-        <span class="lbl">From</span>
-        <input type="date" id="iss-date-from" onchange="renderIssuance()">
-        <span class="lbl">To</span>
-        <input type="date" id="iss-date-to" onchange="renderIssuance()">
-        <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
-        <span class="toolbar-spacer"></span>
+        <div class="ledger-check"></div>
+        <span id="iss-chips" class="st-contents"></span>
         <span class="bulk-info" id="iss-bulk-info"></span>
-        <button class="btn btn-sm btn-restricted" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
-        <button class="btn btn-sm btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
-        <button class="btn btn-sm btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <span class="st-chip info" id="movement-note" style="display:none" title="Balances are reconstructed from current stock and retained history. Stock now is current inventory. Deleted history or unlogged adjustments can affect historical balances."><small>&#9432; Note</small></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search part / SKU (history: issued to)" id="iss-search" oninput="renderIssuance()">
+          <select id="iss-sort" class="st-sort" title="Sort by (reports: by part name or total out)" onchange="renderIssuance()">
+            <option value="">Sort: Newest first</option>
+            <option value="old">Sort: Oldest first</option>
+            <option value="name">Sort: Part name A-Z</option>
+            <option value="name-desc">Sort: Part name Z-A</option>
+            <option value="qty-desc">Sort: Qty high to low</option>
+            <option value="qty-asc">Sort: Qty low to high</option>
+          </select>
+        </div>
+        <div class="st-group">
+          <label class="lbl">View <select id="movement-view" onchange="StoreMovement.change()" style="width:auto"><option value="weekly">Weekly report</option><option value="daily">Daily report</option><option value="monthly">Monthly report</option><option value="history">Transaction history</option></select></label>
+          <span class="lbl">From</span>
+          <input type="date" id="iss-date-from" onchange="renderIssuance()">
+          <span class="lbl">To</span>
+          <input type="date" id="iss-date-to" onchange="renderIssuance()">
+          <button class="btn btn-sm" onclick="clearLogFilters('iss')">Clear</button>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-restricted" id="iss-bulk-purge" style="display:none" onclick="bulkDeleteTxns('iss',true)"><i class="ti ti-alert-triangle"></i> Delete from History</button>
+          <button class="btn btn-sm btn-print" onclick="openPrintModal('issuance')"><i class="ti ti-printer"></i> Print</button>
+          <button class="btn btn-sm btn-excel" onclick="openExportModal('issuance')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        </div>
       </div>
       <div id="movement-categories" class="no-print" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
       <div id="movement-output"></div>
@@ -601,9 +663,21 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- CATEGORIES -->
     <div class="page" id="page-categories">
-      <div class="page-header">
-        <div class="page-title">Categories</div>
-        <button class="btn btn-primary write-only" onclick="openModal('addCat')"><i class="ti ti-plus"></i> Add Category</button>
+      <div class="search-bar no-print">
+        <span id="cat-chips" class="st-contents"></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search categories..." id="cat-search" oninput="renderCategories()">
+          <select id="cat-sort" class="st-sort" title="Sort by" onchange="renderCategories()">
+            <option value="">Sort: Default order</option>
+            <option value="name">Sort: Name A-Z</option>
+            <option value="name-desc">Sort: Name Z-A</option>
+            <option value="most">Sort: Most parts</option>
+            <option value="fewest">Sort: Fewest parts</option>
+          </select>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-primary write-only" onclick="openModal('addCat')"><i class="ti ti-plus"></i> Add Category</button>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -615,9 +689,21 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- MACHINES -->
     <div class="page" id="page-machines">
-      <div class="page-header">
-        <div class="page-title">Machines / Equipment</div>
-        <button class="btn btn-primary write-only" onclick="openModal('addMachine')"><i class="ti ti-plus"></i> Add Machine</button>
+      <div class="search-bar no-print">
+        <span id="machine-chips" class="st-contents"></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search machines..." id="machine-search" oninput="renderMachines()">
+          <select id="machine-sort" class="st-sort" title="Sort by" onchange="renderMachines()">
+            <option value="">Sort: Default order</option>
+            <option value="name">Sort: Name A-Z</option>
+            <option value="name-desc">Sort: Name Z-A</option>
+            <option value="most">Sort: Most parts</option>
+            <option value="fewest">Sort: Fewest parts</option>
+          </select>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-primary write-only" onclick="openModal('addMachine')"><i class="ti ti-plus"></i> Add Machine</button>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -643,9 +729,19 @@ body:not(.role-admin) .admin-only{display:none!important}
 
     <!-- TRASH -->
     <div class="page" id="page-trash">
-      <div class="page-header">
-        <div class="page-title">Trash</div>
-        <span style="font-size:12px;color:#888">A deleted part stays here until you remove it. Its stock in and stock out history stays in the reports either way.</span>
+      <div class="search-bar no-print">
+        <span id="trash-chips" class="st-contents"></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search trash..." id="trash-search" oninput="renderTrash()">
+          <select id="trash-sort" class="st-sort" title="Sort by" onchange="renderTrash()">
+            <option value="">Sort: Default order</option>
+            <option value="del-new">Sort: Deleted newest</option>
+            <option value="del-old">Sort: Deleted oldest</option>
+            <option value="name">Sort: Part name A-Z</option>
+            <option value="name-desc">Sort: Part name Z-A</option>
+            <option value="qty-desc">Sort: Qty high to low</option>
+          </select>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
@@ -3101,17 +3197,17 @@ function renderLedgerCheck(){
   const head=`<tr style="background:#fee2e2"><th style="text-align:left;${th}">Part</th><th style="text-align:right;${th}">Qty on hand</th><th style="text-align:right;${th}">Movements add up to</th><th style="text-align:right;${th}">Difference</th><th style="${th}"></th></tr>`;
   let html;
   if(off.length){
-    html=`<div style="margin:0 0 10px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
+    html=`<div style="flex:1 1 100%;margin:0 0 2px;padding:10px 12px;background:#fef2f2;border:1px solid #dc2626;border-radius:8px;font-size:12px">
       <div style="font-weight:700;color:#991b1b;margin-bottom:4px">&#9888; ${off.length} part${off.length===1?' does':'s do'} not add up - the quantity on hand and the stock movements disagree</div>
       <div style="color:#7f1d1d;margin-bottom:8px">Usually a record was removed with "Delete from History" while the quantity was kept. The Weekly / Daily / Monthly reports start from the quantity on hand, so their opening balances for these parts are off by the difference.${canReconcile()?' <b>Reconcile</b> records an adjustment so the history matches the quantity on hand (the quantity itself is not changed); <b>Ignore</b> hides the warning until its difference changes.':''}</div>
       <table style="width:auto;font-size:12px;border-collapse:collapse">${head}
         ${off.map(m=>rowHtml(m,`${histBtn(m)}${canReconcile()?` <button class="btn btn-sm btn-restricted" title="Record an adjustment so the movements add up to the quantity on hand" onclick="ledgerReconcile(${m.p.id})">Reconcile</button> <button class="btn btn-sm btn-restricted" title="Hide this warning" onclick="ledgerIgnore(${m.p.id})">Ignore</button>`:''}`)).join('')}
       </table></div>`;
   } else {
-    html=`<div style="margin:0 0 10px;font-size:12px;color:#166534">&#10003; 0 parts off - every quantity matches its stock movements</div>`;
+    html='<span class="st-chip ok" title="Every quantity matches its stock movements"><b>&#10003; 0</b><small>parts off</small></span>';
   }
   if(ignored.length){
-    html+=`<div style="margin:0 0 10px;font-size:12px;color:#666">${ignored.length} warning${ignored.length===1?'':'s'} ignored - <a href="#" onclick="toggleLedgerIgnored();return false" style="color:#8C2326;font-weight:600">${_ledgerShowIgnored?'hide':'show'}</a>
+    html+=`<div style="${_ledgerShowIgnored?'flex:1 1 100%;margin:0 0 2px;':'display:contents;'}font-size:12px;color:#666"><span class="st-chip"><b>${ignored.length}</b><small>warning${ignored.length===1?'':'s'} ignored - <a href="#" onclick="toggleLedgerIgnored();return false" style="color:#8C2326;font-weight:600;text-transform:none">${_ledgerShowIgnored?'hide':'show'}</a></small></span>
       ${_ledgerShowIgnored?`<table style="width:auto;font-size:12px;border-collapse:collapse;margin-top:6px">${head}${ignored.map(m=>rowHtml(m,`${histBtn(m)}${canReconcile()?` <button class="btn btn-sm btn-restricted" onclick="ledgerUnignore(${m.p.id})">Stop ignoring</button>`:''}`)).join('')}</table>`:''}
     </div>`;
   }
@@ -3560,7 +3656,7 @@ function renderSupBrand(){
         +'<td style="text-align:right;color:#888;white-space:nowrap">'+products+' product'+(products===1?'':'s')+'</td><td style="width:24px;color:#bbb">\u203A</td></tr>';
     }).join('');
     body.innerHTML=tabs
-      +'<div style="font-size:12px;color:#777;margin-bottom:8px">'+keys.filter(k=>k).length+' '+label+(keys.filter(k=>k).length===1?'':'s')+' across '+state.parts.length+' items. Click one to see its items and change them.</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><span class="st-chip" title="Click one to see its items and change them"><b>'+keys.filter(k=>k).length+'</b><small>'+label+(keys.filter(k=>k).length===1?'':'s')+'</small></span><span class="st-chip"><b>'+state.parts.length+'</b><small>items</small></span></div>'
       +'<div class="sb-box"><table><thead><tr><th>'+(f==='supplier'?'Supplier':'Brand')+'</th><th style="text-align:right">Items</th><th style="text-align:right">Products</th><th></th></tr></thead><tbody>'
       +(rows||'<tr><td colspan="4" style="padding:16px;text-align:center;color:#999">Nothing in the store yet.</td></tr>')+'</tbody></table></div>';
     return;
@@ -3631,14 +3727,24 @@ async function sbRename(){
 
 // One card per product: its name, category, brand count and total, then a row per supplier + brand
 // with that brand's own stock and its + Stock / − Stock / Edit / Delete.
-function renderInkGroups(visible){
+function renderInkGroups(visible,sortV){
   const host=document.getElementById('inv-groups');
   if(!host)return;
   const e=_escHtml;
   const groups=new Map();
   visible.forEach(p=>{const k=inkKey(p);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
   if(!groups.size){host.innerHTML='<div class="empty"><i class="ti ti-search"></i>No items found</div>';return;}
-  host.innerHTML=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,rows])=>{
+  // Sort the product cards (default: by name).
+  const gSum=new Map();
+  const sumOf=k=>{if(!gSum.has(k))gSum.set(k,inkGroupTotal(state.parts.filter(p=>inkKey(p)===k)).sum);return gSum.get(k);};
+  const catOf=k=>{const f=state.parts.find(p=>inkKey(p)===k);return f?(f.category||''):'';};
+  const byKey=(a,b)=>a[0].localeCompare(b[0]);
+  const cmp=sortV==='name-desc'?(a,b)=>byKey(b,a)
+    :sortV==='qty-desc'?(a,b)=>sumOf(b[0])-sumOf(a[0])||byKey(a,b)
+    :sortV==='qty-asc'?(a,b)=>sumOf(a[0])-sumOf(b[0])||byKey(a,b)
+    :sortV==='cat'?(a,b)=>stNameCmp(catOf(a[0]),catOf(b[0]))||byKey(a,b)
+    :byKey;
+  host.innerHTML=[...groups.entries()].sort(cmp).map(([k,rows])=>{
     rows.sort(inkSort);
     const all=state.parts.filter(p=>inkKey(p)===k);
     const t=inkGroupTotal(all);
@@ -3734,6 +3840,44 @@ function openGroupHistory(k,brandId){
   document.getElementById('modal-partHistory').classList.add('open');
 }
 
+// ---- List toolbar helpers: count chips and sorting ----
+// list: [[value,label,cls?,title?],...] (falsy entries skipped)
+function stChips(id,list){
+  const h=document.getElementById(id);
+  if(!h)return;
+  h.innerHTML=list.filter(Boolean).map(c=>'<span class="st-chip'+(c[2]?' '+c[2]:'')+'"'+(c[3]?' title="'+_escHtml(c[3])+'"':'')+'><b>'+_escHtml(String(c[0]))+'</b><small>'+_escHtml(c[1])+'</small></span>').join('');
+}
+function stNameCmp(a,b){return String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base',numeric:true});}
+function stCount(n,total){return n===total?n:n+' of '+total;}
+function sortParts(list,v){
+  const nm=(a,b)=>stNameCmp(a.name,b.name);
+  if(v==='name')list.sort(nm);
+  else if(v==='name-desc')list.sort((a,b)=>nm(b,a));
+  else if(v==='qty-desc')list.sort((a,b)=>(Number(b.qty)||0)-(Number(a.qty)||0)||nm(a,b));
+  else if(v==='qty-asc')list.sort((a,b)=>(Number(a.qty)||0)-(Number(b.qty)||0)||nm(a,b));
+  else if(v==='cat')list.sort((a,b)=>stNameCmp(a.category,b.category)||nm(a,b));
+  return list;
+}
+// Stock in / out / issuance rows. The lists arrive newest first (highest id first), which is the default.
+function sortTxns(list,v){
+  const pn=(a,b)=>stNameCmp(getPartName(a.partId),getPartName(b.partId));
+  if(v==='old')list.sort((a,b)=>a.id-b.id);
+  else if(v==='name')list.sort((a,b)=>pn(a,b)||b.id-a.id);
+  else if(v==='name-desc')list.sort((a,b)=>pn(b,a)||b.id-a.id);
+  else if(v==='qty-desc')list.sort((a,b)=>(Number(b.qty)||0)-(Number(a.qty)||0)||b.id-a.id);
+  else if(v==='qty-asc')list.sort((a,b)=>(Number(a.qty)||0)-(Number(b.qty)||0)||b.id-a.id);
+  return list;
+}
+// Categories / machines: items {count}, sorted by name (nameOf) or by how many parts they hold.
+function sortCounted(list,v,nameOf){
+  const nm=(a,b)=>stNameCmp(nameOf(a),nameOf(b));
+  if(v==='name')list.sort(nm);
+  else if(v==='name-desc')list.sort((a,b)=>nm(b,a));
+  else if(v==='most')list.sort((a,b)=>b.count-a.count||nm(a,b));
+  else if(v==='fewest')list.sort((a,b)=>a.count-b.count||nm(a,b));
+  return list;
+}
+
 function renderInventory(){
   renderLedgerCheck();
   const inks=isInks();
@@ -3769,7 +3913,15 @@ function renderInventory(){
     return txt&&cat&&mach&&rack;
   });
 
-  if(inks){renderInkGroups(parts);return;}
+  const lowN=parts.filter(p=>p.qty!==0&&p.qty<=p.minQty).length, outN=parts.filter(p=>p.qty===0).length;
+  stChips('inv-chips',[
+    [stCount(parts.length,state.parts.length),inks?'Items':'Parts'],
+    lowN?[lowN,'Low','low','Low stock']:null,
+    outN?[outN,'Out','out','Out of stock']:null
+  ]);
+  const sortV=(document.getElementById('inv-sort')||{value:''}).value;
+  if(inks){renderInkGroups(parts,sortV);return;}
+  sortParts(parts,sortV);
 
   // Header follows the module.
   const th=document.getElementById('inv-thead');
@@ -3891,6 +4043,8 @@ function renderStockIn(){
     const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.ref||'')+' '+(t.notes||'')+' '+(t.challanNo||'')).toLowerCase().includes(search);
     return ms&&inDateRange(t.date,dFrom,dTo);
   });
+  sortTxns(txns,(document.getElementById('in-sort')||{value:''}).value);
+  stChips('in-chips',[[stCount(txns.length,state.transactions.filter(t=>t.type==='in').length),'Entries']]);
   const bal=computeBalances();
   const tb=document.getElementById('stockin-table');
   if(!tb)return;
@@ -3920,6 +4074,8 @@ function renderStockOut(){
     const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.issuedTo||'')+' '+(t.purpose||'')+' '+(t.challanNo||'')).toLowerCase().includes(search);
     return ms&&inDateRange(t.date,dFrom,dTo);
   });
+  sortTxns(txns,(document.getElementById('out-sort')||{value:''}).value);
+  stChips('out-chips',[[stCount(txns.length,state.transactions.filter(t=>t.type==='out').length),'Entries']]);
   const bal=computeBalances();
   const tb=document.getElementById('stockout-table');
   if(!tb)return;
@@ -3951,6 +4107,8 @@ function renderIssuance(){
     const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.issuedTo||'')+(t.ref||'')+(t.purpose||'')+(t.challanNo||'')).toLowerCase().includes(search);
     return ms&&inDateRange(t.date,dFrom,dTo)&&(!StoreMovement.category||getPartCat(t.partId)===StoreMovement.category);
   });
+  sortTxns(txns,(document.getElementById('iss-sort')||{value:''}).value);
+  stChips('iss-chips',[[stCount(txns.length,state.transactions.length),'Entries']]);
   const bal=computeBalances();
   const tb=document.getElementById('issuance-table');
   if(!tb)return;
@@ -3973,8 +4131,13 @@ function renderIssuance(){
 function renderCategories(){
   const tb=document.getElementById('cat-table');
   if(!tb)return;
-  tb.innerHTML=state.categories.map(c=>{
-    const count=state.parts.filter(p=>p.category===c).length;
+  const q=((document.getElementById('cat-search')||{value:''}).value||'').trim().toLowerCase();
+  const all=state.categories.map(c=>({c,count:state.parts.filter(p=>p.category===c).length}));
+  const list=all.filter(x=>!q||String(x.c).toLowerCase().includes(q));
+  sortCounted(list,(document.getElementById('cat-sort')||{value:''}).value,x=>x.c);
+  stChips('cat-chips',[[stCount(list.length,all.length),'Categories']]);
+  if(!list.length){tb.innerHTML=q?'<tr><td colspan="3"><div class="empty"><i class="ti ti-search"></i>No matching categories</div></td></tr>':'';return;}
+  tb.innerHTML=list.map(({c,count})=>{
     return`<tr><td style="font-weight:600">${c}</td><td><span class="badge badge-ok">${count} part${count!==1?'s':''}</span></td><td class="write-only"><button class="btn btn-sm" style="color:#A32D2D" title="Delete this category" onclick="deleteCat('${c}')"><i class="ti ti-trash"></i> Delete</button></td></tr>`;
   }).join('');
 }
@@ -3982,9 +4145,14 @@ function renderCategories(){
 function renderMachines(){
   const tb=document.getElementById('machine-table');
   if(!tb)return;
+  const q=((document.getElementById('machine-search')||{value:''}).value||'').trim().toLowerCase();
+  const all=state.machines.map(m=>({m,count:state.parts.filter(p=>parseMachines(p.machine).includes(m)).length}));
+  const list=all.filter(x=>!q||String(x.m).toLowerCase().includes(q));
+  sortCounted(list,(document.getElementById('machine-sort')||{value:''}).value,x=>x.m);
+  stChips('machine-chips',[[stCount(list.length,all.length),'Machines']]);
   if(!state.machines.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><i class="ti ti-building-factory-2"></i>No machines added yet</div></td></tr>';return;}
-  tb.innerHTML=state.machines.map(m=>{
-    const count=state.parts.filter(p=>parseMachines(p.machine).includes(m)).length;
+  if(!list.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><i class="ti ti-search"></i>No matching machines</div></td></tr>';return;}
+  tb.innerHTML=list.map(({m,count})=>{
     return`<tr><td style="font-weight:600">${m}</td><td><span class="badge badge-ok">${count} part${count!==1?'s':''}</span></td><td class="write-only"><button class="btn btn-sm" style="color:#A32D2D" title="Delete this machine" onclick="deleteMachine('${m.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i> Delete</button></td></tr>`;
   }).join('');
 }
@@ -4032,8 +4200,19 @@ function renderActivity(){
 function renderTrash(){
   const tb=document.getElementById('trash-table');
   if(!tb)return;
-  const items=state.trash||[];
-  if(!items.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><i class="ti ti-trash-off"></i>Trash is empty</div></td></tr>';return;}
+  const all=state.trash||[];
+  const q=((document.getElementById('trash-search')||{value:''}).value||'').trim().toLowerCase();
+  const items=all.filter(p=>!q||[p.sku,p.name,p.category].join(' ').toLowerCase().includes(q));
+  const sv=(document.getElementById('trash-sort')||{value:''}).value;
+  const dt=p=>new Date(p.deletedAt||0).getTime()||0;
+  if(sv==='name')items.sort((a,b)=>stNameCmp(a.name,b.name));
+  else if(sv==='name-desc')items.sort((a,b)=>stNameCmp(b.name,a.name));
+  else if(sv==='qty-desc')items.sort((a,b)=>(Number(b.qty)||0)-(Number(a.qty)||0)||stNameCmp(a.name,b.name));
+  else if(sv==='del-new')items.sort((a,b)=>dt(b)-dt(a));
+  else if(sv==='del-old')items.sort((a,b)=>dt(a)-dt(b));
+  stChips('trash-chips',[[stCount(items.length,all.length),'In trash',null,'A deleted part stays here until you remove it. Its stock in and stock out history stays in the reports either way.']]);
+  if(!all.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><i class="ti ti-trash-off"></i>Trash is empty</div></td></tr>';return;}
+  if(!items.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><i class="ti ti-search"></i>No matching parts in the trash</div></td></tr>';return;}
   const fmtTs=ts=>{if(!ts)return'';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
   tb.innerHTML=items.map(p=>`<tr>
     <td style="font-family:monospace;font-weight:600;color:#8C2326">${p.sku||'—'}</td>

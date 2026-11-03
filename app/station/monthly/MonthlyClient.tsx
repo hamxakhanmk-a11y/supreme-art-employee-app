@@ -4,23 +4,21 @@ import { useRouter } from "next/navigation";
 import MonthlyReport from "./MonthlyReport";
 import type { FleetMonth } from "@/lib/fleetMonthly";
 
-// The page around the report: its title, the month, and the way back to the
-// terminal, on one line like the other Station pages.
+// The page around the report: the month picker and the way back to the
+// terminal sit in the report's own controls row, so there is one line above the sheet.
 export default function MonthlyClient({ data, readOnly, canOpenCards }: { data: FleetMonth; readOnly: boolean; canOpenCards: boolean }) {
   const router = useRouter();
   return (
     <div className="fade-up">
-      <div className="no-print page-head">
-        <h1>📊 Monthly Report</h1>
-        <span className="spacer" />
-        <span className="head-filter">
-          Month
-          <input type="month" value={data.month}
-            onChange={e => e.target.value && router.push(`/station/monthly?month=${e.target.value}`, { scroll: false })} />
-        </span>
-        <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
-      </div>
-      <MonthlyReport data={data} readOnly={readOnly} canOpenCards={canOpenCards} />
+      <MonthlyReport data={data} readOnly={readOnly} canOpenCards={canOpenCards}
+        lead={
+          <span className="head-filter">
+            Month
+            <input type="month" value={data.month}
+              onChange={e => e.target.value && router.push(`/station/monthly?month=${e.target.value}`, { scroll: false })} />
+          </span>
+        }
+        nav={<Link href="/station" className="btn btn-xs">🏭 Terminal</Link>} />
     </div>
   );
 }

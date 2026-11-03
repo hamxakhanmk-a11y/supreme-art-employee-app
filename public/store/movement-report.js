@@ -117,6 +117,7 @@
     const history = el('issuance-table')?.closest('.card');
     const output = el('movement-output');
     if (!output) return false;
+    const note = el('movement-note'); if (note) note.style.display = mode === 'history' ? 'none' : '';
     if (history) history.style.display = mode === 'history' ? '' : 'none';
     el('iss-bulk-info').style.display = mode === 'history' ? '' : 'none';
     if (mode === 'history') { output.style.display = 'none'; return false; }
@@ -131,8 +132,16 @@
       api.current = build(state.parts.concat(state.gone || []),state.transactions,from,to,mode,api.category,el('iss-search').value);
       const visible = new Set(api.current.rows.map(r => String(r.id)));
       api.selected.forEach(id => { if (!visible.has(id)) api.selected.delete(id); });
-      output.innerHTML = '<style>' + css + '</style><p style="font-size:12px;margin:8px 0">Balances are reconstructed from current stock and retained history. Stock now is current inventory. Deleted history or unlogged adjustments can affect historical balances.</p>' +
-        (api.current.rows.length ? '<div style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(api.current,0,api.current.groups.length,true) + tableRows(api.current,0,api.current.groups.length,true) + '</table></div>' : '<p>No parts match these filters.</p>');
+      if (typeof stChips === 'function') stChips('iss-chips', [[api.current.rows.length, 'Parts']]);
+      // The on-screen order can be changed with the sort box; api.current (what is printed / exported) keeps its own order.
+      const sortBy = el('iss-sort')?.value || '';
+      const shownRows = api.current.rows.slice();
+      if (sortBy === 'name-desc') shownRows.reverse();
+      else if (sortBy === 'qty-desc') shownRows.sort((a,b) => b.totalOut - a.totalOut);
+      else if (sortBy === 'qty-asc') shownRows.sort((a,b) => a.totalOut - b.totalOut);
+      const shown = { ...api.current, rows: shownRows };
+      output.innerHTML = '<style>' + css + '</style>' +
+        (shown.rows.length ? '<div style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(shown,0,shown.groups.length,true) + tableRows(shown,0,shown.groups.length,true) + '</table></div>' : '<p>No parts match these filters.</p>');
       output.querySelectorAll('[data-movement-id]').forEach(c => c.onchange = () => c.checked ? api.selected.add(c.dataset.movementId) : api.selected.delete(c.dataset.movementId));
     } catch (error) { api.current = null; output.textContent = error.message; }
     return true;

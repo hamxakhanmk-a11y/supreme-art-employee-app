@@ -6,8 +6,24 @@ import PrintLandscape from "@/components/PrintLandscape";
 import PrintHeader from "@/components/PrintHeader";
 import EditCell from "../EditCell";
 import ScrollBox from "../ScrollBox";
+import StatChip from "../StatChip";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import type { PsoRow } from "@/lib/fleetServer";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type RegSort = "listed" | "driver" | "vehicle" | "card" | "amount" | "pending";
+const SORT_OPTIONS: SortOption<RegSort>[] = [
+  { value: "listed", label: "Collection date (as listed)" },
+  { value: "driver", label: "Driver (A–Z)" },
+  { value: "vehicle", label: "Vehicle" },
+  { value: "card", label: "Card SN" },
+  { value: "amount", label: "Fuel (most first)" },
+  { value: "pending", label: "Pending first" },
+];
+
+const LBL: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, textTransform: "uppercase" };
+
 
 
 type VehicleRow = { id: number; vehicleNo: string; name: string | null; active: boolean };
@@ -46,11 +62,21 @@ export default function RegisterClient({
     router.push(`/station/pso?${p.toString()}`, { scroll: false });
   };
 
+  const [sort, setSort] = useState<RegSort>("listed");
+
   const shown = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(r => (r.sn + " " + r.driver + " " + r.vehicleNo + " " + r.notes).toLowerCase().includes(q));
-  }, [rows, search]);
+    const found = rows.filter(r => matchesQuery(search, [r.sn, r.driver, r.vehicleNo, r.notes, r.slipNo]));
+    // "listed" is the order the server sends; the rest re-order a copy.
+    const cmp: Record<RegSort, (a: PsoRow, b: PsoRow) => number> = {
+      listed: () => 0,
+      driver: (a, b) => cmpText(a.driver, b.driver),
+      vehicle: (a, b) => cmpText(a.vehicleNo, b.vehicleNo),
+      card: (a, b) => cmpText(a.sn, b.sn),
+      amount: (a, b) => (b.amount ?? 0) - (a.amount ?? 0),
+      pending: (a, b) => Number(!!a.submittedDate) - Number(!!b.submittedDate),
+    };
+    return sort === "listed" ? found : [...found].sort(cmp[sort]);
+  }, [rows, search, sort]);
 
   const totalAmount = shown.reduce((s, r) => s + (r.amount ?? 0), 0);
 
@@ -105,18 +131,27 @@ export default function RegisterClient({
       <PrintLandscape />
       <PrintHeader title="PSO Cards — Fuel Logbook" meta={`${fmt(from)} to ${fmt(to)} · ${shown.length} entries · ${rupees(totalAmount)}`} />
 
-      {/* Title, filters, total and buttons on one line, so the entries start
-          as high up the screen as they can. */}
-      <div className="no-print toolbar-row">
-        <strong style={{ fontSize: 15, marginRight: 4 }}>📋 Cards Logbook</strong>
-        <input placeholder="Search SN, driver, vehicle…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: 210 }} />
-        <span style={{ fontSize: 12, color: "#666" }}>From</span>
-        <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 145 }} />
-        <span style={{ fontSize: 12, color: "#666" }}>To</span>
-        <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 145 }} />
-        <span style={{ flex: 1 }} />
-        <button className="btn btn-xs" onClick={() => window.print()}>🖨 Print</button>
-        <button className="btn btn-xs" onClick={exportXlsx} disabled={!shown.length}>📊 Excel</button>
+      {/* One row, so the entries start as high up the screen as they can: the
+          counts, search and sort, the date range, and Print and Excel together at the right. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <StatChip label="Entries" value={shown.length} />
+          <StatChip label="Fuel" value={rupees(totalAmount)} color="var(--primary)" bg="var(--primary-soft)" />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={search} onChange={setSearch} placeholder="🔍  Search SN, driver, vehicle, slip…" width={210} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={LBL}>From</span>
+          <input type="date" value={from} onChange={e => e.target.value && go({ from: e.target.value })} style={{ width: 138 }} />
+          <span style={LBL}>To</span>
+          <input type="date" value={to} onChange={e => e.target.value && go({ to: e.target.value })} style={{ width: 138 }} />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          <button className="btn btn-print" onClick={() => window.print()}>🖨 Print</button>
+          <button className="btn btn-primary" onClick={exportXlsx} disabled={!shown.length}>⬇ Excel</button>
+        </div>
       </div>
 
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 12, fontSize: 13 }}>{err}</div>}

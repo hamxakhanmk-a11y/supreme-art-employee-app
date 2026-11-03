@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useCanEdit } from "@/components/MeProvider";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
+import Link from "next/link";
+import StatChip from "../StatChip";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
 
 // ISO timestamp → "HH:MM" (24h) wall-clock in Karachi, for the time inputs.
 function toKarachiHM(iso: string | null | undefined): string {
@@ -27,15 +31,28 @@ export interface Trip {
   minutes: number | null;
 }
 
+type TripSort = "latest" | "oldest" | "name" | "empId" | "longest" | "type" | "open";
+const TRIP_SORT_OPTIONS: SortOption<TripSort>[] = [
+  { value: "latest", label: "Latest check-out" },
+  { value: "oldest", label: "Oldest check-out" },
+  { value: "name", label: "Employee (A–Z)" },
+  { value: "empId", label: "Employee ID" },
+  { value: "longest", label: "Duration (longest)" },
+  { value: "type", label: "Type" },
+  { value: "open", label: "Still out first" },
+];
+
 function fmtDate(d: string) {
   const [y, m, day] = d.split("-");
   return `${day}/${m}/${y}`;
 }
 
 export default function StationReportClient({
-  trips, from, to, tab,
+  trips, from, to, tab, terminalLink = false,
 }: {
   trips: Trip[]; from: string; to: string;
+  /** Standalone page (Reports → Station): the way back to the terminal sits with Print and Excel. */
+  terminalLink?: boolean;
   /** Kept in the address when the dates are applied, so the page stays on this view. */
   tab?: string;
 }) {
@@ -44,6 +61,7 @@ export default function StationReportClient({
   const canDeleteStation = useCanEdit("station.delete");
   const [empFilter, setEmpFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | LeaveType>("all");
+  const [sort, setSort] = useState<TripSort>("latest");
 
   // Inline edit of one trip's times / type / reason.
   const [editId, setEditId] = useState<number | null>(null);
@@ -85,11 +103,23 @@ export default function StationReportClient({
   }
   const showActions = canEditStation || canDeleteStation;
 
-  const rows = useMemo(() => trips.filter(t => {
-    if (typeFilter !== "all" && t.type !== typeFilter) return false;
-    if (empFilter && !`${t.name} ${t.empCode}`.toLowerCase().includes(empFilter.toLowerCase())) return false;
-    return true;
-  }), [trips, empFilter, typeFilter]);
+  const rows = useMemo(() => {
+    const found = trips.filter(t => {
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
+      return matchesQuery(empFilter, [t.name, t.empCode, `${t.name} ${t.empCode}`, t.department, t.reason]);
+    });
+    // "latest" is the order the server sends (latest check-out first); the rest re-order a copy.
+    const cmp: Record<TripSort, (a: Trip, b: Trip) => number> = {
+      latest: () => 0,
+      oldest: (a, b) => a.outAt.localeCompare(b.outAt),
+      name: (a, b) => cmpText(a.name, b.name) || b.outAt.localeCompare(a.outAt),
+      empId: (a, b) => cmpText(a.empCode, b.empCode) || b.outAt.localeCompare(a.outAt),
+      longest: (a, b) => (b.minutes ?? 0) - (a.minutes ?? 0),
+      type: (a, b) => cmpText(a.type, b.type) || b.outAt.localeCompare(a.outAt),
+      open: (a, b) => Number(b.inAt === null) - Number(a.inAt === null),
+    };
+    return sort === "latest" ? found : [...found].sort(cmp[sort]);
+  }, [trips, empFilter, typeFilter, sort]);
 
   const totPersonal = rows.filter(r => r.type === "personal").reduce((s, r) => s + (r.minutes ?? 0), 0);
   const totOfficial = rows.filter(r => r.type === "official").reduce((s, r) => s + (r.minutes ?? 0), 0);
@@ -119,39 +149,39 @@ export default function StationReportClient({
 
   return (
     <>
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-        <form method="GET" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13, color: "var(--text2)" }}>
+      {/* One block of controls (each group wraps as a whole): the counts first, then search and sort, the
+          range, the type, and at the right the way to the terminal, Print and Excel together. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <StatChip label="Trips" value={rows.length} />
+          <StatChip label="Personal" value={formatMins(totPersonal)} color={LEAVE_STYLE.personal.color} bg={LEAVE_STYLE.personal.bg} />
+          <StatChip label="Official" value={formatMins(totOfficial)} color={LEAVE_STYLE.official.color} bg={LEAVE_STYLE.official.bg} />
+          {openCount > 0 && <StatChip label="Still out" value={openCount} color="var(--danger)" bg="var(--danger-bg)" />}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={empFilter} onChange={setEmpFilter} placeholder="🔍  Search name, ID, reason…" width={210} />
+          <SortBy options={TRIP_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <form method="GET" style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0, fontSize: 13, color: "var(--text2)" }}>
           {tab && <input type="hidden" name="tab" value={tab} />}
-          <span style={{ fontWeight: 600 }}>From</span>
-          <input type="date" name="from" defaultValue={from} style={{ width: 150 }} />
-          <span>→</span>
-          <input type="date" name="to" defaultValue={to} style={{ width: 150 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>From</span>
+          <input type="date" name="from" defaultValue={from} style={{ width: 138 }} />
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>To</span>
+          <input type="date" name="to" defaultValue={to} style={{ width: 138 }} />
           <button type="submit" className="btn btn-primary btn-sm">Apply</button>
         </form>
-
-        <input
-          value={empFilter}
-          onChange={e => setEmpFilter(e.target.value)}
-          placeholder="🔍 Employee name or ID"
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, width: 210 }}
-        />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as "all" | LeaveType)}
-          style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 }}>
-          <option value="all">All types</option>
-          <option value="personal">Personal only</option>
-          <option value="official">Official only</option>
-        </select>
-
-        <div style={{ flex: 1 }} />
-        <button onClick={exportXlsx} className="btn btn-sm" disabled={rows.length === 0}>⬇ Export Excel</button>
-        <button onClick={() => window.print()} className="btn btn-sm">🖨 Print</button>
-      </div>
-
-      <div className="no-print" style={{ fontSize: 13, color: "var(--text2)", marginBottom: 10 }}>
-        <strong>{rows.length}</strong> trip{rows.length === 1 ? "" : "s"} ·
-        {" "}Personal <strong style={{ color: LEAVE_STYLE.personal.color }}>{formatMins(totPersonal)}</strong> (deducted) ·
-        {" "}Official <strong style={{ color: LEAVE_STYLE.official.color }}>{formatMins(totOfficial)}</strong> (excused)
-        {openCount > 0 && <> · <strong style={{ color: "#DC2626" }}>{openCount} still out</strong></>}
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as "all" | LeaveType)} title="Type" style={{ width: 140 }}>
+            <option value="all">All types</option>
+            <option value="personal">Personal only</option>
+            <option value="official">Official only</option>
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          {terminalLink && <Link href="/station" className="btn">🏭 Terminal</Link>}
+          <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
+          <button onClick={exportXlsx} className="btn btn-primary" disabled={rows.length === 0}>⬇ Excel</button>
+        </div>
       </div>
 
       {err && <div className="no-print" style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 8 }}>{err}</div>}

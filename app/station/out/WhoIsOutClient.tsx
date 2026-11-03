@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
 import type { OutNow } from "@/lib/stationServer";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+import StatChip from "../StatChip";
+
+type OutSort = "listed" | "name" | "longest";
+const OUT_SORT_OPTIONS: SortOption<OutSort>[] = [
+  { value: "listed", label: "Time out (as listed)" },
+  { value: "name", label: "Name / vehicle (A–Z)" },
+  { value: "longest", label: "Earliest out first" },
+];
 
 type OutRow = OutNow & { inAt?: string | null; minutes?: number | null };
 
@@ -38,6 +48,8 @@ export default function WhoIsOutClient({
   useEffect(() => { setOut(initial); setVehicles(initialVehicles); }, [initial, initialVehicles]);
   const [now, setNow] = useState<number>(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<OutSort>("listed");
 
   // Tick every 30s so the "out for" durations stay live without a reload.
   useEffect(() => {
@@ -59,18 +71,28 @@ export default function WhoIsOutClient({
     return () => clearInterval(t);
   }, [isToday]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const shownVehicles = [...vehicles.filter(v => matchesQuery(query, [v.vehicleNo, v.vehicleName, v.driver, v.destination, v.purpose, ...v.officers]))]
+    .sort(sort === "name" ? (a, b) => cmpText(a.vehicleNo, b.vehicleNo)
+      : sort === "longest" ? (a, b) => a.outAt.localeCompare(b.outAt)
+      : () => 0);
+  const shownOut = [...out.filter(o => matchesQuery(query, [o.name, o.empCode, o.designation, o.reason, LEAVE_STYLE[o.type as LeaveType]?.label ?? o.type]))]
+    .sort(sort === "name" ? (a, b) => cmpText(a.name, b.name)
+      : sort === "longest" ? (a, b) => a.outAt.localeCompare(b.outAt)
+      : () => 0);
+
   return (
-    <div className="fade-up" style={{ maxWidth: 720, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
-        <div>
-          {!embedded && <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>🚶 Who&apos;s Out</h1>}
-          <p style={{ color: "#888", marginTop: embedded ? 0 : 4, fontSize: 13 }}>
-            {isToday
-              ? "Who and what is outside the factory right now. Updates automatically."
-              : "Who went out that day, and what they took — the whole day, not only what was still out at the end of it."}
-          </p>
+    <div className="fade-up">
+      {/* One row: the counts, search and sort, the day, and at the right the refresh. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <StatChip label={isToday ? "Out now" : "Went out"} value={out.length} color="var(--danger)" bg="var(--danger-bg)" />
+          {vehicles.length > 0 && <StatChip label={isToday ? "Vehicles out" : "Vehicles"} value={vehicles.length} color="#B45309" bg="#FFFBEB" />}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search name, ID, reason, vehicle…" width={230} />
+          <SortBy options={OUT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
           <input
             type="date"
             value={date}
@@ -78,6 +100,8 @@ export default function WhoIsOutClient({
             onChange={e => e.target.value && router.push("/station/out?date=" + e.target.value)}
             style={{ width: 150 }}
           />
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
           {!isToday && (
             <button className="btn btn-sm" onClick={() => router.push("/station/out")}>Today</button>
           )}
@@ -90,13 +114,17 @@ export default function WhoIsOutClient({
         </div>
       </div>
 
+      <div style={{ maxWidth: 720 }}>
       {vehicles.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>
-            {isToday ? "Vehicles out" : "Vehicles that went out"} ({vehicles.length})
+            {isToday ? "Vehicles out" : "Vehicles that went out"}
           </div>
           <div style={{ display: "grid", gap: 10 }}>
-            {vehicles.map(v => (
+            {shownVehicles.length === 0 && (
+              <div className="card" style={{ textAlign: "center", padding: "20px", color: "var(--text3)", fontSize: 13 }}>No vehicle matches this search.</div>
+            )}
+            {shownVehicles.map(v => (
               <div key={v.id} className="card" style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "12px 16px", borderLeft: "4px solid #B45309" }}>
                 <div style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>🚐</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -127,13 +155,11 @@ export default function WhoIsOutClient({
         </div>
       )}
 
-      <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
-        {out.length === 0
-          ? null
-          : isToday
-            ? <><strong>{out.length}</strong> {out.length === 1 ? "person is" : "people are"} out right now.</>
-            : <><strong>{out.length}</strong> {out.length === 1 ? "person" : "people"} went out that day.</>}
-      </div>
+      {vehicles.length > 0 && out.length > 0 && (
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>
+          {isToday ? "People out" : "People who went out"}
+        </div>
+      )}
 
       {out.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "40px 20px", color: "var(--text2)" }}>
@@ -145,7 +171,10 @@ export default function WhoIsOutClient({
         </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
-          {out.map(o => {
+          {shownOut.length === 0 && (
+            <div className="card" style={{ textAlign: "center", padding: "20px", color: "var(--text3)", fontSize: 13 }}>No one matches this search.</div>
+          )}
+          {shownOut.map(o => {
             const st = LEAVE_STYLE[o.type as LeaveType] ?? { label: o.type, color: "var(--text2)", bg: "var(--bg2)" };
             const mins = minsSince(o.outAt, now);
             return (
@@ -186,6 +215,7 @@ export default function WhoIsOutClient({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
