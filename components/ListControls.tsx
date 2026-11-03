@@ -5,15 +5,15 @@
 
 export type SortOption<K extends string> = { value: K; label: string };
 
-// Solid brand red with white text, so the search box and the sort dropdown stand out on the page. A select gets its
-// own white arrow (the native one is dark and disappears on red); the placeholder and option colours are in globals.css.
+// Solid yellow-orange with dark text, so the search box and the sort dropdown stand out on the page. A select gets its
+// own dark arrow (the native one is easy to lose on a coloured box); the placeholder and option colours are in globals.css.
 const ACCENT: React.CSSProperties = {
-  backgroundColor: "var(--brand)",
-  color: "#fff",
-  border: "1px solid var(--brand-dark)",
-  boxShadow: "0 2px 6px rgba(163, 45, 45, 0.30)",
+  backgroundColor: "#F59E0B",
+  color: "#1f1300",
+  border: "1px solid #B45309",
+  boxShadow: "0 2px 6px rgba(245, 158, 11, 0.40)",
 };
-const ARROW = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
+const ARROW = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%231f1300' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>\")";
 const SELECT_ACCENT: React.CSSProperties = {
   ...ACCENT, appearance: "none", WebkitAppearance: "none", fontWeight: 600,
   backgroundImage: ARROW, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", backgroundSize: "12px 8px",
@@ -42,7 +42,7 @@ export function SearchBox({ value, onChange, placeholder = "🔍  Search…", bl
       {value && (
         <button type="button" onClick={() => onChange("")} title="Clear search" style={{
           position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-          background: "transparent", border: "none", color: "#fff", cursor: "pointer", fontSize: 14, padding: 4,
+          background: "transparent", border: "none", color: "#1f1300", cursor: "pointer", fontSize: 14, padding: 4,
         }}>✕</button>
       )}
     </span>
