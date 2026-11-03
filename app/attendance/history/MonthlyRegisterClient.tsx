@@ -1,6 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import SidebarSlot from "@/components/SidebarSlot";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
@@ -203,6 +205,7 @@ export default function MonthlyRegisterClient({
         />
       ) : (
         <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+          <Link href="/attendance" className="btn btn-primary btn-sm">＋ Mark Today</Link>
           <button onClick={() => changeMonth(-1)} className="btn btn-sm">‹ Prev</button>
           <select value={month} onChange={e => setMonth(parseInt(e.target.value))} style={{ width: 140 }}>
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
@@ -219,8 +222,19 @@ export default function MonthlyRegisterClient({
         </div>
       )}
 
-      {/* Codes legend */}
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
+      {/* Codes legend: on paper here, on screen in the sidebar under the sub-tabs */}
+      <SideLegendBox>
+        <LegendChip code="P"  label="Present"  c="#15803D" />
+        <LegendChip code="A"  label="Absent"   c="#DC2626" />
+        <LegendChip code="L"  label="Leave"    c="#D97706" />
+        <LegendChip code="H"  label="Holiday"  c="#0E7490" />
+        <LegendChip code="P" marker="½" label="Half-day (present)" c="#15803D" />
+        <LegendChip code="P" marker="15m" label="Late arrival (shows minutes/hours late)" c="#15803D" />
+        <LegendChip code="OL" label="Official hourly leave (excused, not deducted)" c="#0E7490" />
+        <LegendChip code="PL" label="Personal hourly leave (deducted like lateness, included in Late Time)" c="#9333EA" />
+        <YieldNote />
+      </SideLegendBox>
+      <div className="print-only"><div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
         <strong style={{ color: "var(--text)" }}>Codes:</strong>
         <LegendChip code="P"  label="Present"  c="#15803D" />
         <LegendChip code="A"  label="Absent"   c="#DC2626" />
@@ -234,7 +248,7 @@ export default function MonthlyRegisterClient({
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
           <span>= live yield: total worked hours ÷ total required hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 — can exceed 100%)</span>
         </span>
-      </div>
+      </div></div>
 
       {/* Live time-required summary */}
       <RequiredHoursPanel
@@ -471,32 +485,54 @@ export function RangeToolbar({
   };
 
   return (
-    <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4 }}>FROM</span>
-      <select value={fm} onChange={e => setFromMonth(parseInt(e.target.value))} style={{ width: 130 }}>
+    <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+      <Link href="/attendance" className="btn btn-primary">＋ Mark Today</Link>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, marginLeft: 6 }}>FROM</span>
+      <select value={fm} onChange={e => setFromMonth(parseInt(e.target.value))} style={{ width: 112 }}>
         {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
       </select>
-      <select value={fy} onChange={e => setFromYear(parseInt(e.target.value))} style={{ width: 90 }}>
+      <select value={fy} onChange={e => setFromYear(parseInt(e.target.value))} style={{ width: 78 }}>
         {years.map(y => <option key={y} value={y}>{y}</option>)}
       </select>
       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4 }}>TO</span>
-      <select value={tm} onChange={e => setToMonth(parseInt(e.target.value))} style={{ width: 130 }}>
+      <select value={tm} onChange={e => setToMonth(parseInt(e.target.value))} style={{ width: 112 }}>
         {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
       </select>
-      <select value={ty} onChange={e => setToYear(parseInt(e.target.value))} style={{ width: 90 }}>
+      <select value={ty} onChange={e => setToYear(parseInt(e.target.value))} style={{ width: 78 }}>
         {years.map(y => <option key={y} value={y}>{y}</option>)}
       </select>
-      <div style={{ display: "flex", gap: 4, marginLeft: 6 }}>
+      <div style={{ display: "flex", gap: 4, marginLeft: 2 }}>
         <button onClick={() => presetSingleMonth(fy, fm)} className="btn btn-sm" title="Current month only">This month</button>
         <button onClick={presetYTD} className="btn btn-sm" title="January through current month">YTD</button>
         <button onClick={() => presetYear(fy)} className="btn btn-sm" title="Full calendar year">Full year</button>
       </div>
       <div style={{ flex: 1 }} />
-      {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" />}
+      {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" width={180} />}
       {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
-      <button onClick={onPrint} className="btn btn-print">🖨 Print Register</button>
+      <button onClick={onPrint} className="btn btn-print">🖨 Print</button>
       <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>
     </div>
+  );
+}
+
+// The code legend in the sidebar, one code to a line.
+export function SideLegendBox({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarSlot>
+      <div style={{ borderTop: "1px dashed var(--border)", margin: "14px 14px 0", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8, fontSize: 11, color: "var(--text2)" }}>
+        <strong style={{ color: "var(--text)", fontSize: 11.5, letterSpacing: 0.6 }}>CODES</strong>
+        {children}
+      </div>
+    </SidebarSlot>
+  );
+}
+
+export function YieldNote() {
+  return (
+    <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <span><StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} /></span>
+      <span style={{ fontSize: 10.5, lineHeight: 1.4 }}>= live yield: total worked hours ÷ total required hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 — can exceed 100%)</span>
+    </span>
   );
 }
 

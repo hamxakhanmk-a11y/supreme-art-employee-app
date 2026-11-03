@@ -16,10 +16,6 @@ export default async function HalfDayReport() {
   ]);
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Half-Day History</h1>
-        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>All half-day requests by employee, status, date range.</p>
-      </div>
       <LeaveHistoryClient employees={emps} leaveTypes={types} onlyHalfDay />
     </div>
   );

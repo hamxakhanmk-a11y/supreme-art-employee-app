@@ -92,11 +92,6 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Monthly Overtime Report</h1>
-        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>One row per employee, one column per day — overtime hours, totals on the right.</p>
-      </div>
-
       <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <button className="btn btn-sm" onClick={() => changeMonth(-1)}>← Prev</button>
         <strong style={{ fontSize: 15 }}>{MONTHS[month - 1]} {year}</strong>

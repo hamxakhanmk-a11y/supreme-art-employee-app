@@ -1,6 +1,5 @@
 // Attendance Register — single-month renders the existing daily grid,
 // multi-month renders a cross-month summary.
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees, attendance } from "@/lib/schema";
 import { and, gte, lte } from "drizzle-orm";
@@ -98,17 +97,6 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Attendance Register</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            {isSingleMonth
-              ? "One row per employee, one column per day, totals on the right."
-              : "Pick a date range — single month shows daily detail, multiple months show a per-month summary."}
-          </p>
-        </div>
-        <Link href="/attendance" className="btn btn-primary">＋ Mark Today</Link>
-      </div>
       {isSingleMonth ? (
         <MonthlyRegisterClient
           year={from.y}

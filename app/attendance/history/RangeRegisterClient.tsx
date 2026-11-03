@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
-import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel } from "./MonthlyRegisterClient";
+import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel, SideLegendBox, YieldNote } from "./MonthlyRegisterClient";
 import { empMatches } from "@/lib/listTools";
 import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
@@ -163,7 +163,19 @@ export default function RangeRegisterClient({
           onQueryChange={setQuery}
       />
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
+      {/* Codes legend: on paper here, on screen in the sidebar under the sub-tabs */}
+      <SideLegendBox>
+        <Chip code="P" label="Present (incl. half-day)" />
+        <Chip code="A" label="Absent" />
+        <Chip code="L" label="Leave" />
+        <Chip code="H" label="Holiday" />
+        <Chip code="Lt" label="Late arrivals" />
+        <Chip code="OL" label="Official hourly leave (excused)" />
+        <Chip code="PL" label="Personal hourly leave (deducted like lateness)" />
+        <span>{months.length} month{months.length === 1 ? "" : "s"}</span>
+        <YieldNote />
+      </SideLegendBox>
+      <div className="print-only"><div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>
         <strong style={{ color: "var(--text)" }}>Codes:</strong>
         <Chip code="P" label="Present (incl. half-day)" />
         <Chip code="A" label="Absent" />
@@ -177,7 +189,7 @@ export default function RangeRegisterClient({
           <StatusBadge status="ok" percent={97} /> / <StatusBadge status="not-ok" percent={80} />
           <span>= live yield: total worked hours ÷ total required hours for days marked so far × 100 (8:10–16:45, 1h break, minus lateness &amp; personal leave, plus overtime after 16:45 — can exceed 100%)</span>
         </span>
-      </div>
+      </div></div>
 
       <RequiredHoursPanel months={requiredByMonth} />
 

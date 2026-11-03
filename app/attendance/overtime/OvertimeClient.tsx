@@ -65,31 +65,26 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Overtime</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Record each employee&apos;s overtime hours for a day.</p>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/reports/overtime" className="btn">📊 Overtime Report</Link>
-          <Link href="/attendance" className="btn btn-back">← Mark Today</Link>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+        {canEdit && (
+          <>
+            <span style={{ fontWeight: 800, fontSize: 14 }}>Record overtime for</span>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 160 }} />
+            <button onClick={save} disabled={busy} className="btn btn-primary btn-sm">{busy ? "Saving…" : "Save"}</button>
+            {msg && <span style={{ fontSize: 12.5, fontWeight: 600, color: msg.includes("✓") ? "#166534" : "#7C1F1F" }}>{msg}</span>}
+          </>
+        )}
+        <div style={{ flex: 1 }} />
+        {canEdit && <span style={{ fontSize: 12.5, color: "var(--text2)" }}>Day total: <b>{dayTotal || 0}</b> hrs</span>}
+        <Link href="/reports/overtime" className="btn">📊 Overtime Report</Link>
+        <Link href="/attendance" className="btn btn-back">← Mark Today</Link>
       </div>
 
       {!canEdit && <ViewOnlyNotice />}
 
       {canEdit && (
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-            <span style={{ fontWeight: 800, fontSize: 14 }}>Record overtime for</span>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 160 }} />
-            <button onClick={save} disabled={busy} className="btn btn-primary btn-sm">{busy ? "Saving…" : "Save"}</button>
-            {msg && <span style={{ fontSize: 12.5, fontWeight: 600, color: msg.includes("✓") ? "#166534" : "#7C1F1F" }}>{msg}</span>}
-            <div style={{ flex: 1 }} />
-            <span style={{ fontSize: 12.5, color: "var(--text2)" }}>Day total: <b>{dayTotal || 0}</b> hrs</span>
-          </div>
-          <div style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 10 }}>Enter hours (e.g. 2 or 1.5). Blank / 0 = none.</div>
-          <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
             <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
             <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} />
           </div>
@@ -100,7 +95,7 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
                 <span style={{ flex: 1, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {e.firstName} {e.lastName} <span style={{ color: "var(--text3)" }}>· {e.employeeId}</span>
                 </span>
-                <input type="number" min={0} step={0.5} inputMode="decimal"
+                <input type="number" min={0} step={0.5} inputMode="decimal" title="Hours, e.g. 2 or 1.5 — blank or 0 is none"
                   value={entries[e.id] ?? ""} onChange={ev => setEntries(p => ({ ...p, [e.id]: ev.target.value }))}
                   style={{ width: 66, textAlign: "right" }} placeholder="0" />
                 <span style={{ fontSize: 11, color: "var(--text3)" }}>hrs</span>

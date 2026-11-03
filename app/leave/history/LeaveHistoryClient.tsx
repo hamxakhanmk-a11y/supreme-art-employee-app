@@ -137,54 +137,35 @@ export default function LeaveHistoryClient({
         subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
         meta={empMeta}
       />
-      <div className="no-print" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by employee, leave type, status, reason…" />
-        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
+      {/* One row of controls, then a thin row of counts. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+        <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee, type, status, reason…" width={250} />
+        <span style={LBL}>From</span>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 140 }} />
+        <span style={LBL}>To</span>
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 140 }} />
+        <select value={employeeId} onChange={e => setEmployeeId(e.target.value)} style={{ width: 170 }} title="Employee">
+          <option value="">All Employees</option>
+          {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
+        </select>
+        <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 112 }} title="Status">
+          <option value="">All status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+        <div style={{ flex: 1 }} />
+        <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
+        <button onClick={exportCSV} className="btn btn-primary" disabled={!filtered.length}>⬇ Excel</button>
       </div>
 
-      <div className="card no-print" style={{ marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, alignItems: "end" }}>
-          <div>
-            <label className="form-label">From</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="form-label">To</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} />
-          </div>
-          <div>
-            <label className="form-label">Employee</label>
-            <select value={employeeId} onChange={e => setEmployeeId(e.target.value)}>
-              <option value="">All Employees</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="form-label">Status</label>
-            <select value={status} onChange={e => setStatus(e.target.value)}>
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={printLandscape} className="btn btn-print" style={{ flex: 1 }}>🖨 Print</button>
-            <button onClick={exportCSV} className="btn btn-primary" style={{ flex: 1 }} disabled={!filtered.length}>⬇ Excel</button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         <Stat label="Total" value={totals.total} color="#1a1a1a" bg="#fafaf6" />
         <Stat label="Days" value={totals.days} color="var(--primary)" bg="var(--primary-soft)" />
         <Stat label="Approved" value={totals.approved} color="var(--success)" bg="var(--success-bg)" />
         <Stat label="Pending" value={totals.pending} color="var(--warning)" bg="var(--warning-bg)" />
         <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
-      </div>
-
-      <div className="table-summary no-print">
-        <strong>{totals.total}</strong> rows · <strong>{totals.days}</strong> days total · <strong>{totals.approved}</strong> approved · <strong>{totals.pending}</strong> pending · <strong>{totals.rejected}</strong> rejected
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -237,11 +218,13 @@ export default function LeaveHistoryClient({
   );
 }
 
+const LBL: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, textTransform: "uppercase" };
+
 function Stat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <div className="card" style={{ background: bg, borderColor: `${color}33`, textAlign: "center", padding: "0.9rem 0.5rem" }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "4px 12px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color }}>{value}</span>
+      <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>
   );
 }

@@ -93,6 +93,8 @@ export default function Sidebar() {
           </Link>
         );
       })}
+      {/* Pages can put something here under the sub-tabs — see SidebarSlot. */}
+      <div id="sidebar-slot" />
     </aside>
   );
 }

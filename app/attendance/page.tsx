@@ -296,14 +296,7 @@ export default function AttendancePage() {
     <div className="fade-up">
       <PrintHeader title="Daily Attendance" subtitle={new Date(date).toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} meta={closed ? "Status: CLOSED" : "Status: Open for marking"} />
       {/* Header */}
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, gap: 14, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Mark Attendance</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            {rows.length} employee{rows.length !== 1 ? "s" : ""} • {date}
-            {closed && <span style={{ marginLeft: 10, color: "var(--danger)", fontWeight: 700 }}>🔒 Closed</span>}
-          </p>
-        </div>
+      <div className="no-print" style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", marginBottom: 10, gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: "auto" }} />
           {!closed && summary.unmarked > 0 && (
@@ -411,7 +404,7 @@ export default function AttendancePage() {
       )}
 
       {/* Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 10 }}>
         <StatChip label="Present"  count={summary.present}  color="#15803D" bg="#e3f5e3" />
         <StatChip label="Absent"   count={summary.absent}   color="#DC2626" bg="#fde2e2" />
         <StatChip label="Leave"    count={summary.leave}    color="#D97706" bg="#fdebd0" />
@@ -577,9 +570,9 @@ export default function AttendancePage() {
 
 function StatChip({ label, count, color, bg }: { label: string; count: number; color: string; bg: string }) {
   return (
-    <div className="card" style={{ background: bg, borderColor: `${color}33`, textAlign: "center", padding: "0.9rem 0.5rem" }}>
-      <div style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
+    <div className="card" style={{ background: bg, borderColor: `${color}33`, padding: "5px 10px", display: "flex", alignItems: "baseline", justifyContent: "center", gap: 8 }}>
+      <span style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1 }}>{count}</span>
+      <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>
   );
 }
