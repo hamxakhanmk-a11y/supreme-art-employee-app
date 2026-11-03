@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import DriverPoolPanel from "./DriverPoolPanel";
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL } from "@/lib/fleet";
 
@@ -25,6 +25,7 @@ type Vehicle = {
   oilIntervalKm: number | null; // oil is changed every this many km
   oilLastKm: number | null;     // the meter reading at the last change
   oilLastDate: string | null;
+  oilChanges: number;           // how many times "Oil changed" was pressed
   meterNow: number | null;      // the vehicle's latest meter reading
 };
 
@@ -47,6 +48,7 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
   const [manual, setManual] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [poolOpen, setPoolOpen] = useState(false);
+  const [oilHistoryFor, setOilHistoryFor] = useState<number | null>(null);
 
   const openAdd = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(true); };
   const closeForm = () => { setForm({ ...BLANK }); setManual(""); setErr(""); setFormOpen(false); };
@@ -382,7 +384,8 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
               </td></tr>
             )}
             {shown.map(v => (
-              <tr key={v.id} style={{ opacity: v.active ? 1 : 0.55 }}>
+              <Fragment key={v.id}>
+              <tr style={{ opacity: v.active ? 1 : 0.55 }}>
                 <td style={{ fontWeight: 700, fontFamily: "monospace" }}>
                   {v.vehicleNo}
                   <div style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", fontFamily: "var(--font)" }}>{VEHICLE_TYPE_LABEL[v.type] || v.type}</div>
@@ -420,7 +423,10 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
                       </span>
                     )}
                     {!readOnly && v.active && v.oilIntervalKm !== null && (
-                      <button className={oilDue(v) ? "btn btn-sm btn-primary" : "btn btn-xs"} disabled={busy} onClick={() => oilDone(v)}>✓ Oil changed</button>
+                      <button className="btn btn-sm" disabled={busy} onClick={() => oilDone(v)}
+                        title={oilDue(v) ? "The meter is past the oil change limit — press once the oil has been changed" : v.oilChanges > 0 ? "Oil changed — the next one is not due yet" : "Press when the oil has been changed"}
+                        style={oilDue(v) ? { background: "#DC2626", borderColor: "#B91C1C", color: "#fff", fontWeight: 800 }
+                          : v.oilChanges > 0 ? { background: "#16A34A", borderColor: "#15803D", color: "#fff", fontWeight: 700 } : undefined}>✓ Oil changed</button>
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 3 }}>
@@ -428,6 +434,10 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
                       : oilNext(v) === null ? `meter now ${v.meterNow.toLocaleString("en-PK")} km · ${v.oilIntervalKm === null ? "set how often to start" : "press Oil changed to start counting"}`
                       : `meter now ${v.meterNow.toLocaleString("en-PK")} · next at ${oilNext(v)!.toLocaleString("en-PK")}${oilDue(v) ? "" : ` (${(oilNext(v)! - v.meterNow).toLocaleString("en-PK")} km to go)`}${v.oilLastDate ? ` · changed ${v.oilLastDate}` : ""}`}
                   </div>
+                  <button type="button" className="btn btn-xs" style={{ marginTop: 5 }}
+                    onClick={() => setOilHistoryFor(oilHistoryFor === v.id ? null : v.id)}>
+                    {oilHistoryFor === v.id ? "Hide oil changes" : `Oil changes (${v.oilChanges})`}
+                  </button>
                 </td>
                 <td style={{ fontSize: 12 }}>
                   {!v.active ? <span style={{ color: "var(--text3)" }}>Retired</span>
@@ -449,10 +459,70 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
                   </td>
                 )}
               </tr>
+              {oilHistoryFor === v.id && (
+                <tr>
+                  <td colSpan={readOnly ? 6 : 7} style={{ background: "var(--bg2)" }}>
+                    <OilHistory vehicleId={v.id} vehicleNo={v.vehicleNo} canDelete={canDelete && !readOnly} onChanged={load} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// One vehicle's oil changes, newest first: the day, the meter reading, how far it ran since the one before,
+// and who pressed "Oil changed". Deleting a wrong one puts the last change back to the one before it.
+function OilHistory({ vehicleId, vehicleNo, canDelete, onChanged }: {
+  vehicleId: number; vehicleNo: string; canDelete: boolean; onChanged: () => void;
+}) {
+  type Change = { id: number; date: string; meterKm: number; createdBy: string };
+  const [rows, setRows] = useState<Change[] | null>(null);
+  const [err, setErr] = useState("");
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/fleet/vehicles/oil?vehicleId=${vehicleId}`, { cache: "no-store" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Could not load the oil changes");
+      setRows(j); setErr("");
+    } catch (e: any) { setErr(e.message); }
+  }, [vehicleId]);
+  useEffect(() => { load(); }, [load]);
+
+  const remove = async (c: Change) => {
+    if (!confirm(`Delete the oil change of ${c.date} at ${c.meterKm.toLocaleString("en-PK")} km on ${vehicleNo}?`)) return;
+    const res = await fetch(`/api/fleet/vehicles/oil?id=${c.id}`, { method: "DELETE" });
+    const j = await res.json();
+    if (!res.ok) { setErr(j.error || "Could not delete"); return; }
+    await load(); onChanged();
+  };
+
+  if (rows === null) return <div style={{ fontSize: 12, color: "var(--text3)", padding: 8 }}>{err || "Loading…"}</div>;
+  return (
+    <div style={{ padding: "6px 0" }}>
+      {err && <div style={{ color: "#DC2626", fontSize: 12, marginBottom: 6 }}>{err}</div>}
+      {rows.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--text3)" }}>No oil change recorded on {vehicleNo} yet — press “✓ Oil changed” when one is done.</div>
+      ) : (
+        <table style={{ fontSize: 12, width: "auto", background: "transparent" }}>
+          <thead><tr><th>Date</th><th className="num">Meter (km)</th><th className="num">Since the one before (km)</th><th>Recorded by</th>{canDelete && <th />}</tr></thead>
+          <tbody>
+            {rows.map((c, i) => (
+              <tr key={c.id}>
+                <td style={{ whiteSpace: "nowrap" }}>{c.date}</td>
+                <td className="num" style={{ fontWeight: 700 }}>{c.meterKm.toLocaleString("en-PK")}</td>
+                <td className="num">{rows[i + 1] ? (c.meterKm - rows[i + 1].meterKm).toLocaleString("en-PK") : "—"}</td>
+                <td style={{ color: "var(--text2)" }}>{c.createdBy || "—"}</td>
+                {canDelete && <td><button className="btn btn-xs btn-restricted" onClick={() => remove(c)}>Delete</button></td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

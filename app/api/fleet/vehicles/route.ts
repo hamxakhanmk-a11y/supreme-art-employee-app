@@ -131,6 +131,7 @@ export async function GET(req: NextRequest) {
     // reading from its trips and fuel records — due once the meter is interval km past the last change.
     const oilRes = await db.execute(sql`
       SELECT v.id, v.oil_interval_km AS "oilIntervalKm", v.oil_last_km AS "oilLastKm", v.oil_last_date::text AS "oilLastDate",
+             (SELECT COUNT(*) FROM vehicle_oil_changes c WHERE c.vehicle_id = v.id)::int AS "oilChanges",
              NULLIF(GREATEST(
                COALESCE((SELECT MAX(GREATEST(t.meter_out, COALESCE(t.meter_in, 0))) FROM fleet_trips t WHERE t.vehicle_id = v.id), 0),
                COALESCE((SELECT MAX(f.meter_reading) FROM fuel_entries f WHERE f.vehicle_id = v.id), 0)
@@ -141,6 +142,7 @@ export async function GET(req: NextRequest) {
       oilIntervalKm: r.oilIntervalKm === null ? null : Number(r.oilIntervalKm),
       oilLastKm: r.oilLastKm === null ? null : Number(r.oilLastKm),
       oilLastDate: r.oilLastDate === null ? null : String(r.oilLastDate),
+      oilChanges: Number(r.oilChanges) || 0,
       meterNow: r.meterNow === null ? null : Number(r.meterNow),
     }]));
 
@@ -151,6 +153,7 @@ export async function GET(req: NextRequest) {
         oilIntervalKm: oilBy.get(v.id)?.oilIntervalKm ?? null,
         oilLastKm: oilBy.get(v.id)?.oilLastKm ?? null,
         oilLastDate: oilBy.get(v.id)?.oilLastDate ?? null,
+        oilChanges: oilBy.get(v.id)?.oilChanges ?? 0,
         meterNow: oilBy.get(v.id)?.meterNow ?? null,
         drivers: driversBy.get(v.id) ?? [],
         openTrip: o ? {
@@ -286,7 +289,10 @@ export async function PUT(req: NextRequest) {
       }
       if (interval !== null && last === null && meter !== null) { last = meter; lastDate = karachiNow().date; }
       await db.execute(sql`UPDATE vehicles SET oil_interval_km = ${interval}, oil_last_km = ${last}, oil_last_date = ${lastDate} WHERE id = ${id}`);
-      if (b.oilDone) await logActivity({ user: guard, action: "station.vehicle.oil", summary: `oil changed on "${vehicleNo}" at ${meter} km` });
+      if (b.oilDone) {
+        await db.execute(sql`INSERT INTO vehicle_oil_changes (vehicle_id, date, meter_km, created_by) VALUES (${id}, ${lastDate}::date, ${last}, ${guard.name})`);
+        await logActivity({ user: guard, action: "station.vehicle.oil", summary: `oil changed on "${vehicleNo}" at ${meter} km` });
+      }
     }
 
     const what = before.active !== active ? (active ? "put back in service" : "retired") : "edited";

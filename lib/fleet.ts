@@ -261,6 +261,16 @@ DO $$ BEGIN
   ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_interval_km integer;
   ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_last_km integer;
   ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_last_date date;
+  -- Every time "Oil changed" was pressed: the day, the meter reading, and who pressed it.
+  CREATE TABLE IF NOT EXISTS vehicle_oil_changes (
+    id serial PRIMARY KEY,
+    vehicle_id integer NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    date date NOT NULL,
+    meter_km integer NOT NULL,
+    created_by varchar(120),
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS vehicle_oil_changes_vehicle_idx ON vehicle_oil_changes (vehicle_id, date);
 
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL
