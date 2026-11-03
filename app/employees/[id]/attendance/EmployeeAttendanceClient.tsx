@@ -1,8 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import { lateMinutes, formatLate } from "@/lib/attendance";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type AttSort = "newest" | "oldest" | "status" | "checkIn";
+const SORT_OPTIONS: SortOption<AttSort>[] = [
+  { value: "newest", label: "Date (newest)" },
+  { value: "oldest", label: "Date (oldest)" },
+  { value: "status", label: "Status" },
+  { value: "checkIn", label: "Check-in (latest)" },
+];
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type Row = { id: number; date: string; status: string; checkIn: string | null; checkOut: string | null; notes: string | null };
@@ -15,12 +26,14 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
   late:       { label: "Late",     color: "#EA580C", bg: "#fde2cf" },
 };
 
-export default function EmployeeAttendanceClient({ employee }: { employee: Emp }) {
+export default function EmployeeAttendanceClient({ employee, backHref }: { employee: Emp; backHref: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const yearAgo = new Date(Date.now() - 365 * 86400 * 1000).toISOString().slice(0, 10);
 
   const [from, setFrom] = useState(yearAgo);
   const [to, setTo] = useState(today);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<AttSort>("newest");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,14 +49,29 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
 
-  const sorted = [...rows].sort((a, b) => (a.date < b.date ? 1 : -1));
+  // Newest date first is the default; the sort dropdown re-orders it, the search narrows it.
+  const sorted = (() => {
+    const byDateDesc = (a: Row, b: Row) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    const cmp: Record<AttSort, (a: Row, b: Row) => number> = {
+      newest: byDateDesc,
+      oldest: (a, b) => -byDateDesc(a, b),
+      status: (a, b) => cmpText(a.status, b.status) || byDateDesc(a, b),
+      checkIn: (a, b) => cmpText(b.checkIn, a.checkIn) || byDateDesc(a, b),
+    };
+    return rows
+      .filter(r => matchesQuery(query, [
+        r.date, new Date(r.date).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }),
+        STATUS_LABEL[r.status]?.label, r.status, r.checkIn, r.checkOut, r.notes,
+      ]))
+      .sort(cmp[sort]);
+  })();
 
   const totals = {
-    present: rows.filter(r => r.status === "present").length,
-    absent:  rows.filter(r => r.status === "absent").length,
-    leave:   rows.filter(r => r.status === "leave").length,
-    halfday: rows.filter(r => r.status === "half-day").length,
-    late:    rows.filter(r => lateMinutes(r.checkIn) > 0).length,
+    present: sorted.filter(r => r.status === "present").length,
+    absent:  sorted.filter(r => r.status === "absent").length,
+    leave:   sorted.filter(r => r.status === "leave").length,
+    halfday: sorted.filter(r => r.status === "half-day").length,
+    late:    sorted.filter(r => lateMinutes(r.checkIn) > 0).length,
   };
 
   const exportCSV = () => {
@@ -62,37 +90,30 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
       <PrintHeader
         title="Attendance History"
         subtitle={`${employee.firstName} ${employee.lastName} (${employee.employeeId})`}
-        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}${query.trim() ? ` · Search: ${query.trim()}` : ""}`}
       />
-      {/* Filters */}
-      <div className="card no-print" style={{ marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, alignItems: "end" }}>
-          <div>
-            <label className="form-label">From</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="form-label">To</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => window.print()} className="btn btn-print" style={{ flex: 1 }}>🖨 Print</button>
-            <button onClick={exportCSV} className="btn btn-primary" style={{ flex: 1 }} disabled={!sorted.length}>⬇ Excel</button>
-          </div>
+      {/* One row: the counts first, then search and sort, the date range; Back, Print and Excel stay together at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
+          {Object.entries(STATUS_LABEL).map(([k, v]) => (
+            <Stat key={k} label={v.label} value={totals[k === "half-day" ? "halfday" : k as keyof typeof totals] ?? 0} color={v.color} bg={v.bg} />
+          ))}
         </div>
-      </div>
-
-      {/* Totals */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 16 }}>
-        {Object.entries(STATUS_LABEL).map(([k, v]) => {
-          const count = totals[k === "half-day" ? "halfday" : k as keyof typeof totals] ?? 0;
-          return (
-            <div key={k} className="card" style={{ background: v.bg, borderColor: `${v.color}33`, textAlign: "center", padding: "0.9rem 0.5rem" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: v.color }}>{count}</div>
-              <div style={{ fontSize: 11, color: v.color, fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.4 }}>{v.label}</div>
-            </div>
-          );
-        })}
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search date, status, notes…" width={210} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={150} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={LBL}>From</span>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 138 }} />
+          <span style={LBL}>To</span>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 138 }} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          <Link href={backHref} className="btn btn-back">← Back to Profile</Link>
+          <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
+          <button onClick={exportCSV} className="btn btn-primary" disabled={!sorted.length}>⬇ Excel</button>
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -131,5 +152,16 @@ export default function EmployeeAttendanceClient({ employee }: { employee: Emp }
         )}
       </div>
     </>
+  );
+}
+
+const LBL: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, textTransform: "uppercase" };
+
+function Stat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 9px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color }}>{value}</span>
+      <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+    </div>
   );
 }

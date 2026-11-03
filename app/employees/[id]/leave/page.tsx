@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { employees, leaveTypes } from "@/lib/schema";
@@ -21,10 +20,6 @@ export default async function EmployeeLeavePage({ params }: { params: Promise<{ 
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ marginBottom: 16 }}>
-        <Link href={`/employees/${empId}`} className="btn btn-sm btn-back">← Back to Profile</Link>
-      </div>
-
       <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
         {emp.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -41,7 +36,7 @@ export default async function EmployeeLeavePage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <EmployeeLeaveClient employee={{
+      <EmployeeLeaveClient backHref={`/employees/${empId}`} employee={{
         id: emp.id, employeeId: emp.employeeId,
         firstName: emp.firstName, lastName: emp.lastName,
       }} leaveTypes={types} />

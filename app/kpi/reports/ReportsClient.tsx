@@ -1,6 +1,18 @@
 "use client";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type RepSort = "default" | "name" | "id" | "scoreHigh" | "scoreLow";
+const SORT_OPTIONS: SortOption<RepSort>[] = [
+  { value: "default", label: "Catalog order" },
+  { value: "name", label: "Employee (A–Z)" },
+  { value: "id", label: "Employee ID" },
+  { value: "scoreHigh", label: "Score (highest)" },
+  { value: "scoreLow", label: "Score (lowest)" },
+];
 
 export type EmpSummary = {
   id: number;
@@ -55,24 +67,48 @@ export default function ReportsClient({
   const router = useRouter();
   const pathname = usePathname();
   const setYear = (y: number) => router.push(`${pathname}?year=${y}`);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<RepSort>("default");
+
+  // Search narrows the employees inside each designation (empty designations and departments drop out);
+  // the averages shown stay the full-year ones. "default" is the order the server sends.
+  const shown = useMemo(() => {
+    const cmp: Record<RepSort, (a: EmpSummary, b: EmpSummary) => number> = {
+      default: () => 0,
+      name: (a, b) => cmpText(a.name, b.name),
+      id: (a, b) => cmpText(a.employeeId, b.employeeId),
+      scoreHigh: (a, b) => (b.overall ?? -1) - (a.overall ?? -1),
+      scoreLow: (a, b) => (a.overall ?? 99) - (b.overall ?? 99),
+    };
+    return departments.map(dep => ({
+      ...dep,
+      designations: dep.designations.map(des => ({
+        ...des,
+        employees: des.employees
+          .filter(e => matchesQuery(query, [e.name, e.employeeId, e.templateCode, e.templateTitle, e.department]))
+          .sort(cmp[sort]),
+      })).filter(des => des.employees.length > 0),
+    })).filter(dep => dep.designations.length > 0);
+  }, [departments, query, sort]);
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 14, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>KPI Reports &mdash; {year}</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            Annual KPI score (0&ndash;10) per employee, rolled up by designation and department.
-          </p>
+      {/* One row: the figures first, then search and sort, the year filter. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "2px 9px", borderRadius: 8, background: "#fafaf6", border: "1px solid #1a1a1a33" }}>
+            <span style={{ fontSize: 10.5, color: "#1a1a1a", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>Company avg</span>
+            <ScorePill s={companyAvg} />
+          </span>
         </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100 }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search name, ID, role…" width={230} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <select value={year} onChange={e => setYear(Number(e.target.value))} style={{ width: 100 }} title="Year">
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: 0.4 }}>Company avg</div>
-            <ScorePill s={companyAvg} big />
-          </div>
         </div>
       </div>
 
@@ -87,9 +123,11 @@ export default function ReportsClient({
             <Link href="/kpi/entry" className="btn btn-primary">✍️ Monthly Entry</Link>
           </div>
         </div>
+      ) : shown.length === 0 ? (
+        <div className="card"><div className="empty">No employees match.</div></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {departments.map(dep => (
+          {shown.map(dep => (
             <div key={dep.department} className="card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{
                 background: "linear-gradient(180deg, var(--brand) 0%, var(--brand-dark) 100%)", color: "#fff",

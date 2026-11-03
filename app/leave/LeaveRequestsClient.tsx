@@ -3,6 +3,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintHeader from "@/components/PrintHeader";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type ReqSort = "recent" | "startNew" | "startOld" | "name" | "days" | "status";
+const SORT_OPTIONS: SortOption<ReqSort>[] = [
+  { value: "recent", label: "Latest requested" },
+  { value: "startNew", label: "Start date (newest)" },
+  { value: "startOld", label: "Start date (oldest)" },
+  { value: "name", label: "Employee (A–Z)" },
+  { value: "days", label: "Days (most first)" },
+  { value: "status", label: "Status" },
+];
 
 type Req = {
   id: number; employeeId: number; leaveTypeId: number;
@@ -20,10 +32,15 @@ const STATUS = {
   rejected: { label: "Rejected", color: "var(--danger)",  bg: "var(--danger-bg)"  },
 } as const;
 
-export default function LeaveRequestsClient({ initial, employees, leaveTypes }: { initial: Req[]; employees: Emp[]; leaveTypes: LT[] }) {
+export default function LeaveRequestsClient({ initial, employees, leaveTypes, actions }: {
+  initial: Req[]; employees: Emp[]; leaveTypes: LT[];
+  /** The buttons at the right of the top row; defaults to "Apply Leave". */
+  actions?: React.ReactNode;
+}) {
   const router = useRouter();
   const [requests, setRequests] = useState<Req[]>(initial);
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<ReqSort>("recent");
 
   const empById = new Map(employees.map(e => [e.id, e]));
   const typeById = new Map(leaveTypes.map(t => [t.id, t]));
@@ -34,16 +51,28 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
     rejected: requests.filter(r => r.status === "rejected").length,
   };
 
-  const filtered = requests.filter(r => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
+  const matched = requests.filter(r => {
     const e = empById.get(r.employeeId);
     const t = typeById.get(r.leaveTypeId);
-    return [
-      e?.firstName, e?.lastName, e?.employeeId, `${e?.firstName} ${e?.lastName}`,
+    return matchesQuery(query, [
+      e?.firstName, e?.lastName, e?.employeeId, e ? `${e.firstName} ${e.lastName}` : "",
       t?.name, r.status, r.reason,
-    ].some(f => f && String(f).toLowerCase().includes(q));
+    ]);
   });
+
+  // "recent" is the order the server sends (newest request first); the rest re-order it.
+  const filtered = (() => {
+    const nameOf = (r: Req) => { const e = empById.get(r.employeeId); return e ? `${e.firstName} ${e.lastName}` : ""; };
+    const cmp: Record<ReqSort, (a: Req, b: Req) => number> = {
+      recent: () => 0,
+      startNew: (a, b) => b.startDate.localeCompare(a.startDate),
+      startOld: (a, b) => a.startDate.localeCompare(b.startDate),
+      name: (a, b) => cmpText(nameOf(a), nameOf(b)) || b.startDate.localeCompare(a.startDate),
+      days: (a, b) => b.days - a.days || b.startDate.localeCompare(a.startDate),
+      status: (a, b) => cmpText(a.status, b.status) || b.startDate.localeCompare(a.startDate),
+    };
+    return [...matched].sort(cmp[sort]);
+  })();
 
   const decide = async (r: Req, status: "approved" | "rejected") => {
     const note = status === "rejected" ? prompt("Reason for rejection (optional):") || "" : "";
@@ -67,31 +96,20 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
   return (
     <>
       <PrintHeader title="Leave Requests" subtitle={`${filtered.length} request${filtered.length !== 1 ? "s" : ""}`} />
-      {/* Stat strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 16 }}>
-        {Object.entries(STATUS).map(([k, v]) => (
-          <div key={k} className="card" style={{ background: v.bg, borderColor: `${v.color}33`, textAlign: "center", padding: "0.9rem 0.5rem" }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: v.color }}>{counts[k as keyof typeof counts]}</div>
-            <div style={{ fontSize: 11, color: v.color, fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.4 }}>{v.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="no-print" style={{ marginBottom: 12, position: "relative" }}>
-        <input
-          type="text"
-          placeholder="🔍  Search by employee name, ID, leave type, status…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ width: "100%", padding: "11px 16px", fontSize: 13 }}
-        />
-        {query && (
-          <button onClick={() => setQuery("")} style={{
-            position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-            background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 14, padding: 4,
-          }}>✕</button>
-        )}
+      {/* One row: the counts first, then search and sort; the primary action sits at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {Object.entries(STATUS).map(([k, v]) => (
+            <Stat key={k} label={v.label} value={counts[k as keyof typeof counts]} color={v.color} bg={v.bg} />
+          ))}
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee, ID, leave type, status…" width={230} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          {actions ?? <Link href="/leave/apply" className="btn btn-primary">✍ Apply Leave</Link>}
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -171,5 +189,14 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes }: 
         )}
       </div>
     </>
+  );
+}
+
+function Stat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 9px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color }}>{value}</span>
+      <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+    </div>
   );
 }

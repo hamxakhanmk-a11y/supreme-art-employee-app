@@ -23,17 +23,13 @@ export default async function ApprovalsPage() {
 
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Pending Approvals</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Review pending leave + half-day requests. Approve or reject.</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
+      <LeaveRequestsClient
+        initial={requests} employees={emps} leaveTypes={types}
+        actions={<>
           <Link href="/forms/leave" className="btn">＋ New Leave</Link>
           <Link href="/forms/half-day" className="btn btn-primary">＋ New Half-Day</Link>
-        </div>
-      </div>
-      <LeaveRequestsClient initial={requests} employees={emps} leaveTypes={types} />
+        </>}
+      />
     </div>
   );
 }

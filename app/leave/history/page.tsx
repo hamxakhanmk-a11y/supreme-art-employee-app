@@ -15,10 +15,6 @@ export default async function LeaveHistoryPage() {
   ]);
   return (
     <div className="fade-up">
-      <div className="no-print" style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Leave History</h1>
-        <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>Filter, print, export leave records.</p>
-      </div>
       <LeaveHistoryClient employees={emps} leaveTypes={types} />
     </div>
   );

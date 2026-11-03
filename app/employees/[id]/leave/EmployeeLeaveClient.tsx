@@ -1,7 +1,20 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type LeaveSort = "recent" | "startNew" | "startOld" | "days" | "type" | "status";
+const SORT_OPTIONS: SortOption<LeaveSort>[] = [
+  { value: "recent", label: "Latest requested" },
+  { value: "startNew", label: "Start date (newest)" },
+  { value: "startOld", label: "Start date (oldest)" },
+  { value: "days", label: "Days (most first)" },
+  { value: "type", label: "Leave type" },
+  { value: "status", label: "Status" },
+];
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null; daysAllowed: number };
@@ -18,12 +31,14 @@ const STATUS = {
   rejected: { label: "Rejected", color: "var(--danger)",  bg: "var(--danger-bg)"  },
 };
 
-export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee: Emp; leaveTypes: LT[] }) {
+export default function EmployeeLeaveClient({ employee, leaveTypes, backHref }: { employee: Emp; leaveTypes: LT[]; backHref: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const yearAgo = new Date(Date.now() - 365 * 86400 * 1000).toISOString().slice(0, 10);
 
   const [from, setFrom] = useState(yearAgo);
   const [to, setTo] = useState(today);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<LeaveSort>("recent");
   const [rows, setRows] = useState<Req[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -48,18 +63,33 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
     return { type: t, approved, pending, remaining: Math.max(0, t.daysAllowed - approved) };
   });
 
+  // "recent" is the order the server sends; the rest re-order it. The search narrows the list.
+  const shown = (() => {
+    const cmp: Record<LeaveSort, (a: Req, b: Req) => number> = {
+      recent: () => 0,
+      startNew: (a, b) => b.startDate.localeCompare(a.startDate),
+      startOld: (a, b) => a.startDate.localeCompare(b.startDate),
+      days: (a, b) => b.days - a.days || b.startDate.localeCompare(a.startDate),
+      type: (a, b) => cmpText(typeById.get(a.leaveTypeId)?.name, typeById.get(b.leaveTypeId)?.name) || b.startDate.localeCompare(a.startDate),
+      status: (a, b) => cmpText(a.status, b.status) || b.startDate.localeCompare(a.startDate),
+    };
+    return rows
+      .filter(r => matchesQuery(query, [typeById.get(r.leaveTypeId)?.name, r.status, r.reason, r.decidedBy, r.startDate, r.endDate]))
+      .sort(cmp[sort]);
+  })();
+
   const totals = {
-    total: rows.length,
-    days: rows.filter(r => r.status === "approved").reduce((s, r) => s + r.days, 0),
-    pending: rows.filter(r => r.status === "pending").length,
-    approved: rows.filter(r => r.status === "approved").length,
-    rejected: rows.filter(r => r.status === "rejected").length,
+    total: shown.length,
+    days: shown.filter(r => r.status === "approved").reduce((s, r) => s + r.days, 0),
+    pending: shown.filter(r => r.status === "pending").length,
+    approved: shown.filter(r => r.status === "approved").length,
+    rejected: shown.filter(r => r.status === "rejected").length,
   };
 
   const exportCSV = () => {
     downloadCSV(`leave-${employee.employeeId}-${from}_to_${to}`,
       ["From", "To", "Days", "Type", "Status", "Reason", "Decided By"],
-      rows.map(r => {
+      shown.map(r => {
         const t = typeById.get(r.leaveTypeId);
         return [
           r.startDate, r.endDate, r.days, t?.name || "",
@@ -75,32 +105,32 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
       <PrintHeader
         title="Leave History"
         subtitle={`${employee.firstName} ${employee.lastName} (${employee.employeeId})`}
-        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
+        meta={`Period: ${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}${query.trim() ? ` · Search: ${query.trim()}` : ""}`}
       />
-      <div className="card no-print" style={{ marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 12, alignItems: "end" }}>
-          <div>
-            <label className="form-label">From</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="form-label">To</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => window.print()} className="btn btn-print" style={{ flex: 1 }}>🖨 Print</button>
-            <button onClick={exportCSV} className="btn btn-primary" style={{ flex: 1 }} disabled={!rows.length}>⬇ Excel</button>
-          </div>
+      {/* One row: the counts first, then search and sort, the date range; Back, Print and Excel stay together at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flexShrink: 0 }}>
+          <Stat label="Requests" value={totals.total} color="#1a1a1a" bg="#fafaf6" />
+          <Stat label="Days Taken" value={totals.days} color="var(--primary)" bg="var(--primary-soft)" />
+          <Stat label="Approved" value={totals.approved} color="var(--success)" bg="var(--success-bg)" />
+          <Stat label="Pending" value={totals.pending} color="var(--warning)" bg="var(--warning-bg)" />
+          <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
         </div>
-      </div>
-
-      {/* Totals */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10, marginBottom: 16 }}>
-        <Stat label="Requests" value={totals.total} color="#1a1a1a" bg="#fafaf6" />
-        <Stat label="Days Taken" value={totals.days} color="var(--primary)" bg="var(--primary-soft)" />
-        <Stat label="Approved" value={totals.approved} color="var(--success)" bg="var(--success-bg)" />
-        <Stat label="Pending" value={totals.pending} color="var(--warning)" bg="var(--warning-bg)" />
-        <Stat label="Rejected" value={totals.rejected} color="var(--danger)" bg="var(--danger-bg)" />
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search type, status, reason…" width={210} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <span style={LBL}>From</span>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 138 }} />
+          <span style={LBL}>To</span>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 138 }} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: "auto", flexShrink: 0 }}>
+          <Link href={backHref} className="btn btn-back">← Back to Profile</Link>
+          <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
+          <button onClick={exportCSV} className="btn btn-primary" disabled={!shown.length}>⬇ Excel</button>
+        </div>
       </div>
 
       {/* Per-type balance */}
@@ -130,7 +160,7 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
 
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? <div className="empty">Loading…</div>
-          : rows.length === 0 ? <div className="empty">No leave records in this range.</div>
+          : shown.length === 0 ? <div className="empty">{rows.length === 0 ? "No leave records in this range." : "No leave records match."}</div>
           : (
           <table>
             <thead>
@@ -144,7 +174,7 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => {
+              {shown.map(r => {
                 const t = typeById.get(r.leaveTypeId);
                 const s = STATUS[r.status as keyof typeof STATUS];
                 return (
@@ -166,11 +196,13 @@ export default function EmployeeLeaveClient({ employee, leaveTypes }: { employee
   );
 }
 
+const LBL: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--text2)", letterSpacing: 0.4, textTransform: "uppercase" };
+
 function Stat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
   return (
-    <div className="card" style={{ background: bg, borderColor: `${color}33`, textAlign: "center", padding: "0.9rem 0.5rem" }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 11, color, fontWeight: 600, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</div>
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 9px", borderRadius: 8, background: bg, border: `1px solid ${color}33` }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color }}>{value}</span>
+      <span style={{ fontSize: 10.5, color, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>
   );
 }

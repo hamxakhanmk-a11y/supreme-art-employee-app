@@ -4,6 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCanEdit } from "@/components/MeProvider";
 import { CAPA_STATUS_META, parseCapaData, fmtDate, type CapaStatus } from "@/lib/capa";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
+
+type CapaSort = "newest" | "oldest" | "ref" | "company" | "complaint" | "status";
+const SORT_OPTIONS: SortOption<CapaSort>[] = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "ref", label: "CAPA No." },
+  { value: "company", label: "Company (A–Z)" },
+  { value: "complaint", label: "Complaint date (newest)" },
+  { value: "status", label: "Status" },
+];
 
 type Row = {
   id: number;
@@ -28,21 +40,29 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
   const [rows] = useState<Row[]>(initial);
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<CapaSort>("newest");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let list = filter === "all" ? rows : rows.filter(r => r.status === filter);
-    const term = q.trim().toLowerCase();
-    if (term) {
+    if (q.trim()) {
       list = list.filter(r => {
         const d = parseCapaData(r.data);
-        return [r.capaRef, d.company_name, d.job_name, d.problem_description, d.detected_by]
-          .some(v => (v || "").toLowerCase().includes(term));
+        return matchesQuery(q, [r.capaRef, d.company_name, d.job_name, d.problem_description, d.detected_by]);
       });
     }
-    return list;
-  }, [rows, filter, q]);
+    // "newest" is the order the server sends (highest id first); the rest re-order it.
+    const cmp: Record<CapaSort, (a: Row, b: Row) => number> = {
+      newest: () => 0,
+      oldest: (a, b) => a.id - b.id,
+      ref: (a, b) => cmpText(a.capaRef, b.capaRef),
+      company: (a, b) => cmpText(parseCapaData(a.data).company_name, parseCapaData(b.data).company_name) || b.id - a.id,
+      complaint: (a, b) => cmpText(b.issueDate, a.issueDate) || b.id - a.id,
+      status: (a, b) => cmpText(a.status, b.status) || b.id - a.id,
+    };
+    return [...list].sort(cmp[sort]);
+  }, [rows, filter, q, sort]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -71,27 +91,13 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>CAPA Reports</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Corrective &amp; Preventive Action reports raised against customer complaints and internal non-conformances.
-          </p>
-        </div>
-        {canEdit && (
-          <button className="btn btn-primary" onClick={createCapa} disabled={creating}>
-            {creating ? "Creating…" : "＋ New CAPA"}
-          </button>
-        )}
-      </div>
-
       {error && (
         <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 12 }}>{error}</div>
       )}
 
-      {/* Filters + search */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        <div className="tabs">
+      {/* One row: the status filter (with its counts), search and sort; the primary action sits at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div className="tabs" style={{ flexShrink: 0 }}>
           {FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`tab ${filter === f.key ? "active" : ""}`}>
@@ -100,9 +106,17 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
             </button>
           ))}
         </div>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search ref, company, job, issue…"
-          style={{ maxWidth: 300 }} />
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox value={q} onChange={setQ} placeholder="🔍  Search ref, company, job, issue…" width={230} />
+          <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
+        </div>
+        {canEdit && (
+          <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+            <button className="btn btn-primary" onClick={createCapa} disabled={creating}>
+              {creating ? "Creating…" : "＋ New CAPA"}
+            </button>
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 ? (
