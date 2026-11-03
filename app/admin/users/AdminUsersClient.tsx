@@ -1,5 +1,16 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText, matchesQuery } from "@/lib/listTools";
+
+type UserSort = "listed" | "name" | "role" | "login" | "status";
+const USER_SORT_OPTIONS: SortOption<UserSort>[] = [
+  { value: "listed", label: "As listed" },
+  { value: "name", label: "Name" },
+  { value: "role", label: "Role" },
+  { value: "login", label: "Last login (latest)" },
+  { value: "status", label: "Active first" },
+];
 
 type Role = string;
 interface User {
@@ -27,6 +38,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<UserSort>("listed");
 
   const [roleList, setRoleList] = useState<RoleMeta[]>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -98,50 +111,50 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
     return { total: users.length, byRole };
   }, [users]);
 
+  // Search + sort are client-side only; "As listed" keeps the order the server sends.
+  const visibleUsers = useMemo(() => {
+    const out = users.filter(u => matchesQuery(q, [u.name, u.email, u.role, labelFor(u.role)]));
+    switch (sort) {
+      case "name": return out.sort((a, b) => cmpText(a.name, b.name));
+      case "role": return out.sort((a, b) => cmpText(labelFor(a.role), labelFor(b.role)) || cmpText(a.name, b.name));
+      case "login": return out.sort((a, b) => (b.lastLoginAt ? Date.parse(b.lastLoginAt) : 0) - (a.lastLoginAt ? Date.parse(a.lastLoginAt) : 0));
+      case "status": return out.sort((a, b) => Number(b.active) - Number(a.active) || cmpText(a.name, b.name));
+      default: return out;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, q, sort, roleList]);
+
   return (
     <div className="fade-up">
-      {/* === Header === */}
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Users</h1>
-          <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
-            Approved Google accounts. Add an email here and that person can sign in with Google.
-          </p>
+      {/* === One row: the counts, search and sort, then the add button at the right === */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+          <UserStat label="Total users" value={counts.total} />
+          {roleList.map(r => (
+            <UserStat key={r.key} label={r.label} value={counts.byRole[r.key] || 0} accent={r.color} />
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox width={250} value={q} onChange={setQ} placeholder="🔍  Search name, email, role…" />
+          <SortBy options={USER_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          <button onClick={() => setAddOpen(o => !o)} style={btnDark}>
+            {addOpen ? "Cancel" : "+ Add User"}
+          </button>
         </div>
       </div>
 
-      {/* === Summary tiles === */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        gap: 12, marginBottom: 18,
-      }}>
-        <Tile label="TOTAL USERS" value={counts.total} />
-        {roleList.map(r => (
-          <Tile key={r.key} label={r.label.toUpperCase()} value={counts.byRole[r.key] || 0} accent={r.color} />
-        ))}
-      </div>
-
-      <div style={{ padding: "10px 14px", background: "#EFF6FF", border: "1px solid #BFDBFE",
-        borderRadius: 8, marginBottom: 16, fontSize: 13, color: "#1E3A8A" }}>
-        Sign-in is via <b>Google</b>. The email you add below must match their Google account exactly.
-      </div>
-
       {error && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 12 }}>{error}</div>}
-
-      {/* === Authorized users header + add button === */}
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ flex: 1, fontSize: 16, fontWeight: 700 }}>Authorized Users</div>
-        <button onClick={() => setAddOpen(o => !o)} style={btnDark}>
-          {addOpen ? "Cancel" : "+ Add User"}
-        </button>
-      </div>
 
       {addOpen && (
         <div style={{
           background: "var(--bg)", border: "1px solid var(--border)",
           borderRadius: 12, padding: 18, marginBottom: 16,
         }}>
+          <div style={{ fontSize: 12.5, color: "var(--text2)", marginBottom: 10 }}>
+            Sign-in is via <b>Google</b>. The email you add must match their Google account exactly.
+          </div>
           <form onSubmit={addUser} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px auto", gap: 10, alignItems: "end" }}>
             <Field label="Name"><input className="auth-input" required value={iName} onChange={e => setIName(e.target.value)} /></Field>
             <Field label="Google email"><input className="auth-input" type="email" required value={iEmail} onChange={e => setIEmail(e.target.value)} placeholder="person@gmail.com" /></Field>
@@ -160,13 +173,13 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
       {/* === User cards === */}
       {loading ? (
         <div style={{ color: "var(--text2)", padding: 16 }}>Loading…</div>
-      ) : users.length === 0 ? (
+      ) : visibleUsers.length === 0 ? (
         <div style={{ padding: 24, textAlign: "center", color: "var(--text2)", fontSize: 13, border: "1px solid var(--border)", borderRadius: 12, background: "var(--bg)" }}>
-          No users yet.
+          {users.length === 0 ? "No users yet." : "No users match your search."}
         </div>
       ) : (
         <div style={{ display: "grid", gap: 6 }}>
-          {users.map(u => {
+          {visibleUsers.map(u => {
             const isSelf = u.id === currentUserId;
             return (
               <div key={u.id} style={{
@@ -237,15 +250,11 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   );
 }
 
-function Tile({ label, value, accent }: { label: string; value: number; accent?: string }) {
+function UserStat({ label, value, accent }: { label: string; value: number; accent?: string }) {
   return (
-    <div style={{
-      background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
-      padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6,
-      borderTop: accent ? `3px solid ${accent}` : "1px solid var(--border)",
-    }}>
-      <div style={{ fontSize: 11, letterSpacing: 0.5, fontWeight: 700, color: "var(--text2)" }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: accent || "var(--text)" }}>{value}</div>
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 10px", borderRadius: 8, background: "#fafaf6", border: "1px solid var(--border)", borderLeft: accent ? `3px solid ${accent}` : "1px solid var(--border)" }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color: accent || "var(--text)" }}>{value}</span>
+      <span style={{ fontSize: 10.5, color: "var(--text2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
     </div>
   );
 }

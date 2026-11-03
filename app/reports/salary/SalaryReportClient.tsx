@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MONTHS } from "@/lib/salary";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText, matchesQuery } from "@/lib/listTools";
 
 type Slip = {
   id: number;
@@ -23,22 +25,56 @@ type Slip = {
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string; department: string | null };
 
+type SalSort = "latest" | "oldest" | "name" | "dept" | "net" | "gross";
+const SAL_SORT_OPTIONS: SortOption<SalSort>[] = [
+  { value: "latest", label: "Latest period" },
+  { value: "oldest", label: "Oldest period" },
+  { value: "name", label: "Employee name" },
+  { value: "dept", label: "Department" },
+  { value: "net", label: "Net pay (highest first)" },
+  { value: "gross", label: "Gross (highest first)" },
+];
+const byPeriod = (a: Slip, b: Slip) => (a.year - b.year) || ((a.monthNum ?? 0) - (b.monthNum ?? 0));
+const SAL_SORTS: Record<SalSort, ((a: Slip, b: Slip) => number) | null> = {
+  latest: null,
+  oldest: (a, b) => byPeriod(a, b) || cmpText(a.employeeName, b.employeeName),
+  name: (a, b) => cmpText(a.employeeName, b.employeeName) || byPeriod(b, a),
+  dept: (a, b) => cmpText(a.department, b.department) || cmpText(a.employeeName, b.employeeName) || byPeriod(b, a),
+  net: (a, b) => (b.netPay || 0) - (a.netPay || 0) || byPeriod(b, a),
+  gross: (a, b) => (b.grossEarnings || 0) - (a.grossEarnings || 0) || byPeriod(b, a),
+};
+
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-PK");
+
+function SalStat({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 10px", borderRadius: 8, background: "#fafaf6", border: "1px solid var(--border)" }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color: strong ? "var(--brand)" : "var(--text)" }}>{value}</span>
+      <span style={{ fontSize: 10.5, color: "var(--text2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+    </div>
+  );
+}
 const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 export default function SalaryReportClient({ records, employees }: { records: Slip[]; employees: Emp[] }) {
   const [month, setMonth] = useState<string>("");
   const [year, setYear] = useState<string>("");
-  const [employeeId, setEmployeeId] = useState<string>("");
+  const [q, setQ] = useState<string>("");
+  const [sort, setSort] = useState<SalSort>("latest");
 
   const years = useMemo(() => Array.from(new Set(records.map(r => r.year))).sort((a, b) => b - a), [records]);
 
-  const filtered = useMemo(() => records.filter(r => {
-    if (month && r.month !== month) return false;
-    if (year && String(r.year) !== year) return false;
-    if (employeeId && String(r.employeeId) !== employeeId) return false;
-    return true;
-  }), [records, month, year, employeeId]);
+  // "latest" keeps the order the server sent (year, month, then name), so the default view is unchanged.
+  const filtered = useMemo(() => {
+    const out = records.filter(r => {
+      if (month && r.month !== month) return false;
+      if (year && String(r.year) !== year) return false;
+      if (!matchesQuery(q, [r.employeeName, r.employeeCode, r.department, r.designation])) return false;
+      return true;
+    });
+    const cmp = SAL_SORTS[sort];
+    return cmp ? out.sort(cmp) : out;
+  }, [records, month, year, q, sort]);
 
   const totals = useMemo(() => filtered.reduce((acc, r) => ({
     gross: acc.gross + Number(r.grossEarnings || 0),
@@ -65,49 +101,36 @@ export default function SalaryReportClient({ records, employees }: { records: Sl
   return (
     <div className="fade-up">
       <PrintLandscape />
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Salary Records</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>All generated salary slips. Click any row to view and print.</p>
+      {/* One row: the totals (also printed), search and sort, the month/year filters, then the actions at the right. */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
+          <SalStat label="Records" value={String(filtered.length)} />
+          <SalStat label="Net PKR" value={fmt(totals.net)} strong />
+          <SalStat label="Gross PKR" value={fmt(totals.gross)} />
+          <SalStat label="Deductions PKR" value={fmt(totals.deductions)} />
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/salary" className="btn btn-primary">＋ Generate Slips</Link>
-          <button className="btn" onClick={exportCSV} disabled={filtered.length === 0}>⬇ Excel (CSV)</button>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox width={250} value={q} onChange={setQ} placeholder="🔍  Search employee, ID, department…" />
+          <SortBy options={SAL_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <select value={month} onChange={e => setMonth(e.target.value)} style={{ width: 140 }} title="Month">
+            <option value="">All months</option>
+            {MONTHS.map(m => <option key={m}>{m}</option>)}
+          </select>
+          <select value={year} onChange={e => setYear(e.target.value)} style={{ width: 120 }} title="Year">
+            <option value="">All years</option>
+            {years.map(y => <option key={y}>{y}</option>)}
+          </select>
+        </div>
+        <div className="no-print" style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
           <button className="btn btn-print" onClick={printLandscape} disabled={filtered.length === 0}>🖨 Print</button>
-        </div>
-      </div>
-
-      <div className="card no-print" style={{ padding: "12px 14px", marginBottom: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "200px 140px 1fr", gap: 12, alignItems: "end" }}>
-          <div>
-            <label className="form-label">Month</label>
-            <select value={month} onChange={e => setMonth(e.target.value)}>
-              <option value="">All</option>
-              {MONTHS.map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="form-label">Year</label>
-            <select value={year} onChange={e => setYear(e.target.value)}>
-              <option value="">All</option>
-              {years.map(y => <option key={y}>{y}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="form-label">Employee</label>
-            <select value={employeeId} onChange={e => setEmployeeId(e.target.value)}>
-              <option value="">All</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeId})</option>)}
-            </select>
-          </div>
+          <button className="btn" onClick={exportCSV} disabled={filtered.length === 0}>⬇ Excel (CSV)</button>
+          <Link href="/salary" className="btn btn-primary">＋ Generate Slips</Link>
         </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", fontSize: 12, color: "var(--text2)", display: "flex", justifyContent: "space-between" }}>
-          <span>{filtered.length} record{filtered.length === 1 ? "" : "s"}</span>
-          <span>Total net: <strong style={{ color: "var(--brand)" }}>PKR {fmt(totals.net)}</strong> · Gross: PKR {fmt(totals.gross)} · Deductions: PKR {fmt(totals.deductions)}</span>
-        </div>
         <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ minWidth: 1000 }}>
             <thead>
