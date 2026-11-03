@@ -41,11 +41,13 @@ export default function FuelPanel({
     finally { setBusy(false); }
   };
 
-  const remove = async (f: LogBookFuel) => {
-    if (!confirm(`Delete the ${f.litres} L entry of ${f.date}?`)) return;
+  const remove = async (f: LogBookFuel, reverse = false) => {
+    if (!confirm(reverse
+      ? `Reverse the ${f.litres} L entry of ${f.date}? It is taken out of the log book. The Activity Log keeps a record.`
+      : `Delete the ${f.litres} L entry of ${f.date}?`)) return;
     setBusy(true); setErr("");
     try {
-      const res = await fetch(`/api/fleet/fuel?id=${f.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/fleet/fuel?id=${f.id}${reverse ? "&reverse=1" : ""}`, { method: "DELETE" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not delete");
       onChanged();
@@ -138,6 +140,7 @@ export default function FuelPanel({
                     ) : (
                       <div style={{ display: "flex", gap: 6 }}>
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(f)}>Edit</button>
+                        <button className="btn btn-sm" style={{ color: "#854F0B" }} disabled={busy} title="Take a wrong entry out" onClick={() => remove(f, true)}>Reverse</button>
                         {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(f)}>Delete</button>}
                       </div>
                     )}

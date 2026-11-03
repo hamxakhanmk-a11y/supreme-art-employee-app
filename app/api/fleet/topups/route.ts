@@ -136,7 +136,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE ?id=
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("station.delete");
+  // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
+  const reverse = req.nextUrl.searchParams.get("reverse") === "1";
+  const guard = await guardWrite(reverse ? "station.cards" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -147,8 +149,8 @@ export async function DELETE(req: NextRequest) {
     await db.delete(psoCardTopups).where(eq(psoCardTopups.id, id));
     const [card] = await db.select({ sn: psoCards.sn }).from(psoCards).where(eq(psoCards.id, row.cardId));
     await logActivity({
-      user: guard, action: "station.card.topup.delete",
-      summary: `deleted a ${row.kind === "opening" ? "opening balance" : "top-up"} of Rs ${row.amount} on PSO card ${card?.sn ?? ""}`.trim(),
+      user: guard, action: reverse ? "station.card.topup.reverse" : "station.card.topup.delete",
+      summary: `${reverse ? "reversed" : "deleted"} a ${row.kind === "opening" ? "opening balance" : "top-up"} of Rs ${row.amount} on PSO card ${card?.sn ?? ""}`.trim(),
     });
     return NextResponse.json({ ok: true, balance: await cardBalance(row.cardId) });
   } catch (e: any) {

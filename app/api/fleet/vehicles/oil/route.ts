@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// DELETE ?id= — a wrong entry. The vehicle's last change goes back to the newest one left (Station · Delete).
+// DELETE ?id= — a wrong entry. The vehicle's last change goes back to the newest one left (Station · Delete,
+// or ?reverse=1 with the Vehicles edit grant).
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("station.delete");
+  // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
+  const reverse = req.nextUrl.searchParams.get("reverse") === "1";
+  const guard = await guardWrite(reverse ? "station.vehicles" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -46,7 +49,7 @@ export async function DELETE(req: NextRequest) {
         oil_last_km = (SELECT meter_km FROM vehicle_oil_changes c WHERE c.vehicle_id = v.id ORDER BY date DESC, meter_km DESC, id DESC LIMIT 1),
         oil_last_date = (SELECT date FROM vehicle_oil_changes c WHERE c.vehicle_id = v.id ORDER BY date DESC, meter_km DESC, id DESC LIMIT 1)
       WHERE v.id = ${Number(found.vehicleId)}`);
-    await logActivity({ user: guard, action: "station.vehicle.oil.delete", summary: `deleted an oil change at ${found.meterKm} km on "${found.vehicleNo}"` });
+    await logActivity({ user: guard, action: reverse ? "station.vehicle.oil.reverse" : "station.vehicle.oil.delete", summary: `${reverse ? "reversed" : "deleted"} an oil change at ${found.meterKm} km on "${found.vehicleNo}"` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

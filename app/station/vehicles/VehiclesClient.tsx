@@ -462,7 +462,7 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
               {oilHistoryFor === v.id && (
                 <tr>
                   <td colSpan={readOnly ? 6 : 7} style={{ background: "var(--bg2)" }}>
-                    <OilHistory vehicleId={v.id} vehicleNo={v.vehicleNo} canDelete={canDelete && !readOnly} onChanged={load} />
+                    <OilHistory vehicleId={v.id} vehicleNo={v.vehicleNo} canDelete={canDelete && !readOnly} canReverse={!readOnly} onChanged={load} />
                   </td>
                 </tr>
               )}
@@ -477,8 +477,8 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
 
 // One vehicle's oil changes, newest first: the day, the meter reading, how far it ran since the one before,
 // and who pressed "Oil changed". Deleting a wrong one puts the last change back to the one before it.
-function OilHistory({ vehicleId, vehicleNo, canDelete, onChanged }: {
-  vehicleId: number; vehicleNo: string; canDelete: boolean; onChanged: () => void;
+function OilHistory({ vehicleId, vehicleNo, canDelete, canReverse, onChanged }: {
+  vehicleId: number; vehicleNo: string; canDelete: boolean; canReverse: boolean; onChanged: () => void;
 }) {
   type Change = { id: number; date: string; meterKm: number; createdBy: string };
   const [rows, setRows] = useState<Change[] | null>(null);
@@ -493,9 +493,12 @@ function OilHistory({ vehicleId, vehicleNo, canDelete, onChanged }: {
   }, [vehicleId]);
   useEffect(() => { load(); }, [load]);
 
-  const remove = async (c: Change) => {
-    if (!confirm(`Delete the oil change of ${c.date} at ${c.meterKm.toLocaleString("en-PK")} km on ${vehicleNo}?`)) return;
-    const res = await fetch(`/api/fleet/vehicles/oil?id=${c.id}`, { method: "DELETE" });
+  const remove = async (c: Change, reverse = false) => {
+    const what = `the oil change of ${c.date} at ${c.meterKm.toLocaleString("en-PK")} km on ${vehicleNo}`;
+    if (!confirm(reverse
+      ? `Reverse ${what}? It is taken out and the last change goes back to the one before it. The Activity Log keeps a record.`
+      : `Delete ${what}?`)) return;
+    const res = await fetch(`/api/fleet/vehicles/oil?id=${c.id}${reverse ? "&reverse=1" : ""}`, { method: "DELETE" });
     const j = await res.json();
     if (!res.ok) { setErr(j.error || "Could not delete"); return; }
     await load(); onChanged();
@@ -509,7 +512,7 @@ function OilHistory({ vehicleId, vehicleNo, canDelete, onChanged }: {
         <div style={{ fontSize: 12, color: "var(--text3)" }}>No oil change recorded on {vehicleNo} yet — press “✓ Oil changed” when one is done.</div>
       ) : (
         <table style={{ fontSize: 12, width: "auto", background: "transparent" }}>
-          <thead><tr><th>Date</th><th className="num">Meter (km)</th><th className="num">Since the one before (km)</th><th>Recorded by</th>{canDelete && <th />}</tr></thead>
+          <thead><tr><th>Date</th><th className="num">Meter (km)</th><th className="num">Since the one before (km)</th><th>Recorded by</th>{(canReverse || canDelete) && <th />}</tr></thead>
           <tbody>
             {rows.map((c, i) => (
               <tr key={c.id}>
@@ -517,7 +520,14 @@ function OilHistory({ vehicleId, vehicleNo, canDelete, onChanged }: {
                 <td className="num" style={{ fontWeight: 700 }}>{c.meterKm.toLocaleString("en-PK")}</td>
                 <td className="num">{rows[i + 1] ? (c.meterKm - rows[i + 1].meterKm).toLocaleString("en-PK") : "—"}</td>
                 <td style={{ color: "var(--text2)" }}>{c.createdBy || "—"}</td>
-                {canDelete && <td><button className="btn btn-xs btn-restricted" onClick={() => remove(c)}>Delete</button></td>}
+                {(canReverse || canDelete) && (
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {canReverse && <button className="btn btn-xs" style={{ color: "#854F0B" }} title="Take a wrong entry out" onClick={() => remove(c, true)}>Reverse</button>}
+                      {canDelete && <button className="btn btn-xs btn-restricted" onClick={() => remove(c)}>Delete</button>}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

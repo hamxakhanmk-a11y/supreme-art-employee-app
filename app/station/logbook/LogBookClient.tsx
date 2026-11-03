@@ -100,11 +100,13 @@ export default function LogBookClient({
     if (ok) setClosing(prev => { const next = { ...prev }; delete next[t.id]; return next; });
   };
 
-  const remove = async (t: LogBookTrip) => {
-    if (!confirm(`Delete the trip of ${bookDate(t.date)} — ${t.destination || "no destination"}? This can't be undone.`)) return;
+  const remove = async (t: LogBookTrip, reverse = false) => {
+    if (!confirm(reverse
+      ? `Reverse the trip of ${bookDate(t.date)} — ${t.destination || "no destination"}? It is taken out of the log book, with its km. The Activity Log keeps a record.`
+      : `Delete the trip of ${bookDate(t.date)} — ${t.destination || "no destination"}? This can't be undone.`)) return;
     setBusy(true); setErr("");
     try {
-      const res = await fetch(`/api/fleet/trips/${t.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/fleet/trips/${t.id}${reverse ? "?reverse=1" : ""}`, { method: "DELETE" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not delete");
       router.refresh();
@@ -274,7 +276,10 @@ export default function LogBookClient({
                       </td>
                       {!readOnly && (
                         <td className="no-print">
-                          {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(t)}>Delete</button>}
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            <button className="btn btn-sm" style={{ color: "#854F0B" }} disabled={busy} title="Take a wrong entry out" onClick={() => remove(t, true)}>Reverse</button>
+                            {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(t)}>Delete</button>}
+                          </div>
                         </td>
                       )}
                     </tr>

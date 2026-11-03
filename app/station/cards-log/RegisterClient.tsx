@@ -70,11 +70,13 @@ export default function RegisterClient({
     } catch (e: any) { setErr(e.message); return false; }
   };
 
-  const remove = async (r: PsoRow) => {
-    if (!confirm(`Delete the entry for card ${r.sn} collected ${fmt(r.collectedDate)}? Any fuel it recorded goes with it.`)) return;
+  const remove = async (r: PsoRow, reverse = false) => {
+    if (!confirm(reverse
+      ? `Reverse the entry for card ${r.sn} collected ${fmt(r.collectedDate)}? It is taken out, and the fuel it recorded goes with it, so the card's balance goes back. The Activity Log keeps a record.`
+      : `Delete the entry for card ${r.sn} collected ${fmt(r.collectedDate)}? Any fuel it recorded goes with it.`)) return;
     setBusy(true); setErr("");
     try {
-      const res = await fetch(`/api/fleet/card-issues?id=${r.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/fleet/card-issues?id=${r.id}${reverse ? "&reverse=1" : ""}`, { method: "DELETE" });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Could not delete");
       router.refresh();
@@ -211,7 +213,10 @@ export default function RegisterClient({
                 </td>
                 {!readOnly && (
                   <td className="no-print">
-                    {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(r)}>Delete</button>}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button className="btn btn-sm" style={{ color: "#854F0B" }} disabled={busy} title="Take a wrong entry out" onClick={() => remove(r, true)}>Reverse</button>
+                      {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(r)}>Delete</button>}
+                    </div>
                   </td>
                 )}
               </tr>

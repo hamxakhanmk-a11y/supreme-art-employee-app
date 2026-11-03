@@ -105,7 +105,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("station.delete");
+  // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
+  const reverse = req.nextUrl.searchParams.get("reverse") === "1";
+  const guard = await guardWrite(reverse ? "station.vehicles" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -116,8 +118,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Officers go with it — the cascade on trip_id.
     await db.delete(fleetTrips).where(eq(fleetTrips.id, id));
     await logActivity({
-      user: guard, action: "station.trip.delete",
-      summary: `deleted a ${v?.vehicleNo ?? "vehicle"} log book entry dated ${trip.date} (${trip.kmCovered ?? "—"} km)`,
+      user: guard, action: reverse ? "station.trip.reverse" : "station.trip.delete",
+      summary: `${reverse ? "reversed" : "deleted"} a ${v?.vehicleNo ?? "vehicle"} log book entry dated ${trip.date} (${trip.kmCovered ?? "—"} km)`,
     });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

@@ -37,10 +37,13 @@ export default function TopupHistory({ cardId, readOnly, canDelete, onChanged }:
     } catch (e: any) { setErr(e.message); return false; }
   };
 
-  const remove = async (t: Topup) => {
-    if (!confirm(`Delete this ${t.kind === "opening" ? "opening balance" : "top-up"} of ${rs(t.amount)}?`)) return;
+  const remove = async (t: Topup, reverse = false) => {
+    const what = `${t.kind === "opening" ? "opening balance" : "top-up"} of ${rs(t.amount)}`;
+    if (!confirm(reverse
+      ? `Reverse this ${what}? It is taken out and the card's balance is worked out without it. The Activity Log keeps a record.`
+      : `Delete this ${what}?`)) return;
     setErr("");
-    const res = await fetch(`/api/fleet/topups?id=${t.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/fleet/topups?id=${t.id}${reverse ? "&reverse=1" : ""}`, { method: "DELETE" });
     const j = await res.json();
     if (!res.ok) { setErr(j.error || "Could not delete"); return; }
     await load(); onChanged();
@@ -55,7 +58,7 @@ export default function TopupHistory({ cardId, readOnly, canDelete, onChanged }:
       ) : (
         <table style={{ fontSize: 12, width: "auto", background: "transparent" }}>
           <thead>
-            <tr><th>Date</th><th>Entry</th><th className="num">Amount</th><th>Ref / receipt</th><th>Entered by</th>{!readOnly && canDelete && <th />}</tr>
+            <tr><th>Date</th><th>Entry</th><th className="num">Amount</th><th>Ref / receipt</th><th>Entered by</th>{!readOnly && <th />}</tr>
           </thead>
           <tbody>
             {rows.map(t => (
@@ -70,8 +73,13 @@ export default function TopupHistory({ cardId, readOnly, canDelete, onChanged }:
                 </td>
                 <td><EditCell value={t.refNo} minWidth={120} placeholder="—" readOnly={readOnly} onSave={v => save(t.id, { refNo: v })} /></td>
                 <td style={{ color: "var(--text2)" }}>{t.createdBy || "—"}</td>
-                {!readOnly && canDelete && (
-                  <td><button className="btn btn-xs btn-restricted" onClick={() => remove(t)}>Delete</button></td>
+                {!readOnly && (
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn btn-xs" style={{ color: "#854F0B" }} title="Take a wrong entry out" onClick={() => remove(t, true)}>Reverse</button>
+                      {canDelete && <button className="btn btn-xs btn-restricted" onClick={() => remove(t)}>Delete</button>}
+                    </div>
+                  </td>
                 )}
               </tr>
             ))}

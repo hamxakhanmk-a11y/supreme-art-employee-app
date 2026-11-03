@@ -204,7 +204,9 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("station.delete");
+  // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
+  const reverse = req.nextUrl.searchParams.get("reverse") === "1";
+  const guard = await guardWrite(reverse ? "station.cards" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   const idParam = req.nextUrl.searchParams.get("id");
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });
@@ -216,8 +218,8 @@ export async function DELETE(req: NextRequest) {
     const [card] = await db.select({ sn: psoCards.sn }).from(psoCards).where(eq(psoCards.id, row.cardId));
     await db.delete(psoCardIssues).where(eq(psoCardIssues.id, id));
     await logActivity({
-      user: guard, action: "station.card.delete",
-      summary: `deleted a fuel record on PSO card ${card?.sn ?? ""} dated ${row.collectedDate}`.trim(),
+      user: guard, action: reverse ? "station.card.reverse" : "station.card.delete",
+      summary: `${reverse ? "reversed" : "deleted"} a fuel record on PSO card ${card?.sn ?? ""} dated ${row.collectedDate}`.trim(),
     });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

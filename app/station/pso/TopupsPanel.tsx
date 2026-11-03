@@ -79,10 +79,13 @@ export default function TopupsPanel({ readOnly, canDelete }: { readOnly: boolean
     } catch (e: any) { setErr(e.message); return false; }
   };
 
-  const remove = async (t: Entry) => {
-    if (!confirm(`Delete this ${t.kind === "opening" ? "opening balance" : "top-up"} of ${rs(t.amount)} on card ${t.cardSn}?`)) return;
+  const remove = async (t: Entry, reverse = false) => {
+    const what = `${t.kind === "opening" ? "opening balance" : "top-up"} of ${rs(t.amount)} on card ${t.cardSn}`;
+    if (!confirm(reverse
+      ? `Reverse this ${what}? It is taken out and the card's balance is worked out without it. The Activity Log keeps a record.`
+      : `Delete this ${what}?`)) return;
     setErr("");
-    const res = await fetch(`/api/fleet/topups?id=${t.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/fleet/topups?id=${t.id}${reverse ? "&reverse=1" : ""}`, { method: "DELETE" });
     const j = await res.json();
     if (!res.ok) { setErr(j.error || "Could not delete"); return; }
     await load();
@@ -164,7 +167,7 @@ export default function TopupsPanel({ readOnly, canDelete }: { readOnly: boolean
           <thead>
             <tr>
               <th>Date</th><th>Card SN</th><th>Vehicle</th><th>Entry</th><th className="num">Amount</th>
-              <th>Ref / receipt</th><th>Entered by</th>{!readOnly && canDelete && <th />}
+              <th>Ref / receipt</th><th>Entered by</th>{!readOnly && <th />}
             </tr>
           </thead>
           <tbody>
@@ -188,7 +191,14 @@ export default function TopupsPanel({ readOnly, canDelete }: { readOnly: boolean
                 </td>
                 <td><EditCell value={t.refNo} minWidth={120} placeholder="—" readOnly={readOnly} onSave={v => change(t.id, { refNo: v })} /></td>
                 <td style={{ color: "var(--text2)" }}>{t.createdBy || "—"}</td>
-                {!readOnly && canDelete && <td><button className="btn btn-xs btn-restricted" onClick={() => remove(t)}>Delete</button></td>}
+                {!readOnly && (
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn btn-xs" style={{ color: "#854F0B" }} title="Take a wrong entry out" onClick={() => remove(t, true)}>Reverse</button>
+                      {canDelete && <button className="btn btn-xs btn-restricted" onClick={() => remove(t)}>Delete</button>}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -197,7 +207,7 @@ export default function TopupsPanel({ readOnly, canDelete }: { readOnly: boolean
               <tr>
                 <td colSpan={4} style={{ fontWeight: 700 }}>Topped up{cardFilter !== "" || from || to ? " (shown)" : ""}</td>
                 <td className="num" style={{ fontWeight: 800 }}>{rs(loaded)}</td>
-                <td colSpan={readOnly || !canDelete ? 2 : 3} />
+                <td colSpan={readOnly ? 2 : 3} />
               </tr>
             </tfoot>
           )}

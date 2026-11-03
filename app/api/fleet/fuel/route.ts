@@ -103,7 +103,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/fleet/fuel?id=4 — needs the same grant deleting a Station trip does.
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("station.delete");
+  // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
+  const reverse = req.nextUrl.searchParams.get("reverse") === "1";
+  const guard = await guardWrite(reverse ? "station.vehicles" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   const idParam = req.nextUrl.searchParams.get("id");
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });
@@ -113,7 +115,7 @@ export async function DELETE(req: NextRequest) {
     const [row] = await db.select().from(fuelEntries).where(eq(fuelEntries.id, id));
     if (!row) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     await db.delete(fuelEntries).where(eq(fuelEntries.id, id));
-    await logActivity({ user: guard, action: "station.fuel.delete", summary: `deleted a fuel entry of ${row.litres} L dated ${row.date}` });
+    await logActivity({ user: guard, action: reverse ? "station.fuel.reverse" : "station.fuel.delete", summary: `${reverse ? "reversed" : "deleted"} a fuel entry of ${row.litres} L dated ${row.date}` });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
