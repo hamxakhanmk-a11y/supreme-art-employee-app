@@ -254,9 +254,13 @@ DO $$ BEGIN
   -- when set it replaces what the card's fuel records add up to.
   ALTER TABLE fleet_month_notes ADD COLUMN IF NOT EXISTS consumption double precision;
 
-  -- The meter reading at which this vehicle's oil change is due: All vehicles blinks yellow once
-  -- the vehicle's meter has reached it. Set per vehicle, and set again after each oil change.
+  -- Oil change, per vehicle: every oil_interval_km, counted from the meter reading at the last change
+  -- (oil_last_km, set when "Oil changed" is pressed). All vehicles blinks yellow once the meter has
+  -- gone interval past that reading. (oil_change_km, a fixed due reading, is no longer used.)
   ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_change_km integer;
+  ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_interval_km integer;
+  ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_last_km integer;
+  ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS oil_last_date date;
 
   ALTER TABLE vehicle_drivers ALTER COLUMN vehicle_id DROP NOT NULL;
   -- The (vehicle_id, employee_id) index can't hold these apart, since two NULL

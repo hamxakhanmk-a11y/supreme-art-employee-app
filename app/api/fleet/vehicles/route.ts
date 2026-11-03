@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { guardView, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureFleetSchema, VEHICLE_TYPES } from "@/lib/fleet";
+import { karachiNow } from "@/lib/gateTime";
 
 // Station · Vehicles grants this list (view / edit); deleting a vehicle needs
 // Station · Delete. The gate reads vehicles through /api/fleet/terminal.
@@ -53,6 +54,18 @@ async function setDrivers(vehicleId: number, raw: unknown) {
   await db.delete(vehicleDrivers).where(eq(vehicleDrivers.vehicleId, vehicleId));
   if (rows.length) await db.insert(vehicleDrivers).values(rows.map(r => ({ vehicleId, ...r })));
   return rows;
+}
+
+// The vehicle's latest meter reading, from its trips and fuel records (null when it has none).
+async function latestMeter(vehicleId: number): Promise<number | null> {
+  const res = await db.execute(sql`
+    SELECT NULLIF(GREATEST(
+      COALESCE((SELECT MAX(GREATEST(t.meter_out, COALESCE(t.meter_in, 0))) FROM fleet_trips t WHERE t.vehicle_id = ${vehicleId}), 0),
+      COALESCE((SELECT MAX(f.meter_reading) FROM fuel_entries f WHERE f.vehicle_id = ${vehicleId}), 0)
+    ), 0) AS "meterNow"
+  `);
+  const r = (((res as any).rows ?? res) as any[])[0];
+  return r?.meterNow === null || r?.meterNow === undefined ? null : Number(r.meterNow);
 }
 
 function normalizeType(t: unknown): string {
@@ -114,10 +127,10 @@ export async function GET(req: NextRequest) {
       driversBy.set(l.vehicleId, arr);
     }
 
-    // The oil change: the meter reading it is due at (set by hand), and the vehicle's latest meter
-    // reading from its trips and fuel records — what the due reading is compared with.
+    // The oil change: how often, the meter reading at the last change, and the vehicle's latest meter
+    // reading from its trips and fuel records — due once the meter is interval km past the last change.
     const oilRes = await db.execute(sql`
-      SELECT v.id, v.oil_change_km AS "oilChangeKm",
+      SELECT v.id, v.oil_interval_km AS "oilIntervalKm", v.oil_last_km AS "oilLastKm", v.oil_last_date::text AS "oilLastDate",
              NULLIF(GREATEST(
                COALESCE((SELECT MAX(GREATEST(t.meter_out, COALESCE(t.meter_in, 0))) FROM fleet_trips t WHERE t.vehicle_id = v.id), 0),
                COALESCE((SELECT MAX(f.meter_reading) FROM fuel_entries f WHERE f.vehicle_id = v.id), 0)
@@ -125,7 +138,9 @@ export async function GET(req: NextRequest) {
       FROM vehicles v
     `);
     const oilBy = new Map((((oilRes as any).rows ?? oilRes) as any[]).map(r => [Number(r.id), {
-      oilChangeKm: r.oilChangeKm === null ? null : Number(r.oilChangeKm),
+      oilIntervalKm: r.oilIntervalKm === null ? null : Number(r.oilIntervalKm),
+      oilLastKm: r.oilLastKm === null ? null : Number(r.oilLastKm),
+      oilLastDate: r.oilLastDate === null ? null : String(r.oilLastDate),
       meterNow: r.meterNow === null ? null : Number(r.meterNow),
     }]));
 
@@ -133,7 +148,9 @@ export async function GET(req: NextRequest) {
       const o = openBy.get(v.id);
       return {
         ...v,
-        oilChangeKm: oilBy.get(v.id)?.oilChangeKm ?? null,
+        oilIntervalKm: oilBy.get(v.id)?.oilIntervalKm ?? null,
+        oilLastKm: oilBy.get(v.id)?.oilLastKm ?? null,
+        oilLastDate: oilBy.get(v.id)?.oilLastDate ?? null,
         meterNow: oilBy.get(v.id)?.meterNow ?? null,
         drivers: driversBy.get(v.id) ?? [],
         openTrip: o ? {
@@ -241,14 +258,35 @@ export async function PUT(req: NextRequest) {
 
     if (Array.isArray(b?.drivers)) await setDrivers(id, b.drivers);
 
-    // Only when it was sent: a save that does not mention it leaves it as it was. Blank clears it.
-    if (b && "oilChangeKm" in b) {
-      const raw = b.oilChangeKm;
-      const km = raw === "" || raw === null || raw === undefined ? null : Math.round(Number(raw));
-      if (km !== null && (!Number.isFinite(km) || km < 0)) {
-        return NextResponse.json({ error: "The oil change reading must be a number of km" }, { status: 400 });
+    // Oil change. Only when it was sent: a save that does not mention it leaves it as it was.
+    //   oilIntervalKm — every how many km (blank clears it)
+    //   oilLastKm     — the meter reading at the last change, to correct it by hand
+    //   oilDone: true — the oil was just changed: the last change becomes the meter's latest reading
+    // Setting an interval on a vehicle with no last change counts from the meter now.
+    if (b && ("oilIntervalKm" in b || "oilLastKm" in b || b.oilDone)) {
+      const num = (v: unknown): number | null | "bad" => {
+        if (v === "" || v === null || v === undefined) return null;
+        const n = Math.round(Number(v));
+        return Number.isFinite(n) && n >= 0 ? n : "bad";
+      };
+      const curRes = await db.execute(sql`SELECT oil_interval_km AS i, oil_last_km AS l, oil_last_date::text AS d FROM vehicles WHERE id = ${id}`);
+      const cur = (((curRes as any).rows ?? curRes) as any[])[0] ?? {};
+      let interval = "oilIntervalKm" in b ? num(b.oilIntervalKm) : (cur.i === null || cur.i === undefined ? null : Number(cur.i));
+      let last = "oilLastKm" in b ? num(b.oilLastKm) : (cur.l === null || cur.l === undefined ? null : Number(cur.l));
+      let lastDate: string | null = cur.d ?? null;
+      if (interval === "bad" || last === "bad" || interval === 0) {
+        return NextResponse.json({ error: "Type the oil change distance as a number of km, like 5000" }, { status: 400 });
       }
-      await db.execute(sql`UPDATE vehicles SET oil_change_km = ${km} WHERE id = ${id}`);
+      const meter = await latestMeter(id);
+      if (b.oilDone) {
+        if (meter === null) return NextResponse.json({ error: "This vehicle has no meter reading yet — the oil change is counted from it" }, { status: 400 });
+        last = meter; lastDate = karachiNow().date;
+      } else if ("oilLastKm" in b && last !== (cur.l === null || cur.l === undefined ? null : Number(cur.l))) {
+        lastDate = null;   // typed by hand: the day is not known
+      }
+      if (interval !== null && last === null && meter !== null) { last = meter; lastDate = karachiNow().date; }
+      await db.execute(sql`UPDATE vehicles SET oil_interval_km = ${interval}, oil_last_km = ${last}, oil_last_date = ${lastDate} WHERE id = ${id}`);
+      if (b.oilDone) await logActivity({ user: guard, action: "station.vehicle.oil", summary: `oil changed on "${vehicleNo}" at ${meter} km` });
     }
 
     const what = before.active !== active ? (active ? "put back in service" : "retired") : "edited";
