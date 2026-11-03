@@ -17,7 +17,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return (
     <div className="fade-up od">
       <div className="od-top">
-        <Link href={`/?from=${from}&to=${to}`} className="btn btn-back btn-sm">← Dashboard</Link>
+        <Link href={`/?efrom=${from}&eto=${to}`} className="btn btn-back btn-sm">← Dashboard</Link>
         <RangePicker from={from} to={to} today={today} />
       </div>
       <ExpenseDetail summary={summary} />

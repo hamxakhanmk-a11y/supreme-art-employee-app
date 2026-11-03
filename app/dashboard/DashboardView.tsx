@@ -10,13 +10,15 @@ import RangePicker from "./RangePicker";
 import { pkr, dmy, monthLabel } from "./format";
 
 export type Loaded<T> = { ok: true; data: T } | { ok: false; error: string };
+export type Range = { from: string; to: string };
 type CategoryRow = { category: string; total: number; purchase: number; procurement: number; lines: number };
 type VehicleRow = { id: number; vehicleNo: string; vehicleName: string; driver: string; destination: string; at: string; since: string };
 export interface DashData {
-  from: string; to: string; today: string;
+  expRange: Range; attRange: Range; today: string;
   exp: Loaded<{ total: number; purchase: number; procurement: number; skipped: number; categories: CategoryRow[] }>;
   cnic: Loaded<CnicAlert[]>;
   late: Loaded<LateComer[]>;
+  lateToday: Loaded<LateComer[]>;
   off: Loaded<DaysOff[]>;
   people: Loaded<(OutNow & { at: string; since: string })[]>;
   vehicles: Loaded<VehicleRow[]>;
@@ -26,7 +28,9 @@ export interface DashData {
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 export default function DashboardView({ data }: { data: DashData }) {
-  const { from, to, today, exp, cnic, late, off, people, vehicles, cards } = data;
+  const { expRange: er, attRange: ar, today, exp, cnic, late, lateToday, off, people, vehicles, cards } = data;
+  // Each band's period is kept in the address under its own names, next to the other band's.
+  const expKeep = { afrom: ar.from, ato: ar.to }, attKeep = { efrom: er.from, eto: er.to };
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -35,7 +39,7 @@ export default function DashboardView({ data }: { data: DashData }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const expLink = `/dashboard/expenses?from=${from}&to=${to}`;
+  const expLink = `/dashboard/expenses?from=${er.from}&to=${er.to}`;
   const details: Record<string, { fam: string; label: string; body: () => ReactNode }> = {};
   const tile = (key: string, fam: string, label: string, l: Loaded<unknown>, value: (d: any) => ReactNode, sub: (d: any) => ReactNode, more?: (d: any) => ReactNode, wide?: boolean) => {
     if (l.ok && more) details[key] = { fam, label, body: () => more(l.data) };
@@ -60,7 +64,6 @@ export default function DashboardView({ data }: { data: DashData }) {
     </>
   );
   const emp = (id: number, name: string, code: string) => <><Link href={`/employees/${id}`}>{name}</Link> <span className="od-dim">{code}</span></>;
-  const lateToday = late.ok ? late.data.filter(r => r.lateToday > 0).sort((a, b) => b.lateToday - a.lateToday) : [];
   const expired = cnic.ok ? cnic.data.filter(c => c.daysLeft < 0).length : 0;
 
   // Read once the tiles above have been laid out, since laying them out is what fills `details`.
@@ -77,11 +80,10 @@ export default function DashboardView({ data }: { data: DashData }) {
   };
   return (
     <div className="fade-up od">
-      <RangePicker from={from} to={to} today={today} />
-
       <div className="od-zones">
       <div className="od-zone od-zone-1">
-        <div className="od-sec">Expense <small>· for the period</small></div>
+        <div className="od-sec">Expense</div>
+        <RangePicker from={er.from} to={er.to} today={today} fromKey="efrom" toKey="eto" keep={expKeep} />
         <div className="od-grid">
           {tile("exp-total", "money", "Total expense", exp, d => `PKR ${pkr(d.total)}`,
             d => <>Purchase + Procurement{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
@@ -91,14 +93,15 @@ export default function DashboardView({ data }: { data: DashData }) {
       </div>
 
       <div className="od-zone od-zone-2">
-        <div className="od-sec">Attendance <small>· for the period</small></div>
+        <div className="od-sec">Attendance <small>· Late today and CNIC are as of today</small></div>
+        <RangePicker from={ar.from} to={ar.to} today={today} fromKey="afrom" toKey="ato" keep={attKeep} />
         <div className="od-grid">
           {tile("late", "late", "Late comers", late, d => d.length, d => `${plural(d.reduce((t: number, r: LateComer) => t + r.days, 0), "late day")}`, (d: LateComer[]) => (
             <><div className="od-sub">Checked in after 08:10 — most late days first.</div>
               {d.length ? <List>{d.map(r => <Row key={r.id} left={emp(r.id, r.name, r.empCode)} right={`${plural(r.days, "day")} · ${formatLate(r.minutes)}`} />)}</List> : <div className="od-sub">Nobody came late.</div>}</>
           ))}
-          {tile("late-today", lateToday.length ? "late" : "calm", "Late today", late, () => lateToday.length, () => dmy(today), () => (
-            lateToday.length ? <List>{lateToday.map(r => <Row key={r.id} left={emp(r.id, r.name, r.empCode)} right={formatLate(r.lateToday)} />)}</List> : <div className="od-sub">Nobody late today{today < from || today > to ? " (today is outside the period)" : ""}.</div>
+          {tile("late-today", lateToday.ok && lateToday.data.length ? "late" : "calm", "Late today", lateToday, d => d.length, () => dmy(today), (d: LateComer[]) => (
+            d.length ? <List>{[...d].sort((a, b) => b.minutes - a.minutes).map(r => <Row key={r.id} left={emp(r.id, r.name, r.empCode)} right={formatLate(r.minutes)} />)}</List> : <div className="od-sub">Nobody late today.</div>
           ))}
           {tile("off", off.ok && off.data.length ? "out" : "calm", "> 2 days off", off, d => d.length, () => "absent + leave, a month", (d: DaysOff[]) => (
             <><div className="od-sub">More than 2 days Absent or on Leave in one month. Holidays, week-offs and half-days are not counted.</div>

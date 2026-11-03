@@ -5,7 +5,7 @@ import { currentlyOut } from "@/lib/stationServer";
 import { vehiclesOut } from "@/lib/fleetServer";
 import { loadExpenses, cnicAlerts, lateComers, daysOffOver2, cardsOut } from "@/lib/ownerDashboard";
 import { formatMins } from "@/lib/station";
-import DashboardView, { type DashData, type Loaded } from "./DashboardView";
+import DashboardView, { type DashData, type Loaded, type Range } from "./DashboardView";
 
 // The server runs on UTC; the gate keeps Karachi time.
 const karachiTime = (isoStr: string) =>
@@ -23,16 +23,18 @@ async function settle<T>(p: Promise<T>): Promise<Loaded<T>> {
   catch (e: any) { console.warn("Dashboard section failed:", e?.message); return { ok: false, error: e?.message || "Could not load" }; }
 }
 
-export default async function OwnerDashboard({ from, to, today }: { from: string; to: string; today: string }) {
-  const [exp, cnic, late, off, people, vehicles, cards] = await Promise.all([
-    settle(loadExpenses(from, to).then(s => ({
+// Expense and Attendance each have their own period; Late today, CNIC expiry and Outside are as of now.
+export default async function OwnerDashboard({ exp: er, att: ar, today }: { exp: Range; att: Range; today: string }) {
+  const [exp, cnic, late, lateToday, off, people, vehicles, cards] = await Promise.all([
+    settle(loadExpenses(er.from, er.to).then(s => ({
       total: s.total, purchase: s.purchase, procurement: s.procurement, skipped: s.skipped.length,
       // Only the totals travel to the page; every line is on the expense page.
       categories: s.categories.map(c => ({ category: c.category, total: c.total, purchase: c.purchase, procurement: c.procurement, lines: c.lines.length })),
     }))),
     settle(cnicAlerts(today)),
-    settle(lateComers(from, to, today)),
-    settle(daysOffOver2(from, to)),
+    settle(lateComers(ar.from, ar.to, today)),
+    settle(lateComers(today, today, today)),
+    settle(daysOffOver2(ar.from, ar.to)),
     settle(currentlyOut().then(rows => rows.map(r => ({ ...r, at: karachiTime(r.outAt), since: since(r.outAt) })))),
     settle(vehiclesOut().then(rows => rows.map(r => ({
       id: r.id as number, vehicleNo: String(r.vehicleNo), vehicleName: String(r.vehicleName || ""), driver: String(r.driver || ""),
@@ -40,6 +42,6 @@ export default async function OwnerDashboard({ from, to, today }: { from: string
     })))),
     settle(cardsOut()),
   ]);
-  const data: DashData = { from, to, today, exp, cnic, late, off, people, vehicles, cards };
+  const data: DashData = { expRange: er, attRange: ar, today, exp, cnic, late, lateToday, off, people, vehicles, cards };
   return <DashboardView data={data} />;
 }

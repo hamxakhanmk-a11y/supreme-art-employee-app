@@ -9,7 +9,11 @@ const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate
 
 // The period of the Super Admin dashboard, as on the Tracker's CEO dashboard: one dropdown of periods, the date
 // boxes only for Custom, a reload button and the range in words. Kept in the address, so a reload keeps it.
-export default function RangePicker({ from, to, today }: { from: string; to: string; today: string }) {
+// fromKey / toKey name it there, so each band of the dashboard can have its own; `keep` is the rest of the
+// address (the other bands' periods), left as it is.
+export default function RangePicker({ from, to, today, fromKey = "from", toKey = "to", keep = {} }: {
+  from: string; to: string; today: string; fromKey?: string; toKey?: string; keep?: Record<string, string>;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const y = +today.slice(0, 4), m = +today.slice(5, 7);
@@ -26,7 +30,9 @@ export default function RangePicker({ from, to, today }: { from: string; to: str
   const go = (f: string, t: string) => {
     if (!f || !t) return;
     const [a, b] = f <= t ? [f, t] : [t, f];
-    router.push(`${pathname}?from=${a}&to=${b}`);
+    const q = new URLSearchParams(keep);
+    q.set(fromKey, a); q.set(toKey, b);
+    router.push(`${pathname}?${q}`, { scroll: false });
   };
   return (
     <div className="od-bar no-print">

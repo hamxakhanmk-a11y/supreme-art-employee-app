@@ -68,11 +68,12 @@ function severity(daysLeft: number): { label: string; color: string; bg: string;
 }
 
 // The Super Admin gets the owner dashboard (app/dashboard/OwnerDashboard.tsx); everyone else this one.
-export default async function Home({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default async function Home({ searchParams }: { searchParams: Promise<{ efrom?: string; eto?: string; afrom?: string; ato?: string }> }) {
   const user = await getSession();
   if (user?.role === "superadmin") {
-    const { from, to, today } = dashboardRange(await searchParams);
-    return <OwnerDashboard from={from} to={to} today={today} />;
+    const sp = await searchParams;
+    const exp = dashboardRange({ from: sp.efrom, to: sp.eto }), att = dashboardRange({ from: sp.afrom, to: sp.ato });
+    return <OwnerDashboard exp={exp} att={att} today={exp.today} />;
   }
   return <Dashboard />;
 }
