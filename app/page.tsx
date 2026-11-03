@@ -105,7 +105,7 @@ export default async function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 8, marginBottom: 12 }}>
         <StatCard label="Total Employees" value={total} sub="On current payroll" />
         <StatCard label="Active" value={active} sub="Currently employed" color="#15803D" />
         <StatCard label="Inactive" value={inactive} sub="On hold" color="var(--text2)" />
@@ -196,12 +196,11 @@ function AlertGroup({ title, rows }: { title: string; rows: Alert[] }) {
   );
 }
 
-function StatCard({ label, value, color, sub, warn }: { label: string; value: number; icon?: string; color?: string; bg?: string; sub?: string; warn?: boolean }) {
+function StatCard({ label, value, color, warn }: { label: string; value: number; icon?: string; color?: string; bg?: string; sub?: string; warn?: boolean }) {
   return (
-    <div className="stat">
+    <div className="stat stat-slim">
       <div className="stat-label">{label}</div>
       <div className={`stat-value ${warn ? "warn" : ""}`} style={color && !warn ? { color } : undefined}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>{sub}</div>}
     </div>
   );
 }
