@@ -1,0 +1,180 @@
+// Spending for the Super Admin's dashboard, over a date range:
+//  - Purchase: every requisition line's own value and category, on the requisition's date.
+//    A requisition the HOD did not approve, or HR rejected, was never spent and is left out.
+//  - Procurement: what actually arrived on a GRR (its received quantity), valued at the
+//    linked PO line's rate plus tax, less that PO's discount in proportion. On the GRR's
+//    date, under the GRR's categories (split equally when it has several).
+// Anything that can't be counted is not guessed at: it goes into `skipped` with the reason,
+// so the dashboard can say what was left out. No database access here (see
+// lib/ownerDashboard.ts), which keeps the arithmetic testable on its own.
+import { parsePrItems } from "./purchase";
+import {
+  parseItems, parseInspection, withValueCategories, checklistCategory, qtyToNum, poLineMoney, docNoLabel,
+  type PoItem, type GrnItem, type GrrChecklist,
+} from "./procurement";
+
+export type ExpenseSource = "purchase" | "procurement";
+
+export interface ExpenseLine {
+  source: ExpenseSource;
+  date: string;          // yyyy-mm-dd
+  category: string;
+  amount: number;        // PKR, not rounded
+  ref: string;           // "PR 121", "GRR 15004u"
+  description: string;
+  href: string;
+}
+
+export interface SkippedLine {
+  source: ExpenseSource;
+  reason: string;
+  date: string;          // "" when the document has none
+  ref: string;
+  description: string;
+  href: string;
+}
+
+export interface PrInput {
+  id: number; prNo: number | null; date: string | null; category: string | null;
+  items: string | null; itemName: string | null; quantity: number | null; uom: string | null; value: number | null;
+  hodApproval: string | null; hrApproval: string | null;
+}
+export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null }
+export interface GrnInput {
+  id: number; grnNo: number; registered: boolean | null; date: string; poId: number | null; poNo: number | null;
+  items: string | null; inspection: string | null;
+}
+
+export const UNCATEGORISED = "Uncategorised";
+
+export const SKIP = {
+  prRejected: "Requisition not approved / rejected",
+  prNoDate: "Requisition has no date",
+  prNoValue: "Requisition line has no value",
+  grrRejected: "GRR rejected at inspection",
+  grrNoPo: "GRR not linked to a PO",
+  grrNotOnPo: "GRR line not found on its PO",
+  grrBadQty: "GRR quantity is not a number",
+  grrNoRate: "PO line has no rate",
+} as const;
+
+const inRange = (d: string, from: string, to: string) => d >= from && d <= to;
+const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+export function isRejectedPr(pr: Pick<PrInput, "hodApproval" | "hrApproval">): boolean {
+  return pr.hodApproval === "Not Approved" || pr.hrApproval === "Rejected";
+}
+
+export function purchaseExpenses(prs: PrInput[], from: string, to: string, lines: ExpenseLine[], skipped: SkippedLine[]) {
+  for (const pr of prs) {
+    const ref = pr.prNo != null ? `PR ${pr.prNo}` : `PR (no number)`;
+    const href = `/purchase?open=${pr.id}`;
+    const date = pr.date || "";
+    // A requisition with no date belongs to no period; it is reported whatever the range.
+    if (date && !inRange(date, from, to)) continue;
+    const items = parsePrItems(pr).filter(it => it.itemName || it.value != null);
+    if (!items.length) continue;
+    const rejected = isRejectedPr(pr);
+    if (rejected && !date) continue;   // neither spent nor in any period: nothing to say about it
+    for (const it of items) {
+      const description = it.itemName || "";
+      if (rejected) { skipped.push({ source: "purchase", reason: SKIP.prRejected, date, ref, description, href }); continue; }
+      if (!date) { skipped.push({ source: "purchase", reason: SKIP.prNoDate, date, ref, description, href }); continue; }
+      if (it.value == null || !Number.isFinite(it.value)) { skipped.push({ source: "purchase", reason: SKIP.prNoValue, date, ref, description, href }); continue; }
+      lines.push({ source: "purchase", date, category: it.category || pr.category?.trim() || UNCATEGORISED, amount: it.value, ref, description, href });
+    }
+  }
+}
+
+export function procurementExpenses(
+  grns: GrnInput[], pos: PoInput[], checklist: GrrChecklist, from: string, to: string,
+  lines: ExpenseLine[], skipped: SkippedLine[],
+) {
+  const byId = new Map(pos.map(p => [p.id, p]));
+  // Old GRRs may carry only the PO number. It is reused across the registered and unregistered series,
+  // so it only identifies a PO together with the tax status, and only when that pair is unique.
+  const byNo = new Map<string, PoInput | null>();
+  for (const p of pos) {
+    const k = `${p.poNo}|${p.registered}`;
+    byNo.set(k, byNo.has(k) ? null : p);
+  }
+
+  for (const g of grns) {
+    if (!inRange(g.date, from, to)) continue;
+    const ref = `GRR ${docNoLabel(g.grnNo, g.registered)}`;
+    const href = `/procurement/grn/${g.id}`;
+    const items = parseItems<GrnItem>(g.items).filter(it => String(it.item ?? "").trim() || String(it.quantity ?? "").trim());
+    if (!items.length) continue;
+    const skip = (reason: string, description: string) =>
+      skipped.push({ source: "procurement", reason, date: g.date, ref, description, href });
+
+    const ins = withValueCategories(parseInspection(g.inspection));
+    if (ins.result === "rejected") { for (const it of items) skip(SKIP.grrRejected, it.item || ""); continue; }
+
+    const po = (g.poId != null ? byId.get(g.poId) : undefined)
+      ?? (g.poId == null && g.poNo != null ? byNo.get(`${g.poNo}|${g.registered}`) ?? undefined : undefined);
+    if (!po) { for (const it of items) skip(SKIP.grrNoPo, it.item || ""); continue; }
+
+    const poItems = parseItems<PoItem>(po.items);
+    // The discount is on the whole PO; each received line bears its share of it.
+    const poNet = poItems.reduce((s, it) => s + poLineMoney(it).net, 0);
+    const discount = Number(po.discount) || 0;
+    const factor = poNet > 0 ? Math.max(0, poNet - discount) / poNet : 1;
+    const bySr = new Map(poItems.map(p => [p.srNo, p]));
+    const byDesc = new Map<string, PoItem>();
+    for (const p of poItems) {
+      const d = normDesc(p.description || p.item || "");
+      if (d && !byDesc.has(d)) byDesc.set(d, p);
+    }
+
+    const labels = ins.categories.map(id => checklistCategory(checklist, id)?.label ?? id);
+    const cats = labels.length ? labels : [UNCATEGORISED];
+
+    for (const it of items) {
+      const description = it.item || "";
+      const pl = (it.poSrNo != null ? bySr.get(it.poSrNo) : undefined) ?? byDesc.get(normDesc(description));
+      if (!pl) { skip(SKIP.grrNotOnPo, description); continue; }
+      const qty = qtyToNum(it.quantity);
+      if (qty == null) { skip(SKIP.grrBadQty, description); continue; }
+      const m = poLineMoney({ quantity: String(qty), rate: pl.rate, tax: pl.tax });
+      if (!(m.rate > 0)) { skip(SKIP.grrNoRate, description); continue; }
+      const amount = m.net * factor;
+      for (const category of cats) {
+        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, ref, description: description || pl.description || pl.item || "", href });
+      }
+    }
+  }
+}
+
+export interface CategoryTotal { category: string; purchase: number; procurement: number; total: number; lines: ExpenseLine[] }
+export interface ExpenseSummary {
+  from: string; to: string;
+  purchase: number; procurement: number; total: number;
+  categories: CategoryTotal[];   // highest total first
+  skipped: SkippedLine[];
+}
+
+export function summarizeExpenses(
+  input: { prs: PrInput[]; grns: GrnInput[]; pos: PoInput[]; checklist: GrrChecklist },
+  from: string, to: string,
+): ExpenseSummary {
+  const lines: ExpenseLine[] = [];
+  const skipped: SkippedLine[] = [];
+  purchaseExpenses(input.prs, from, to, lines, skipped);
+  procurementExpenses(input.grns, input.pos, input.checklist, from, to, lines, skipped);
+  const map = new Map<string, CategoryTotal>();
+  let purchase = 0, procurement = 0;
+  for (const l of lines) {
+    // Same name typed with different case or spacing is one category.
+    const key = l.category.trim().replace(/\s+/g, " ").toLowerCase();
+    let c = map.get(key);
+    if (!c) { c = { category: l.category.trim().replace(/\s+/g, " "), purchase: 0, procurement: 0, total: 0, lines: [] }; map.set(key, c); }
+    c[l.source] += l.amount;
+    c.total += l.amount;
+    c.lines.push(l);
+    if (l.source === "purchase") purchase += l.amount; else procurement += l.amount;
+  }
+  const categories = [...map.values()].sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
+  for (const c of categories) c.lines.sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+  return { from, to, purchase, procurement, total: purchase + procurement, categories, skipped };
+}

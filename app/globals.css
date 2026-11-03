@@ -1187,3 +1187,80 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 }
 :is(input[type="search"], input[placeholder^="🔍"], input[placeholder^="Search" i], input[placeholder^="Name, employee ID"])::placeholder { color: rgba(31, 19, 0, 0.68); font-weight: 500; }
 :is(input[type="search"], input[placeholder^="🔍"], input[placeholder^="Search" i], input[placeholder^="Name, employee ID"]):focus { outline: 2px solid #7C2D12; outline-offset: 1px; }
+
+/* ---------- Super Admin dashboard (app/dashboard) ---------- */
+.od-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.od-top .od-range { margin-bottom: 0; }
+.od-range { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.od-range-dates { display: flex; gap: 6px; align-items: center; color: var(--text2); }
+.od-range-dates input { width: 150px; }
+.od-range-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.od-chip { padding: 6px 12px; font-size: 12.5px; font-weight: 600; border-radius: 999px; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.od-chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* Four across: the expense tile takes two, so the seven tiles make two full rows. */
+.od-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.od-tiles-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.od-tile { display: flex; flex-direction: column; gap: 3px; padding: 11px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); text-decoration: none; color: var(--text); min-width: 0; }
+a.od-tile:hover { border-color: var(--brand); box-shadow: var(--shadow-md); }
+.od-tile-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text2); display: flex; justify-content: space-between; gap: 6px; }
+.od-tile-value { font-size: 26px; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
+.od-tile-sub { font-size: 12px; color: var(--text2); }
+.od-tile-period { font-size: 11px; color: var(--text3); }
+.od-tile-warn .od-tile-value { color: var(--brand); }
+.od-tile-money { grid-column: span 2; background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-color: var(--brand-dark); color: #fff; }
+.od-tile-money .od-tile-label, .od-tile-money .od-tile-sub, .od-tile-money .od-tile-period { color: rgba(255,255,255,.85); }
+.od-tile-money .od-tile-sub b { color: #FDE68A; }
+.od-tile-more { text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+.od-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.od-section { padding: 12px 14px; scroll-margin-top: 70px; margin-bottom: 12px; }
+.od-grid .od-section { margin-bottom: 0; }
+.od-section-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.od-section-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.od-section-sub { font-size: 11.5px; color: var(--text2); margin-top: 2px; }
+.od-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); }
+.od-open { font-size: 12px; font-weight: 600; color: var(--brand); text-decoration: none; white-space: nowrap; }
+.od-empty { font-size: 13px; color: var(--text2); padding: 14px 4px; }
+.od-error { color: var(--brand); }
+.od-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+.od-row, .od-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 9px; background: #fafaf6; border: 1px solid var(--border); text-decoration: none; color: var(--text); }
+a.od-row:hover, a.od-line:hover { border-color: var(--brand); }
+.od-row-main { min-width: 0; flex: 1; }
+.od-row-title { font-size: 13px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.od-row-meta { font-size: 11.5px; color: var(--text2); margin-top: 2px; overflow-wrap: anywhere; }
+.od-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.od-row-right { font-size: 11.5px; color: var(--text2); white-space: nowrap; }
+.od-badge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.od-danger { color: var(--red-text); background: var(--red-bg); }
+.od-warn { color: var(--amber-text); background: var(--amber-bg); }
+.od-ok { color: var(--green-text); background: var(--green-bg); }
+.od-info { color: #0E7490; background: #cffafe; }
+.od-purple { color: #9333EA; background: #f3e8ff; }
+
+.od-cats { display: flex; flex-direction: column; gap: 6px; }
+.od-cat { border: 1px solid var(--border); border-radius: 10px; background: #fafaf6; overflow: hidden; }
+.od-cat.open { border-color: var(--brand); }
+.od-cat-head { display: block; width: 100%; text-align: left; background: none; border: none; padding: 10px 12px; cursor: pointer; color: var(--text); font: inherit; }
+.od-cat-name { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; font-weight: 700; }
+.od-cat-total { white-space: nowrap; }
+.od-bar { height: 5px; border-radius: 3px; background: rgba(0,0,0,.06); margin: 6px 0 5px; overflow: hidden; }
+.od-bar span { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
+.od-cat-split { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--text2); }
+.od-lines { display: flex; flex-direction: column; gap: 4px; padding: 0 8px 8px; max-height: 420px; overflow-y: auto; }
+.od-line { background: #fff; }
+.od-line-amt { font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .od-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .od-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .od-tile { padding: 10px 12px; }
+  .od-tile-value { font-size: 24px; }
+  .od-tile-label, .od-tile-sub { font-size: 12px; }
+  .od-range-dates { width: 100%; }
+  .od-range-dates input { flex: 1; width: auto; min-width: 0; }
+  .od-row-title, .od-cat-name { font-size: 14.5px; }
+  .od-row-meta, .od-row-right, .od-cat-split { font-size: 12.5px; }
+}

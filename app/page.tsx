@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
-// no drizzle ops needed at top level — we run a single select
+import { getSession } from "@/lib/auth";
+import { dashboardRange } from "@/lib/ownerDashboard";
+import OwnerDashboard from "./dashboard/OwnerDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +67,17 @@ function severity(daysLeft: number): { label: string; color: string; bg: string;
   return { label: `${daysLeft}d left`, color: "#2d6a10", bg: "#eaf3de", border: "#cfe5b8" };
 }
 
-export default async function Dashboard() {
+// The Super Admin gets the owner dashboard (app/dashboard/OwnerDashboard.tsx); everyone else this one.
+export default async function Home({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+  const user = await getSession();
+  if (user?.role === "superadmin") {
+    const { from, to, today } = dashboardRange(await searchParams);
+    return <OwnerDashboard from={from} to={to} today={today} />;
+  }
+  return <Dashboard />;
+}
+
+async function Dashboard() {
   let allEmployees: Emp[] = [];
   try {
     allEmployees = await db.select().from(employees);
