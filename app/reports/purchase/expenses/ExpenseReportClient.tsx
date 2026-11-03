@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
 import { PR_CATEGORIES } from "@/lib/purchase";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 
 export interface ExpenseRow {
   prId: number;
@@ -19,6 +21,25 @@ export interface ExpenseRow {
 }
 
 type ViewMode = "lines" | "byCategory";
+
+type ExpSort = "newest" | "oldest" | "valueDesc" | "valueAsc" | "category" | "description";
+const EXP_SORT_OPTIONS: SortOption<ExpSort>[] = [
+  { value: "newest", label: "Latest date" },
+  { value: "oldest", label: "Oldest date" },
+  { value: "valueDesc", label: "Value (highest first)" },
+  { value: "valueAsc", label: "Value (lowest first)" },
+  { value: "category", label: "Category" },
+  { value: "description", label: "Description" },
+];
+const expNewest = (a: ExpenseRow, b: ExpenseRow) => (b.date || "").localeCompare(a.date || "");
+const EXP_SORTS: Record<ExpSort, (a: ExpenseRow, b: ExpenseRow) => number> = {
+  newest: expNewest,
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || ""),
+  valueDesc: (a, b) => (b.value ?? 0) - (a.value ?? 0) || expNewest(a, b),
+  valueAsc: (a, b) => (a.value ?? 0) - (b.value ?? 0) || expNewest(a, b),
+  category: (a, b) => cmpText(a.category, b.category) || expNewest(a, b),
+  description: (a, b) => cmpText(a.description, b.description) || expNewest(a, b),
+};
 
 function moneyOrDash(n: number | null): string {
   return n == null ? "—" : fmtMoney(n, false);
@@ -36,6 +57,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>("lines");
+  const [sort, setSort] = useState<ExpSort>("newest");
 
   // Category dropdown shows the canonical list (matching the Purchase
   // register's own picker) plus anything else that happens to be on record
@@ -57,7 +79,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.description} ${r.category} ${r.department}`.toLowerCase().includes(s);
-  }).sort((a, b) => (b.date || "").localeCompare(a.date || "")), [rows, q, category, fromDate, toDate]);
+  }).sort(EXP_SORTS[sort]), [rows, q, category, fromDate, toDate, sort]);
 
   const total = useMemo(
     () => filtered.reduce((s, r) => s + (r.value ?? 0), 0),
@@ -133,42 +155,30 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Expense Report</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13, marginTop: 4 }}>
-            Every expense line raised through Purchase Requisitions, with its category and value. Read-only — click a row to open its requisition.
-          </p>
-        </div>
-        <Link href="/purchase" className="btn btn-back btn-sm">← PR Register</Link>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
         <div className="tabs">
           <button className={`tab ${view === "lines" ? "active" : ""}`} onClick={() => setView("lines")}>Every expense</button>
           <button className={`tab ${view === "byCategory" ? "active" : ""}`} onClick={() => setView("byCategory")}>By category</button>
         </div>
-        <input
-          value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Search description, category, department…"
-          style={{ maxWidth: 260 }}
-        />
-        <select value={category} onChange={e => setCategory(e.target.value)} style={{ maxWidth: 220 }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox width={260} value={q} onChange={setQ} placeholder="🔍  Search description, category, department…" />
+          {view === "lines" && <SortBy options={EXP_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />}
+        </div>
+        <select value={category} onChange={e => setCategory(e.target.value)} style={{ maxWidth: 200 }}>
           <option value="">All categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title="From date" style={{ width: 145 }} />
         <span style={{ color: "var(--text3)" }}>–</span>
         <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
-        <div style={{ flex: 1 }} />
-        <button className="btn btn-sm" onClick={exportXlsx}>⬇ Export Excel</button>
-      </div>
-
-      {view === "lines" && valuedCount < filtered.length && (
-        <div style={{ marginBottom: 10, fontSize: 12.5, color: "var(--text2)" }}>
-          {filtered.length - valuedCount} line{filtered.length - valuedCount === 1 ? "" : "s"} not yet valued
+        {view === "lines" && valuedCount < filtered.length && (
+          <span style={{ fontSize: 12, color: "var(--text2)" }}>{filtered.length - valuedCount} not yet valued</span>
+        )}
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+          <button className="btn btn-sm" onClick={exportXlsx}>⬇ Export Excel</button>
+          <Link href="/purchase" className="btn btn-back btn-sm">← PR Register</Link>
         </div>
-      )}
+      </div>
 
       <div className="rpt-table-wrap">
         {view === "lines" ? (

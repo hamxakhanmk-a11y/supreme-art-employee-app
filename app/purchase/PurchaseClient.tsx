@@ -5,6 +5,8 @@ import { reportLetterhead } from "@/lib/report-export";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { useCanEdit } from "@/components/MeProvider";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 import {
   PR_DEPARTMENTS, PR_CATEGORIES, PR_UNITS, PR_STATUSES, PR_STATUS_STYLE,
   parsePrItems, prItemsTotal, type PrItem,
@@ -76,6 +78,29 @@ const emptyDraft = (): Draft => ({
   requiredDate: "", hodApproval: "", status: "PR Raised", poNo: "", remarks: "",
 });
 
+type PrSort = "latest" | "oldest" | "prDesc" | "prAsc" | "dept" | "person" | "value" | "status";
+const PR_SORT_OPTIONS: SortOption<PrSort>[] = [
+  { value: "latest", label: "Latest date" },
+  { value: "oldest", label: "Oldest date" },
+  { value: "prDesc", label: "PR# (highest first)" },
+  { value: "prAsc", label: "PR# (lowest first)" },
+  { value: "dept", label: "Department" },
+  { value: "person", label: "Requested by" },
+  { value: "value", label: "Value (highest first)" },
+  { value: "status", label: "Status" },
+];
+const byLatest = (a: PrRow, b: PrRow) => (b.date || "").localeCompare(a.date || "") || (b.prNo ?? 0) - (a.prNo ?? 0);
+const PR_SORTS: Record<PrSort, (a: PrRow, b: PrRow) => number> = {
+  latest: byLatest,
+  oldest: (a, b) => (a.date || "").localeCompare(b.date || "") || (a.prNo ?? 0) - (b.prNo ?? 0),
+  prDesc: (a, b) => (b.prNo ?? 0) - (a.prNo ?? 0),
+  prAsc: (a, b) => (a.prNo ?? 0) - (b.prNo ?? 0),
+  dept: (a, b) => cmpText(a.department, b.department) || byLatest(a, b),
+  person: (a, b) => cmpText(a.concernedPerson, b.concernedPerson) || byLatest(a, b),
+  value: (a, b) => (b.value ?? 0) - (a.value ?? 0) || byLatest(a, b),
+  status: (a, b) => cmpText(a.status, b.status) || byLatest(a, b),
+};
+
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—";
 
@@ -92,6 +117,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const [status, setStatus] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [sort, setSort] = useState<PrSort>("latest");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft());
@@ -114,7 +140,7 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
       if (!hay.includes(s)) return false;
     }
     return true;
-  }), [rows, q, dept, cat, status, fromDate, toDate]);
+  }).sort(PR_SORTS[sort]), [rows, q, dept, cat, status, fromDate, toDate, sort]);
 
   const totalValue = useMemo(() => filtered.reduce((s, r) => s + (r.value ?? 0), 0), [filtered]);
 
@@ -322,24 +348,23 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
       </div>
       {exportError && <p className="no-print" role="alert">{exportError}</p>}
 
-      {/* Header */}
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 14, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Purchase Requisitions</h1>
-          <p style={{ color: "#888", marginTop: 4, fontSize: 13 }}>
-            {filtered.length} of {rows.length} requisitions · total value {totalValue.toLocaleString()} PKR
-          </p>
+      {/* Row 1: the counts, search and sort, then the actions at the right. Row 2: the filters. */}
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <PrStat label="Requisitions" value={filtered.length === rows.length ? String(rows.length) : `${filtered.length} of ${rows.length}`} />
+          <PrStat label="Value PKR" value={totalValue.toLocaleString()} />
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search item, person, PR#…" />
+          <SortBy options={PR_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
           <button onClick={printLandscape} className="btn btn-print">🖨 Print</button>
           <button onClick={exportXlsx} disabled={exporting} className="btn">{exporting ? "Exporting…" : "⬇ Excel"}</button>
           {canRaise && <button onClick={openNew} className="btn btn-primary">＋ New Requisition</button>}
         </div>
       </div>
-
-      {/* Filters */}
-      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-        <input placeholder="Search item, person, PR#…" value={q} onChange={e => setQ(e.target.value)} style={{ width: 240 }} />
+      <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
         <select value={dept} onChange={e => setDept(e.target.value)} style={{ width: 180 }}>
           <option value="">All departments</option>
           {PR_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -660,4 +685,13 @@ function pillBtn(color: string, active: boolean): React.CSSProperties {
     padding: "3px 7px", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer",
     border: `1px solid ${color}`, background: active ? color : "#fff", color: active ? "#fff" : color,
   };
+}
+
+function PrStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: 6, padding: "3px 10px", borderRadius: 8, background: "#fafaf6", border: "1px solid var(--border)" }}>
+      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{value}</span>
+      <span style={{ fontSize: 10.5, color: "var(--text2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4 }}>{label}</span>
+    </div>
+  );
 }
