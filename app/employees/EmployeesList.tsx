@@ -6,6 +6,8 @@ import { useState, useMemo } from "react";
 import EmployeesToolbar from "./EmployeesToolbar";
 import PrintHeader from "@/components/PrintHeader";
 import { useCanEdit } from "@/components/MeProvider";
+import { SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 import type { employees } from "@/lib/schema";
 
 // Full DB row (every column) plus the one computed field — the table itself
@@ -19,12 +21,37 @@ const statusLabel = (s: string) => (s === "resigned" ? "Exited" : s);
 
 type StatusFilter = "active" | "exited" | "all";
 
+type EmpSort = "newest" | "oldest" | "name" | "nameDesc" | "id" | "department" | "designation" | "joined";
+const EMP_SORT_OPTIONS: SortOption<EmpSort>[] = [
+  { value: "newest", label: "Latest added" },
+  { value: "oldest", label: "Oldest added" },
+  { value: "name", label: "Name (A–Z)" },
+  { value: "nameDesc", label: "Name (Z–A)" },
+  { value: "id", label: "Employee ID" },
+  { value: "department", label: "Department" },
+  { value: "designation", label: "Designation" },
+  { value: "joined", label: "Joining date (newest)" },
+];
+const timeOf = (d: unknown) => (d ? new Date(d as string).getTime() || 0 : 0);
+const fullName = (e: Row) => `${e.firstName} ${e.lastName}`;
+const EMP_SORTS: Record<EmpSort, (a: Row, b: Row) => number> = {
+  newest: (a, b) => timeOf(b.createdAt) - timeOf(a.createdAt),
+  oldest: (a, b) => timeOf(a.createdAt) - timeOf(b.createdAt),
+  name: (a, b) => cmpText(fullName(a), fullName(b)),
+  nameDesc: (a, b) => cmpText(fullName(b), fullName(a)),
+  id: (a, b) => cmpText(a.employeeId, b.employeeId),
+  department: (a, b) => cmpText(a.department, b.department) || cmpText(fullName(a), fullName(b)),
+  designation: (a, b) => cmpText(a.designation, b.designation) || cmpText(fullName(a), fullName(b)),
+  joined: (a, b) => timeOf(b.joiningDate) - timeOf(a.joiningDate),
+};
+
 export default function EmployeesList({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const canEdit = useCanEdit("employees");
   const today = new Date().toISOString().slice(0, 10);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [sort, setSort] = useState<EmpSort>("newest");
   const [busyId, setBusyId] = useState<number | null>(null);
   // Exit dialog — pick the exit date (today or a past date) and a reason.
   const [exitFor, setExitFor] = useState<Row | null>(null);
@@ -33,7 +60,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((e) => {
+    const list = rows.filter((e) => {
       if (statusFilter === "active" && e.status !== "active") return false;
       if (statusFilter === "exited" && e.status === "active") return false;
       if (!q) return true;
@@ -44,7 +71,8 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
       ];
       return fields.some((f) => f && String(f).toLowerCase().includes(q));
     });
-  }, [rows, query, statusFilter]);
+    return list.sort(EMP_SORTS[sort]);
+  }, [rows, query, statusFilter, sort]);
 
   function openExit(e: Row) {
     setExitDate(today);
@@ -108,6 +136,8 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
             }}
           >{label}</button>
         ))}
+        <div style={{ flex: 1 }} />
+        <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} />
       </div>
 
       {/* Search bar */}

@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
-import { sortEmployees } from "@/lib/attendance";
+import { sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
+import { SearchBox, SortBy } from "@/components/ListControls";
+import { empMatches } from "@/lib/listTools";
 
 type Emp = {
   id: number; employeeId: string; firstName: string; lastName: string;
@@ -17,8 +19,13 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
   const [entries, setEntries] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("id");
 
   const activeEmps = useMemo(() => sortEmployees(employees.filter(e => e.status === "active"), "id"), [employees]);
+
+  // What the grid shows. Saving and the day total still use every active employee, so a search never drops an entry.
+  const shownEmps = useMemo(() => sortEmployees(activeEmps.filter(e => empMatches(query, e)), sort), [activeEmps, query, sort]);
 
   // Load whatever's already recorded for the chosen date.
   useEffect(() => {
@@ -82,8 +89,13 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
             <span style={{ fontSize: 12.5, color: "var(--text2)" }}>Day total: <b>{dayTotal || 0}</b> hrs</span>
           </div>
           <div style={{ fontSize: 11.5, color: "var(--text3)", marginBottom: 10 }}>Enter hours (e.g. 2 or 1.5). Blank / 0 = none.</div>
+          <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+            <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, department…" />
+            <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} />
+          </div>
+          {shownEmps.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, padding: "8px 0" }}>No employee matches “{query}”.</div>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 8 }}>
-            {activeEmps.map(e => (
+            {shownEmps.map(e => (
               <label key={e.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px" }}>
                 <span style={{ flex: 1, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {e.firstName} {e.lastName} <span style={{ color: "var(--text3)" }}>· {e.employeeId}</span>

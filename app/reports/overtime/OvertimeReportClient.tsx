@@ -1,8 +1,10 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { sortEmployees } from "@/lib/attendance";
+import { sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { empMatches, cmpText } from "@/lib/listTools";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 
 type Emp = {
@@ -12,6 +14,9 @@ type Emp = {
 type Rec = { employeeId: number; date: string; hours: number };
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+type OtSort = SortKey | "total";
+const OT_SORT_OPTIONS: SortOption<OtSort>[] = [...SORT_OPTIONS, { value: "total", label: "Total hours (most first)" }];
 
 function fmtHrs(h: number): string {
   if (!h) return "";
@@ -23,6 +28,8 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<OtSort>("id");
 
   const byKey = useMemo(() => {
     const m = new Map<string, number>();
@@ -34,10 +41,14 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
   }, [records]);
 
   const empIdsWithOt = useMemo(() => new Set(records.filter(r => r.hours > 0).map(r => r.employeeId)), [records]);
-  const gridEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithOt.has(e.id)), "id"),
-    [employees, empIdsWithOt],
-  );
+  const gridEmps = useMemo(() => {
+    const base = employees.filter(e => (e.status === "active" || empIdsWithOt.has(e.id)) && empMatches(query, e));
+    if (sort === "total") {
+      const tot = (id: number) => { let t = 0; for (let d = 1; d <= daysInMonth; d++) t += byKey.get(`${id}-${d}`) || 0; return t; };
+      return [...base].sort((a, b) => tot(b.id) - tot(a.id) || cmpText(a.employeeId, b.employeeId));
+    }
+    return sortEmployees(base, sort);
+  }, [employees, empIdsWithOt, query, sort, byKey, daysInMonth]);
 
   const rowTotal = (empId: number) => {
     let t = 0;
@@ -92,6 +103,8 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
         <button className="btn btn-sm" onClick={() => changeMonth(1)}>Next →</button>
         <Link href="/attendance/overtime" className="btn btn-sm">✎ Record overtime</Link>
         <div style={{ flex: 1 }} />
+        <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
+        <SortBy options={OT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
         <button onClick={exportXlsx} className="btn btn-sm" disabled={gridEmps.length === 0}>⬇ Export Excel</button>
         <button className="btn btn-sm btn-print" onClick={() => window.print()}>🖨 Print</button>
       </div>
@@ -118,7 +131,7 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
           </thead>
           <tbody>
             {gridEmps.length === 0 && (
-              <tr><td colSpan={2 + daysInMonth + 1} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>No overtime recorded this month.</td></tr>
+              <tr><td colSpan={2 + daysInMonth + 1} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{query ? `No employee matches “${query}”.` : "No overtime recorded this month."}</td></tr>
             )}
             {gridEmps.map(e => (
               <tr key={e.id}>

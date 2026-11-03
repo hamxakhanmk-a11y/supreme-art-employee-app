@@ -1,10 +1,12 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import { DEFAULT_CHECK_IN, lateMinutes, formatLate } from "@/lib/attendance";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { matchesQuery, cmpText } from "@/lib/listTools";
 
 type Row = {
   id: number;
@@ -29,6 +31,28 @@ const STATUS = {
 
 const DEFAULT_CHECK_OUT = "16:45";
 
+type DaySort = "name" | "nameDesc" | "id" | "department" | "designation" | "status" | "checkin";
+const DAY_SORT_OPTIONS: SortOption<DaySort>[] = [
+  { value: "name", label: "Name (A–Z)" },
+  { value: "nameDesc", label: "Name (Z–A)" },
+  { value: "id", label: "Employee ID" },
+  { value: "department", label: "Department" },
+  { value: "designation", label: "Designation" },
+  { value: "status", label: "Status (unmarked first)" },
+  { value: "checkin", label: "Check-in time" },
+];
+const STATUS_RANK: Record<string, number> = { unmarked: 0, absent: 1, leave: 2, "half-day": 3, present: 4 };
+const nameOf = (r: Row) => `${r.firstName} ${r.lastName}`;
+const DAY_SORTS: Record<DaySort, (a: Row, b: Row) => number> = {
+  name: (a, b) => cmpText(nameOf(a), nameOf(b)),
+  nameDesc: (a, b) => cmpText(nameOf(b), nameOf(a)),
+  id: (a, b) => cmpText(a.employeeId, b.employeeId),
+  department: (a, b) => cmpText(a.department, b.department) || cmpText(nameOf(a), nameOf(b)),
+  designation: (a, b) => cmpText(a.designation, b.designation) || cmpText(nameOf(a), nameOf(b)),
+  status: (a, b) => (STATUS_RANK[a.status ?? "unmarked"] - STATUS_RANK[b.status ?? "unmarked"]) || cmpText(nameOf(a), nameOf(b)),
+  checkin: (a, b) => cmpText(a.checkIn, b.checkIn) || cmpText(nameOf(a), nameOf(b)),
+};
+
 // Statuses shown as inline pills in each row (Half-day is its own button).
 const ROW_PILLS = ["present", "absent", "leave"] as const;
 
@@ -41,6 +65,11 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<DaySort>("name");
+  // Bumped each time the day is loaded: the sort order is worked out then (and when the sort is changed),
+  // not on every click, so a row does not jump away from under the cursor when it is marked.
+  const [loadVersion, setLoadVersion] = useState(0);
 
   // "Mark OFF Day" inline panel
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -80,6 +109,7 @@ export default function AttendancePage() {
       if (data.error) throw new Error(data.error);
       setRows(data.rows);
       setClosed(data.closed);
+      setLoadVersion(v => v + 1);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -234,7 +264,7 @@ export default function AttendancePage() {
   const exportCSV = () => {
     downloadCSV(`attendance-${date}`,
       ["Employee ID", "Name", "Designation", "Department", "Status", "Check-in", "Check-out", "Notes"],
-      rows.map(r => [
+      view.map(r => [
         r.employeeId, `${r.firstName} ${r.lastName}`, r.designation || "", r.department || "",
         r.status ? ((STATUS as any)[r.status]?.label ?? r.status) : "Unmarked",
         r.checkIn || "", r.checkOut || "", r.notes || "",
@@ -249,6 +279,16 @@ export default function AttendancePage() {
     halfday: rows.filter(r => r.status === "half-day").length,
     unmarked:rows.filter(r => r.status === null).length,
   };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const orderedIds = useMemo(() => [...rows].sort(DAY_SORTS[sort]).map(r => r.id), [sort, loadVersion]);
+  const view = useMemo(() => {
+    const byId = new Map(rows.map(r => [r.id, r]));
+    return orderedIds.map(id => byId.get(id)).filter((r): r is Row => !!r).filter(r => matchesQuery(query, [
+      r.firstName, r.lastName, nameOf(r), r.employeeId, r.designation, r.department, r.notes,
+      r.status ? STATUS[r.status as keyof typeof STATUS]?.label ?? r.status : "unmarked",
+    ]));
+  }, [rows, orderedIds, query]);
 
   if (!canEdit) return <ViewOnlyNotice title="Attendance marking is edit-only" />;
 
@@ -385,12 +425,20 @@ export default function AttendancePage() {
         </div>
       )}
 
+      <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+        <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by name, ID, designation, department, status, notes…" />
+        <SortBy options={DAY_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
+      </div>
+      {query && !loading && <div className="no-print" style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>Showing {view.length} of {rows.length}</div>}
+
       {/* Table */}
       <div className="card" style={{ padding: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {loading ? (
           <div className="empty">Loading…</div>
         ) : rows.length === 0 ? (
           <div className="empty">No employees found. Add employees first.</div>
+        ) : view.length === 0 ? (
+          <div className="empty">No employee matches “{query}”.</div>
         ) : (
           <table>
             <thead>
@@ -405,7 +453,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
+              {view.map(r => (
                 <tr key={r.id}>
                   <td>
                     {r.photoUrl ? (

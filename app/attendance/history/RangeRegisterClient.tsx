@@ -5,6 +5,7 @@ import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
 import { MONTHS, RangeToolbar, StatusBadge, RequiredHoursPanel } from "./MonthlyRegisterClient";
+import { empMatches } from "@/lib/listTools";
 import { lateMinutes, formatLate, sortEmployees, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
@@ -85,11 +86,12 @@ export default function RangeRegisterClient({
   };
 
   const [sort, setSort] = useState<SortKey>("id");
+  const [query, setQuery] = useState("");
   // Active employees, plus anyone with attendance in this range even if exited.
   const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithRecords.has(e.id)), sort),
-    [employees, sort, empIdsWithRecords]
+    () => sortEmployees(employees.filter(e => (e.status === "active" || empIdsWithRecords.has(e.id)) && empMatches(query, e)), sort),
+    [employees, sort, empIdsWithRecords, query]
   );
 
   const rangeLabel = `${MONTHS[from.m - 1]} ${from.y} – ${MONTHS[to.m - 1]} ${to.y}`;
@@ -157,6 +159,8 @@ export default function RangeRegisterClient({
         years={years}
         sort={sort}
         onSortChange={setSort}
+          query={query}
+          onQueryChange={setQuery}
       />
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", marginBottom: 12, fontSize: 12, color: "var(--text2)" }}>

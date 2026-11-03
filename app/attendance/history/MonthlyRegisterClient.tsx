@@ -4,6 +4,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
+import { SearchBox } from "@/components/ListControls";
+import { empMatches } from "@/lib/listTools";
 import { lateMinutes, formatLate, sortEmployees, SORT_OPTIONS, type SortKey, workedMinutesForDay, overtimeMinutes, countsTowardYield, formatHoursHM, workStatus, workPercent, formatPercent, type WorkStatus, DAILY_EXPECTED_MINUTES } from "@/lib/attendance";
 
 type Emp = {
@@ -60,13 +62,14 @@ export default function MonthlyRegisterClient({
   }, [records]);
 
   const [sort, setSort] = useState<SortKey>("id");
+  const [query, setQuery] = useState("");
 
   // Show active employees, plus anyone who has attendance this month even if
   // they've since exited — so a mid-month leaver's record still appears.
   const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(
-    () => sortEmployees(employees.filter(e => e.status === "active" || empIdsWithRecords.has(e.id)), sort),
-    [employees, sort, empIdsWithRecords]
+    () => sortEmployees(employees.filter(e => (e.status === "active" || empIdsWithRecords.has(e.id)) && empMatches(query, e)), sort),
+    [employees, sort, empIdsWithRecords, query]
   );
 
   // Live "time required": only counts calendar days that have actually been
@@ -195,6 +198,8 @@ export default function MonthlyRegisterClient({
           years={years}
           sort={sort}
           onSortChange={setSort}
+          query={query}
+          onQueryChange={setQuery}
         />
       ) : (
         <div className="no-print" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
@@ -207,6 +212,7 @@ export default function MonthlyRegisterClient({
           </select>
           <button onClick={() => changeMonth(1)} className="btn btn-sm">Next ›</button>
           <div style={{ flex: 1 }} />
+          <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />
           <SortSelect value={sort} onChange={setSort} />
           <button onClick={printLandscape} className="btn btn-print">🖨 Print Register</button>
           <button onClick={exportXlsx} className="btn btn-primary">⬇ Excel</button>
@@ -430,7 +436,7 @@ function fmt(n: number) {
 }
 
 export function RangeToolbar({
-  pathname, from, to, onPrint, onExport, years, sort, onSortChange,
+  pathname, from, to, onPrint, onExport, years, sort, onSortChange, query, onQueryChange,
 }: {
   pathname: string;
   from: string; to: string;
@@ -439,6 +445,8 @@ export function RangeToolbar({
   years: number[];
   sort?: SortKey;
   onSortChange?: (s: SortKey) => void;
+  query?: string;
+  onQueryChange?: (q: string) => void;
 }) {
   const router = useRouter();
   const [fy, fm] = from.split("-").map(Number);
@@ -484,6 +492,7 @@ export function RangeToolbar({
         <button onClick={() => presetYear(fy)} className="btn btn-sm" title="Full calendar year">Full year</button>
       </div>
       <div style={{ flex: 1 }} />
+      {onQueryChange && <SearchBox value={query ?? ""} onChange={onQueryChange} placeholder="🔍  Search employee…" />}
       {sort && onSortChange && <SortSelect value={sort} onChange={onSortChange} />}
       <button onClick={onPrint} className="btn btn-print">🖨 Print Register</button>
       <button onClick={onExport} className="btn btn-primary">⬇ Excel</button>

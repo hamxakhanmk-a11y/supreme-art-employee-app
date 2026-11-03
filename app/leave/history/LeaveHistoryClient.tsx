@@ -4,6 +4,8 @@ import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
+import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
+import { cmpText } from "@/lib/listTools";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string };
 type LT = { id: number; name: string; color: string | null };
@@ -14,6 +16,19 @@ type Req = {
   halfSegment: string | null;
   decidedBy: string | null; decisionNote: string | null;
 };
+
+type LeaveSort = "recent" | "startNew" | "startOld" | "name" | "nameDesc" | "id" | "days" | "type" | "status";
+const LEAVE_SORT_OPTIONS: SortOption<LeaveSort>[] = [
+  { value: "recent", label: "Latest requested" },
+  { value: "startNew", label: "Start date (newest)" },
+  { value: "startOld", label: "Start date (oldest)" },
+  { value: "name", label: "Employee (A–Z)" },
+  { value: "nameDesc", label: "Employee (Z–A)" },
+  { value: "id", label: "Employee ID" },
+  { value: "days", label: "Days (most first)" },
+  { value: "type", label: "Leave type" },
+  { value: "status", label: "Status" },
+];
 
 const STATUS = {
   pending:  { label: "Pending",  color: "var(--warning)", bg: "var(--warning-bg)" },
@@ -32,6 +47,7 @@ export default function LeaveHistoryClient({
   const [employeeId, setEmployeeId] = useState("");
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<LeaveSort>("recent");
   const [rows, setRows] = useState<Req[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +70,7 @@ export default function LeaveHistoryClient({
   const empById = new Map(employees.map(e => [e.id, e]));
   const typeById = new Map(leaveTypes.map(t => [t.id, t]));
 
-  const filtered = rows.filter(r => {
+  const matched = rows.filter(r => {
     if (excludeHalfDay && r.halfSegment) return false;
     if (onlyHalfDay && !r.halfSegment) return false;
     const q = query.trim().toLowerCase();
@@ -66,6 +82,23 @@ export default function LeaveHistoryClient({
       t?.name, r.status, r.reason,
     ].some(f => f && String(f).toLowerCase().includes(q));
   });
+
+  // "recent" is the order the server sends (newest request first); the rest re-order it.
+  const filtered = (() => {
+    const nameOf = (r: Req) => { const e = empById.get(r.employeeId); return e ? `${e.firstName} ${e.lastName}` : ""; };
+    const cmp: Record<LeaveSort, (a: Req, b: Req) => number> = {
+      recent: () => 0,
+      startNew: (a, b) => b.startDate.localeCompare(a.startDate),
+      startOld: (a, b) => a.startDate.localeCompare(b.startDate),
+      name: (a, b) => cmpText(nameOf(a), nameOf(b)) || b.startDate.localeCompare(a.startDate),
+      nameDesc: (a, b) => cmpText(nameOf(b), nameOf(a)) || b.startDate.localeCompare(a.startDate),
+      id: (a, b) => cmpText(empById.get(a.employeeId)?.employeeId, empById.get(b.employeeId)?.employeeId) || b.startDate.localeCompare(a.startDate),
+      days: (a, b) => b.days - a.days || b.startDate.localeCompare(a.startDate),
+      type: (a, b) => cmpText(typeById.get(a.leaveTypeId)?.name, typeById.get(b.leaveTypeId)?.name) || b.startDate.localeCompare(a.startDate),
+      status: (a, b) => cmpText(a.status, b.status) || b.startDate.localeCompare(a.startDate),
+    };
+    return [...matched].sort(cmp[sort]);
+  })();
 
   const totals = {
     total: filtered.length,
@@ -104,16 +137,9 @@ export default function LeaveHistoryClient({
         subtitle={`${new Date(from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} — ${new Date(to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
         meta={empMeta}
       />
-      <div className="no-print" style={{ marginBottom: 12, position: "relative" }}>
-        <input type="text" placeholder="🔍  Search by employee, leave type, status, reason…"
-          value={query} onChange={e => setQuery(e.target.value)}
-          style={{ width: "100%", padding: "11px 16px", fontSize: 13 }} />
-        {query && (
-          <button onClick={() => setQuery("")} style={{
-            position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-            background: "transparent", border: "none", color: "#888", cursor: "pointer", fontSize: 14, padding: 4,
-          }}>✕</button>
-        )}
+      <div className="no-print" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <SearchBox block value={query} onChange={setQuery} placeholder="🔍  Search by employee, leave type, status, reason…" />
+        <SortBy options={LEAVE_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={190} />
       </div>
 
       <div className="card no-print" style={{ marginBottom: 16 }}>
