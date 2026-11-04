@@ -17,9 +17,9 @@ import { getSession } from "@/lib/auth";
 import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
-import { isNotNull } from "drizzle-orm";
-import { ensureProcurementTables, parseItems, qtyToNum, computePoReceipts, type PoItem, type GrnItem } from "@/lib/procurement";
-import SupplierDirectoryClient, { type DirectoryRow } from "./SupplierDirectoryClient";
+import { ensureProcurementTables, parseItems, qtyToNum, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
+import { procurementExpenses, type ExpenseLine, type SkippedLine } from "@/lib/expenses";
+import SupplierDirectoryClient, { type DirectoryRow, type ReceivedRow } from "./SupplierDirectoryClient";
 
 export const dynamic = "force-dynamic";
 
@@ -43,13 +43,18 @@ export default async function SupplierDirectoryPage() {
     supplierNtn: purchaseOrders.supplierNtn,
     supplierStrn: purchaseOrders.supplierStrn,
     items: purchaseOrders.items,
+    registered: purchaseOrders.registered,
+    discount: purchaseOrders.discount,
   }).from(purchaseOrders).orderBy(purchaseOrders.poNo);
 
   // What has arrived of each PO line, from every GRR raised against the PO — the same reckoning that sets
   // the PO's own open / partial / received status.
-  const grnRows = await db.select({ poId: grns.poId, items: grns.items }).from(grns).where(isNotNull(grns.poId));
+  const grnRows = await db.select({
+    id: grns.id, grnNo: grns.grnNo, registered: grns.registered, date: grns.date, poId: grns.poId, poNo: grns.poNo,
+    items: grns.items, inspection: grns.inspection,
+  }).from(grns);
   const grnItemsByPo = new Map<number, GrnItem[]>();
-  for (const g of grnRows) grnItemsByPo.set(g.poId!, [...(grnItemsByPo.get(g.poId!) ?? []), ...parseItems<GrnItem>(g.items)]);
+  for (const g of grnRows) if (g.poId != null) grnItemsByPo.set(g.poId, [...(grnItemsByPo.get(g.poId) ?? []), ...parseItems<GrnItem>(g.items)]);
 
   // Flatten every PO line into its own row — one product, one supplier, one
   // rate, one date/PO ref. No grouping or dedup here: that happens
@@ -114,6 +119,28 @@ export default async function SupplierDirectoryPage() {
     }
   }
 
+  // Received only (the owner's): every GRR line, on its GRR date, valued exactly as the dashboard's Procurement
+  // is (lib/expenses.ts: received qty × PO rate + tax, less the PO's discount share, never more than ordered,
+  // rejected GRRs left out). All dates are worked out here; the page narrows them to its From–To.
+  const received: ReceivedRow[] = [];
+  let receivedNotCounted = 0;
+  if (isOwner) {
+    const lines: ExpenseLine[] = [], skipped: SkippedLine[] = [];
+    procurementExpenses(grnRows, pos.map(p => ({ ...p, supplierName: p.supplierName })), await loadChecklist(), "0000-01-01", "9999-12-31", lines, skipped);
+    receivedNotCounted = skipped.length;
+    // A GRR checked against several categories gives one line per category; here it is one row again.
+    const byLine = new Map<string, ReceivedRow>();
+    for (const l of lines) {
+      const r = byLine.get(l.lineId!);
+      if (r) { r.net += l.amount; continue; }
+      byLine.set(l.lineId!, {
+        lineId: l.lineId!, date: l.date, product: l.description, supplier: l.supplier || "—", grr: l.ref, href: l.href,
+        po: l.po || "", poDate: l.poDate || "", qty: l.qty ?? 0, rate: l.rate ?? 0, taxPct: l.taxPct ?? 0, net: l.amount, calc: l.calc || "",
+      });
+    }
+    received.push(...byLine.values());
+  }
+
   // Hand-noted reference rates, keyed the same way the By-product view groups
   // (exact product description + supplier name). Where one exists it's shown
   // instead of the PO's rate; the PO itself is never changed by it.
@@ -125,6 +152,8 @@ export default async function SupplierDirectoryPage() {
     <SupplierDirectoryClient
       rows={rows}
       rateNotes={rateNotes}
+      received={received}
+      receivedNotCounted={receivedNotCounted}
       byProductOnly={!isOwner}
       canEditRates={canEditRates}
     />

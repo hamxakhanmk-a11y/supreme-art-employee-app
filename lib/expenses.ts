@@ -28,6 +28,13 @@ export interface ExpenseLine {
   calc?: string;         // how a procurement amount was worked out, shown beside it
   po?: string;           // procurement: the PO it was valued from, "PO 10234"
   poDate?: string;       // and that PO's date ("" when unknown)
+  // Procurement, for the Supplier Directory's received view: which GRR line (split across categories, a line
+  // appears once per category with the same lineId), its supplier, and the quantity / rate / tax it was valued at.
+  lineId?: string;
+  supplier?: string;
+  qty?: number;
+  rate?: number;
+  taxPct?: number;
   ref: string;           // "PR 121", "GRR 15004u"
   description: string;
   href: string;
@@ -48,7 +55,7 @@ export interface PrInput {
   hodApproval: string | null; hrApproval: string | null;
   receivedByAdmin?: boolean | null;   // Admin's "Mark Received" on the PR register
 }
-export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null; date?: string | null }
+export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null; date?: string | null; supplierName?: string | null }
 export interface GrnInput {
   id: number; grnNo: number; registered: boolean | null; date: string; poId: number | null; poNo: number | null;
   items: string | null; inspection: string | null;
@@ -156,7 +163,7 @@ export function procurementExpenses(
     const labels = ins.categories.map(id => checklistCategory(checklist, id)?.label ?? id);
     const cats = labels.length ? labels : [UNCATEGORISED];
 
-    for (const it of items) {
+    for (const [idx, it] of items.entries()) {
       const description = it.item || "";
       const pl = (it.poSrNo != null ? bySr.get(it.poSrNo) : undefined) ?? byDesc.get(normDesc(description));
       if (!pl) { skip(SKIP.grrNotOnPo, description); continue; }
@@ -180,7 +187,8 @@ export function procurementExpenses(
       const out: ExpenseLine[] = [];
       held.push({ key, orderedQty, lines: out });
       for (const category of cats) {
-        out.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, po: `PO ${docNoLabel(po.poNo, po.registered)}`, poDate: po.date ? String(po.date).slice(0, 10) : "", ref, description: description || pl.description || pl.item || "", href });
+        out.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, po: `PO ${docNoLabel(po.poNo, po.registered)}`, poDate: po.date ? String(po.date).slice(0, 10) : "",
+          lineId: `${g.id}:${idx}`, supplier: (po.supplierName || "").trim(), qty: valued, rate: m.rate, taxPct: m.taxPct, ref, description: description || pl.description || pl.item || "", href });
       }
     }
   }

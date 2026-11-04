@@ -32,6 +32,24 @@ export interface DirectoryRow {
   orderedQty: number | null;
 }
 
+// Received only: one row per GRR line, on its GRR date, valued as the dashboard's Procurement is
+// (see lib/expenses.ts), so the two totals agree for the same dates.
+export interface ReceivedRow {
+  lineId: string;
+  date: string;          // GRR date
+  product: string;
+  supplier: string;
+  grr: string;           // "GRR 15110"
+  href: string;
+  po: string;            // "PO 10234"
+  poDate: string;
+  qty: number;           // quantity valued (never more than was left on the PO line)
+  rate: number;
+  taxPct: number;
+  net: number;           // after the PO's discount share
+  calc: string;
+}
+
 type ViewMode = "orders" | "byProduct";
 
 // Sorting. "Every order" lists rows (newest first by default); "By product" lists product groups (A-Z by
@@ -144,15 +162,15 @@ function taxPctLabel(rate: number | null, taxPct: number): string {
 // stay with the owner. canEditRates — whether the rate / tax % cells on that
 // list can be corrected in place.
 export default function SupplierDirectoryClient({
-  rows, rateNotes = {}, byProductOnly = false, canEditRates = false,
-}: { rows: DirectoryRow[]; rateNotes?: RateNotes; byProductOnly?: boolean; canEditRates?: boolean }) {
+  rows, rateNotes = {}, byProductOnly = false, canEditRates = false, received = [], receivedNotCounted = 0,
+}: { rows: DirectoryRow[]; rateNotes?: RateNotes; byProductOnly?: boolean; canEditRates?: boolean; received?: ReceivedRow[]; receivedNotCounted?: number }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>(byProductOnly ? "byProduct" : "orders");
-  // Every order: only the lines that have arrived (fully or in part) on a GRR.
+  // Every order → what arrived instead: each GRR line in the From–To by its GRR date (see ReceivedRow).
   const [receivedOnly, setReceivedOnly] = useState(false);
   // Restricted roles are pinned to By-product no matter what `view` holds —
   // hiding the tabs alone would leave the per-order view one stray setView
@@ -202,11 +220,27 @@ export default function SupplierDirectoryClient({
   const filteredOrders = useMemo(() => rows.filter(r => {
     if (supplierFilter && r.supplier !== supplierFilter) return false;
     if (!inRange(r)) return false;
-    if (receivedOnly && r.received === "none") return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.product} ${r.supplier}`.toLowerCase().includes(s);
-  }).sort((a, b) => (ORDER_SORTS[sort]?.(a, b) ?? 0) || (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate, sort, receivedOnly]);
+  }).sort((a, b) => (ORDER_SORTS[sort]?.(a, b) ?? 0) || (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate, sort]);
+
+  const RECEIVED_SORTS: Partial<Record<DirSort, (a: ReceivedRow, b: ReceivedRow) => number>> = {
+    dateAsc: (a, b) => a.date.localeCompare(b.date),
+    product: (a, b) => cmpText(a.product, b.product),
+    supplier: (a, b) => cmpText(a.supplier, b.supplier),
+    rate: (a, b) => b.rate - a.rate,
+    net: (a, b) => b.net - a.net,
+  };
+  const filteredReceived = useMemo(() => received.filter(r => {
+    if (supplierFilter && r.supplier !== supplierFilter) return false;
+    if (!inReportRange(r.date, fromDate, toDate)) return false;
+    const s = q.trim().toLowerCase();
+    return !s || `${r.product} ${r.supplier} ${r.grr} ${r.po}`.toLowerCase().includes(s);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }).sort((a, b) => (RECEIVED_SORTS[sort]?.(a, b) ?? 0) || b.date.localeCompare(a.date)), [received, q, supplierFilter, fromDate, toDate, sort]);
+  const receivedTotal = useMemo(() => filteredReceived.reduce((s, r) => s + r.net, 0), [filteredReceived]);
+  const showReceived = receivedOnly && activeView === "orders";
 
   const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
     gross: s.gross + (r.gross ?? 0),
@@ -328,7 +362,23 @@ export default function SupplierDirectoryClient({
     if (fromDate && toDate && fromDate > toDate) return;
     setExporting(true); setExportError("");
     try {
-    if (activeView === "orders") {
+    if (showReceived) {
+      await downloadWorkbookXlsx({
+        filename: "supplier-directory-received",
+        sheets: [{
+          sheetName: "Received", title: "SUPPLIER DIRECTORY — RECEIVED (BY GRR DATE)",
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [14,38,28,14,22,14,16,10,18,40],
+          headers: ["GRR Date", "Product / Description", "Supplier", "GRR", "PO", "Qty", "Rate", "Tax %", "Net Received", "Worked out as"],
+          rows: [
+            ...filteredReceived.map(r => [
+              fmtDate(r.date), r.product, r.supplier, r.grr, r.po + (r.poDate ? ` (${fmtDate(r.poDate)})` : ""),
+              r.qty.toLocaleString(), fmtMoney(r.rate, false), `${r.taxPct}%`, fmtMoney(r.net, false), r.calc,
+            ]),
+            ["", "", "", "", "", "", "", "Total", fmtMoney(receivedTotal, false), ""],
+          ],
+        }],
+      });
+    } else if (activeView === "orders") {
       await downloadWorkbookXlsx({
         filename: "product-supplier-directory",
         sheets: [{
@@ -372,7 +422,9 @@ export default function SupplierDirectoryClient({
           date range, and at the right end Excel and the way back. */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          {activeView === "orders"
+          {showReceived
+            ? <StatChip label="Received lines" value={filteredReceived.length} />
+            : activeView === "orders"
             ? <StatChip label="Orders" value={filteredOrders.length} />
             : <StatChip label="Products" value={new Set(byProduct.map(r => r.product)).size} />}
         </div>
@@ -392,7 +444,7 @@ export default function SupplierDirectoryClient({
         )}
         {activeView === "orders" && (
           <button type="button" onClick={() => setReceivedOnly(v => !v)} aria-pressed={receivedOnly}
-            title="Show only the PO lines that have arrived on a GRR (fully or in part)"
+            title="Show what arrived instead: every GRR line in the dates, by its GRR date, valued as the dashboard's Procurement"
             style={{
               padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", flexShrink: 0,
               border: `1px solid ${receivedOnly ? "#15803D" : "var(--border)"}`,
@@ -411,7 +463,47 @@ export default function SupplierDirectoryClient({
       </div>
 
       <div className="rpt-table-wrap rpt-table-wrap--fit">
-        {activeView === "orders" ? (
+        {showReceived ? (
+          <table className="rpt-table">
+            <thead>
+              <tr>
+                <th>GRR Date</th>
+                <th className="wrap">Product / Description</th>
+                <th className="wrap">Supplier</th>
+                <th>GRR / PO</th>
+                <th className="num">Qty</th>
+                <th className="num">Rate</th>
+                <th>Tax %</th>
+                <th className="num">Net Received</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReceived.length === 0 && (
+                <tr><td colSpan={8} className="empty">Nothing received in these dates.</td></tr>
+              )}
+              {filteredReceived.map(r => (
+                <tr key={r.lineId} onClick={() => router.push(r.href)} className="rpt-row-clickable" title={`${r.calc} — tap to open the GRR`}>
+                  <td>{fmtDate(r.date)}</td>
+                  <td className="wrap">{r.product}</td>
+                  <td className="wrap">{r.supplier}</td>
+                  <td style={{ fontSize: 12 }}>{r.grr}<div style={{ color: "var(--text2)" }}>{r.po}{r.poDate ? ` · ${fmtDate(r.poDate)}` : ""}</div></td>
+                  <td className="num">{r.qty.toLocaleString()}</td>
+                  <td className="num">{fmtMoney(r.rate, false)}</td>
+                  <td>{r.taxPct}%</td>
+                  <td className="num" style={{ fontWeight: 700 }}>{fmtMoney(r.net, false)}</td>
+                </tr>
+              ))}
+            </tbody>
+            {filteredReceived.length > 0 && (
+              <tfoot>
+                <tr className="rpt-total-row">
+                  <td colSpan={7}>Total received — {filteredReceived.length} line{filteredReceived.length === 1 ? "" : "s"} · after PO discounts{receivedNotCounted > 0 ? ` · GRR lines with no rate, no PO or rejected are not counted` : ""}</td>
+                  <td className="num">{fmtMoney(receivedTotal, false)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        ) : activeView === "orders" ? (
           <table className="rpt-table">
             <thead>
               <tr>
