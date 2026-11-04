@@ -14,14 +14,17 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   if (user.role !== "superadmin") redirect("/");
   const sp = await searchParams;
   const { from, to, today } = dashboardRange(sp);
-  const receivedOnly = sp.recv === "1";
-  const summary = await loadExpenses(from, to, receivedOnly);
+  const received = sp.recv === "1";
+  const summary = await loadExpenses(from, to, received ? "received" : "ordered");
   return (
     <div className="fade-up od">
       <div className="od-top">
-        <Link href={`/?efrom=${from}&eto=${to}${receivedOnly ? "&erecv=1" : ""}`} className="btn btn-back btn-sm">← Dashboard</Link>
-        <RangePicker from={from} to={to} today={today} keep={receivedOnly ? { recv: "1" } : {}} />
-        {receivedOnly && <span className="od-recv on" style={{ cursor: "default" }}>✓ Received only</span>}
+        <Link href={`/?efrom=${from}&eto=${to}${received ? "&erecv=1" : ""}`} className="btn btn-back btn-sm">← Dashboard</Link>
+        <RangePicker from={from} to={to} today={today} keep={received ? { recv: "1" } : {}} />
+        <div className="od-seg" role="group" aria-label="Ordered or received">
+          <Link href={`/dashboard/expenses?from=${from}&to=${to}`} className={received ? "" : "on"}>Ordered</Link>
+          <Link href={`/dashboard/expenses?from=${from}&to=${to}&recv=1`} className={received ? "on" : ""}>Received</Link>
+        </div>
       </div>
       <ExpenseDetail summary={summary} />
     </div>

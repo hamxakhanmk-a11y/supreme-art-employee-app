@@ -19,22 +19,22 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
   return (
     <>
       <div className="od-zone od-zone-1">
-        <div className="od-sec">Expense{summary.receivedOnly ? " · received in full only" : ""} <small>· {rangeLabel(summary.from, summary.to)}</small></div>
+        <div className="od-sec">Expense · {summary.mode === "received" ? "received" : "ordered"} <small>· {rangeLabel(summary.from, summary.to)}</small></div>
         <div className="od-grid">
           <div className="od-tile od-money od-wide">
             <div className="od-label">Total expense</div>
             <div className="od-value">PKR {pkr(summary.total)}</div>
-            <div className="od-sub">Purchase + Procurement</div>
+            <div className="od-sub">{summary.mode === "received" ? "Received in the period" : "Ordered in the period"}</div>
           </div>
           <div className="od-tile od-purchase">
             <div className="od-label">Purchase</div>
             <div className="od-value">{pkr(summary.purchase)}</div>
-            <div className="od-sub">Requisition lines, on the PR date</div>
+            <div className="od-sub">{summary.mode === "received" ? "Requisitions marked received, on the day marked" : "Requisition lines, on the PR date"}</div>
           </div>
           <div className="od-tile od-proc">
             <div className="od-label">Procurement</div>
             <div className="od-value">{pkr(summary.procurement)}</div>
-            <div className="od-sub">GRR qty × PO rate + tax, on the GRR date{summary.procurementEarlierPos > 0 && <> · <b>{pkr(summary.procurementEarlierPos)}</b> on POs placed before this period</>}</div>
+            <div className="od-sub">{summary.mode === "received" ? "GRR qty × PO rate + tax, on the GRR date" : "PO lines placed, qty × rate + tax, on the PO date"}{summary.procurementEarlierPos > 0 && <> · <b>{pkr(summary.procurementEarlierPos)}</b> on POs placed before this period</>}</div>
           </div>
         </div>
       </div>

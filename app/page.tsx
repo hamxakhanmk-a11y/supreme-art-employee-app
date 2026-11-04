@@ -73,7 +73,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   if (user?.role === "superadmin") {
     const sp = await searchParams;
     const exp = dashboardRange({ from: sp.efrom, to: sp.eto }), att = dashboardRange({ from: sp.afrom, to: sp.ato });
-    return <OwnerDashboard exp={exp} att={att} receivedOnly={sp.erecv === "1"} today={exp.today} />;
+    return <OwnerDashboard exp={exp} att={att} received={sp.erecv === "1"} today={exp.today} />;
   }
   return <Dashboard />;
 }

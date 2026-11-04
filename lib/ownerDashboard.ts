@@ -1,13 +1,13 @@
 // What the Super Admin's dashboard reads. Server only. Each loader stands alone, so one
 // that fails leaves the rest of the dashboard working.
-import { sql, and, or, gte, lte, lt, gt, inArray, isNotNull, isNull } from "drizzle-orm";
+import { sql, and, or, gte, lte, lt, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "./db";
 import { employees, attendance, purchaseRequisitions, purchaseOrders, grns } from "./schema";
 import { ensureProcurementTables, loadChecklist } from "./procurement";
 import { ensureFleetSchema } from "./fleet";
 import { lateMinutes } from "./attendance";
 import { karachiNow } from "./gateTime";
-import { summarizeExpenses, type ExpenseSummary } from "./expenses";
+import { summarizeExpenses, type ExpenseSummary, type ExpenseMode } from "./expenses";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -20,27 +20,41 @@ export function dashboardRange(sp: { from?: string; to?: string }): { from: stri
   return { from, to, today };
 }
 
-export async function loadExpenses(from: string, to: string, receivedOnly = false): Promise<ExpenseSummary> {
+const grnCols = {
+  id: grns.id, grnNo: grns.grnNo, registered: grns.registered, date: grns.date, poId: grns.poId, poNo: grns.poNo,
+  items: grns.items, inspection: grns.inspection,
+};
+const poCols = {
+  id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, items: purchaseOrders.items,
+  discount: purchaseOrders.discount, date: purchaseOrders.date, supplierName: purchaseOrders.supplierName,
+};
+
+// Ordered (the default) or Received — see lib/expenses.ts for what each counts.
+export async function loadExpenses(from: string, to: string, mode: ExpenseMode = "ordered"): Promise<ExpenseSummary> {
   await ensureProcurementTables();
-  const [prs, grnRows, checklist] = await Promise.all([
+  const [prs, checklist] = await Promise.all([
     db.select({
       id: purchaseRequisitions.id, prNo: purchaseRequisitions.prNo, date: purchaseRequisitions.date,
       category: purchaseRequisitions.category, items: purchaseRequisitions.items,
       itemName: purchaseRequisitions.itemName, quantity: purchaseRequisitions.quantity, uom: purchaseRequisitions.uom,
       value: purchaseRequisitions.value, hodApproval: purchaseRequisitions.hodApproval, hrApproval: purchaseRequisitions.hrApproval,
-      receivedByAdmin: purchaseRequisitions.receivedByAdmin,
+      receivedByAdmin: purchaseRequisitions.receivedByAdmin, receivedDate: purchaseRequisitions.receivedDate,
     }).from(purchaseRequisitions),
-    db.select({
-      id: grns.id, grnNo: grns.grnNo, registered: grns.registered, date: grns.date, poId: grns.poId, poNo: grns.poNo,
-      items: grns.items, inspection: grns.inspection,
-    }).from(grns).where(and(gte(grns.date, from), lte(grns.date, to))),
     loadChecklist(),
   ]);
+
+  if (mode === "ordered") {
+    // The POs placed in the period, and their GRRs for the categories.
+    const pos = await db.select(poCols).from(purchaseOrders).where(and(gte(purchaseOrders.date, from), lte(purchaseOrders.date, to)));
+    const ids = pos.map(p => p.id);
+    const poGrns = ids.length ? await db.select(grnCols).from(grns).where(inArray(grns.poId, ids)) : [];
+    return summarizeExpenses({ prs, grns: poGrns, pos, checklist }, from, to, "ordered");
+  }
+
+  const grnRows = await db.select(grnCols).from(grns).where(and(gte(grns.date, from), lte(grns.date, to)));
   const poIds = [...new Set(grnRows.map(g => g.poId).filter((x): x is number => x != null))];
   const poNos = [...new Set(grnRows.filter(g => g.poId == null).map(g => g.poNo).filter((x): x is number => x != null))];
-  const poCols = { id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, items: purchaseOrders.items, discount: purchaseOrders.discount, date: purchaseOrders.date };
-  // The other GRRs on the same POs: what earlier ones received is no longer left to value, and later ones
-  // tell whether a line was received in full (see lib/expenses.ts).
+  // The other GRRs on the same POs: what earlier ones received is no longer left to value (see lib/expenses.ts).
   const linked = [
     ...(poIds.length ? [inArray(grns.poId, poIds)] : []),
     ...(poNos.length ? [and(isNull(grns.poId), inArray(grns.poNo, poNos))] : []),
@@ -48,13 +62,10 @@ export async function loadExpenses(from: string, to: string, receivedOnly = fals
   const [byId, byNo, others] = await Promise.all([
     poIds.length ? db.select(poCols).from(purchaseOrders).where(inArray(purchaseOrders.id, poIds)) : Promise.resolve([]),
     poNos.length ? db.select(poCols).from(purchaseOrders).where(inArray(purchaseOrders.poNo, poNos)) : Promise.resolve([]),
-    linked.length ? db.select({
-      id: grns.id, grnNo: grns.grnNo, registered: grns.registered, date: grns.date, poId: grns.poId, poNo: grns.poNo,
-      items: grns.items, inspection: grns.inspection,
-    }).from(grns).where(and(or(lt(grns.date, from), gt(grns.date, to)), or(...linked))) : Promise.resolve([]),
+    linked.length ? db.select(grnCols).from(grns).where(and(lt(grns.date, from), or(...linked))) : Promise.resolve([]),
   ]);
   const pos = [...new Map([...byId, ...byNo].map(p => [p.id, p])).values()];
-  return summarizeExpenses({ prs, grns: [...others, ...grnRows], pos, checklist }, from, to, { receivedOnly });
+  return summarizeExpenses({ prs, grns: [...others, ...grnRows], pos, checklist }, from, to, "received");
 }
 
 export interface CnicAlert { id: number; empCode: string; name: string; designation: string | null; expiry: string; daysLeft: number }

@@ -17,8 +17,8 @@ import { getSession } from "@/lib/auth";
 import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
-import { ensureProcurementTables, parseItems, qtyToNum, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
-import { procurementExpenses, type ExpenseLine, type SkippedLine } from "@/lib/expenses";
+import { ensureProcurementTables, parseItems, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
+import { procurementExpenses, poLineValue, type ExpenseLine, type SkippedLine } from "@/lib/expenses";
 import SupplierDirectoryClient, { type DirectoryRow, type ReceivedRow } from "./SupplierDirectoryClient";
 
 export const dynamic = "force-dynamic";
@@ -69,11 +69,9 @@ export default async function SupplierDirectoryPage() {
       const desc = (it.description || it.item || "").trim();
       if (!desc) continue;
 
-      const rateNum = qtyToNum(it.rate);
-      const rate = rateNum && rateNum > 0 ? rateNum : null;
-      const qtyNum = qtyToNum(it.quantity);
-      const qty = qtyNum && qtyNum > 0 ? qtyNum : null;
-      const taxPct = qtyToNum(it.tax) || 0;
+      // The same arithmetic as the dashboard's Ordered expense (lib/expenses.ts), so the two totals agree.
+      const v = poLineValue(it);
+      const { rate, taxPct } = v;
 
       // Gross/Tax/Net only mean something once both qty and rate are usable
       // numbers — otherwise leave them blank rather than show a misleading 0.
@@ -81,14 +79,9 @@ export default async function SupplierDirectoryPage() {
       // to By-product they're left out of the payload entirely rather than
       // merely hidden — otherwise every order's value would still be sitting
       // in the page's data for anyone who looked.
-      let gross: number | null = null;
-      let taxValue = 0;
-      let net: number | null = null;
-      if (isOwner && rate != null && qty != null) {
-        gross = qty * rate;
-        taxValue = gross * taxPct / 100;
-        net = gross + taxValue;
-      }
+      const gross = isOwner ? v.gross : null;
+      const taxValue = isOwner ? v.taxValue : 0;
+      const net = isOwner ? v.net : null;
 
       rows.push({
         product: desc,

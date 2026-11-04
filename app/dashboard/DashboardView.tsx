@@ -15,7 +15,7 @@ export type Range = { from: string; to: string };
 type CategoryRow = { category: string; total: number; purchase: number; procurement: number; lines: number };
 type VehicleRow = { id: number; vehicleNo: string; vehicleName: string; driver: string; destination: string; at: string; since: string };
 export interface DashData {
-  expRange: Range; attRange: Range; receivedOnly: boolean; today: string;
+  expRange: Range; attRange: Range; received: boolean; today: string;   // received: Expense shows Received, else Ordered
   exp: Loaded<{ total: number; purchase: number; procurement: number; earlierPos: number; skipped: number; categories: CategoryRow[] }>;
   cnic: Loaded<CnicAlert[]>;
   late: Loaded<LateComer[]>;
@@ -29,14 +29,15 @@ export interface DashData {
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 export default function DashboardView({ data }: { data: DashData }) {
-  const { expRange: er, attRange: ar, receivedOnly, today, exp, cnic, late, lateToday, off, people, vehicles, cards } = data;
+  const { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards } = data;
   // Each band's period is kept in the address under its own names, next to the other band's.
-  const recv: Record<string, string> = receivedOnly ? { erecv: "1" } : {};
+  const recv: Record<string, string> = received ? { erecv: "1" } : {};
   const expKeep = { afrom: ar.from, ato: ar.to, ...recv }, attKeep = { efrom: er.from, eto: er.to, ...recv };
   const router = useRouter(), pathname = usePathname();
-  const toggleReceived = () => {
+  const setReceived = (on: boolean) => {
+    if (on === received) return;
     const q = new URLSearchParams({ efrom: er.from, eto: er.to, afrom: ar.from, ato: ar.to });
-    if (!receivedOnly) q.set("erecv", "1");
+    if (on) q.set("erecv", "1");
     router.push(`${pathname}?${q}`, { scroll: false });
   };
   const [open, setOpen] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function DashboardView({ data }: { data: DashData }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const expLink = `/dashboard/expenses?from=${er.from}&to=${er.to}${receivedOnly ? "&recv=1" : ""}`;
+  const expLink = `/dashboard/expenses?from=${er.from}&to=${er.to}${received ? "&recv=1" : ""}`;
   const details: Record<string, { fam: string; label: string; body: () => ReactNode }> = {};
   const tile = (key: string, fam: string, label: string, l: Loaded<unknown>, value: (d: any) => ReactNode, sub: (d: any) => ReactNode, more?: (d: any) => ReactNode, wide?: boolean) => {
     if (l.ok && more) details[key] = { fam, label, body: () => more(l.data) };
@@ -66,10 +67,15 @@ export default function DashboardView({ data }: { data: DashData }) {
   };
   const expMore = (key: "total" | "purchase" | "procurement") => (d: Extract<DashData["exp"], { ok: true }>["data"]) => (
     <>
-      {key !== "purchase" && d.procurement > 0 && (
+      {received && key !== "purchase" && d.procurement > 0 && (
         <div className="od-sub od-split">
           Procurement counts goods by the day they arrived (GRR date). Of {pkr(d.procurement)}: <b>{pkr(d.procurement - d.earlierPos)}</b> against POs placed in this period,
-          {" "}<b>{pkr(d.earlierPos)}</b> against POs placed before it. The Supplier Directory counts POs by the day they were placed, whether the goods have arrived or not.
+          {" "}<b>{pkr(d.earlierPos)}</b> against POs placed before it. The Supplier Directory’s Received only shows these same lines.
+        </div>
+      )}
+      {!received && key !== "purchase" && d.procurement > 0 && (
+        <div className="od-sub od-split">
+          Procurement counts the POs placed in this period at their full value (qty × rate + tax), whether the goods have arrived or not — the Supplier Directory’s Every order total for the same dates.
         </div>
       )}
       {catList(d.categories, c => c[key], "No expense in this period")}
@@ -99,15 +105,18 @@ export default function DashboardView({ data }: { data: DashData }) {
         <div className="od-sec">Expense</div>
         <div className="od-bar-row">
           <RangePicker from={er.from} to={er.to} today={today} fromKey="efrom" toKey="eto" keep={expKeep} />
-          <button type="button" className={`od-recv${receivedOnly ? " on" : ""}`} onClick={toggleReceived} aria-pressed={receivedOnly}
-            title={receivedOnly ? "Showing only what is complete — tap to show everything that arrived, part deliveries too"
-              : "Show only requisitions marked received and PO lines received in full"}>{receivedOnly ? "✓ " : ""}Received only</button>
+          <div className="od-seg" role="group" aria-label="Ordered or received">
+            <button type="button" className={received ? "" : "on"} aria-pressed={!received} onClick={() => setReceived(false)}
+              title="What was ordered in the period: requisitions raised and POs placed">Ordered</button>
+            <button type="button" className={received ? "on" : ""} aria-pressed={received} onClick={() => setReceived(true)}
+              title="What came in during the period: requisitions marked received and goods received on GRRs, from POs of any month">Received</button>
+          </div>
         </div>
         <div className="od-grid">
           {tile("exp-total", "money", "Total expense", exp, d => `PKR ${pkr(d.total)}`,
-            d => <>{receivedOnly ? "Received in full only" : "Purchase + Procurement"}{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
-          {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => (receivedOnly ? "marked received" : "requisitions"), expMore("purchase"))}
-          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (receivedOnly ? "PO lines received in full" : "") + (d.earlierPos > 0 ? `${receivedOnly ? " · " : "received · "}${pkr(d.earlierPos)} on earlier POs` : receivedOnly ? "" : "received on GRRs"), expMore("procurement"))}
+            d => <>{received ? "Received in the period" : "Ordered in the period"}{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
+          {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => (received ? "marked received" : "requisitions raised"), expMore("purchase"))}
+          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (received ? (d.earlierPos > 0 ? `on GRRs · ${pkr(d.earlierPos)} on earlier POs` : "received on GRRs") : "POs placed"), expMore("procurement"))}
         </div>
       </div>
 

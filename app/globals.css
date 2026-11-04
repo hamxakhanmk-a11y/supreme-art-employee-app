@@ -1193,8 +1193,9 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .od-bar select, .od-bar input[type=date] { width: auto; flex: 0 0 auto; max-width: 170px; padding: 5px 8px; }
 .od-bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
 .od-bar-row .od-bar { margin: 0; }
-.od-recv { padding: 4px 12px; font-size: 12px; font-weight: 700; border-radius: 999px; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-.od-recv.on { background: #15803D; border-color: #15803D; color: #fff; }
+.od-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; background: var(--bg); flex-shrink: 0; }
+.od-seg > button, .od-seg > a { padding: 4px 12px; font-size: 12px; font-weight: 700; border: none; background: none; color: var(--text2); cursor: pointer; text-decoration: none; }
+.od-seg > .on { background: var(--brand); color: #fff; }
 .od-bar-to, .od-bar-label { font-size: 12px; color: var(--text2); }
 .od-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .od-top .od-bar { margin: 0; }
