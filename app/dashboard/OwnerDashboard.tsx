@@ -24,9 +24,9 @@ async function settle<T>(p: Promise<T>): Promise<Loaded<T>> {
 }
 
 // Expense and Attendance each have their own period; Late today, CNIC expiry and Outside are as of now.
-export default async function OwnerDashboard({ exp: er, att: ar, today }: { exp: Range; att: Range; today: string }) {
+export default async function OwnerDashboard({ exp: er, att: ar, receivedOnly, today }: { exp: Range; att: Range; receivedOnly: boolean; today: string }) {
   const [exp, cnic, late, lateToday, off, people, vehicles, cards] = await Promise.all([
-    settle(loadExpenses(er.from, er.to).then(s => ({
+    settle(loadExpenses(er.from, er.to, receivedOnly).then(s => ({
       total: s.total, purchase: s.purchase, procurement: s.procurement, earlierPos: s.procurementEarlierPos, skipped: s.skipped.length,
       // Only the totals travel to the page; every line is on the expense page.
       categories: s.categories.map(c => ({ category: c.category, total: c.total, purchase: c.purchase, procurement: c.procurement, lines: c.lines.length })),
@@ -42,6 +42,6 @@ export default async function OwnerDashboard({ exp: er, att: ar, today }: { exp:
     })))),
     settle(cardsOut()),
   ]);
-  const data: DashData = { expRange: er, attRange: ar, today, exp, cnic, late, lateToday, off, people, vehicles, cards };
+  const data: DashData = { expRange: er, attRange: ar, receivedOnly, today, exp, cnic, late, lateToday, off, people, vehicles, cards };
   return <DashboardView data={data} />;
 }

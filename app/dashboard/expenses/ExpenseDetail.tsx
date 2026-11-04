@@ -19,7 +19,7 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
   return (
     <>
       <div className="od-zone od-zone-1">
-        <div className="od-sec">Expense <small>· {rangeLabel(summary.from, summary.to)}</small></div>
+        <div className="od-sec">Expense{summary.receivedOnly ? " · received in full only" : ""} <small>· {rangeLabel(summary.from, summary.to)}</small></div>
         <div className="od-grid">
           <div className="od-tile od-money od-wide">
             <div className="od-label">Total expense</div>

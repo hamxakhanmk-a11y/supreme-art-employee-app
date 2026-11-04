@@ -7,6 +7,8 @@
 //    costs more than it was ordered for: the GRRs against it are taken in date order and
 //    whatever goes past the ordered quantity is not valued again (a GRR typed in another
 //    unit, sheets against a PO in packets, would otherwise multiply the money).
+// "Received only" (the dashboard's button) narrows both to what is complete: requisitions Admin has
+// marked received, and PO lines received in full (part deliveries left out). The dates stay the same.
 // Anything that can't be counted is not guessed at: it goes into `skipped` with the reason,
 // so the dashboard can say what was left out. No database access here (see
 // lib/ownerDashboard.ts), which keeps the arithmetic testable on its own.
@@ -44,6 +46,7 @@ export interface PrInput {
   id: number; prNo: number | null; date: string | null; category: string | null;
   items: string | null; itemName: string | null; quantity: number | null; uom: string | null; value: number | null;
   hodApproval: string | null; hrApproval: string | null;
+  receivedByAdmin?: boolean | null;   // Admin's "Mark Received" on the PR register
 }
 export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null; date?: string | null }
 export interface GrnInput {
@@ -78,8 +81,9 @@ export function isRejectedPr(pr: Pick<PrInput, "hodApproval" | "hrApproval">): b
   return pr.hodApproval === "Not Approved" || pr.hrApproval === "Rejected";
 }
 
-export function purchaseExpenses(prs: PrInput[], from: string, to: string, lines: ExpenseLine[], skipped: SkippedLine[]) {
+export function purchaseExpenses(prs: PrInput[], from: string, to: string, lines: ExpenseLine[], skipped: SkippedLine[], receivedOnly = false) {
   for (const pr of prs) {
+    if (receivedOnly && !pr.receivedByAdmin) continue;
     const ref = pr.prNo != null ? `PR ${pr.prNo}` : `PR (no number)`;
     const href = `/purchase?open=${pr.id}`;
     const date = pr.date || "";
@@ -101,7 +105,7 @@ export function purchaseExpenses(prs: PrInput[], from: string, to: string, lines
 
 export function procurementExpenses(
   grns: GrnInput[], pos: PoInput[], checklist: GrrChecklist, from: string, to: string,
-  lines: ExpenseLine[], skipped: SkippedLine[],
+  lines: ExpenseLine[], skipped: SkippedLine[], receivedOnly = false,
 ) {
   const byId = new Map(pos.map(p => [p.id, p]));
   // Old GRRs may carry only the PO number. It is reused across the registered and unregistered series,
@@ -115,6 +119,9 @@ export function procurementExpenses(
   // How much of each PO line earlier GRRs have received, so a later one is only valued up to what is left.
   // Every GRR of the PO is passed in, earlier ones too; only those in the range are counted.
   const receivedSoFar = new Map<string, number>();
+  // Lines are held until every GRR has been gone through, since whether a PO line was received in full can
+  // depend on a GRR after the period.
+  const held: { key: string; orderedQty: number | null; lines: ExpenseLine[] }[] = [];
   const ordered = [...grns].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
 
   for (const g of ordered) {
@@ -170,16 +177,24 @@ export function procurementExpenses(
       const calc = `${n(valued)} × ${n(m.rate)}${m.taxPct ? ` + ${n(m.taxPct)}%` : ""}${factor < 1 ? " − discount share" : ""}`
         + (valued < qty ? ` (GRR says ${n(qty)}; PO ordered ${n(orderedQty!)}${before > 0 ? `, ${n(Math.min(before, orderedQty!))} received before` : ""})` : "")
         + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
+      const out: ExpenseLine[] = [];
+      held.push({ key, orderedQty, lines: out });
       for (const category of cats) {
-        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, po: `PO ${docNoLabel(po.poNo, po.registered)}`, poDate: po.date ? String(po.date).slice(0, 10) : "", ref, description: description || pl.description || pl.item || "", href });
+        out.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, po: `PO ${docNoLabel(po.poNo, po.registered)}`, poDate: po.date ? String(po.date).slice(0, 10) : "", ref, description: description || pl.description || pl.item || "", href });
       }
     }
+  }
+  for (const h of held) {
+    const got = receivedSoFar.get(h.key) ?? 0;
+    const full = h.orderedQty == null || h.orderedQty <= 0 ? got > 0 : got >= h.orderedQty - 1e-9;
+    if (receivedOnly && !full) continue;
+    lines.push(...h.lines);
   }
 }
 
 export interface CategoryTotal { category: string; purchase: number; procurement: number; total: number; lines: ExpenseLine[] }
 export interface ExpenseSummary {
-  from: string; to: string;
+  from: string; to: string; receivedOnly: boolean;
   purchase: number; procurement: number; total: number;
   // The part of procurement received against POs dated before the period. The Supplier Directory counts a PO
   // by its own date, so this is what it shows in an earlier month while it arrives in this one.
@@ -190,12 +205,13 @@ export interface ExpenseSummary {
 
 export function summarizeExpenses(
   input: { prs: PrInput[]; grns: GrnInput[]; pos: PoInput[]; checklist: GrrChecklist },
-  from: string, to: string,
+  from: string, to: string, opts: { receivedOnly?: boolean } = {},
 ): ExpenseSummary {
   const lines: ExpenseLine[] = [];
   const skipped: SkippedLine[] = [];
-  purchaseExpenses(input.prs, from, to, lines, skipped);
-  procurementExpenses(input.grns, input.pos, input.checklist, from, to, lines, skipped);
+  const receivedOnly = !!opts.receivedOnly;
+  purchaseExpenses(input.prs, from, to, lines, skipped, receivedOnly);
+  procurementExpenses(input.grns, input.pos, input.checklist, from, to, lines, skipped, receivedOnly);
   const map = new Map<string, CategoryTotal>();
   let purchase = 0, procurement = 0, procurementEarlierPos = 0;
   for (const l of lines) {
@@ -211,5 +227,5 @@ export function summarizeExpenses(
   }
   const categories = [...map.values()].sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
   for (const c of categories) c.lines.sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date));
-  return { from, to, purchase, procurement, procurementEarlierPos, total: purchase + procurement, categories, skipped };
+  return { from, to, receivedOnly, purchase, procurement, procurementEarlierPos, total: purchase + procurement, categories, skipped };
 }

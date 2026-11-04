@@ -3,6 +3,7 @@
 // grouped in bands, and each tile's details in a pop-up from its "See more" button, so the page stays one screen.
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import type { CnicAlert, LateComer, DaysOff, CardOut } from "@/lib/ownerDashboard";
 import type { OutNow } from "@/lib/stationServer";
 import { formatLate } from "@/lib/attendance";
@@ -14,7 +15,7 @@ export type Range = { from: string; to: string };
 type CategoryRow = { category: string; total: number; purchase: number; procurement: number; lines: number };
 type VehicleRow = { id: number; vehicleNo: string; vehicleName: string; driver: string; destination: string; at: string; since: string };
 export interface DashData {
-  expRange: Range; attRange: Range; today: string;
+  expRange: Range; attRange: Range; receivedOnly: boolean; today: string;
   exp: Loaded<{ total: number; purchase: number; procurement: number; earlierPos: number; skipped: number; categories: CategoryRow[] }>;
   cnic: Loaded<CnicAlert[]>;
   late: Loaded<LateComer[]>;
@@ -28,9 +29,16 @@ export interface DashData {
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 export default function DashboardView({ data }: { data: DashData }) {
-  const { expRange: er, attRange: ar, today, exp, cnic, late, lateToday, off, people, vehicles, cards } = data;
+  const { expRange: er, attRange: ar, receivedOnly, today, exp, cnic, late, lateToday, off, people, vehicles, cards } = data;
   // Each band's period is kept in the address under its own names, next to the other band's.
-  const expKeep = { afrom: ar.from, ato: ar.to }, attKeep = { efrom: er.from, eto: er.to };
+  const recv: Record<string, string> = receivedOnly ? { erecv: "1" } : {};
+  const expKeep = { afrom: ar.from, ato: ar.to, ...recv }, attKeep = { efrom: er.from, eto: er.to, ...recv };
+  const router = useRouter(), pathname = usePathname();
+  const toggleReceived = () => {
+    const q = new URLSearchParams({ efrom: er.from, eto: er.to, afrom: ar.from, ato: ar.to });
+    if (!receivedOnly) q.set("erecv", "1");
+    router.push(`${pathname}?${q}`, { scroll: false });
+  };
   const [open, setOpen] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
@@ -39,7 +47,7 @@ export default function DashboardView({ data }: { data: DashData }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const expLink = `/dashboard/expenses?from=${er.from}&to=${er.to}`;
+  const expLink = `/dashboard/expenses?from=${er.from}&to=${er.to}${receivedOnly ? "&recv=1" : ""}`;
   const details: Record<string, { fam: string; label: string; body: () => ReactNode }> = {};
   const tile = (key: string, fam: string, label: string, l: Loaded<unknown>, value: (d: any) => ReactNode, sub: (d: any) => ReactNode, more?: (d: any) => ReactNode, wide?: boolean) => {
     if (l.ok && more) details[key] = { fam, label, body: () => more(l.data) };
@@ -89,12 +97,17 @@ export default function DashboardView({ data }: { data: DashData }) {
       <div className="od-zones">
       <div className="od-zone od-zone-1">
         <div className="od-sec">Expense</div>
-        <RangePicker from={er.from} to={er.to} today={today} fromKey="efrom" toKey="eto" keep={expKeep} />
+        <div className="od-bar-row">
+          <RangePicker from={er.from} to={er.to} today={today} fromKey="efrom" toKey="eto" keep={expKeep} />
+          <button type="button" className={`od-recv${receivedOnly ? " on" : ""}`} onClick={toggleReceived} aria-pressed={receivedOnly}
+            title={receivedOnly ? "Showing only what is complete — tap to show everything that arrived, part deliveries too"
+              : "Show only requisitions marked received and PO lines received in full"}>{receivedOnly ? "✓ " : ""}Received only</button>
+        </div>
         <div className="od-grid">
           {tile("exp-total", "money", "Total expense", exp, d => `PKR ${pkr(d.total)}`,
-            d => <>Purchase + Procurement{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
-          {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => "requisitions", expMore("purchase"))}
-          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (d.earlierPos > 0 ? `received · ${pkr(d.earlierPos)} on earlier POs` : "received on GRRs"), expMore("procurement"))}
+            d => <>{receivedOnly ? "Received in full only" : "Purchase + Procurement"}{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
+          {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => (receivedOnly ? "marked received" : "requisitions"), expMore("purchase"))}
+          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (receivedOnly ? "PO lines received in full" : "") + (d.earlierPos > 0 ? `${receivedOnly ? " · " : "received · "}${pkr(d.earlierPos)} on earlier POs` : receivedOnly ? "" : "received on GRRs"), expMore("procurement"))}
         </div>
       </div>
 

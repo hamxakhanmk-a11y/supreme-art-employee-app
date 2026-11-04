@@ -8,17 +8,20 @@ import ExpenseDetail from "./ExpenseDetail";
 
 export const dynamic = "force-dynamic";
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; recv?: string }> }) {
   const user = await getSession();
   if (!user) redirect("/login?next=/dashboard/expenses");
   if (user.role !== "superadmin") redirect("/");
-  const { from, to, today } = dashboardRange(await searchParams);
-  const summary = await loadExpenses(from, to);
+  const sp = await searchParams;
+  const { from, to, today } = dashboardRange(sp);
+  const receivedOnly = sp.recv === "1";
+  const summary = await loadExpenses(from, to, receivedOnly);
   return (
     <div className="fade-up od">
       <div className="od-top">
-        <Link href={`/?efrom=${from}&eto=${to}`} className="btn btn-back btn-sm">← Dashboard</Link>
-        <RangePicker from={from} to={to} today={today} />
+        <Link href={`/?efrom=${from}&eto=${to}${receivedOnly ? "&erecv=1" : ""}`} className="btn btn-back btn-sm">← Dashboard</Link>
+        <RangePicker from={from} to={to} today={today} keep={receivedOnly ? { recv: "1" } : {}} />
+        {receivedOnly && <span className="od-recv on" style={{ cursor: "default" }}>✓ Received only</span>}
       </div>
       <ExpenseDetail summary={summary} />
     </div>
