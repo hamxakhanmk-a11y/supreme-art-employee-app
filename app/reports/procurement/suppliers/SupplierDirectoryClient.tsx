@@ -27,6 +27,9 @@ export interface DirectoryRow {
   taxPct: number;
   taxValue: number;
   net: number | null;
+  received: "none" | "partial" | "full";   // what has arrived of this PO line on GRRs
+  receivedQty: number;
+  orderedQty: number | null;
 }
 
 type ViewMode = "orders" | "byProduct";
@@ -149,6 +152,8 @@ export default function SupplierDirectoryClient({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>(byProductOnly ? "byProduct" : "orders");
+  // Every order: only the lines that have arrived (fully or in part) on a GRR.
+  const [receivedOnly, setReceivedOnly] = useState(false);
   // Restricted roles are pinned to By-product no matter what `view` holds —
   // hiding the tabs alone would leave the per-order view one stray setView
   // away. Everything that branches on the view reads this, not `view`.
@@ -197,10 +202,11 @@ export default function SupplierDirectoryClient({
   const filteredOrders = useMemo(() => rows.filter(r => {
     if (supplierFilter && r.supplier !== supplierFilter) return false;
     if (!inRange(r)) return false;
+    if (receivedOnly && r.received === "none") return false;
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.product} ${r.supplier}`.toLowerCase().includes(s);
-  }).sort((a, b) => (ORDER_SORTS[sort]?.(a, b) ?? 0) || (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate, sort]);
+  }).sort((a, b) => (ORDER_SORTS[sort]?.(a, b) ?? 0) || (b.date || "").localeCompare(a.date || "")), [rows, q, supplierFilter, fromDate, toDate, sort, receivedOnly]);
 
   const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
     gross: s.gross + (r.gross ?? 0),
@@ -384,6 +390,15 @@ export default function SupplierDirectoryClient({
             <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => { setView("byProduct"); setSort("az"); }}>By product</button>
           </div>
         )}
+        {activeView === "orders" && (
+          <button type="button" onClick={() => setReceivedOnly(v => !v)} aria-pressed={receivedOnly}
+            title="Show only the PO lines that have arrived on a GRR (fully or in part)"
+            style={{
+              padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", flexShrink: 0,
+              border: `1px solid ${receivedOnly ? "#15803D" : "var(--border)"}`,
+              background: receivedOnly ? "#15803D" : "var(--bg)", color: receivedOnly ? "#fff" : "var(--text)",
+            }}>{receivedOnly ? "✓ " : ""}Received only</button>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <label className="head-filter">From <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} style={{ width: 138 }} /></label>
           <label className="head-filter">To <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} style={{ width: 138 }} /></label>
@@ -423,7 +438,14 @@ export default function SupplierDirectoryClient({
                   title="Tap to open this Purchase Order"
                 >
                   <td>{r.date ? fmtDate(r.date) : "—"}</td>
-                  <td className="wrap">{r.product}</td>
+                  <td className="wrap">
+                    {r.product}
+                    {r.received !== "none" && (
+                      <div style={{ fontSize: 11, fontWeight: 600, color: r.received === "full" ? "#15803D" : "#B45309" }}>
+                        {r.received === "full" ? "✓ Received" : `◐ Part received · ${r.receivedQty.toLocaleString()}${r.orderedQty != null ? ` of ${r.orderedQty.toLocaleString()}` : ""}`}
+                      </div>
+                    )}
+                  </td>
                   <td className="wrap">{r.supplier}</td>
                   <td style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>

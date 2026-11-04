@@ -16,8 +16,9 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
-import { purchaseOrders, supplierProductRates } from "@/lib/schema";
-import { ensureProcurementTables, parseItems, qtyToNum, type PoItem } from "@/lib/procurement";
+import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
+import { isNotNull } from "drizzle-orm";
+import { ensureProcurementTables, parseItems, qtyToNum, computePoReceipts, type PoItem, type GrnItem } from "@/lib/procurement";
 import SupplierDirectoryClient, { type DirectoryRow } from "./SupplierDirectoryClient";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,12 @@ export default async function SupplierDirectoryPage() {
     items: purchaseOrders.items,
   }).from(purchaseOrders).orderBy(purchaseOrders.poNo);
 
+  // What has arrived of each PO line, from every GRR raised against the PO — the same reckoning that sets
+  // the PO's own open / partial / received status.
+  const grnRows = await db.select({ poId: grns.poId, items: grns.items }).from(grns).where(isNotNull(grns.poId));
+  const grnItemsByPo = new Map<number, GrnItem[]>();
+  for (const g of grnRows) grnItemsByPo.set(g.poId!, [...(grnItemsByPo.get(g.poId!) ?? []), ...parseItems<GrnItem>(g.items)]);
+
   // Flatten every PO line into its own row — one product, one supplier, one
   // rate, one date/PO ref. No grouping or dedup here: that happens
   // client-side so the user can toggle between "every order" and "by
@@ -52,6 +59,7 @@ export default async function SupplierDirectoryPage() {
   const rows: DirectoryRow[] = [];
   for (const po of pos) {
     const items = parseItems<PoItem>(po.items);
+    const receipts = new Map(computePoReceipts(items, grnItemsByPo.get(po.id) ?? []).map(r => [r.srNo, r]));
     for (const it of items) {
       const desc = (it.description || it.item || "").trim();
       if (!desc) continue;
@@ -95,6 +103,13 @@ export default async function SupplierDirectoryPage() {
         taxPct,
         taxValue,
         net,
+        received: (() => {
+          const r = receipts.get(it.srNo);
+          if (!r || !(r.hasReceipt || r.received > 0)) return "none" as const;
+          return r.fulfilled ? "full" as const : "partial" as const;
+        })(),
+        receivedQty: receipts.get(it.srNo)?.received ?? 0,
+        orderedQty: receipts.get(it.srNo)?.ordered ?? null,
       });
     }
   }
