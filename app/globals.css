@@ -1152,3 +1152,63 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
   .pf-2up .pf-sheet .pf-remarks { font-size: 8.5px !important; margin: 0 0 2px !important; }
   .pf-remarks { font-size: 10.5pt; }
 }
+
+/* ---------- Test copy of the ERP (html[data-env="test"], see lib/appEnv.ts) ----------
+   Teal instead of the brand red, a striped TEST strip and badges, and a stamp on
+   printouts, so the pilot app can't be mistaken for the real one. Colours
+   hard-coded in individual pages stay red; the strip and badges carry the message. */
+.test-env-badge, .test-env-banner, .print-test-stamp { display: none; }
+
+html[data-env="test"] {
+  --brand: #0F766E;
+  --brand-dark: #115E59;
+  --brand-light: #14B8A6;
+  --brand-soft: #E6F6F4;
+  --brand-deep: #134E4A;
+  --bg2: #eef5f3;
+  --bg3: #e3efec;
+}
+html[data-env="test"] body { background: var(--bg2); }
+
+html[data-env="test"] .test-env-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #F59E0B;
+  color: #1a1a18;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+html[data-env="test"] .test-env-banner {
+  display: block;
+  padding: 6px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1a1a18;
+  background: repeating-linear-gradient(-45deg, #FBBF24 0 14px, #FDE68A 14px 28px);
+  border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+
+@media print {
+  html[data-env="test"] .test-env-banner { display: none !important; }
+  html[data-env="test"] .print-test-stamp {
+    display: block !important;
+    position: fixed;
+    top: 40%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    transform: rotate(-30deg);
+    font-size: 56pt;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: rgba(220, 38, 38, 0.18);
+    pointer-events: none;
+    z-index: 9999;
+  }
+}

@@ -14,6 +14,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           <Image src="/logo.png" alt="Supreme Art" width={36} height={36} priority style={{ width: 36, height: 36, objectFit: "contain" }} />
           <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)" }}>
             Supreme Art <span style={{ color: "var(--brand)" }}>HR</span>
+            <span className="test-env-badge">TEST</span>
           </span>
         </div>
         <div style={{

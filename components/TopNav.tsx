@@ -63,6 +63,8 @@ export default function TopNav() {
           <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
             Supreme Art <span style={{ color: "var(--brand)" }}>ERP</span>
           </span>
+          {/* Visible only on test copies (html[data-env="test"]). */}
+          <span className="test-env-badge">TEST</span>
         </Link>
 
         <div ref={flowRef} className="mode-switch flow-connected" style={{ marginLeft: "1rem" }}>

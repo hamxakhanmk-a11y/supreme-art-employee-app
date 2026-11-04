@@ -6,9 +6,13 @@ import AppIntro from "@/components/AppIntro";
 import PrintWatermark from "@/components/PrintWatermark";
 import PrintTextareas from "@/components/PrintTextareas";
 import { MeProvider } from "@/components/MeProvider";
+import TestEnvBanner from "@/components/TestEnvBanner";
+import { APP_NAME, TEST_APP_NAME, appEnv } from "@/lib/appEnv";
+
+const isTest = appEnv() === "test";
 
 export const metadata: Metadata = {
-  title: "Supreme Art ERP",
+  title: isTest ? TEST_APP_NAME : APP_NAME,
   description: "Supreme Art enterprise portal — HR, forms, reports, salary, KPI, procurement, station, and store.",
 };
 
@@ -16,7 +20,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    // data-env="test" switches the palette and shows the TEST badges (globals.css).
+    <html lang="en" data-env={isTest ? "test" : undefined}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -24,6 +29,7 @@ export default function RootLayout({
       </head>
       <body>
         <MeProvider>
+          {isTest && <TestEnvBanner />}
           <AppIntro />
           <PrintWatermark />
           <PrintTextareas />
