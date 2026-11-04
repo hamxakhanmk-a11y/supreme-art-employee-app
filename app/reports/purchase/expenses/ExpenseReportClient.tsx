@@ -18,6 +18,8 @@ export interface ExpenseRow {
   quantity: number | null;
   uom: string;
   value: number | null;
+  received: boolean;       // Admin's "Mark Received" on the PR register
+  receivedDate: string;    // the day it was marked, "" if none
 }
 
 type ViewMode = "lines" | "byCategory";
@@ -58,6 +60,13 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
   const [toDate, setToDate] = useState("");
   const [view, setView] = useState<ViewMode>("lines");
   const [sort, setSort] = useState<ExpSort>("newest");
+  // Received only: the requisitions Admin has marked received, dated (and filtered, sorted) by the day they
+  // were marked — the dashboard's Received expense counts them the same way.
+  const [receivedOnly, setReceivedOnly] = useState(false);
+  const base = useMemo(
+    () => (receivedOnly ? rows.filter(r => r.received).map(r => ({ ...r, date: r.receivedDate })) : rows),
+    [rows, receivedOnly],
+  );
 
   // Category dropdown shows the canonical list (matching the Purchase
   // register's own picker) plus anything else that happens to be on record
@@ -68,7 +77,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
-  const filtered = useMemo(() => rows.filter(r => {
+  const filtered = useMemo(() => base.filter(r => {
     if (category && r.category !== category) return false;
     if (fromDate || toDate) {
       const d = r.date ? r.date.slice(0, 10) : "";
@@ -79,7 +88,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
     const s = q.trim().toLowerCase();
     if (!s) return true;
     return `${r.description} ${r.category} ${r.department}`.toLowerCase().includes(s);
-  }).sort(EXP_SORTS[sort]), [rows, q, category, fromDate, toDate, sort]);
+  }).sort(EXP_SORTS[sort]), [base, q, category, fromDate, toDate, sort]);
 
   const total = useMemo(
     () => filtered.reduce((s, r) => s + (r.value ?? 0), 0),
@@ -91,7 +100,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
   // range and search — but ignoring the category dropdown itself, since
   // picking one category there would otherwise collapse this to one row.
   const byCategory = useMemo(() => {
-    const base = rows.filter(r => {
+    const inView = base.filter(r => {
       if (fromDate || toDate) {
         const d = r.date ? r.date.slice(0, 10) : "";
         if (!d) return false;
@@ -103,7 +112,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       return `${r.description} ${r.category} ${r.department}`.toLowerCase().includes(s);
     });
     const map = new Map<string, { count: number; total: number }>();
-    for (const r of base) {
+    for (const r of inView) {
       const key = r.category || "(Uncategorised)";
       const g = map.get(key) || { count: 0, total: 0 };
       g.count += 1;
@@ -113,7 +122,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
     return [...map.entries()]
       .map(([category, g]) => ({ category, ...g }))
       .sort((a, b) => b.total - a.total);
-  }, [rows, q, fromDate, toDate]);
+  }, [base, q, fromDate, toDate]);
 
   const byCategoryGrand = useMemo(
     () => byCategory.reduce((s, g) => ({ count: s.count + g.count, total: s.total + g.total }), { count: 0, total: 0 }),
@@ -125,8 +134,8 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       downloadWorkbookXlsx({
         filename: "expense-report",
         sheets: [{
-          sheetName: "Expenses", title: "Expense Report — every line item",
-          headers: ["Date", "Category", "Description", "Quantity", "Value"],
+          sheetName: "Expenses", title: receivedOnly ? "Expense Report — received only" : "Expense Report — every line item",
+          headers: [receivedOnly ? "Received" : "Date", "Category", "Description", "Quantity", "Value"],
           rows: [
             ...filtered.map(r => [
               r.date ? fmtDate(r.date) : "—", r.category || "—", r.description || "—",
@@ -140,7 +149,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       downloadWorkbookXlsx({
         filename: "expense-report-by-category",
         sheets: [{
-          sheetName: "By category", title: "Expense Report — by category",
+          sheetName: "By category", title: receivedOnly ? "Expense Report — by category, received only" : "Expense Report — by category",
           headers: ["Category", "Line Items", "Total Value"],
           rows: [
             ...byCategory.map(g => [g.category, g.count, fmtMoney(g.total, false)]),
@@ -168,7 +177,14 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
           <option value="">All categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title="From date" style={{ width: 145 }} />
+        <button type="button" onClick={() => setReceivedOnly(v => !v)} aria-pressed={receivedOnly}
+          title="Only requisitions marked received, dated by the day they were marked"
+          style={{
+            padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", flexShrink: 0,
+            border: `1px solid ${receivedOnly ? "#15803D" : "var(--border)"}`,
+            background: receivedOnly ? "#15803D" : "var(--bg)", color: receivedOnly ? "#fff" : "var(--text)",
+          }}>{receivedOnly ? "✓ " : ""}Received only</button>
+        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title={receivedOnly ? "Received from" : "From date"} style={{ width: 145 }} />
         <span style={{ color: "var(--text3)" }}>–</span>
         <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
         {view === "lines" && valuedCount < filtered.length && (
@@ -185,7 +201,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
           <table className="rpt-table">
             <thead>
               <tr>
-                <th style={{ width: 100 }}>Date</th>
+                <th style={{ width: 100 }}>{receivedOnly ? "Received" : "Date"}</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th style={{ width: 130 }}>Quantity</th>

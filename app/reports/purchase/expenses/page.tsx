@@ -27,6 +27,8 @@ export default async function ExpenseReportPage() {
     quantity: purchaseRequisitions.quantity,
     uom: purchaseRequisitions.uom,
     value: purchaseRequisitions.value,
+    receivedByAdmin: purchaseRequisitions.receivedByAdmin,
+    receivedDate: purchaseRequisitions.receivedDate,
   }).from(purchaseRequisitions).orderBy(purchaseRequisitions.id);
 
   // Flatten every line item into its own expense row — one description, one
@@ -51,6 +53,8 @@ export default async function ExpenseReportPage() {
         quantity: it.quantity,
         uom: it.uom || "",
         value: it.value,
+        received: !!pr.receivedByAdmin,
+        receivedDate: pr.receivedDate || "",
       });
     }
   }
