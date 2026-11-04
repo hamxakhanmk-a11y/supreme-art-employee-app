@@ -12,7 +12,7 @@
 // lib/ownerDashboard.ts), which keeps the arithmetic testable on its own.
 import { parsePrItems } from "./purchase";
 import {
-  parseItems, parseInspection, withValueCategories, checklistCategory, qtyToNum, poLineMoney, docNoLabel,
+  parseItems, parseInspection, withValueCategories, checklistCategory, qtyToNum, docNoLabel,
   type PoItem, type GrnItem, type GrrChecklist,
 } from "./procurement";
 
@@ -66,6 +66,12 @@ export const SKIP = {
 } as const;
 
 const inRange = (d: string, from: string, to: string) => d >= from && d <= to;
+// A PO line's money, reading its numbers the way the Supplier Directory does: "1,450" is 1450, "18%" is 18.
+function lineMoney(qty: number, it: Pick<PoItem, "rate" | "tax">) {
+  const rate = qtyToNum(it.rate) ?? 0, taxPct = qtyToNum(it.tax) ?? 0;
+  const gross = qty * rate;
+  return { rate, taxPct, net: gross + gross * taxPct / 100 };
+}
 const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 export function isRejectedPr(pr: Pick<PrInput, "hodApproval" | "hrApproval">): boolean {
@@ -130,7 +136,7 @@ export function procurementExpenses(
 
     const poItems = parseItems<PoItem>(po.items);
     // The discount is on the whole PO; each received line bears its share of it.
-    const poNet = poItems.reduce((s, it) => s + poLineMoney(it).net, 0);
+    const poNet = poItems.reduce((s, it) => s + lineMoney(qtyToNum(it.quantity) ?? 0, it).net, 0);
     const discount = Number(po.discount) || 0;
     const factor = poNet > 0 ? Math.max(0, poNet - discount) / poNet : 1;
     const bySr = new Map(poItems.map(p => [p.srNo, p]));
@@ -156,7 +162,7 @@ export function procurementExpenses(
       // Without a number for the ordered quantity there is nothing to hold it to.
       const valued = orderedQty == null || orderedQty <= 0 ? qty : Math.max(0, Math.min(qty, orderedQty - before));
       if (!counted) continue;
-      const m = poLineMoney({ quantity: String(valued), rate: pl.rate, tax: pl.tax });
+      const m = lineMoney(valued, pl);
       if (!(m.rate > 0)) { skip(SKIP.grrNoRate, description); continue; }
       if (valued <= 0) { skip(SKIP.grrPastPo, description); continue; }
       const amount = m.net * factor;
