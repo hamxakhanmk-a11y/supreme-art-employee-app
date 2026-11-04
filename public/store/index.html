@@ -526,6 +526,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         <select id="inv-rack-filter" class="consumables-only" onchange="renderInventory()" style="width:150px"></select>
         <div class="st-actions">
           <button class="btn btn-sm write-only consumables-only" title="See which suppliers and brands have how many items, and change them" onclick="openSupBrand()"><i class="ti ti-settings"></i> Suppliers &amp; Brands</button>
+          <button class="btn btn-sm" title="Print a sticker filled in by hand, without a stock in or out" onclick="openBlankSticker()"><i class="ti ti-tag"></i> Sticker</button>
           <button class="btn btn-sm btn-print" onclick="openPrintModal('inventory')"><i class="ti ti-printer"></i> Print</button>
           <button class="btn btn-sm btn-excel" onclick="openExportModal('inventory')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
           <button class="btn btn-sm btn-primary write-only" onclick="openModal('addPart')"><i class="ti ti-plus"></i> Add Part</button>
@@ -3419,7 +3420,7 @@ function batchNo(n,iso){return String(n).padStart(2,'0')+'-'+String(iso||today()
 // Changing the date moves the year in a batch number nobody has typed over.
 function stDateChanged(){
   const b=document.getElementById('st-batch');
-  if(b.value.trim()===_st.autoBatch){
+  if(_st.autoBatch&&b.value.trim()===_st.autoBatch){
     const auto=batchNo(_st.batch,stVal('st-date'));
     b.value=auto;_st.autoBatch=auto;
   }
@@ -3441,28 +3442,33 @@ function openBatchSticker(partId,n){
   showStickerDialog({partId,batch:n,txnId:first?first.id:0,date:first?first.date:today(),
     qty:b.inQty>0?b.inQty:Math.max(b.qty,0),po:(first&&first.poNo)||'',dc:(first&&first.challanNo)||'',inv:(first&&first.invoiceNo)||'',label:(first&&first.batchLabel)||''});
 }
+// From the Inventory toolbar: a sticker not tied to any item or stock in, every field typed by hand. Nothing is saved.
+function openBlankSticker(){showStickerDialog({partId:0,batch:0,date:today()});}
 function showStickerDialog(o){
-  const p=partOf(o.partId);
-  if(!p)return;
+  const p=o.partId?partOf(o.partId):null;
+  if(o.partId&&!p)return;
   const e=_escHtml;
   const q=Math.round((o.qty||0)*1000)/1000;
   // Starts as the whole stock in in one box; the keeper breaks it into the real cartons or drums.
   Object.assign(_st,{partId:o.partId,batch:o.batch,txnId:o.txnId||0,po:o.po||'',inv:o.inv||'',label:o.label||'',ref:q,rows:[{q:q>0?String(q):'',n:'1'}]});
-  document.getElementById('st-summary').innerHTML='<b>'+e(p.name)+'</b><div style="color:#777;margin-top:2px">'+e(p.supplier||'No supplier')+(p.brand?' · '+e(p.brand):'')+' · <b>'+ordBatch(o.batch)+'</b></div>';
+  document.getElementById('st-summary').innerHTML=p
+    ?'<b>'+e(p.name)+'</b><div style="color:#777;margin-top:2px">'+e(p.supplier||'No supplier')+(p.brand?' · '+e(p.brand):'')+' · <b>'+ordBatch(o.batch)+'</b></div>'
+    :'<b>Blank sticker</b><div style="color:#777;margin-top:2px">Not tied to any item or stock in / out. Type what it should say; anything left empty prints blank to write on. Nothing is saved.</div>';
   document.getElementById('st-date').value=o.date||today();
   // These start as what the item says and can be typed over; it changes the stickers, not the item.
-  _st.autoBatch=batchNo(o.batch,o.date||today());
+  _st.autoBatch=p?batchNo(o.batch,o.date||today()):'';
   // The batch number as it was last written for this stock in, else the automatic one.
   document.getElementById('st-batch').value=o.label||_st.autoBatch;
-  document.getElementById('st-desc').value=p.name;
-  document.getElementById('st-supplier').value=p.supplier||'';
-  document.getElementById('st-brand').value=p.brand||'';
+  document.getElementById('st-desc').value=p?p.name:'';
+  document.getElementById('st-supplier').value=p?p.supplier||'':'';
+  document.getElementById('st-brand').value=p?p.brand||'':'';
   document.getElementById('st-po').value=o.po||'';
   document.getElementById('st-dc').value=o.dc||'';
-  const uoms=STICKER_UOMS.includes(p.unit)||!p.unit?STICKER_UOMS:[p.unit].concat(STICKER_UOMS);
+  const unit=p?p.unit:'';
+  const uoms=STICKER_UOMS.includes(unit)||!unit?STICKER_UOMS:[unit].concat(STICKER_UOMS);
   const uom=document.getElementById('st-uom');
   uom.innerHTML=uoms.map(u=>'<option value="'+e(u)+'">'+e(u)+'</option>').join('');
-  uom.value=p.unit||'kg';
+  uom.value=unit||'kg';
   let per='';try{per=localStorage.getItem('storeStickerPer')||'';}catch(err){}
   document.getElementById('st-per').value=per;
   document.getElementById('st-from').value='';
@@ -3483,9 +3489,11 @@ function stAddRow(){_st.rows.push({q:'',n:'1'});renderStickerRows();stRefresh();
 function stRemoveRow(i){_st.rows.splice(i,1);renderStickerRows();stRefresh();}
 // The stickers the window describes: a line per quantity, each box numbered on from the last, then cut to the
 // range. strict: a half-filled line is an error (when printing) instead of being skipped (while typing).
+// On a blank sticker the quantity may be left empty, to be written on by hand.
 function stickerPlan(strict){
-  const rows=_st.rows.map(r=>({q:parseFloat(r.q),n:parseInt(r.n,10)}));
-  const ok=rows.filter(r=>r.q>0&&r.n>=1);
+  const blank=!_st.partId;
+  const rows=_st.rows.map(r=>({q:String(r.q).trim()===''&&blank?null:parseFloat(r.q),n:parseInt(r.n,10)}));
+  const ok=rows.filter(r=>(r.q>0||r.q===null)&&r.n>=1);
   if(strict&&ok.length!==rows.length)return {error:'Every line needs a quantity and a number of boxes (at least 1), or remove it.'};
   const all=[];
   let no=0;
@@ -3497,11 +3505,11 @@ function stickerPlan(strict){
   if(!(from>=1))from=1;
   if(!(to>=1))to=total;
   if(from>to||to>total)return {error:'The range has to sit within 1 to '+total+', with From no more than To.'};
-  return {stickers:all.filter(s=>s.no>=from&&s.no<=to),total,from,to,sum:Math.round(ok.reduce((t,r)=>t+r.q*r.n,0)*1000)/1000};
+  return {stickers:all.filter(s=>s.no>=from&&s.no<=to),total,from,to,sum:Math.round(ok.reduce((t,r)=>t+(r.q||0)*r.n,0)*1000)/1000};
 }
 function stickerData(stickers,total){
   const p=partOf(_st.partId);
-  return {batchNo:stVal('st-batch'),date:stickerDay(stVal('st-date')),desc:stVal('st-desc'),code:p.sku||'',supplier:stVal('st-supplier'),brand:stVal('st-brand'),
+  return {batchNo:stVal('st-batch'),date:stickerDay(stVal('st-date')),desc:stVal('st-desc'),code:(p&&p.sku)||'',supplier:stVal('st-supplier'),brand:stVal('st-brand'),
     po:stVal('st-po'),dc:stVal('st-dc'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
 }
 // What the window says and shows: the heading of the quantity, how many stickers and what they add up to, the preview.
@@ -3518,15 +3526,15 @@ function stRefresh(){
   hint.style.color=off?'#B45309':'#777';
   hint.textContent=plan.stickers.length+' sticker'+(plan.stickers.length===1?'':'s')
     +(plan.stickers.length!==plan.total?' (nos. '+plan.from+' to '+plan.to+' of '+plan.total+')':'')
-    +'. The boxes add up to '+fmtQty(plan.sum)+' '+uom
+    +(plan.sum>0?'. The boxes add up to '+fmtQty(plan.sum)+' '+uom:'')
     +(same?(off?'; this stock in is '+fmtQty(_st.ref)+' '+uom+', so they do not match.':', the same as this stock in.'):'.');
   prev.srcdoc=stickerDocHtml(stickerData([plan.stickers[0]],plan.total));
 }
 async function printSticker(){
-  const p=partOf(_st.partId);
-  if(!p)return;
-  if(!stVal('st-date')){await warnDialog('Date required','Choose the day the stock was received.');return;}
-  if(!stVal('st-desc')){await warnDialog('Description required','Type what the sticker is for.');return;}
+  const p=_st.partId?partOf(_st.partId):null;
+  if(_st.partId&&!p)return;
+  if(p&&!stVal('st-date')){await warnDialog('Date required','Choose the day the stock was received.');return;}
+  if(p&&!stVal('st-desc')){await warnDialog('Description required','Type what the sticker is for.');return;}
   const plan=stickerPlan(true);
   if(plan.error){await warnDialog('Check the stickers',plan.error);return;}
   const n=plan.stickers.length;
@@ -3591,7 +3599,7 @@ function stickerDocHtml(d){
     +'<div class="line desc">'+cell('desc','DESCRIPTION','<span class="clamp">'+e(d.desc)+'</span><em>'+e(d.code)+'</em>','desc')+'</div>'
     +'<div class="line">'+cell('supplier','SUPPLIER','<span class="fit2">'+e(d.supplier)+'</span>')+cell('brand','BRAND','<span class="fit2">'+e(d.brand)+'</span>')+'</div>'
     +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+'</div>'
-    +'<div class="line">'+cell('qty','QUANTITY'+(per?' / '+e(per):''),'<span class="fit1">'+fmtQty(s.qty)+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas',(per?e(per):'CASE')+' #','<span class="fit1">'+s.no+' OF '+d.total+'</span>')+'</div>'
+    +'<div class="line">'+cell('qty','QUANTITY'+(per?' / '+e(per):''),'<span class="fit1">'+(s.qty==null?'':fmtQty(s.qty))+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas',(per?e(per):'CASE')+' #','<span class="fit1">'+s.no+' OF '+d.total+'</span>')+'</div>'
     +'</div>';
   const css=`
     *{box-sizing:border-box}
