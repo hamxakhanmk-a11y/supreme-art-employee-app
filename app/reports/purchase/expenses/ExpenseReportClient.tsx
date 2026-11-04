@@ -20,6 +20,7 @@ export interface ExpenseRow {
   value: number | null;
   received: boolean;       // Admin's "Mark Received" on the PR register
   receivedDate: string;    // the day it was marked, "" if none
+  rejected: boolean;       // HOD "Not Approved" or HR "Rejected"
 }
 
 type ViewMode = "lines" | "byCategory";
@@ -63,10 +64,13 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
   // Received only: the requisitions Admin has marked received, dated (and filtered, sorted) by the day they
   // were marked — the dashboard's Received expense counts them the same way.
   const [receivedOnly, setReceivedOnly] = useState(false);
-  const base = useMemo(
-    () => (receivedOnly ? rows.filter(r => r.received).map(r => ({ ...r, date: r.receivedDate })) : rows),
-    [rows, receivedOnly],
-  );
+  // Rejected requisitions are left out of the totals; this lists only them instead.
+  const [showRejected, setShowRejected] = useState(false);
+  const rejectedCount = useMemo(() => rows.filter(r => r.rejected).length, [rows]);
+  const base = useMemo(() => {
+    const kept = rows.filter(r => r.rejected === showRejected);
+    return receivedOnly ? kept.filter(r => r.received).map(r => ({ ...r, date: r.receivedDate })) : kept;
+  }, [rows, receivedOnly, showRejected]);
 
   // Category dropdown shows the canonical list (matching the Purchase
   // register's own picker) plus anything else that happens to be on record
@@ -134,7 +138,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       downloadWorkbookXlsx({
         filename: "expense-report",
         sheets: [{
-          sheetName: "Expenses", title: receivedOnly ? "Expense Report — received only" : "Expense Report — every line item",
+          sheetName: "Expenses", title: `Expense Report — ${showRejected ? "rejected requisitions" : "every line item"}${receivedOnly ? ", received only" : ""}`,
           headers: [receivedOnly ? "Received" : "Date", "Category", "Description", "Quantity", "Value"],
           rows: [
             ...filtered.map(r => [
@@ -149,7 +153,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
       downloadWorkbookXlsx({
         filename: "expense-report-by-category",
         sheets: [{
-          sheetName: "By category", title: receivedOnly ? "Expense Report — by category, received only" : "Expense Report — by category",
+          sheetName: "By category", title: `Expense Report — by category${showRejected ? ", rejected requisitions" : ""}${receivedOnly ? ", received only" : ""}`,
           headers: ["Category", "Line Items", "Total Value"],
           rows: [
             ...byCategory.map(g => [g.category, g.count, fmtMoney(g.total, false)]),
@@ -184,6 +188,13 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
             border: `1px solid ${receivedOnly ? "#15803D" : "var(--border)"}`,
             background: receivedOnly ? "#15803D" : "var(--bg)", color: receivedOnly ? "#fff" : "var(--text)",
           }}>{receivedOnly ? "✓ " : ""}Received only</button>
+        <button type="button" onClick={() => setShowRejected(v => !v)} aria-pressed={showRejected}
+          title={showRejected ? "Back to the expenses (rejected requisitions left out)" : "List the requisitions the HOD did not approve or HR rejected — they are not in the totals"}
+          style={{
+            padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", flexShrink: 0,
+            border: `1px solid ${showRejected ? "#B91C1C" : "var(--border)"}`,
+            background: showRejected ? "#B91C1C" : "var(--bg)", color: showRejected ? "#fff" : "var(--text)",
+          }}>{showRejected ? "✓ " : ""}Rejected ({rejectedCount})</button>
         <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} title={receivedOnly ? "Received from" : "From date"} style={{ width: 145 }} />
         <span style={{ color: "var(--text3)" }}>–</span>
         <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} title="To date" style={{ width: 145 }} />
@@ -210,7 +221,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="empty">No matching expenses.</td></tr>
+                <tr><td colSpan={5} className="empty">{showRejected ? "No rejected requisitions here." : "No matching expenses."}</td></tr>
               )}
               {filtered.map((r, i) => (
                 <tr
@@ -230,7 +241,7 @@ export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
             {filtered.length > 0 && (
               <tfoot>
                 <tr className="rpt-total-row">
-                  <td colSpan={4}>Total — {filtered.length} line{filtered.length === 1 ? "" : "s"}</td>
+                  <td colSpan={4}>{showRejected ? "Rejected — not in the expense" : "Total"} — {filtered.length} line{filtered.length === 1 ? "" : "s"}</td>
                   <td className="num">{fmtMoney(total, false)}</td>
                 </tr>
               </tfoot>

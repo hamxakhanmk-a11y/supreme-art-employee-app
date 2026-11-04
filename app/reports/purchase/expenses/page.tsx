@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
 import { parsePrItems } from "@/lib/purchase";
+import { isRejectedPr } from "@/lib/expenses";
 import ExpenseReportClient, { type ExpenseRow } from "./ExpenseReportClient";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export default async function ExpenseReportPage() {
     value: purchaseRequisitions.value,
     receivedByAdmin: purchaseRequisitions.receivedByAdmin,
     receivedDate: purchaseRequisitions.receivedDate,
+    hodApproval: purchaseRequisitions.hodApproval,
+    hrApproval: purchaseRequisitions.hrApproval,
   }).from(purchaseRequisitions).orderBy(purchaseRequisitions.id);
 
   // Flatten every line item into its own expense row — one description, one
@@ -55,6 +58,9 @@ export default async function ExpenseReportPage() {
         value: it.value,
         received: !!pr.receivedByAdmin,
         receivedDate: pr.receivedDate || "",
+        // Not approved by the HOD or rejected by HR: never spent, so left out unless asked for
+        // (the dashboard's expense leaves them out the same way — lib/expenses.ts isRejectedPr).
+        rejected: isRejectedPr(pr),
       });
     }
   }
