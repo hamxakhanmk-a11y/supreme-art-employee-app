@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { readNavMemory, type NavMemory } from "@/lib/usePageState";
 import { useMe } from "@/components/MeProvider";
 import { getSubNav, pathToModule } from "@/components/nav-config";
 import { useFlowIndicator } from "@/components/useFlowIndicator";
@@ -18,6 +20,9 @@ export default function Sidebar() {
   const me = meState.user ? { ...meState.user, modules: meState.modules } : null;
   // Liquid selector that glides between the sub-nav items.
   const flowRef = useFlowIndicator<HTMLElement>("y", ".sb-item.active", pathname, [meState.modules.join(","), meState.user?.role]);
+  // A sub-tab opens with the filters it last had in the address (month, dates, tab…).
+  const [nav, setNav] = useState<NavMemory | null>(null);
+  useEffect(() => { setNav(readNavMemory()); }, [pathname]);
 
   if (HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
 
@@ -86,7 +91,7 @@ export default function Sidebar() {
         return (
           <Link
             key={link.href}
-            href={link.href}
+            href={link.href + ((!active && nav?.query[link.href]) || "")}
             className={`sb-item ${link.variant === "report" ? "sb-item--report" : ""} ${active ? "active" : ""}`}
           >
             {link.label}

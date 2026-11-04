@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { getDesignation, byDepartment, MONTH_LABELS, type KpiDef } from "@/lib/kpi/catalog";
 import {
@@ -52,8 +53,9 @@ export default function EntryClient({ employees }: { employees: Emp[] }) {
 
   const [role, setRole] = useState<string>(initialRole);
   const [empId, setEmpId] = useState<number | null>(initialEmpId);
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
+  // Year and month are kept for when the user comes back (role and employee follow the URL).
+  const [year, setYear] = usePageState("year", now.getFullYear());
+  const [month, setMonth] = usePageState("month", now.getMonth() + 1); // 1-12
   const [vals, setVals] = useState<Record<string, number>>({});
   const [targets, setTargets] = useState<Record<number, number>>({}); // kpiIdx -> override
   const [loading, setLoading] = useState(true);

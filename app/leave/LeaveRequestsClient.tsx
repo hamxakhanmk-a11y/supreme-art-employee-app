@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintHeader from "@/components/PrintHeader";
@@ -39,8 +40,8 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes, ac
 }) {
   const router = useRouter();
   const [requests, setRequests] = useState<Req[]>(initial);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<ReqSort>("recent");
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<ReqSort>("sort", "recent");
 
   const empById = new Map(employees.map(e => [e.id, e]));
   const typeById = new Map(leaveTypes.map(t => [t.id, t]));

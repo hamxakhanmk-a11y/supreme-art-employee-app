@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 
 interface ModuleDef { key: string; label: string; hint: string }
 interface RolePerm { role: string; label: string; color: string; builtin: boolean; modules: string[]; editModules: string[] }
@@ -47,7 +48,7 @@ export default function RolesClient() {
   const [error, setError] = useState("");
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [savedRole, setSavedRole] = useState<string | null>(null);
-  const [tab, setTab] = useState("");
+  const [tab, setTab] = usePageState("tab", ""); // sub-tab shown, kept for when the user comes back
 
   // New-role form
   const [showNew, setShowNew] = useState(false);
@@ -105,8 +106,9 @@ export default function RolesClient() {
   }, [modules]);
 
   // Active tab falls back to the first one until the user picks another — no
-  // effect needed, so it stays in sync as modules load.
-  const activeTab = tab || tabs[0] || "";
+  // effect needed, so it stays in sync as modules load. A remembered tab that
+  // no longer exists falls back the same way.
+  const activeTab = (tabs.includes(tab) ? tab : tabs[0]) || "";
 
   const tabModules = useMemo(
     () => modules.filter(m => groupOf(m.key) === activeTab),

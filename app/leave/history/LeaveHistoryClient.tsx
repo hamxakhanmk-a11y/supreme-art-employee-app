@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
@@ -42,15 +43,18 @@ export default function LeaveHistoryClient({
   const today = new Date().toISOString().slice(0, 10);
   const yearAgo = new Date(Date.now() - 365 * 86400 * 1000).toISOString().slice(0, 10);
 
-  const [from, setFrom] = useState(yearAgo);
-  const [to, setTo] = useState(today);
-  const [status, setStatus] = useState("");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<LeaveSort>("recent");
+  const [from, setFrom] = usePageState("from", yearAgo);
+  const [to, setTo] = usePageState("to", today);
+  const [status, setStatus] = usePageState("status", "");
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<LeaveSort>("sort", "recent");
   const [rows, setRows] = useState<Req[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Only the newest request may fill the list (a restored date range starts a second one straight away).
+  const fetchSeq = useRef(0);
   const fetchRows = useCallback(async () => {
+    const mine = ++fetchSeq.current;
     setLoading(true);
     try {
       const p = new URLSearchParams();
@@ -59,8 +63,8 @@ export default function LeaveHistoryClient({
       if (status) p.set("status", status);
       const res = await fetch(`/api/leave/requests?${p}`);
       const data = await res.json();
-      setRows(Array.isArray(data) ? data : []);
-    } finally { setLoading(false); }
+      if (mine === fetchSeq.current) setRows(Array.isArray(data) ? data : []);
+    } finally { if (mine === fetchSeq.current) setLoading(false); }
   }, [from, to, status]);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);

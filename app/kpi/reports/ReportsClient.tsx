@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { matchesQuery, cmpText } from "@/lib/listTools";
+import { usePageState } from "@/lib/usePageState";
 
 type RepSort = "default" | "name" | "id" | "scoreHigh" | "scoreLow";
 const SORT_OPTIONS: SortOption<RepSort>[] = [
@@ -67,8 +68,9 @@ export default function ReportsClient({
   const router = useRouter();
   const pathname = usePathname();
   const setYear = (y: number) => router.push(`${pathname}?year=${y}`);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<RepSort>("default");
+  // Search and sort are kept for when the user comes back (the year lives in the URL).
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<RepSort>("sort", "default");
 
   // Search narrows the employees inside each designation (empty designations and departments drop out);
   // the averages shown stay the full-year ones. "default" is the order the server sends.

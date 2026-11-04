@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { inReportRange, reportLetterhead } from "@/lib/report-export";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
@@ -165,19 +166,19 @@ export default function SupplierDirectoryClient({
   rows, rateNotes = {}, byProductOnly = false, canEditRates = false, received = [], receivedNotCounted = 0,
 }: { rows: DirectoryRow[]; rateNotes?: RateNotes; byProductOnly?: boolean; canEditRates?: boolean; received?: ReceivedRow[]; receivedNotCounted?: number }) {
   const router = useRouter();
-  const [q, setQ] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [view, setView] = useState<ViewMode>(byProductOnly ? "byProduct" : "orders");
+  const [q, setQ] = usePageState("q", "");
+  const [supplierFilter, setSupplierFilter] = usePageState("supplier", "");
+  const [fromDate, setFromDate] = usePageState("from", "");
+  const [toDate, setToDate] = usePageState("to", "");
+  const [view, setView] = usePageState<ViewMode>("view", byProductOnly ? "byProduct" : "orders");
   // Every order → what arrived instead: each GRR line in the From–To by its GRR date (see ReceivedRow).
-  const [receivedOnly, setReceivedOnly] = useState(false);
+  const [receivedOnly, setReceivedOnly] = usePageState("receivedOnly", false);
   // Restricted roles are pinned to By-product no matter what `view` holds —
   // hiding the tabs alone would leave the per-order view one stray setView
   // away. Everything that branches on the view reads this, not `view`.
   const activeView: ViewMode = byProductOnly ? "byProduct" : view;
   // Each view has its own sort choices; the first of each is the order that view has always had.
-  const [sort, setSort] = useState<DirSort>(byProductOnly ? "az" : "date");
+  const [sort, setSort] = usePageState<DirSort>("sort", byProductOnly ? "az" : "date");
 
   // ---- Inline rate / tax editing (By product view) ----
   // Saves a note against this product + supplier and nothing more: the PO the

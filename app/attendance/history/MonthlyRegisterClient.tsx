@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import SidebarSlot from "@/components/SidebarSlot";
@@ -63,8 +64,8 @@ export default function MonthlyRegisterClient({
     return m;
   }, [records]);
 
-  const [sort, setSort] = useState<SortKey>("id");
-  const [query, setQuery] = useState("");
+  const [sort, setSort] = usePageState<SortKey>("sort", "id");
+  const [query, setQuery] = usePageState("q", "");
 
   // Show active employees, plus anyone who has attendance this month even if
   // they've since exited — so a mid-month leaver's record still appears.

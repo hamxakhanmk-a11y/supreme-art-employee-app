@@ -5,6 +5,7 @@ import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, DEPARTMENTS, type DemandItem } from "@/lib/procurement";
 
@@ -51,8 +52,8 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<DemandSort>("numDesc");
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<DemandSort>("sort", "numDesc");
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [requiredBy, setRequiredBy] = useState("");

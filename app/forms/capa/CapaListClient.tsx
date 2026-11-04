@@ -6,6 +6,7 @@ import { useCanEdit } from "@/components/MeProvider";
 import { CAPA_STATUS_META, parseCapaData, fmtDate, type CapaStatus } from "@/lib/capa";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { matchesQuery, cmpText } from "@/lib/listTools";
+import { usePageState } from "@/lib/usePageState";
 
 type CapaSort = "newest" | "oldest" | "ref" | "company" | "complaint" | "status";
 const SORT_OPTIONS: SortOption<CapaSort>[] = [
@@ -38,9 +39,10 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
   const router = useRouter();
   const canEdit = useCanEdit();
   const [rows] = useState<Row[]>(initial);
-  const [filter, setFilter] = useState("all");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<CapaSort>("newest");
+  // Status filter, search and sort are kept for when the user comes back to this screen.
+  const [filter, setFilter] = usePageState("status", "all");
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<CapaSort>("sort", "newest");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

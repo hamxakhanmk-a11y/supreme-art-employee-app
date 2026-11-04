@@ -5,6 +5,7 @@ import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useCanEdit } from "@/components/MeProvider";
 import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 
@@ -80,9 +81,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
-  const [taxFilter, setTaxFilter] = useState<"all" | "reg" | "unreg" | "unmarked">("all");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<PoSort>("numDesc");
+  const [taxFilter, setTaxFilter] = usePageState<"all" | "reg" | "unreg" | "unmarked">("taxFilter", "all");
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<PoSort>("sort", "numDesc");
 
   function resetForm() {
     setEditId(null); setEditNo(null);
@@ -499,7 +500,7 @@ function TaxCell({ p }: { p: Po }) {
 // still free this financial year — so you can decide, before raising the order,
 // whether it should go in the Unregistered list or the Registered one.
 function UnregLimitChecker({ rows, suppliers }: { rows: Po[]; suppliers: Supplier[] }) {
-  const [q, setQ] = useState("");
+  const [q, setQ] = usePageState("limitQ", "");
   const fy = financialYear();
 
   // Names to suggest: every supplier that has an unregistered PO this year, plus

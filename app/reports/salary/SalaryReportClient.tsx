@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { MONTHS } from "@/lib/salary";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
@@ -57,10 +58,10 @@ function SalStat({ label, value, strong = false }: { label: string; value: strin
 const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 export default function SalaryReportClient({ records, employees }: { records: Slip[]; employees: Emp[] }) {
-  const [month, setMonth] = useState<string>("");
-  const [year, setYear] = useState<string>("");
-  const [q, setQ] = useState<string>("");
-  const [sort, setSort] = useState<SalSort>("latest");
+  const [month, setMonth] = usePageState<string>("month", "");
+  const [year, setYear] = usePageState<string>("year", "");
+  const [q, setQ] = usePageState<string>("q", "");
+  const [sort, setSort] = usePageState<SalSort>("sort", "latest");
 
   const years = useMemo(() => Array.from(new Set(records.map(r => r.year))).sort((a, b) => b - a), [records]);
 

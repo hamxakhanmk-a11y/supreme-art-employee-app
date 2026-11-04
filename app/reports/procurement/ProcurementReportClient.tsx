@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { fmtDate, type InspectionResult } from "@/lib/procurement";
 import QcBadge, { qcText } from "@/components/procurement/QcBadge";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
@@ -55,10 +56,10 @@ const SORTS: Record<RowSort, (a: MasterRow, b: MasterRow) => number> = {
 };
 
 export default function ProcurementReportClient({ rows, from, to }: { rows: MasterRow[]; from: string; to: string }) {
-  const [filter, setFilter] = useState<Filter>("all");
-  const [supplierFilter, setSupplierFilter] = useState("");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<RowSort>("default");
+  const [filter, setFilter] = usePageState<Filter>("filter", "all");
+  const [supplierFilter, setSupplierFilter] = usePageState("supplier", "");
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<RowSort>("sort", "default");
 
   const counts = useMemo(() => ({
     all: rows.length,

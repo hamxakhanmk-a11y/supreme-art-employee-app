@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
@@ -49,7 +50,7 @@ export default function RegisterClient({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePageState("logbook.q", "");
 
   // Keeps the rest of the page's address — the tab, and the day the cards
   // above are showing — so moving the range doesn't move anything else.
@@ -62,7 +63,7 @@ export default function RegisterClient({
     router.push(`/station/pso?${p.toString()}`, { scroll: false });
   };
 
-  const [sort, setSort] = useState<RegSort>("listed");
+  const [sort, setSort] = usePageState<RegSort>("logbook.sort", "listed");
 
   const shown = useMemo(() => {
     const found = rows.filter(r => matchesQuery(search, [r.sn, r.driver, r.vehicleNo, r.notes, r.slipNo]));

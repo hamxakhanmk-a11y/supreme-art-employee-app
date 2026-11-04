@@ -6,6 +6,7 @@ import AppIntro from "@/components/AppIntro";
 import PrintWatermark from "@/components/PrintWatermark";
 import PrintTextareas from "@/components/PrintTextareas";
 import { MeProvider } from "@/components/MeProvider";
+import NavRecorder from "@/components/NavRecorder";
 
 export const metadata: Metadata = {
   title: "Supreme Art ERP",
@@ -24,6 +25,7 @@ export default function RootLayout({
       </head>
       <body>
         <MeProvider>
+          <NavRecorder />
           <AppIntro />
           <PrintWatermark />
           <PrintTextareas />

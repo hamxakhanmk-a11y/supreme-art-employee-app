@@ -4,6 +4,7 @@ import Link from "next/link";
 import { byDepartment, getDesignation } from "@/lib/kpi/catalog";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { empMatches, cmpText } from "@/lib/listTools";
+import { usePageState } from "@/lib/usePageState";
 
 type AssignSort = "default" | "nameDesc" | "id" | "department" | "designation" | "unassigned";
 const SORT_OPTIONS: SortOption<AssignSort>[] = [
@@ -30,9 +31,10 @@ export default function AssignClient({ employees }: { employees: Emp[] }) {
   const [rows, setRows] = useState<Emp[]>(employees);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [onlyUnset, setOnlyUnset] = useState(false);
-  const [sort, setSort] = useState<AssignSort>("default");
+  // Search, the unset-only toggle and sort are kept for when the user comes back to this screen.
+  const [query, setQuery] = usePageState("q", "");
+  const [onlyUnset, setOnlyUnset] = usePageState("unset", false);
+  const [sort, setSort] = usePageState<AssignSort>("sort", "default");
 
   const assigned = rows.filter(r => r.kpiTemplate).length;
 

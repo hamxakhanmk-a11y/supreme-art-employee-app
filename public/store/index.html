@@ -1388,7 +1388,37 @@ function flashTxnRow(prefix,id){
   });
 }
 
+// ---- Where the user left the store ----
+// The page open and each page's search / sort / filter / date boxes, kept for the browser session (per
+// module), so leaving for another ERP tab and coming back finds the store as it was. Not kept: the
+// select-all ticks, anything in a pop-up form, and filters set by a jump from the Issuance Log.
+const STORE_KEEP='store-keep:'+state.module;
+function keepRead(){try{return JSON.parse(sessionStorage.getItem(STORE_KEEP)||'{}')||{}}catch(e){return {}}}
+function keepWrite(k){try{sessionStorage.setItem(STORE_KEEP,JSON.stringify(k))}catch(e){}}
+function keptField(el){
+  return !!(el&&el.id&&el.closest&&el.closest('.page')&&!el.closest('.modal-overlay')
+    &&(el.tagName==='SELECT'||(el.tagName==='INPUT'&&/^(text|search|date)$/.test(el.type))));
+}
+function keepField(e){
+  const el=e.target;
+  if(!keptField(el)||storeReturn)return;
+  const k=keepRead();k.fields=k.fields||{};k.fields[el.id]=el.value;keepWrite(k);
+}
+document.addEventListener('input',keepField,true);
+document.addEventListener('change',keepField,true);
+// Once the data is in: the boxes back as they were, then the page that was open.
+function restoreKept(){
+  const k=keepRead();
+  for(const [id,v] of Object.entries(k.fields||{})){
+    const el=document.getElementById(id);
+    if(keptField(el))el.value=v;
+  }
+  if(k.page&&k.page!=='dashboard'&&document.getElementById('page-'+k.page))showPage(k.page,navItemFor(k.page));
+  else refresh();
+}
+
 function showPage(id,el){
+  {const k=keepRead();k.page=id;keepWrite(k);}
   if(storeReturn&&id!==storeReturn.target)clearStoreReturn();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -4456,6 +4486,7 @@ async function initAuth(){
   hideAuthScreen();
   applyModuleToUI();
   await loadAll();
+  restoreKept();
 }
 
 async function submitSetPassword(){

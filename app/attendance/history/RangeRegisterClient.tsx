@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { usePathname } from "next/navigation";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
 import PrintHeader from "@/components/PrintHeader";
@@ -85,8 +86,8 @@ export default function RangeRegisterClient({
     };
   };
 
-  const [sort, setSort] = useState<SortKey>("id");
-  const [query, setQuery] = useState("");
+  const [sort, setSort] = usePageState<SortKey>("sort", "id");
+  const [query, setQuery] = usePageState("q", "");
   // Active employees, plus anyone with attendance in this range even if exited.
   const empIdsWithRecords = useMemo(() => new Set(records.map(r => r.employeeId)), [records]);
   const activeEmps = useMemo(

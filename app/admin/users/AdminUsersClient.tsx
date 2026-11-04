@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText, matchesQuery } from "@/lib/listTools";
+import { usePageState } from "@/lib/usePageState";
 
 type UserSort = "listed" | "name" | "role" | "login" | "status";
 const USER_SORT_OPTIONS: SortOption<UserSort>[] = [
@@ -38,8 +39,9 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<UserSort>("listed");
+  // Search and sort are kept for when the user comes back to this screen.
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<UserSort>("sort", "listed");
 
   const [roleList, setRoleList] = useState<RoleMeta[]>([]);
   const [addOpen, setAddOpen] = useState(false);

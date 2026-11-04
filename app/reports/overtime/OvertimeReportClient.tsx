@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
@@ -28,8 +29,8 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<OtSort>("id");
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<OtSort>("sort", "id");
 
   const byKey = useMemo(() => {
     const m = new Map<string, number>();

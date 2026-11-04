@@ -1,5 +1,6 @@
 "use client";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import DriverPoolPanel from "./DriverPoolPanel";
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABEL } from "@/lib/fleet";
 
@@ -44,7 +45,7 @@ export default function VehiclesClient({ drivers, readOnly, canDelete = false }:
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ ...BLANK });
   const [busy, setBusy] = useState(false);
-  const [showRetired, setShowRetired] = useState(false);
+  const [showRetired, setShowRetired] = usePageState("vehicles.retired", false);
   const [manual, setManual] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [poolOpen, setPoolOpen] = useState(false);

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { MONTHS, computeSlip } from "@/lib/salary";
@@ -41,9 +42,9 @@ const fmt = (n: number) => n.toLocaleString("en-PK");
 export default function SalaryGeneratorPage() {
   const canEdit = useCanEdit("salary");
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
-  const [year, setYear] = useState<number>(CURRENT_YEAR);
-  const [search, setSearch] = useState<string>("");
+  const [month, setMonth] = usePageState<string>("month", MONTHS[new Date().getMonth()]);
+  const [year, setYear] = usePageState<number>("year", CURRENT_YEAR);
+  const [search, setSearch] = usePageState<string>("q", "");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [rows, setRows] = useState<RowState[]>([]);
   const [printSelected, setPrintSelected] = useState<Set<number>>(new Set());

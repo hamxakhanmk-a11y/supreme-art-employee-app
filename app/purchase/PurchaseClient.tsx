@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useSearchParams } from "next/navigation";
 import { reportLetterhead } from "@/lib/report-export";
 import PrintLandscape, { printLandscape } from "@/components/PrintLandscape";
@@ -111,13 +112,13 @@ export default function PurchaseClient({ initialRows }: { initialRows: RawPr[] }
   const canDeletePr   = useCanEdit("purchase.delete");
   const canHodApprove  = useCanEdit("purchase.hr-approve");
   const [rows, setRows] = useState<PrRow[]>(initialRows.map(normalize));
-  const [q, setQ] = useState("");
-  const [dept, setDept] = useState("");
-  const [cat, setCat] = useState("");
-  const [status, setStatus] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [sort, setSort] = useState<PrSort>("latest");
+  const [q, setQ] = usePageState("q", "");
+  const [dept, setDept] = usePageState("dept", "");
+  const [cat, setCat] = usePageState("cat", "");
+  const [status, setStatus] = usePageState("status", "");
+  const [fromDate, setFromDate] = usePageState("from", "");
+  const [toDate, setToDate] = usePageState("to", "");
+  const [sort, setSort] = usePageState<PrSort>("sort", "latest");
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft());

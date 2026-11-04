@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { downloadCSV } from "@/lib/csv";
@@ -59,14 +60,15 @@ const ROW_PILLS = ["present", "absent", "leave"] as const;
 export default function AttendancePage() {
   const canEdit = useCanEdit("attendance");
   const today = new Date().toISOString().slice(0, 10);
+  // The day being marked always starts at today (not remembered), so nobody marks a past day by accident.
   const [date, setDate] = useState(today);
   const [rows, setRows] = useState<Row[]>([]);
   const [closed, setClosed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<DaySort>("name");
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<DaySort>("sort", "name");
   // Bumped each time the day is loaded: the sort order is worked out then (and when the sort is changed),
   // not on every click, so a row does not jump away from under the cursor when it is marked.
   const [loadVersion, setLoadVersion] = useState(0);

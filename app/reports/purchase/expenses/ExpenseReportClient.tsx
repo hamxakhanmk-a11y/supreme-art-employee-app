@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { downloadWorkbookXlsx } from "@/lib/xlsx";
 import { fmtMoney, fmtDate } from "@/lib/procurement";
 import { PR_CATEGORIES } from "@/lib/purchase";
@@ -55,17 +56,17 @@ function qtyLabel(qty: number | null, uom: string): string {
 
 export default function ExpenseReportClient({ rows }: { rows: ExpenseRow[] }) {
   const router = useRouter();
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [view, setView] = useState<ViewMode>("lines");
-  const [sort, setSort] = useState<ExpSort>("newest");
+  const [q, setQ] = usePageState("q", "");
+  const [category, setCategory] = usePageState("category", "");
+  const [fromDate, setFromDate] = usePageState("from", "");
+  const [toDate, setToDate] = usePageState("to", "");
+  const [view, setView] = usePageState<ViewMode>("view", "lines");
+  const [sort, setSort] = usePageState<ExpSort>("sort", "newest");
   // Received only: the requisitions Admin has marked received, dated (and filtered, sorted) by the day they
   // were marked — the dashboard's Received expense counts them the same way.
-  const [receivedOnly, setReceivedOnly] = useState(false);
+  const [receivedOnly, setReceivedOnly] = usePageState("receivedOnly", false);
   // Rejected requisitions are left out of the totals; this lists only them instead.
-  const [showRejected, setShowRejected] = useState(false);
+  const [showRejected, setShowRejected] = usePageState("rejected", false);
   const rejectedCount = useMemo(() => rows.filter(r => r.rejected).length, [rows]);
   const base = useMemo(() => {
     const kept = rows.filter(r => r.rejected === showRejected);

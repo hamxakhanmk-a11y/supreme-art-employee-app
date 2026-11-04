@@ -2,10 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMe } from "@/components/MeProvider";
 import { MODULES_BASE, MODULE_HOME, pathToModule } from "@/components/nav-config";
 import { useFlowIndicator } from "@/components/useFlowIndicator";
+import { readNavMemory, clearPageState, type NavMemory } from "@/lib/usePageState";
 
 const HIDE_ON = ["/login"];
 
@@ -20,6 +21,9 @@ export default function TopNav() {
   // Liquid selector that glides between the module tabs.
   const flowRef = useFlowIndicator<HTMLDivElement>("x", ".mode-btn.active", pathname, [meState.modules.join(","), meState.user?.role]);
   const hidden = HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"));
+  // Each tab leads back to the page (and its filters in the address) last open in that section.
+  const [nav, setNav] = useState<NavMemory | null>(null);
+  useEffect(() => { setNav(readNavMemory()); }, [pathname]);
 
   if (hidden) return null;
   const activeModule = pathToModule(pathname);
@@ -34,6 +38,7 @@ export default function TopNav() {
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
+    clearPageState();
     router.replace("/login");
   }
 
@@ -72,7 +77,8 @@ export default function TopNav() {
             return (
               <Link
                 key={m.key}
-                href={MODULE_HOME[m.key] || "/"}
+                // The tab of the section already open goes to its start; the others to where the user left them.
+                href={(!active && nav?.section[m.key]) || MODULE_HOME[m.key] || "/"}
                 className={`mode-btn ${active ? "active" : ""}`}
               >
                 {m.label}

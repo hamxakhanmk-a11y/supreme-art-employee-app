@@ -5,6 +5,7 @@ import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText } from "@/lib/listTools";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useCanEdit } from "@/components/MeProvider";
 import QcBadge from "@/components/procurement/QcBadge";
 import { parseItems, fmtDate, docNoLabel, parseInspection, qtyDifference, INSPECTION_RESULTS, checklistLabels, CATEGORY_VALUES, withValueCategories, type GrnItem, type GrnInspection, type InspectionPoint, type GrrChecklist } from "@/lib/procurement";
@@ -56,11 +57,11 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   const [editNo, setEditNo] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [listFilter, setListFilter] = useState<"all" | "reg" | "unreg">("all");
+  const [listFilter, setListFilter] = usePageState<"all" | "reg" | "unreg">("listFilter", "all");
   // A GRR is "final" once its invoice number is in; without it, it's pending.
-  const [invFilter, setInvFilter] = useState<"all" | "final" | "pending">("all");
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<GrnSort>("numDesc");
+  const [invFilter, setInvFilter] = usePageState<"all" | "final" | "pending">("invFilter", "all");
+  const [q, setQ] = usePageState("q", "");
+  const [sort, setSort] = usePageState<GrnSort>("sort", "numDesc");
 
   // Which list the GRR belongs to — fixes its sequence (15000 vs 15000u).
   const [registered, setRegistered] = useState<boolean | null>(null);

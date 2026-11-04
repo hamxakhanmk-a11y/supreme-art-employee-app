@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useRouter } from "next/navigation";
 import { useCanEdit } from "@/components/MeProvider";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
@@ -59,9 +60,9 @@ export default function StationReportClient({
   const router = useRouter();
   const canEditStation = useCanEdit("station");
   const canDeleteStation = useCanEdit("station.delete");
-  const [empFilter, setEmpFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | LeaveType>("all");
-  const [sort, setSort] = useState<TripSort>("latest");
+  const [empFilter, setEmpFilter] = usePageState("trips.employee", "");
+  const [typeFilter, setTypeFilter] = usePageState<"all" | LeaveType>("trips.type", "all");
+  const [sort, setSort] = usePageState<TripSort>("trips.sort", "latest");
 
   // Inline edit of one trip's times / type / reason.
   const [editId, setEditId] = useState<number | null>(null);

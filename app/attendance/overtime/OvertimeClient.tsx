@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
@@ -15,12 +16,13 @@ export default function OvertimeClient({ employees }: { employees: Emp[] }) {
   const canEdit = useCanEdit("attendance");
 
   const today = new Date().toISOString().slice(0, 10);
+  // The day being entered always starts at today (not remembered), so overtime is not put on a past day by accident.
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("id");
+  const [query, setQuery] = usePageState("q", "");
+  const [sort, setSort] = usePageState<SortKey>("sort", "id");
 
   const activeEmps = useMemo(() => sortEmployees(employees.filter(e => e.status === "active"), "id"), [employees]);
 

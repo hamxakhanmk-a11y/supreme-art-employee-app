@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePageState } from "@/lib/usePageState";
 import Image from "next/image";
 
 type Edu = { id: number; degree: string; institution: string | null; yearCompleted: string | null; grade: string | null; certificateUrl: string | null; };
@@ -9,7 +10,7 @@ type OtherDoc = { id: number; label: string; url: string; category?: string | nu
 export default function EmployeeProfileTabs({
   employee, education, experience, otherDocuments = [],
 }: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
-  const [tab, setTab] = useState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary" | "salaryHistory">("personal");
+  const [tab, setTab] = usePageState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary" | "salaryHistory">("tab", "personal");
 
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "personal", label: "Personal" },

@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { downloadWorkbookXlsx, type SheetSpec } from "@/lib/xlsx";
 import { inReportRange, reportLetterhead } from "@/lib/report-export";
 import PrintLandscape from "@/components/PrintLandscape";
 import ReportLetterhead from "@/components/ReportLetterhead";
 export function useReportRange<T extends { date: string }>(rows: T[]) {
- const [from,setFrom] = useState(""); const [to,setTo] = useState("");
+ const [from,setFrom] = usePageState("from", ""); const [to,setTo] = usePageState("to", ""); // kept when the user leaves and comes back
  return { from,to,setFrom,setTo, rows: rows.filter(r => inReportRange(r.date,from,to)) };
 }
 // A thin count/total chip (small pill: big number + small caps label), like the Purchase register's.

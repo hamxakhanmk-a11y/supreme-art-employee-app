@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import EditCell from "../EditCell";
 import { rs } from "@/lib/pso";
 
@@ -21,9 +22,9 @@ export default function TopupsPanel({ readOnly, canDelete }: { readOnly: boolean
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
-  const [cardFilter, setCardFilter] = useState<number | "">("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [cardFilter, setCardFilter] = usePageState<number | "">("topups.card", "");
+  const [from, setFrom] = usePageState("topups.from", "");
+  const [to, setTo] = usePageState("topups.to", "");
 
   const load = useCallback(async () => {
     try {

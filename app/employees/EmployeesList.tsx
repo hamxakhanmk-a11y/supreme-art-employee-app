@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
+import { usePageState } from "@/lib/usePageState";
 import EmployeesToolbar from "./EmployeesToolbar";
 import PrintHeader from "@/components/PrintHeader";
 import { useCanEdit } from "@/components/MeProvider";
@@ -49,9 +50,9 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const canEdit = useCanEdit("employees");
   const today = new Date().toISOString().slice(0, 10);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
-  const [sort, setSort] = useState<EmpSort>("newest");
+  const [query, setQuery] = usePageState("q", "");
+  const [statusFilter, setStatusFilter] = usePageState<StatusFilter>("status", "active");
+  const [sort, setSort] = usePageState<EmpSort>("sort", "newest");
   const [busyId, setBusyId] = useState<number | null>(null);
   // Exit dialog — pick the exit date (today or a past date) and a reason.
   const [exitFor, setExitFor] = useState<Row | null>(null);

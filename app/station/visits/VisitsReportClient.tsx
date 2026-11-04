@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PrintLandscape from "@/components/PrintLandscape";
@@ -67,9 +68,9 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
 
   // Who's listed: by default only the people who went out in the period; ticked,
   // everyone on the books, the ones who stayed in showing dashes.
-  const [showAll, setShowAll] = useState(false);
-  const [empId, setEmpId] = useState("");
-  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = usePageState("all", false);
+  const [empId, setEmpId] = usePageState("employee", "");
+  const [search, setSearch] = usePageState("q", "");
 
   const base = useMemo(() => {
     if (!showAll) return movers;
@@ -77,7 +78,7 @@ export default function VisitsReportClient({ rows: movers, everyone, from, to, t
     return [...movers, ...everyone.filter(s => !went.has(s.id)).map(blank)];
   }, [movers, everyone, showAll]);
 
-  const [sort, setSort] = useState<VisitSort>("time");
+  const [sort, setSort] = usePageState<VisitSort>("sort", "time");
 
   const rows = useMemo(() => {
     const found = base.filter(r =>

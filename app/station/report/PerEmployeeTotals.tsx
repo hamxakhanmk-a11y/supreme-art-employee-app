@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { LEAVE_STYLE, formatMins } from "@/lib/station";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { matchesQuery, cmpText } from "@/lib/listTools";
@@ -24,8 +25,8 @@ const SORT_OPTIONS: SortOption<TotSort>[] = [
 // Station → Who's Out → Report (and Reports → Station): each employee's time outside the factory
 // in the range. The rows arrive already in the default order (most personal time first).
 export default function PerEmployeeTotals({ summary }: { summary: EmpTotals[] }) {
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<TotSort>("personal");
+  const [query, setQuery] = usePageState("totals.q", "");
+  const [sort, setSort] = usePageState<TotSort>("totals.sort", "personal");
 
   const rows = useMemo(() => {
     const found = summary.filter(r => matchesQuery(query, [r.firstName, r.lastName, `${r.firstName} ${r.lastName}`, r.employeeId, r.department]));

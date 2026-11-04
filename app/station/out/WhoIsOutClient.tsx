@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePageState } from "@/lib/usePageState";
 import { useRouter } from "next/navigation";
 import { LEAVE_STYLE, hhmm, formatMins, type LeaveType } from "@/lib/station";
 import type { OutNow } from "@/lib/stationServer";
@@ -48,8 +49,8 @@ export default function WhoIsOutClient({
   useEffect(() => { setOut(initial); setVehicles(initialVehicles); }, [initial, initialVehicles]);
   const [now, setNow] = useState<number>(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<OutSort>("listed");
+  const [query, setQuery] = usePageState("out.q", "");
+  const [sort, setSort] = usePageState<OutSort>("out.sort", "listed");
 
   // Tick every 30s so the "out for" durations stay live without a reload.
   useEffect(() => {
