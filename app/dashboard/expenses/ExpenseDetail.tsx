@@ -34,7 +34,7 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
           <div className="od-tile od-proc">
             <div className="od-label">Procurement</div>
             <div className="od-value">{pkr(summary.procurement)}</div>
-            <div className="od-sub">GRR qty × PO rate + tax, on the GRR date</div>
+            <div className="od-sub">GRR qty × PO rate + tax, on the GRR date{summary.procurementEarlierPos > 0 && <> · <b>{pkr(summary.procurementEarlierPos)}</b> on POs placed before this period</>}</div>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
                         <Link key={i} href={l.href} className="od-line">
                           <div className="od-row-main">
                             <div className="od-row-title">{l.description || "—"}</div>
-                            <div className="od-row-meta">{l.ref} · {SOURCE_LABEL[l.source]} · {dmy(l.date)}</div>
+                            <div className="od-row-meta">{l.ref} · {SOURCE_LABEL[l.source]} · {dmy(l.date)}{l.po && <> · {l.po}{l.poDate ? ` of ${dmy(l.poDate)}` : ""}</>}</div>
                             {l.calc && <div className="od-row-meta od-calc">{l.calc}</div>}
                           </div>
                           <div className="od-line-amt">{pkr(l.amount)}</div>

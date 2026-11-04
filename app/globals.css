@@ -1270,6 +1270,7 @@ a.od-line:hover { border-color: var(--brand); }
 .od-row-title { font-size: 12.5px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .od-row-meta { font-size: 11px; color: var(--text2); margin-top: 1px; overflow-wrap: anywhere; }
 .od-calc { color: #7c3aed; }
+.od-split { margin: 4px 0 8px; padding: 6px 8px; border-radius: 8px; background: #f5f3ff; font-size: 12px; line-height: 1.45; }
 .od-line-amt { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 
 @media (max-width: 560px) {

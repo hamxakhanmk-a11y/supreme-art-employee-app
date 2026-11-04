@@ -24,6 +24,8 @@ export interface ExpenseLine {
   category: string;
   amount: number;        // PKR, not rounded
   calc?: string;         // how a procurement amount was worked out, shown beside it
+  po?: string;           // procurement: the PO it was valued from, "PO 10234"
+  poDate?: string;       // and that PO's date ("" when unknown)
   ref: string;           // "PR 121", "GRR 15004u"
   description: string;
   href: string;
@@ -43,7 +45,7 @@ export interface PrInput {
   items: string | null; itemName: string | null; quantity: number | null; uom: string | null; value: number | null;
   hodApproval: string | null; hrApproval: string | null;
 }
-export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null }
+export interface PoInput { id: number; poNo: number; registered: boolean | null; items: string | null; discount: number | null; date?: string | null }
 export interface GrnInput {
   id: number; grnNo: number; registered: boolean | null; date: string; poId: number | null; poNo: number | null;
   items: string | null; inspection: string | null;
@@ -163,7 +165,7 @@ export function procurementExpenses(
         + (valued < qty ? ` (GRR says ${n(qty)}; PO ordered ${n(orderedQty!)}${before > 0 ? `, ${n(Math.min(before, orderedQty!))} received before` : ""})` : "")
         + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
       for (const category of cats) {
-        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, ref, description: description || pl.description || pl.item || "", href });
+        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, po: `PO ${docNoLabel(po.poNo, po.registered)}`, poDate: po.date ? String(po.date).slice(0, 10) : "", ref, description: description || pl.description || pl.item || "", href });
       }
     }
   }
@@ -173,6 +175,9 @@ export interface CategoryTotal { category: string; purchase: number; procurement
 export interface ExpenseSummary {
   from: string; to: string;
   purchase: number; procurement: number; total: number;
+  // The part of procurement received against POs dated before the period. The Supplier Directory counts a PO
+  // by its own date, so this is what it shows in an earlier month while it arrives in this one.
+  procurementEarlierPos: number;
   categories: CategoryTotal[];   // highest total first
   skipped: SkippedLine[];
 }
@@ -186,7 +191,7 @@ export function summarizeExpenses(
   purchaseExpenses(input.prs, from, to, lines, skipped);
   procurementExpenses(input.grns, input.pos, input.checklist, from, to, lines, skipped);
   const map = new Map<string, CategoryTotal>();
-  let purchase = 0, procurement = 0;
+  let purchase = 0, procurement = 0, procurementEarlierPos = 0;
   for (const l of lines) {
     // Same name typed with different case or spacing is one category.
     const key = l.category.trim().replace(/\s+/g, " ").toLowerCase();
@@ -195,9 +200,10 @@ export function summarizeExpenses(
     c[l.source] += l.amount;
     c.total += l.amount;
     c.lines.push(l);
-    if (l.source === "purchase") purchase += l.amount; else procurement += l.amount;
+    if (l.source === "purchase") purchase += l.amount;
+    else { procurement += l.amount; if (l.poDate && l.poDate < from) procurementEarlierPos += l.amount; }
   }
   const categories = [...map.values()].sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
   for (const c of categories) c.lines.sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date));
-  return { from, to, purchase, procurement, total: purchase + procurement, categories, skipped };
+  return { from, to, purchase, procurement, procurementEarlierPos, total: purchase + procurement, categories, skipped };
 }

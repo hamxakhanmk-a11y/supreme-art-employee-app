@@ -15,7 +15,7 @@ type CategoryRow = { category: string; total: number; purchase: number; procurem
 type VehicleRow = { id: number; vehicleNo: string; vehicleName: string; driver: string; destination: string; at: string; since: string };
 export interface DashData {
   expRange: Range; attRange: Range; today: string;
-  exp: Loaded<{ total: number; purchase: number; procurement: number; skipped: number; categories: CategoryRow[] }>;
+  exp: Loaded<{ total: number; purchase: number; procurement: number; earlierPos: number; skipped: number; categories: CategoryRow[] }>;
   cnic: Loaded<CnicAlert[]>;
   late: Loaded<LateComer[]>;
   lateToday: Loaded<LateComer[]>;
@@ -58,6 +58,12 @@ export default function DashboardView({ data }: { data: DashData }) {
   };
   const expMore = (key: "total" | "purchase" | "procurement") => (d: Extract<DashData["exp"], { ok: true }>["data"]) => (
     <>
+      {key !== "purchase" && d.procurement > 0 && (
+        <div className="od-sub od-split">
+          Procurement counts goods by the day they arrived (GRR date). Of {pkr(d.procurement)}: <b>{pkr(d.procurement - d.earlierPos)}</b> against POs placed in this period,
+          {" "}<b>{pkr(d.earlierPos)}</b> against POs placed before it. The Supplier Directory counts POs by the day they were placed, whether the goods have arrived or not.
+        </div>
+      )}
       {catList(d.categories, c => c[key], "No expense in this period")}
       {d.skipped > 0 && <div className="od-sub od-note">{plural(d.skipped, "line")} could not be counted (no value, no PO rate…) — listed on the full page.</div>}
       <Link href={expLink} className="od-poplink">Full detail by category, every line ›</Link>
@@ -88,7 +94,7 @@ export default function DashboardView({ data }: { data: DashData }) {
           {tile("exp-total", "money", "Total expense", exp, d => `PKR ${pkr(d.total)}`,
             d => <>Purchase + Procurement{d.skipped > 0 && <> · <b className="od-warn-text">{d.skipped} not counted</b></>}</>, expMore("total"), true)}
           {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => "requisitions", expMore("purchase"))}
-          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), () => "received on GRRs", expMore("procurement"))}
+          {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (d.earlierPos > 0 ? `received · ${pkr(d.earlierPos)} on earlier POs` : "received on GRRs"), expMore("procurement"))}
         </div>
       </div>
 

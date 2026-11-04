@@ -37,7 +37,7 @@ export async function loadExpenses(from: string, to: string): Promise<ExpenseSum
   ]);
   const poIds = [...new Set(grnRows.map(g => g.poId).filter((x): x is number => x != null))];
   const poNos = [...new Set(grnRows.filter(g => g.poId == null).map(g => g.poNo).filter((x): x is number => x != null))];
-  const poCols = { id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, items: purchaseOrders.items, discount: purchaseOrders.discount };
+  const poCols = { id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, items: purchaseOrders.items, discount: purchaseOrders.discount, date: purchaseOrders.date };
   // The earlier GRRs on the same POs: what they received is no longer left to value (see lib/expenses.ts).
   const linked = [
     ...(poIds.length ? [inArray(grns.poId, poIds)] : []),

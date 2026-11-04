@@ -27,7 +27,7 @@ async function settle<T>(p: Promise<T>): Promise<Loaded<T>> {
 export default async function OwnerDashboard({ exp: er, att: ar, today }: { exp: Range; att: Range; today: string }) {
   const [exp, cnic, late, lateToday, off, people, vehicles, cards] = await Promise.all([
     settle(loadExpenses(er.from, er.to).then(s => ({
-      total: s.total, purchase: s.purchase, procurement: s.procurement, skipped: s.skipped.length,
+      total: s.total, purchase: s.purchase, procurement: s.procurement, earlierPos: s.procurementEarlierPos, skipped: s.skipped.length,
       // Only the totals travel to the page; every line is on the expense page.
       categories: s.categories.map(c => ({ category: c.category, total: c.total, purchase: c.purchase, procurement: c.procurement, lines: c.lines.length })),
     }))),
