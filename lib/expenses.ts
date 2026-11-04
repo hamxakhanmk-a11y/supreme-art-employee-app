@@ -3,7 +3,10 @@
 //    A requisition the HOD did not approve, or HR rejected, was never spent and is left out.
 //  - Procurement: what actually arrived on a GRR (its received quantity), valued at the
 //    linked PO line's rate plus tax, less that PO's discount in proportion. On the GRR's
-//    date, under the GRR's categories (split equally when it has several).
+//    date, under the GRR's categories (split equally when it has several). A PO line never
+//    costs more than it was ordered for: the GRRs against it are taken in date order and
+//    whatever goes past the ordered quantity is not valued again (a GRR typed in another
+//    unit, sheets against a PO in packets, would otherwise multiply the money).
 // Anything that can't be counted is not guessed at: it goes into `skipped` with the reason,
 // so the dashboard can say what was left out. No database access here (see
 // lib/ownerDashboard.ts), which keeps the arithmetic testable on its own.
@@ -20,6 +23,7 @@ export interface ExpenseLine {
   date: string;          // yyyy-mm-dd
   category: string;
   amount: number;        // PKR, not rounded
+  calc?: string;         // how a procurement amount was worked out, shown beside it
   ref: string;           // "PR 121", "GRR 15004u"
   description: string;
   href: string;
@@ -56,6 +60,7 @@ export const SKIP = {
   grrNotOnPo: "GRR line not found on its PO",
   grrBadQty: "GRR quantity is not a number",
   grrNoRate: "PO line has no rate",
+  grrPastPo: "Already received in full on earlier GRRs",
 } as const;
 
 const inRange = (d: string, from: string, to: string) => d >= from && d <= to;
@@ -99,14 +104,20 @@ export function procurementExpenses(
     byNo.set(k, byNo.has(k) ? null : p);
   }
 
-  for (const g of grns) {
-    if (!inRange(g.date, from, to)) continue;
+  // How much of each PO line earlier GRRs have received, so a later one is only valued up to what is left.
+  // Every GRR of the PO is passed in, earlier ones too; only those in the range are counted.
+  const receivedSoFar = new Map<string, number>();
+  const ordered = [...grns].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+  for (const g of ordered) {
+    const counted = inRange(g.date, from, to);
     const ref = `GRR ${docNoLabel(g.grnNo, g.registered)}`;
     const href = `/procurement/grn/${g.id}`;
     const items = parseItems<GrnItem>(g.items).filter(it => String(it.item ?? "").trim() || String(it.quantity ?? "").trim());
     if (!items.length) continue;
-    const skip = (reason: string, description: string) =>
-      skipped.push({ source: "procurement", reason, date: g.date, ref, description, href });
+    const skip = (reason: string, description: string) => {
+      if (counted) skipped.push({ source: "procurement", reason, date: g.date, ref, description, href });
+    };
 
     const ins = withValueCategories(parseInspection(g.inspection));
     if (ins.result === "rejected") { for (const it of items) skip(SKIP.grrRejected, it.item || ""); continue; }
@@ -136,11 +147,23 @@ export function procurementExpenses(
       if (!pl) { skip(SKIP.grrNotOnPo, description); continue; }
       const qty = qtyToNum(it.quantity);
       if (qty == null) { skip(SKIP.grrBadQty, description); continue; }
-      const m = poLineMoney({ quantity: String(qty), rate: pl.rate, tax: pl.tax });
+      const orderedQty = qtyToNum(pl.quantity);
+      const key = `${po.id}|${pl.srNo}`;
+      const before = receivedSoFar.get(key) ?? 0;
+      receivedSoFar.set(key, before + qty);
+      // Without a number for the ordered quantity there is nothing to hold it to.
+      const valued = orderedQty == null || orderedQty <= 0 ? qty : Math.max(0, Math.min(qty, orderedQty - before));
+      if (!counted) continue;
+      const m = poLineMoney({ quantity: String(valued), rate: pl.rate, tax: pl.tax });
       if (!(m.rate > 0)) { skip(SKIP.grrNoRate, description); continue; }
+      if (valued <= 0) { skip(SKIP.grrPastPo, description); continue; }
       const amount = m.net * factor;
+      const n = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: 3 });
+      const calc = `${n(valued)} × ${n(m.rate)}${m.taxPct ? ` + ${n(m.taxPct)}%` : ""}${factor < 1 ? " − discount share" : ""}`
+        + (valued < qty ? ` (GRR says ${n(qty)}; PO ordered ${n(orderedQty!)}${before > 0 ? `, ${n(Math.min(before, orderedQty!))} received before` : ""})` : "")
+        + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
       for (const category of cats) {
-        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, ref, description: description || pl.description || pl.item || "", href });
+        lines.push({ source: "procurement", date: g.date, category, amount: amount / cats.length, calc, ref, description: description || pl.description || pl.item || "", href });
       }
     }
   }
@@ -175,6 +198,6 @@ export function summarizeExpenses(
     if (l.source === "purchase") purchase += l.amount; else procurement += l.amount;
   }
   const categories = [...map.values()].sort((a, b) => b.total - a.total || a.category.localeCompare(b.category));
-  for (const c of categories) c.lines.sort((a, b) => b.date.localeCompare(a.date) || b.amount - a.amount);
+  for (const c of categories) c.lines.sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date));
   return { from, to, purchase, procurement, total: purchase + procurement, categories, skipped };
 }

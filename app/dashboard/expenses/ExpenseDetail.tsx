@@ -72,6 +72,7 @@ export default function ExpenseDetail({ summary }: { summary: ExpenseSummary }) 
                           <div className="od-row-main">
                             <div className="od-row-title">{l.description || "—"}</div>
                             <div className="od-row-meta">{l.ref} · {SOURCE_LABEL[l.source]} · {dmy(l.date)}</div>
+                            {l.calc && <div className="od-row-meta od-calc">{l.calc}</div>}
                           </div>
                           <div className="od-line-amt">{pkr(l.amount)}</div>
                         </Link>

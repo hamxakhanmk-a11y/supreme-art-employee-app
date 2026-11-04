@@ -1,6 +1,6 @@
 // What the Super Admin's dashboard reads. Server only. Each loader stands alone, so one
 // that fails leaves the rest of the dashboard working.
-import { sql, and, gte, lte, inArray, isNotNull } from "drizzle-orm";
+import { sql, and, or, gte, lte, lt, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "./db";
 import { employees, attendance, purchaseRequisitions, purchaseOrders, grns } from "./schema";
 import { ensureProcurementTables, loadChecklist } from "./procurement";
@@ -38,12 +38,21 @@ export async function loadExpenses(from: string, to: string): Promise<ExpenseSum
   const poIds = [...new Set(grnRows.map(g => g.poId).filter((x): x is number => x != null))];
   const poNos = [...new Set(grnRows.filter(g => g.poId == null).map(g => g.poNo).filter((x): x is number => x != null))];
   const poCols = { id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, items: purchaseOrders.items, discount: purchaseOrders.discount };
-  const [byId, byNo] = await Promise.all([
+  // The earlier GRRs on the same POs: what they received is no longer left to value (see lib/expenses.ts).
+  const linked = [
+    ...(poIds.length ? [inArray(grns.poId, poIds)] : []),
+    ...(poNos.length ? [and(isNull(grns.poId), inArray(grns.poNo, poNos))] : []),
+  ];
+  const [byId, byNo, earlier] = await Promise.all([
     poIds.length ? db.select(poCols).from(purchaseOrders).where(inArray(purchaseOrders.id, poIds)) : Promise.resolve([]),
     poNos.length ? db.select(poCols).from(purchaseOrders).where(inArray(purchaseOrders.poNo, poNos)) : Promise.resolve([]),
+    linked.length ? db.select({
+      id: grns.id, grnNo: grns.grnNo, registered: grns.registered, date: grns.date, poId: grns.poId, poNo: grns.poNo,
+      items: grns.items, inspection: grns.inspection,
+    }).from(grns).where(and(lt(grns.date, from), or(...linked))) : Promise.resolve([]),
   ]);
   const pos = [...new Map([...byId, ...byNo].map(p => [p.id, p])).values()];
-  return summarizeExpenses({ prs, grns: grnRows, pos, checklist }, from, to);
+  return summarizeExpenses({ prs, grns: [...earlier, ...grnRows], pos, checklist }, from, to);
 }
 
 export interface CnicAlert { id: number; empCode: string; name: string; designation: string | null; expiry: string; daysLeft: number }
