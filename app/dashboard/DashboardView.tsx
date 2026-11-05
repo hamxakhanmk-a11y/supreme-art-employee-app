@@ -25,7 +25,8 @@ export interface DashData {
   people: Loaded<(OutNow & { at: string; since: string })[]>;
   vehicles: Loaded<VehicleRow[]>;
   cards: Loaded<CardOut[]>;
-  rates: Loaded<RateIncrease[]>;   // PO rate increases on POs placed in the Expense period
+  rates: Loaded<RateIncrease[]>;   // PO rate increases on POs placed in the last month
+  ratesFrom: string;               // that month's first day
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -33,7 +34,7 @@ const rate = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2
 const pct = (n: number) => `${n >= 10 ? Math.round(n) : Math.round(n * 10) / 10}%`;
 
 export default function DashboardView({ data }: { data: DashData }) {
-  const { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates } = data;
+  const { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates, ratesFrom } = data;
   // Each band's period is kept in the address under its own names, next to the other band's.
   const recv: Record<string, string> = received ? { erecv: "1" } : {};
   const expKeep = { afrom: ar.from, ato: ar.to, ...recv }, attKeep = { efrom: er.from, eto: er.to, ...recv };
@@ -122,14 +123,14 @@ export default function DashboardView({ data }: { data: DashData }) {
           {tile("exp-purchase", "purchase", "Purchase", exp, d => pkr(d.purchase), () => (received ? "marked received" : "requisitions raised"), expMore("purchase"))}
           {tile("exp-proc", "proc", "Procurement", exp, d => pkr(d.procurement), d => (received ? (d.earlierPos > 0 ? `on GRRs · ${pkr(d.earlierPos)} on earlier POs` : "received on GRRs") : "POs placed"), expMore("procurement"))}
           {tile("rates", rates.ok && rates.data.length ? "out" : "calm", "PO rate increases", rates, d => d.length,
-            (d: RateIncrease[]) => (d.length ? <>ordered dearer than last time · up to <b>+{pct(d[0].pct)}</b></> : "no product ordered dearer"), (d: RateIncrease[]) => (
-            <><div className="od-sub">Products on POs placed in this period at a higher rate than their previous PO (any supplier, same unit; rate before tax). Procurement only.</div>
+            (d: RateIncrease[]) => (d.length ? <>last month · up to <b>+{pct(d[0].pct)}</b></> : "none in the last month"), (d: RateIncrease[]) => (
+            <><div className="od-sub">Products on POs placed from {dmy(ratesFrom)} to {dmy(today)} at a higher rate than their previous PO — any supplier, same unit, rate before tax. Each stays here a month, whatever the Expense dates are. Procurement only.</div>
               {d.length ? <List>{d.map(r => <Row key={`${r.now.poId}-${r.product}`}
                 left={<><Link href={`/procurement/po/${r.now.poId}`}>{r.product}</Link>{r.uom ? <span className="od-dim"> · per {r.uom}</span> : null}
                   <div className="od-dim od-rate-was">was {rate(r.before.rate)} on {r.before.po}, {dmy(r.before.date)}{r.before.supplier ? ` · ${r.before.supplier}` : ""}</div>
                   <div className="od-dim od-rate-was">now {rate(r.now.rate)} on {r.now.po}, {dmy(r.now.date)}{r.now.supplier ? ` · ${r.now.supplier}` : ""}</div></>}
                 right={<span className="od-red">{rate(r.before.rate)} → {rate(r.now.rate)} · +{pct(r.pct)}</span>} />)}</List>
-                : <div className="od-sub">No product was ordered at a higher rate in this period.</div>}</>
+                : <div className="od-sub">No product was ordered at a higher rate in the last month.</div>}</>
           ), true)}
         </div>
       </div>

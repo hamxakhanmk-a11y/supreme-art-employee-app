@@ -144,7 +144,8 @@ function NotedMark() {
 
 // A rate / tax % noted by hand against this product + supplier. Shown in
 // place of the PO's own figures when present — see RateNotes below.
-export type RateNote = { rate: number | null; taxPct: number | null };
+// uom: the unit the noted rate is per, where it differs from (or is missing on) the PO.
+export type RateNote = { rate: number | null; taxPct: number | null; uom?: string | null };
 // Keyed on the same exact product description + supplier name the By-product
 // view groups on. JSON-encoded rather than joined with a separator, so a
 // product name containing that separator can't collide with another key.
@@ -192,11 +193,13 @@ export default function SupplierDirectoryClient({
   const [editKey, setEditKey] = useState<string | null>(null);
   const [rateDraft, setRateDraft] = useState("");
   const [taxDraft, setTaxDraft] = useState("");
+  const [uomDraft, setUomDraft] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   function startEdit(row: FlatRow) {
     setEditKey(noteKey(row.product, row.supplier));
     setRateDraft(row.shownRate == null ? "" : String(row.shownRate));
     setTaxDraft(row.shownRate == null ? "" : String(row.shownTaxPct));
+    setUomDraft(row.shownUom);
   }
   async function saveEdit(row: FlatRow) {
     setSavingEdit(true);
@@ -205,7 +208,7 @@ export default function SupplierDirectoryClient({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           product: row.product, supplier: row.supplier,
-          rate: rateDraft.trim(), tax: taxDraft.trim(),
+          rate: rateDraft.trim(), tax: taxDraft.trim(), uom: uomDraft.trim(),
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -270,7 +273,7 @@ export default function SupplierDirectoryClient({
   type FlatRow = {
     product: string; supplier: string; agg: SupplierAgg;
     isFirstOfProduct: boolean; groupSize: number;
-    shownRate: number | null; shownTaxPct: number; noted: boolean;
+    shownRate: number | null; shownTaxPct: number; shownUom: string; noted: boolean;
   };
   const byProduct = useMemo(() => {
     const map = new Map<string, Map<string, SupplierAgg>>();
@@ -311,9 +314,11 @@ export default function SupplierDirectoryClient({
         // the PO's rate showing beside it.
         const shownRate = note?.rate ?? agg.rate;
         const shownTaxPct = note?.taxPct ?? agg.taxPct;
+        // The unit noted here, else the latest PO's.
+        const shownUom = note?.uom || agg.uom || "";
         flat.push({
           product, supplier, agg, isFirstOfProduct: i === 0, groupSize: entries.length,
-          shownRate, shownTaxPct, noted: note != null,
+          shownRate, shownTaxPct, shownUom, noted: note != null,
         });
       });
     }
@@ -411,8 +416,8 @@ export default function SupplierDirectoryClient({
           headers: ["Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Total (Rate + Tax)", "Rate source"],
           rows: byProduct.map(r => [
             r.product, r.supplier + (r.agg.count > 1 ? ` (x${r.agg.count})` : ""), r.agg.brand || "",
-            rateLabel(r.shownRate, r.agg.uom), taxPctLabel(r.shownRate, r.shownTaxPct),
-            rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.agg.uom),
+            rateLabel(r.shownRate, r.shownUom), taxPctLabel(r.shownRate, r.shownTaxPct),
+            rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.shownUom),
             r.noted ? "Noted here" : "From PO",
           ]),
         }],
@@ -625,7 +630,7 @@ export default function SupplierDirectoryClient({
                   <td style={{ fontSize: 12 }}>{r.agg.brand || "—"}</td>
                   {!canEditRates ? (
                     <>
-                      <td>{rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />}{oldRateTag(r.product, r.supplier, r.shownRate)}</td>
+                      <td>{rateLabel(r.shownRate, r.shownUom)}{r.noted && <NotedMark />}{oldRateTag(r.product, r.supplier, r.shownRate)}</td>
                       <td>{taxPctLabel(r.shownRate, r.shownTaxPct)}</td>
                     </>
                   ) : editKey === noteKey(r.product, r.supplier) ? (
@@ -638,7 +643,13 @@ export default function SupplierDirectoryClient({
                           placeholder="Rate"
                           style={{ width: 90, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
                         />
-                        {r.agg.uom && <span style={{ marginLeft: 5, fontSize: 11.5, color: "var(--text3)" }}>/ {r.agg.uom}</span>}
+                        <span style={{ margin: "0 4px", fontSize: 11.5, color: "var(--text3)" }}>/</span>
+                        <input
+                          list="sd-uoms" value={uomDraft} onChange={e => setUomDraft(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") saveEdit(r); if (e.key === "Escape") setEditKey(null); }}
+                          placeholder="unit" title="What the rate is per — ton, ream, kg, pcs… Blank = the PO's own unit"
+                          style={{ width: 70, padding: "4px 7px", fontSize: 12.5, border: "1px solid var(--border)", borderRadius: 5 }}
+                        />
                       </td>
                       <td onClick={e => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                         <input
@@ -660,10 +671,10 @@ export default function SupplierDirectoryClient({
                         onClick={e => { e.stopPropagation(); startEdit(r); }}
                         className="rpt-row-clickable"
                         title={r.noted
-                          ? "Your noted rate — click to change it. Clear both fields to go back to the PO's rate."
-                          : "From this product's latest PO. Click to note your own rate — the PO won't change."}
+                          ? "Your noted rate — click to change it. Clear rate, tax and unit to go back to the PO's."
+                          : "From this product's latest PO. Click to note your own rate and unit — the PO won't change."}
                       >
-                        {rateLabel(r.shownRate, r.agg.uom)}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>{oldRateTag(r.product, r.supplier, r.shownRate)}
+                        {rateLabel(r.shownRate, r.shownUom)}{!r.shownUom && r.shownRate != null && <span style={{ color: "var(--text3)", fontSize: 11 }} title="No unit yet — click to add one"> / unit?</span>}{r.noted && <NotedMark />} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>{oldRateTag(r.product, r.supplier, r.shownRate)}
                       </td>
                       <td
                         onClick={e => { e.stopPropagation(); startEdit(r); }}
@@ -676,13 +687,17 @@ export default function SupplierDirectoryClient({
                       </td>
                     </>
                   )}
-                  <td style={{ fontWeight: 700 }} title="Rate plus sales tax">{rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.agg.uom)}</td>
+                  <td style={{ fontWeight: 700 }} title="Rate plus sales tax">{rateWithTaxLabel(r.shownRate, r.shownTaxPct, r.shownUom)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      <datalist id="sd-uoms">
+        {[...new Set([...rows.map(r => r.uom).filter(Boolean), "kg", "ton", "ream", "pcs", "sheet", "ltr", "drum", "roll", "box", "packet", "meter", "set"])].map(u => <option key={u} value={u} />)}
+      </datalist>
 
       {historyFor && (
         <div onClick={() => setHistoryFor(null)} style={{

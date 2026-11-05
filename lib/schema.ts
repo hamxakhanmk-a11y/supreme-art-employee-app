@@ -577,6 +577,7 @@ export const supplierProductRates = pgTable("supplier_product_rates", {
   supplier: text("supplier").notNull(),
   rate: doublePrecision("rate"),
   taxPct: doublePrecision("tax_pct"),
+  uom: varchar("uom", { length: 30 }),     // the unit the noted rate is per (ton, ream…); blank = the PO's
   updatedBy: varchar("updated_by", { length: 120 }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

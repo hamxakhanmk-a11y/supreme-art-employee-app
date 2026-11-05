@@ -3,7 +3,7 @@
 // else keeps the Profile dashboard in app/page.tsx.
 import { currentlyOut } from "@/lib/stationServer";
 import { vehiclesOut } from "@/lib/fleetServer";
-import { loadExpenses, cnicAlerts, lateComers, daysOffOver2, cardsOut, poRateIncreases } from "@/lib/ownerDashboard";
+import { loadExpenses, cnicAlerts, lateComers, daysOffOver2, cardsOut, poRateIncreases, lastMonth } from "@/lib/ownerDashboard";
 import { formatMins } from "@/lib/station";
 import DashboardView, { type DashData, type Loaded, type Range } from "./DashboardView";
 
@@ -42,9 +42,9 @@ export default async function OwnerDashboard({ exp: er, att: ar, received, today
       destination: String(r.destination || ""), at: karachiTime(r.outAt), since: since(r.outAt),
     })))),
     settle(cardsOut()),
-    // On POs placed in the Expense band's period.
-    settle(poRateIncreases(er.from, er.to)),
+    // A rise stays a month: POs placed from this day last month to today, whatever the Expense period is.
+    settle(poRateIncreases(lastMonth(today).from, today)),
   ]);
-  const data: DashData = { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates };
+  const data: DashData = { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates, ratesFrom: lastMonth(today).from };
   return <DashboardView data={data} />;
 }

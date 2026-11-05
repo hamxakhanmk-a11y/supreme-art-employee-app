@@ -69,6 +69,16 @@ export async function loadExpenses(from: string, to: string, mode: ExpenseMode =
   return summarizeExpenses({ prs, grns: [...others, ...grnRows], pos, checklist }, from, to, "received");
 }
 
+// The month a rate increase stays on the dashboard: from the same day last month to today.
+export function lastMonth(today: string): { from: string; to: string } {
+  const [y, m, d] = today.split("-").map(Number);
+  const back = new Date(Date.UTC(y, m - 2, 1));
+  // The same day last month, or that month's last day (31 Mar → 28/29 Feb).
+  const days = new Date(Date.UTC(back.getUTCFullYear(), back.getUTCMonth() + 1, 0)).getUTCDate();
+  back.setUTCDate(Math.min(d, days));
+  return { from: back.toISOString().slice(0, 10), to: today };
+}
+
 // Products ordered on a PO in the period at a higher rate than their previous PO (lib/rateChanges.ts).
 export async function poRateIncreases(from: string, to: string): Promise<RateIncrease[]> {
   await ensureProcurementTables();

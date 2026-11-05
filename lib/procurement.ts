@@ -657,6 +657,7 @@ DO $$ BEGIN
   );
   CREATE UNIQUE INDEX IF NOT EXISTS supplier_product_rates_key
     ON supplier_product_rates (product, supplier);
+  ALTER TABLE supplier_product_rates ADD COLUMN IF NOT EXISTS uom varchar(30);
   -- Settings for the procurement screens, one row per key. grr_checklist: the
   -- inspection points on a GRR (general ones and per category), set under GRR → Settings.
   CREATE TABLE IF NOT EXISTS procurement_settings (

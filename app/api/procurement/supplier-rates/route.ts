@@ -8,7 +8,7 @@ import { ensureProcurementTables } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
-// POST { product, supplier, rate, tax } — note a reference rate against a
+// POST { product, supplier, rate, tax, uom } — note a reference rate (and the unit it is per) against a
 // product + supplier in the Supplier Directory.
 //
 // This is only ever a note. The directory shows the rate off that product's
@@ -40,11 +40,14 @@ export async function POST(req: Request) {
   const taxPct = parseField(b?.tax, "Tax %");
   if (taxPct !== null && typeof taxPct !== "number") return NextResponse.json({ error: taxPct.error }, { status: 400 });
 
+  // The unit the rate is per (ton, ream, kg…). Blank leaves the PO's own unit showing.
+  const uom = String(b?.uom ?? "").trim().slice(0, 30) || null;
+
   const where = and(eq(supplierProductRates.product, product), eq(supplierProductRates.supplier, supplier));
 
   // Nothing noted on either field → drop the note entirely so the row falls
   // back to the PO rate rather than sitting there as an empty override.
-  if (rate === null && taxPct === null) {
+  if (rate === null && taxPct === null && uom === null) {
     await db.delete(supplierProductRates).where(where);
     await logActivity({
       user: guard, action: "suppliers.rate-note.clear",
@@ -56,15 +59,15 @@ export async function POST(req: Request) {
   const [existing] = await db.select({ id: supplierProductRates.id }).from(supplierProductRates).where(where);
   if (existing) {
     await db.update(supplierProductRates)
-      .set({ rate, taxPct, updatedBy: guard.name, updatedAt: new Date() })
+      .set({ rate, taxPct, uom, updatedBy: guard.name, updatedAt: new Date() })
       .where(eq(supplierProductRates.id, existing.id));
   } else {
-    await db.insert(supplierProductRates).values({ product, supplier, rate, taxPct, updatedBy: guard.name });
+    await db.insert(supplierProductRates).values({ product, supplier, rate, taxPct, uom, updatedBy: guard.name });
   }
 
   await logActivity({
     user: guard, action: "suppliers.rate-note.set",
-    summary: `noted reference rate on "${product}" from ${supplier}: ${rate ?? "—"} @ ${taxPct ?? "—"}% tax`,
+    summary: `noted reference rate on "${product}" from ${supplier}: ${rate ?? "—"}${uom ? ` / ${uom}` : ""} @ ${taxPct ?? "—"}% tax`,
   });
   return NextResponse.json({ ok: true });
 }

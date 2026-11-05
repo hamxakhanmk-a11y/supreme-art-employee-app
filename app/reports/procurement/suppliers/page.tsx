@@ -146,8 +146,8 @@ export default async function SupplierDirectoryPage() {
   // (exact product description + supplier name). Where one exists it's shown
   // instead of the PO's rate; the PO itself is never changed by it.
   const noted = await db.select().from(supplierProductRates);
-  const rateNotes: Record<string, { rate: number | null; taxPct: number | null }> = {};
-  for (const n of noted) rateNotes[JSON.stringify([n.product, n.supplier])] = { rate: n.rate, taxPct: n.taxPct };
+  const rateNotes: Record<string, { rate: number | null; taxPct: number | null; uom: string | null }> = {};
+  for (const n of noted) rateNotes[JSON.stringify([n.product, n.supplier])] = { rate: n.rate, taxPct: n.taxPct, uom: n.uom };
 
   return (
     <SupplierDirectoryClient
