@@ -1,7 +1,7 @@
-import { requireModule } from "@/lib/pageGuard";
+import { requireAnyModule } from "@/lib/pageGuard";
 
-// PSO Cards — logbook, card list, top-ups — its own permission row.
+// PSO Cards — Cards Logbook, All cards, Top-ups, each its own permission row; any one opens the page.
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  await requireModule("station.cards");
+  await requireAnyModule(["station.cards", "station.cardlist", "station.topups"], "station.cards");
   return <>{children}</>;
 }

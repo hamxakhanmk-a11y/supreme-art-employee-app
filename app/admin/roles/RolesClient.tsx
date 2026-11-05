@@ -22,7 +22,7 @@ const GROUP_ORDER = [
 function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
-  if (/^(demand|po|grn)(\.|$)/.test(key) || key === "suppliers") return "Procurement";
+  if (/^(demand|po|grn|suppliers)(\.|$)/.test(key)) return "Procurement";
   if (key.startsWith("station")) return "Station";
   if (key.startsWith("store")) return "Store";
   if (key.startsWith("employees")) return "Employees";
@@ -114,8 +114,10 @@ export default function RolesClient() {
 
   // A button can only be used (EDIT) or not (HIDDEN): one that is merely "viewable" does nothing, so it reads HIDDEN.
   const kindOf = (key: string) => modules.find(m => m.key === key)?.kind;
+  // A page that is only looked at (View / Hidden) never reads EDIT, even when a default's edit list holds it.
   const levelOf = (r: RolePerm, key: string): Level =>
-    r.editModules.includes(key) ? "edit" : r.modules.includes(key) && kindOf(key) !== "action" ? "view" : "none";
+    kindOf(key) === "view" ? (r.modules.includes(key) ? "view" : "none")
+      : r.editModules.includes(key) ? "edit" : r.modules.includes(key) && kindOf(key) !== "action" ? "view" : "none";
 
   function withLevel(r: RolePerm, m: ModuleDef, level: Level): RolePerm {
     const mod = new Set(r.modules), ed = new Set(r.editModules);

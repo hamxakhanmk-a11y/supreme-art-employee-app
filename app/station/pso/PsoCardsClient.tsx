@@ -29,8 +29,10 @@ type Tab = "logbook" | "cards" | "topups";
 
 export default function PsoCardsClient({
   vehicles, people, readOnly, canDelete, custody, date, isToday, rows, from, to, tab: initialTab, focus = null,
+  tabs: allowed = { logbook: true, cards: true, topups: true }, cardsReadOnly = readOnly, topupsReadOnly = readOnly,
 }: {
   vehicles: VehicleRow[]; people: Person[]; readOnly: boolean; canDelete: boolean;
+  tabs?: { logbook: boolean; cards: boolean; topups: boolean }; cardsReadOnly?: boolean; topupsReadOnly?: boolean;
   custody: CustodyRow[]; date: string; isToday: boolean;
   rows: PsoRow[]; from: string; to: string; tab: Tab;
   focus?: LogbookFocus | null;
@@ -94,9 +96,9 @@ export default function PsoCardsClient({
     <div className="fade-up">
       <div className="no-print page-head">
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
-          { key: "logbook", label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined },
-          { key: "cards", label: "💳 All cards", count: cards.length || undefined },
-          { key: "topups", label: "⊕ Top-ups" },
+          ...(allowed.logbook ? [{ key: "logbook" as Tab, label: "📋 Cards Logbook", count: out.length ? `${out.length} out` : undefined }] : []),
+          ...(allowed.cards ? [{ key: "cards" as Tab, label: "💳 All cards", count: cards.length || undefined }] : []),
+          ...(allowed.topups ? [{ key: "topups" as Tab, label: "⊕ Top-ups" }] : []),
         ]} />
         <span className="spacer" />
         {/* Which day the cards out with someone are shown for. */}
@@ -118,9 +120,10 @@ export default function PsoCardsClient({
       {err && <div className="card no-print" style={{ borderColor: "#DC2626", color: "#DC2626", marginBottom: 14, fontSize: 13 }}>{err}</div>}
 
       {tab === "cards" ? (
-        <CardsPanel vehicles={vehicles} readOnly={readOnly} canDelete={canDelete} onChanged={load} />
+        <CardsPanel vehicles={vehicles} readOnly={cardsReadOnly} canDelete={canDelete} onChanged={load}
+          topups={{ see: allowed.topups, edit: allowed.topups && !topupsReadOnly }} />
       ) : tab === "topups" ? (
-        <TopupsPanel readOnly={readOnly} canDelete={canDelete} />
+        <TopupsPanel readOnly={topupsReadOnly} canDelete={canDelete} />
       ) : (
       <>
       {/* Who has a card — on screen only; the logbook below is what prints. */}

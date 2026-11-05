@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import PrintableForm from "@/components/PrintableForm";
+import { employeeFieldAccess, maskEmployee } from "@/lib/employeeAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,13 @@ export default async function PrintEmployee({ params }: { params: Promise<{ id: 
     db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
     db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
   ]);
-  const emp = empArr[0];
-  if (!emp) notFound();
+  if (!empArr[0]) notFound();
+  const access = await employeeFieldAccess();
+  const emp = maskEmployee(empArr[0], access);
 
   const data: any = {
     ...emp,
+    hideSalary: !access.salary, hideBanking: !access.banking,
     education: edu,
     experience: exp,
     otherDocuments: others.map(d => ({

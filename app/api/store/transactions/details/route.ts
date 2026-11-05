@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema } from "@/lib/store";
+import { storeTxnsDenied } from "@/lib/storeAccess";
 
 // The purchase order and invoice numbers of a stock in, and the batch number as written on its
 // sticker, kept from the sticker window. Only these fields change; nothing about the quantity or
@@ -18,6 +19,8 @@ export async function PUT(req: NextRequest) {
     const b = await req.json().catch(() => ({}));
     const id = parseInt(b?.id);
     if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+    const no = await storeTxnsDenied(guard, [id]);
+    if (no) return no;
     const poNo = String(b?.poNo ?? "").trim().slice(0, 60), invoiceNo = String(b?.invoiceNo ?? "").trim().slice(0, 60);
     const hasLabel = Object.prototype.hasOwnProperty.call(b, "batchLabel");
     const batchLabel = String(b?.batchLabel ?? "").trim().slice(0, 40);

@@ -25,6 +25,8 @@ export type EmployeePrintData = {
   minimumWage?: any; essiContribution?: any; accommodation?: any; food?: any;
   bankName?: string | null; accountTitle?: string | null; accountNumber?: string | null; iban?: string | null;
   notes?: string | null;
+  // Left out for a role without Employees · Salary / Banking.
+  hideSalary?: boolean; hideBanking?: boolean;
   photoUrl?: string | null;
   cnicFrontUrl?: string | null; cnicBackUrl?: string | null; passportUrl?: string | null;
   ssiUrl?: string | null; ubiUrl?: string | null;
@@ -154,7 +156,7 @@ export default function EmployeePrintPage({ data = {}, attached = [] }: { data?:
       </Section>
 
       {/* Compensation */}
-      <Section title="Compensation / Salary Details">
+      {!data.hideSalary && <Section title="Compensation / Salary Details">
         <PairRow>
           <Pair label="Basic Salary (PKR)" value={money(data.basicSalary)} flex />
           <Pair label="Conveyance (PKR)" value={money(data.conveyance)} flex />
@@ -177,7 +179,7 @@ export default function EmployeePrintPage({ data = {}, attached = [] }: { data?:
           <Pair label="Minimum Wage (PKR)" value={money(data.minimumWage)} flex />
           <Pair label="ESSI Contribution (PKR)" value={money(data.essiContribution)} flex />
         </PairRow>
-      </Section>
+      </Section>}
 
       {/* Education table */}
       <Section title="Education">
@@ -228,7 +230,7 @@ export default function EmployeePrintPage({ data = {}, attached = [] }: { data?:
       </Section>
 
       {/* Banking */}
-      <Section title="Banking Details">
+      {!data.hideBanking && <Section title="Banking Details">
         <PairRow>
           <Pair label="Bank Name" value={data.bankName} flex />
           <Pair label="Account Title" value={data.accountTitle} flex />
@@ -237,7 +239,7 @@ export default function EmployeePrintPage({ data = {}, attached = [] }: { data?:
           <Pair label="Account Number" value={data.accountNumber} flex />
           <Pair label="IBAN" value={data.iban} flex />
         </PairRow>
-      </Section>
+      </Section>}
 
       {/* Notes */}
       <Section title="Notes">

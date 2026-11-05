@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMe, useCanEdit } from "@/components/MeProvider";
+import { useCanEdit } from "@/components/MeProvider";
 import {
   CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE, CAPA_DOC_NO,
   parseCapaData, type CapaData, type CapaStatus,
@@ -19,7 +19,6 @@ type Capa = {
 
 export default function CapaFormClient({ capa }: { capa: Capa }) {
   const router = useRouter();
-  const me = useMe();
   const canEdit = useCanEdit("capa");
   const canDelete = useCanEdit("capa.delete");
 
@@ -29,9 +28,9 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
-  // A closed CAPA is a signed-off record — locked to everyone but the owner.
-  const isSuperAdmin = me.user?.role === "superadmin";
-  const locked = status === "closed" && !isSuperAdmin;
+  // A closed CAPA is a signed-off record — locked unless the role has CAPA · Change Closed.
+  const canChangeClosed = useCanEdit("capa.closed");
+  const locked = status === "closed" && !canChangeClosed;
   const ro = !canEdit || locked;
 
   const set = (k: keyof CapaData, v: string) => setD(p => ({ ...p, [k]: v }));
@@ -105,7 +104,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           background: "#fef3c7", color: "#92400e", padding: "8px 12px",
           borderRadius: 6, fontSize: 12, marginBottom: 12,
         }}>
-          🔒 This CAPA is closed and locked. Only a Super Admin can edit it.
+          🔒 This CAPA is closed and locked. Your role cannot change a closed CAPA.
         </div>
       )}
       {msg && (

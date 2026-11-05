@@ -15,6 +15,8 @@ export type ModuleKey =
   | "employees"
   | "employees.add"
   | "employees.delete"
+  | "employees.salary"
+  | "employees.banking"
   | "attendance"
   | "attendance.offday"
   | "attendance.close"
@@ -49,9 +51,13 @@ export type ModuleKey =
   // pages each have their own key so a gate role needn't see money.
   | "station"
   | "station.vehicles"
+  | "station.vehiclelist"
   | "station.cards"
+  | "station.cardlist"
+  | "station.topups"
   | "station.monthly"
   | "station.out"
+  | "station.outreport"
   | "station.visits"
   | "station.delete"
   | "demand"
@@ -63,7 +69,11 @@ export type ModuleKey =
   | "grn.delete"
   | "grn.settings"
   | "suppliers"
+  | "suppliers.orders"
+  | "suppliers.received"
   | "store"
+  | "store.machinery"
+  | "store.consumables"
   // stock in / stock out are their own grants, so a store keeper can be given just one
   | "store.stockin"
   | "store.stockout"
@@ -74,13 +84,16 @@ export type ModuleKey =
   | "store.delete"
   | "store.reconcile"
   | "capa"
-  | "capa.delete";
+  | "capa.delete"
+  | "capa.closed";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "dashboard.owner", label: "Owner Dashboard", hint: "The owner's dashboard on Profile — expense, CNIC expiry, late comers, who / what is out" },
   { key: "employees",  label: "Employees",   hint: "Employee list & profiles — edit changes an employee's details" },
   { key: "employees.add",    label: "Employees · Add",    hint: "Add a new employee" },
   { key: "employees.delete", label: "Employees · Delete", hint: "Delete an employee permanently" },
+  { key: "employees.salary",  label: "Employees · Salary",  hint: "Salary & Salary History tabs, and the salary figures in print, Excel and the edit form — edit changes them" },
+  { key: "employees.banking", label: "Employees · Banking", hint: "Banking tab — bank, account title, account number, IBAN — in the profile, print, Excel and edit form; edit changes them" },
   { key: "attendance", label: "Attendance",  hint: "Mark Today — edit marks attendance" },
   { key: "attendance.offday",   label: "Attendance · Mark OFF Day",       hint: "Mark the whole day OFF for everyone" },
   { key: "attendance.close",    label: "Attendance · Close / Reopen Day", hint: "Close a day so it can't be changed, or reopen it" },
@@ -108,10 +121,14 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "purchase.delete",     label: "Purchase · Delete",      hint: "Delete a purchase requisition" },
   { key: "purchase.hr-approve", label: "Purchase · HOD Approval", hint: "HOD-approve or HOD-reject a raised PR" },
   { key: "station",          label: "Station",                  hint: "Gate terminal (people, vehicles, card hand-over & fuel), Who's Out & report, Visits Report" },
-  { key: "station.vehicles", label: "Station · Vehicles",       hint: "Vehicles page — Log Book and the vehicle list, PINs, drivers" },
-  { key: "station.cards",    label: "Station · PSO Cards",      hint: "PSO Cards page — Cards Logbook, card list, top-ups & balances" },
+  { key: "station.vehicles", label: "Station · Vehicles · Log Book", hint: "Each vehicle's trips and fuel, month by month — edit corrects and reverses them" },
+  { key: "station.vehiclelist", label: "Station · Vehicles · All vehicles", hint: "The vehicle list with PINs, drivers and oil changes — edit adds and changes them" },
+  { key: "station.cards",    label: "Station · PSO Cards · Cards Logbook", hint: "Who has which card and every fill drawn — edit hands cards out / back and corrects fills" },
+  { key: "station.cardlist", label: "Station · PSO Cards · All cards", hint: "The card list with balances and the low-balance level — edit adds and changes cards" },
+  { key: "station.topups",   label: "Station · PSO Cards · Top-ups", hint: "The money loaded on every card — edit loads money and corrects top-ups" },
   { key: "station.monthly",  label: "Station · Monthly Report", hint: "Fleet monthly report — fuel rate & maintenance" },
-  { key: "station.out",      label: "Station · Who's Out",      hint: "Who is out of the gate right now, and the out-and-back report" },
+  { key: "station.out",      label: "Station · Who's Out",      hint: "Who is out of the gate right now (or on a chosen day)" },
+  { key: "station.outreport", label: "Station · Who's Out · Report", hint: "Every out-and-back trip in a date range, with each person's totals" },
   { key: "station.visits",   label: "Station · Visits Report",  hint: "Visitors' report" },
   { key: "station.delete", label: "Station · Delete", hint: "Delete hourly-leave trips, vehicle trips, fuel records, top-ups and PSO cards" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
@@ -126,8 +143,12 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   // what rate). Edit additionally allows correcting a product's rate / tax %
   // in place, which writes to that line on its most recent PO. Super Admin
   // also gets the full report — the per-order view with order values.
-  { key: "suppliers",  label: "Supplier Directory", hint: "Which supplier a product comes from & its rate — edit allows correcting the rate" },
+  { key: "suppliers",  label: "Supplier Directory · By product", hint: "Each product's suppliers & their rates — edit allows correcting the rate" },
+  { key: "suppliers.orders",   label: "Supplier Directory · Every order", hint: "Every PO line with its order values — gross, tax, net value, discount" },
+  { key: "suppliers.received", label: "Supplier Directory · Received only", hint: "What actually came in on GRRs, valued at the PO rate" },
   { key: "store",      label: "Parts Store",  hint: "Store inventory — edit adds and edits parts" },
+  { key: "store.machinery",   label: "Store · Machinery",   hint: "The Machinery store — its parts, stock in / out and history" },
+  { key: "store.consumables", label: "Store · Consumables", hint: "The Consumables store — its parts, stock in / out and history" },
   { key: "store.stockin",   label: "Store · Stock In",            hint: "Stock in, one part or in bulk" },
   { key: "store.stockout",  label: "Store · Stock Out / Issue",   hint: "Stock out / issue, one part or in bulk" },
   { key: "store.reverse",   label: "Store · Reverse Entry",       hint: "Reverse a stock in / out — the quantity goes back" },
@@ -136,7 +157,8 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
   { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
-  { key: "capa.delete", label: "CAPA · Delete", hint: "Delete an open CAPA (a closed one stays the owner's)" },
+  { key: "capa.delete", label: "CAPA · Delete", hint: "Delete an open CAPA" },
+  { key: "capa.closed", label: "CAPA · Change Closed", hint: "Reopen, change or delete a CAPA after it is closed (with CAPA · Delete to delete it)" },
 ];
 
 // Dormant features remain valid permission keys so saving another role cannot
@@ -170,7 +192,10 @@ function expandMasters(modules: ModuleKey[]): ModuleKey[] {
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
 
 // Every Station section; any one opens the Station tab (delete is an action, not a page).
-export const STATION_KEYS: ModuleKey[] = ["station", "station.vehicles", "station.cards", "station.monthly", "station.out", "station.visits"];
+export const STATION_KEYS: ModuleKey[] = [
+  "station", "station.vehicles", "station.vehiclelist", "station.cards", "station.cardlist", "station.topups",
+  "station.monthly", "station.out", "station.outreport", "station.visits",
+];
 
 export interface RolePerm {
   modules: ModuleKey[];       // sections the role can OPEN (view access)
@@ -184,12 +209,15 @@ export interface RolePerm {
 //  - "section": everything else — has a real view-vs-edit distinction.
 export type EditKind = "view" | "action" | "section";
 // Pages that are only looked at (like the reports): View or Hidden.
-const VIEW_KEYS = new Set(["dashboard.owner", "station.out", "station.visits"]);
+const VIEW_KEYS = new Set([
+  "dashboard.owner", "station.out", "station.outreport", "station.visits",
+  "suppliers.orders", "suppliers.received", "store.machinery", "store.consumables",
+]);
 export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("reports.") || VIEW_KEYS.has(key)) return "view";
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
-  if (key === "store.delete" || key === "store.reconcile") return "action";
+  if (key === "store.delete" || key === "store.reconcile" || key === "capa.closed") return "action";
   if (key in BUTTON_SPLIT) return "action";
   return "section";
 }
@@ -199,7 +227,9 @@ export function moduleEditKind(key: string): EditKind {
 // the button once. pages: each names the grant that used to open it — every role that could open that is
 // given the page once. Each batch runs once (its marker row, see migrateButtonSplit), so nobody gains or
 // loses anything the day it arrives, and what the owner takes away afterwards stays away.
-const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: Record<string, ModuleKey> }[] = [
+// sections: views split off a section — a role gets the new one to view when it could view the old, and to
+// edit when it could edit the old.
+const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: Record<string, ModuleKey>; sections?: Record<string, ModuleKey> }[] = [
   { name: "button-split-2026-11", pages: {}, buttons: {
     "employees.delete": "employees",
     "attendance.close": "attendance",
@@ -227,20 +257,41 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
     "station.out": "station",
     "station.visits": "station",
   } },
+  // Tabs and views inside a page, each its own grant (Supplier Directory's Every order stays the owner's).
+  { name: "button-split-2026-11c", buttons: {}, pages: {
+    "suppliers.received": "suppliers",
+    "station.outreport": "station.out",
+    "store.machinery": "store",
+    "store.consumables": "store",
+  }, sections: {
+    "employees.salary": "employees",
+    "employees.banking": "employees",
+    "station.vehiclelist": "station.vehicles",
+    "station.cardlist": "station.cards",
+    "station.topups": "station.cards",
+  } },
 ];
 export const BUTTON_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.buttons));
 const PAGE_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.pages));
+const SECTION_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.sections ?? {}));
 // The section a button belongs to: the button does nothing for a role that can't open that section.
 export const MODULE_PARENT: Record<string, ModuleKey> = {
   ...BUTTON_SPLIT,
   "store.delete": "store",
   "store.reconcile": "store",
+  "capa.closed": "capa",
+  // Parts of a page that only show inside it.
+  "employees.salary": "employees",
+  "employees.banking": "employees",
+  "store.machinery": "store",
+  "store.consumables": "store",
 };
 // A default (a role with no saved row yet) gets the split-out pages of what it opens and, when it edits,
 // the split-out buttons too.
 function withSplits(modules: ModuleKey[], canEdit: boolean): ModuleKey[] {
   const out = new Set(modules);
   for (const [page, from] of Object.entries(PAGE_SPLIT)) if (out.has(from)) out.add(page as ModuleKey);
+  for (const [sec, from] of Object.entries(SECTION_SPLIT)) if (out.has(from)) out.add(sec as ModuleKey);
   if (canEdit) for (const [btn, parent] of Object.entries(BUTTON_SPLIT)) if (out.has(parent)) out.add(btn as ModuleKey);
   return [...out];
 }
@@ -273,7 +324,7 @@ export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.k
 // procurement and engineer start narrow — tune them in Role Permissions.
 // Grants that belong to the Super Admin until the owner ticks them for a role:
 // a role without a stored row would otherwise inherit "everything" below.
-const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses"];
+const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses", "suppliers.orders", "capa.closed"];
 const EVERYTHING_BUT_OWNER_ONLY = ALL_MODULE_KEYS.filter(k => !OWNER_ONLY_BY_DEFAULT.includes(k));
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
   superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
@@ -430,9 +481,16 @@ export async function migrateButtonSplit() {
     const pages = Object.entries(b.pages).map(([page, from]) => `
           UPDATE role_permissions SET modules = modules || ',${page}'
             WHERE (${has("modules", from)}${from.startsWith("reports.") ? ` OR ${has("modules", "reports")}` : ""}) AND NOT ${has("modules", page)};`).join("");
+    // A view split off a section: view where the old was viewed, edit where it was edited (a legacy row with
+    // no edit list edits whatever it opens, so the view grant covers it).
+    const sections = Object.entries(b.sections ?? {}).map(([sec, from]) => `
+          UPDATE role_permissions SET modules = modules || ',${sec}'
+            WHERE ${has("modules", from)} AND NOT ${has("modules", sec)};
+          UPDATE role_permissions SET edit_modules = edit_modules || ',${sec}'
+            WHERE edit_modules IS NOT NULL AND ${has("edit_modules", from)} AND NOT ${has("edit_modules", sec)};`).join("");
     return `
       IF NOT EXISTS (SELECT 1 FROM perm_migrations WHERE name = '${b.name}') THEN
-        IF to_regclass('role_permissions') IS NOT NULL THEN${buttons}${pages}
+        IF to_regclass('role_permissions') IS NOT NULL THEN${buttons}${pages}${sections}
         END IF;
         INSERT INTO perm_migrations (name) VALUES ('${b.name}');
       END IF;`;

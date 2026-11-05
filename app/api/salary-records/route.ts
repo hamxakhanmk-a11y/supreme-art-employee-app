@@ -3,14 +3,24 @@ import { db } from "@/lib/db";
 import { salaryRecords, employees } from "@/lib/schema";
 import { and, eq, desc, asc, inArray } from "drizzle-orm";
 import { logActivity } from "@/lib/activity";
-import { guardWrite, getSession } from "@/lib/auth";
+import { guardWrite, guardView, getSession } from "@/lib/auth";
+import { getPerm } from "@/lib/permissions";
 import { computeSlip, MONTHS, DEFAULT_MIN_WAGE_PKR, DEFAULT_ESSI_CONTRIBUTION } from "@/lib/salary";
 
 // GET /api/salary-records?employeeId=1&month=June&year=2025
 // All filters optional. employeeId scopes to one employee. month+year scopes to one period.
+// Salary and its report see every slip; Employees · Salary sees one employee's (the Salary History tab).
 export async function GET(req: NextRequest) {
+  const guard = await guardView(["salary", "reports.salary", "employees.salary"]);
+  if (guard instanceof NextResponse) return guard;
   const sp = req.nextUrl.searchParams;
   const employeeId = sp.get("employeeId");
+  if (!employeeId && guard.role !== "superadmin") {
+    const perm = await getPerm(guard.role);
+    if (!perm.modules.includes("salary") && !perm.modules.includes("reports.salary")) {
+      return NextResponse.json({ error: "Your role doesn't have access to this section." }, { status: 403 });
+    }
+  }
   const month = sp.get("month");
   const year = sp.get("year");
 

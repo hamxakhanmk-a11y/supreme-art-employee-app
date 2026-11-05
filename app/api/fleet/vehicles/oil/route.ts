@@ -11,7 +11,7 @@ const rowsOf = (res: unknown): any[] => (res as any).rows ?? (res as any);
 
 // GET ?vehicleId= — newest first.
 export async function GET(req: NextRequest) {
-  const guard = await guardView("station.vehicles");
+  const guard = await guardView("station.vehiclelist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
   const reverse = req.nextUrl.searchParams.get("reverse") === "1";
-  const guard = await guardWrite(reverse ? "station.vehicles" : "station.delete");
+  const guard = await guardWrite(reverse ? "station.vehiclelist" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

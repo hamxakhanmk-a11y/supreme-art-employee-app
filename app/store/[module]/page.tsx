@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { roleCanAccess } from "@/lib/permissions";
+import { storeModulesFor } from "@/lib/storeAccess";
 import StoreFrame from "../StoreFrame";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function StoreModulePage({ params }: { params: Promise<{ mo
   if (!user) redirect(`/login?next=/store/${module}`);
   const allowed = await roleCanAccess(user.role, "store");
   if (!allowed) redirect("/");
+  if (!(await storeModulesFor(user.role)).includes(module)) redirect("/store");
   // The store is a static file in public/, so a browser can go on serving the
   // copy it already has — an iframe especially — and a deploy that changed it
   // looks like a deploy that did nothing. Stamping the commit into the URL

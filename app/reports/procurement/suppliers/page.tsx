@@ -5,17 +5,16 @@
 // product + supplier, which is kept separately (supplier_product_rates) as
 // reference only.
 //
-// Two levels of access:
-//   • Super Admin          — the whole report, including the per-order view
-//                            with each order's gross / tax / net value.
-//   • `suppliers` grant    — the By-product list (product, supplier, contact
-//     (e.g. Engineer)        details, rate, tax %) and Received only. Every
-//                            order's values are never sent to the browser for
-//                            these roles.
-//   • `suppliers` + edit   — the above, plus editing rate / tax % in place.
+// Three views, each its own grant in the Access Register (the Super Admin has all):
+//   • `suppliers`          — By product: product, supplier, contact details, rate, tax %.
+//                            With edit, correcting a rate / tax % in place.
+//   • `suppliers.orders`   — Every order: each PO line with its gross / tax / net value and
+//                            discount. Without it those values are never sent to the browser.
+//   • `suppliers.received` — Received only: what came in on GRRs, valued at the PO rate.
+// Any one of them opens the page.
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
+import { grantsOf } from "@/lib/pageGuard";
 import { db } from "@/lib/db";
 import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
 import { ensureProcurementTables, parseItems, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
@@ -27,9 +26,12 @@ export const dynamic = "force-dynamic";
 export default async function SupplierDirectoryPage() {
   const user = await getSession();
   if (!user) redirect("/login?next=/reports/procurement/suppliers");
-  const isOwner = user.role === "superadmin";
-  if (!isOwner && !(await roleCanAccess(user.role, "suppliers"))) redirect("/?denied=suppliers");
-  const canEditRates = isOwner || await roleCanEdit(user.role, "suppliers");
+  const g = await grantsOf();
+  const views = { byProduct: g.see("suppliers"), orders: g.see("suppliers.orders"), received: g.see("suppliers.received") };
+  if (!views.byProduct && !views.orders && !views.received) redirect("/?denied=suppliers");
+  const canEditRates = g.edit("suppliers");
+  // Order values only go to the browser for a role with Every order.
+  const isOwner = views.orders;
 
   await ensureProcurementTables();
   const pos = await db.select({
@@ -63,7 +65,8 @@ export default async function SupplierDirectoryPage() {
   // product" views. poId is the actual purchase_orders.id — that's what the
   // PO detail route needs, not the display poNo.
   const rows: DirectoryRow[] = [];
-  for (const po of pos) {
+  // The product rows feed By product and Every order; Received only is built separately below.
+  for (const po of views.byProduct || views.orders ? pos : []) {
     const items = parseItems<PoItem>(po.items);
     const wholeFactor = poWholeFactor(items, po.discount);
     const receipts = new Map(computePoReceipts(items, grnItemsByPo.get(po.id) ?? []).map(r => [r.srNo, r]));
@@ -122,7 +125,7 @@ export default async function SupplierDirectoryPage() {
   // rejected GRRs left out). All dates are worked out here; the page narrows them to its From–To.
   const received: ReceivedRow[] = [];
   let receivedNotCounted = 0;
-  {
+  if (views.received) {
     const lines: ExpenseLine[] = [], skipped: SkippedLine[] = [];
     procurementExpenses(grnRows, pos.map(p => ({ ...p, supplierName: p.supplierName })), await loadChecklist(), "0000-01-01", "9999-12-31", lines, skipped);
     receivedNotCounted = skipped.length;
@@ -152,7 +155,7 @@ export default async function SupplierDirectoryPage() {
       rateNotes={rateNotes}
       received={received}
       receivedNotCounted={receivedNotCounted}
-      byProductOnly={!isOwner}
+      views={views}
       canEditRates={canEditRates}
     />
   );

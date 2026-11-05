@@ -33,3 +33,14 @@ export async function isViewOnly(moduleKey: ModuleKey): Promise<boolean> {
   const perm = await getPerm(user.role);
   return !(perm.editModules ?? []).includes(moduleKey);
 }
+
+// What the signed-in user may see and edit, for a page that shows some parts only to some roles
+// (a tab, a view, a column). The Super Admin sees and edits everything.
+export async function grantsOf(): Promise<{ see: (k: ModuleKey) => boolean; edit: (k: ModuleKey) => boolean }> {
+  const user = await getSession();
+  if (!user) return { see: () => false, edit: () => false };
+  if (user.role === "superadmin") return { see: () => true, edit: () => true };
+  const perm = await getPerm(user.role);
+  const edits = perm.editModules ?? [];
+  return { see: k => perm.modules.includes(k), edit: k => perm.modules.includes(k) && edits.includes(k) };
+}

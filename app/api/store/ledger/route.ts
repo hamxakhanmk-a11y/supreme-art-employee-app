@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema, roundQty } from "@/lib/store";
+import { storePartsDenied } from "@/lib/storeAccess";
 
 // The "does not add up" box on the Store pages: a part whose quantity on hand
 // differs from what its stock movements add up to. Two things can be done about
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
     const action = String(b?.action || "");
     const partId = parseInt(b?.partId);
     if (!partId) return NextResponse.json({ error: "partId is required" }, { status: 400 });
+    const no = await storePartsDenied(guard, [partId]);
+    if (no) return no;
 
     const [part] = rowsOf(await db.execute(sql`SELECT id, sku, name, unit, module FROM parts WHERE id = ${partId}`));
     if (!part) return NextResponse.json({ error: "Part not found" }, { status: 404 });

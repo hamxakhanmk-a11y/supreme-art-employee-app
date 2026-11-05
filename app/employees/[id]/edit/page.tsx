@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import EmployeeForm from "@/components/EmployeeForm";
+import { employeeFieldAccess, maskEmployee } from "@/lib/employeeAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,10 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
     db.select().from(experienceRecords).where(eq(experienceRecords.employeeId, empId)),
     db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
   ]);
-  const emp = empArr[0];
-  if (!emp) notFound();
+  if (!empArr[0]) notFound();
+  // Salary / bank fields only for a role that may change them; the form leaves them out otherwise.
+  const access = await employeeFieldAccess();
+  const emp = maskEmployee(empArr[0], { salary: access.editSalary, banking: access.editBanking });
 
   const initial: any = {
     ...emp,
@@ -54,7 +57,7 @@ export default async function EditEmployee({ params }: { params: Promise<{ id: s
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: "6px 0 4px" }}>Edit Employee</h1>
         <p style={{ color: "#888", fontSize: 13 }}>{emp.employeeId} • {emp.firstName} {emp.lastName}</p>
       </div>
-      <EmployeeForm mode="edit" employeeId={empId} initial={initial} />
+      <EmployeeForm mode="edit" employeeId={empId} initial={initial} hide={{ salary: !access.editSalary, banking: !access.editBanking }} />
     </div>
   );
 }

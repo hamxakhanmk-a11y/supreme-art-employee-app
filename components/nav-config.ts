@@ -21,7 +21,12 @@ export const REPORT_SUBKEYS = [
   "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
   "reports.procurement", "reports.station", "reports.activity", "reports.overtime", "reports.expenses",
 ];
-export const STATION_SUBKEYS = ["station", "station.vehicles", "station.cards", "station.monthly", "station.out", "station.visits"];
+export const STATION_SUBKEYS = [
+  "station", "station.vehicles", "station.vehiclelist", "station.cards", "station.cardlist", "station.topups",
+  "station.monthly", "station.out", "station.outreport", "station.visits",
+];
+// Any one of a page's views opens it.
+export const SUPPLIER_KEYS = ["suppliers", "suppliers.orders", "suppliers.received"];
 export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.receive", "purchase.delete", "purchase.hr-approve"];
 
 export const MODULES_BASE: ModuleDef[] = [
@@ -69,7 +74,7 @@ export interface SubNavItem {
   href: string;
   label: string;
   variant?: "report";   // rendered as a distinct pill (see Sidebar / globals.css)
-  needs?: string;        // module key the item requires (else it's filtered out)
+  needs?: string | string[]; // module key the item requires — any one of a list (else it's filtered out)
   superadminOnly?: boolean; // hidden from everyone except the owner
 }
 
@@ -79,7 +84,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
       return [
         { href: "/", label: "Dashboard" },
         { href: "/employees", label: "Employees" },
-        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: "suppliers" },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: SUPPLIER_KEYS },
         { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", needs: "reports.expenses" },
       ];
     case "attendance":
@@ -129,10 +134,10 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
     case "station":
       return [
         { href: "/station", label: "Terminal", needs: "station" },
-        { href: "/station/out", label: "Who's Out", needs: "station.out" },
+        { href: "/station/out", label: "Who's Out", needs: ["station.out", "station.outreport"] },
         { href: "/station/visits", label: "Visits Report", needs: "station.visits" },
-        { href: "/station/vehicles", label: "Vehicles", needs: "station.vehicles" },
-        { href: "/station/pso", label: "PSO Cards", needs: "station.cards" },
+        { href: "/station/vehicles", label: "Vehicles", needs: ["station.vehicles", "station.vehiclelist"] },
+        { href: "/station/pso", label: "PSO Cards", needs: ["station.cards", "station.cardlist", "station.topups"] },
         { href: "/station/monthly", label: "Monthly Report", needs: "station.monthly" },
       ];
     case "procurement":
@@ -141,7 +146,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/procurement/po", label: "Purchase Order" },
         { href: "/procurement/grn", label: "GRR" },
         { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
-        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: "suppliers" },
+        { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: SUPPLIER_KEYS },
       ];
     case "store":
       // Store has its own overview landing + iframe-owned sidebar for the

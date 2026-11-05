@@ -29,7 +29,7 @@ const shape = (t: typeof psoCardTopups.$inferSelect) => ({
 // GET ?cardId= — one card's history, newest first. Without cardId: every card's, each with its card
 // number and vehicle (the Top-ups tab).
 export async function GET(req: NextRequest) {
-  const guard = await guardView("station.cards");
+  const guard = await guardView("station.topups");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
 // POST { cardId, kind, date, amount, refNo? }
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("station.cards");
+  const guard = await guardWrite("station.topups");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
 // PUT { id, date?, amount?, refNo? } — fix an entry.
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station.cards");
+  const guard = await guardWrite("station.topups");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -138,7 +138,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   // ?reverse=1: a user who can edit this page takes a wrong entry out (Station · Delete is not needed); logged as a reversal.
   const reverse = req.nextUrl.searchParams.get("reverse") === "1";
-  const guard = await guardWrite(reverse ? "station.cards" : "station.delete");
+  const guard = await guardWrite(reverse ? "station.topups" : "station.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

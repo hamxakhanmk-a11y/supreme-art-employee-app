@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { roleCanAccess } from "@/lib/permissions";
+import { storeModulesFor } from "@/lib/storeAccess";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Parts Store — Supreme Art" };
@@ -11,6 +12,10 @@ export default async function StoreLandingPage() {
   if (!user) redirect("/login?next=/store");
   const allowed = await roleCanAccess(user.role, "store");
   if (!allowed) redirect("/");
+  // Store · Machinery / Store · Consumables: only the sections this role has; with one, straight in.
+  const mods = await storeModulesFor(user.role);
+  if (mods.length === 0) redirect("/?denied=store");
+  if (mods.length === 1) redirect(`/store/${mods[0]}`);
 
   return (
     <div className="fade-up">

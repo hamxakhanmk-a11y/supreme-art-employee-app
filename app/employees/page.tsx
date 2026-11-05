@@ -3,12 +3,15 @@ import { employees } from "@/lib/schema";
 import { desc } from "drizzle-orm";
 import { exitReasonsMap } from "@/lib/employeesServer";
 import EmployeesList from "./EmployeesList";
+import { employeeFieldAccess, maskEmployee } from "@/lib/employeeAccess";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
   let rows: any[] = [];
   let dbError: string | null = null;
+  // The Excel export carries salary / bank columns only for a role with Employees · Salary / Banking.
+  const access = await employeeFieldAccess();
   try {
     const [result, reasons] = await Promise.all([
       db.select().from(employees).orderBy(desc(employees.createdAt)),
@@ -17,7 +20,7 @@ export default async function EmployeesPage() {
     // Full row (every column) so the directory's Excel export can include
     // everything, not just the fields the compact table itself displays.
     rows = result.map((r) => ({
-      ...r,
+      ...maskEmployee(r, access),
       exitReason: reasons.get(r.id) ?? null,
     }));
   } catch (e: any) {
@@ -31,7 +34,7 @@ export default async function EmployeesPage() {
           <strong>Database not ready:</strong> {dbError}
         </div>
       )}
-      <EmployeesList rows={rows} />
+      <EmployeesList rows={rows} hide={{ salary: !access.salary, banking: !access.banking }} />
     </div>
   );
 }

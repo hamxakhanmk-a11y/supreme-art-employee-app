@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { inArray } from "drizzle-orm";
 import EmployeePrintPage from "@/components/EmployeePrintPage";
+import { employeeFieldAccess, maskEmployee } from "@/lib/employeeAccess";
 import BulkPrintControls from "./BulkPrintControls";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ export default async function PrintAllEmployees({ searchParams }: { searchParams
 
   // Keep the order the directory had them in (the ids list), not whatever
   // order the DB happens to return.
-  const byId = new Map(rows.map(r => [r.id, r]));
+  const access = await employeeFieldAccess();
+  const byId = new Map(rows.map(r => [r.id, maskEmployee(r, access)]));
   const ordered = ids.map(id => byId.get(id)).filter((r): r is typeof rows[number] => !!r);
 
   return (
@@ -48,6 +50,7 @@ export default async function PrintAllEmployees({ searchParams }: { searchParams
             <EmployeePrintPage
               data={{
                 ...emp,
+                hideSalary: !access.salary, hideBanking: !access.banking,
                 education: edu.filter(e => e.employeeId === emp.id),
                 experience: exp.filter(e => e.employeeId === emp.id),
                 otherDocuments: others.filter(d => d.employeeId === emp.id).map(d => ({

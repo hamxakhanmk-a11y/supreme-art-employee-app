@@ -3,6 +3,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { capaReports } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
+import { roleCanEdit } from "@/lib/permissions";
+
+// A closed CAPA is a signed-off record: reopening, changing or deleting it needs CAPA · Change Closed.
+const mayChangeClosed = async (role: string) => role === "superadmin" || await roleCanEdit(role, "capa.closed");
 import { logActivity } from "@/lib/activity";
 import { ensureCapaTable } from "@/lib/capa";
 
@@ -30,11 +34,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const [existing] = await db.select().from(capaReports).where(eq(capaReports.id, capaId));
   if (!existing) return NextResponse.json({ error: "CAPA not found" }, { status: 404 });
 
-  // A closed CAPA is locked — only a superadmin can reopen or amend it, so the
-  // signed-off record can't be quietly rewritten.
-  if (existing.status === "closed" && guard.role !== "superadmin") {
+  // A closed CAPA is locked, so the signed-off record can't be quietly rewritten.
+  if (existing.status === "closed" && !(await mayChangeClosed(guard.role))) {
     return NextResponse.json(
-      { error: "This CAPA is closed and locked. Only a Super Admin can edit it." },
+      { error: "This CAPA is closed and locked. Your role can't change a closed CAPA." },
       { status: 403 },
     );
   }
@@ -66,9 +69,9 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const capaId = parseInt(id);
   const [existing] = await db.select().from(capaReports).where(eq(capaReports.id, capaId));
   if (!existing) return NextResponse.json({ error: "CAPA not found" }, { status: 404 });
-  // Deleting a signed-off record is a superadmin-only action.
-  if (existing.status === "closed" && guard.role !== "superadmin") {
-    return NextResponse.json({ error: "Closed CAPAs can only be deleted by a Super Admin." }, { status: 403 });
+  // Deleting a signed-off record also needs CAPA · Change Closed.
+  if (existing.status === "closed" && !(await mayChangeClosed(guard.role))) {
+    return NextResponse.json({ error: "Your role can't delete a closed CAPA." }, { status: 403 });
   }
   await db.delete(capaReports).where(eq(capaReports.id, capaId));
   await logActivity({ user: guard, action: "capa.delete", summary: `deleted CAPA ${existing.capaRef}` });

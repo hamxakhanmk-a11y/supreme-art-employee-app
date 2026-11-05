@@ -3,7 +3,7 @@ import { employees, vehicles } from "@/lib/schema";
 import { asc, eq } from "drizzle-orm";
 import { ensureFleetSchema } from "@/lib/fleet";
 import { logBookMonth } from "@/lib/fleetServer";
-import { isViewOnly } from "@/lib/pageGuard";
+import { grantsOf } from "@/lib/pageGuard";
 import { getSession } from "@/lib/auth";
 import { roleCanEdit } from "@/lib/permissions";
 import { karachiNow } from "@/lib/gateTime";
@@ -22,7 +22,10 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   // The Monthly Report has its own Station tab now; old links land there.
   if (sp.tab === "report") redirect(sp.month ? `/station/monthly?month=${sp.month}` : "/station/monthly");
-  const tab = sp.tab === "vehicles" ? "vehicles" : "logbook";
+  // Each view only for a role with its row (Station · Vehicles · Log Book / All vehicles).
+  const g = await grantsOf();
+  const tabs = { logbook: g.see("station.vehicles"), vehicles: g.see("station.vehiclelist") };
+  const tab = (sp.tab === "vehicles" && tabs.vehicles) || !tabs.logbook ? "vehicles" : "logbook";
 
   const [list, people, drivers, user] = await Promise.all([
     db.select({
@@ -50,14 +53,16 @@ export default async function VehiclesPage({ searchParams }: { searchParams: Pro
     ? asked
     : (list.find(v => v.active)?.id ?? list[0]?.id ?? 0);
 
-  const page = vehicleId ? await logBookMonth(vehicleId, month) : { trips: [], fuel: [], totals: { km: 0, litres: 0, cost: 0, average: null, openTrips: 0 } };
+  const page = vehicleId && tabs.logbook ? await logBookMonth(vehicleId, month) : { trips: [], fuel: [], totals: { km: 0, litres: 0, cost: 0, average: null, openTrips: 0 } };
 
   const canDelete = user?.role === "superadmin" || (user ? await roleCanEdit(user.role, "station.delete") : false);
 
   return (
     <VehiclesTabs
       tab={tab}
-      readOnly={await isViewOnly("station.vehicles")}
+      tabs={tabs}
+      readOnly={!g.edit("station.vehicles")}
+      listReadOnly={!g.edit("station.vehiclelist")}
       canDelete={canDelete}
       vehicles={list}
       people={people.map(p => ({ id: p.id, code: p.code, name: `${p.firstName} ${p.lastName}`.trim(), department: p.department || "" }))}

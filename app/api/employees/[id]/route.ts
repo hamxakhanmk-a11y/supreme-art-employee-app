@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import { guardWrite } from "@/lib/auth";
+import { guardWrite, guardView } from "@/lib/auth";
+import { employeeFieldAccess, maskEmployee, writableEmployeeFields } from "@/lib/employeeAccess";
 import { logActivity } from "@/lib/activity";
 import { setExitReason } from "@/lib/employeesServer";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = await guardView("employees");
+  if (guard instanceof NextResponse) return guard;
   const { id } = await ctx.params;
   const empId = parseInt(id);
   const [emp] = await db.select().from(employees).where(eq(employees.id, empId));
   if (!emp) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(emp);
+  return NextResponse.json(maskEmployee(emp, await employeeFieldAccess()));
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -22,7 +25,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const empId = parseInt(id);
     const body = await req.json();
 
-    const [updated] = await db.update(employees).set({
+    // Salary / bank fields are written only by a role that may change them, so another role's save leaves them as they are.
+    const access = await employeeFieldAccess();
+    const [updated] = await db.update(employees).set(writableEmployeeFields({
       ...(body.employeeId && typeof body.employeeId === "string" && body.employeeId.trim()
         ? { employeeId: body.employeeId.trim() }
         : {}),
@@ -88,7 +93,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
       updatedAt: new Date(),
-    }).where(eq(employees.id, empId)).returning();
+    }, access)).where(eq(employees.id, empId)).returning();
 
     // Replace education
     await db.delete(educationRecords).where(eq(educationRecords.employeeId, empId));

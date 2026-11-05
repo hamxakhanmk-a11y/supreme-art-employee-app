@@ -79,8 +79,8 @@ const empty: EmployeePayload = {
 };
 
 export default function EmployeeForm({
-  initial, mode, employeeId,
-}: { initial?: Partial<EmployeePayload>; mode: "create" | "edit"; employeeId?: number; }) {
+  initial, mode, employeeId, hide = {},
+}: { initial?: Partial<EmployeePayload>; mode: "create" | "edit"; employeeId?: number; hide?: { salary?: boolean; banking?: boolean } }) {
   const router = useRouter();
   const [form, setForm] = useState<EmployeePayload>({ ...empty, ...(initial as any) });
   const [saving, setSaving] = useState(false);
@@ -285,8 +285,8 @@ export default function EmployeeForm({
         )}
       </div>
 
-      {/* === Salary Structure === */}
-      <div className="card">
+      {/* === Salary Structure === (only for a role that may change it) */}
+      {!hide.salary && <div className="card">
         <div className="section-title">Salary Structure</div>
         <div style={{ fontSize: 12, color: "var(--text2)", marginTop: -4, marginBottom: 12 }}>
           These values are reused every month when generating this employee's salary slips.
@@ -320,10 +320,10 @@ export default function EmployeeForm({
           <Field label="Accommodation (PKR)"><input type="number" value={form.accommodation} onChange={e => set("accommodation", e.target.value)} /></Field>
           <Field label="Food (PKR)"><input type="number" value={form.food} onChange={e => set("food", e.target.value)} /></Field>
         </Row>
-      </div>
+      </div>}
 
       {/* === Banking === */}
-      <div className="card">
+      {!hide.banking && <div className="card">
         <div className="section-title">Banking Details</div>
         <Row>
           <Field label="Bank Name"><input value={form.bankName} onChange={e => set("bankName", e.target.value)} /></Field>
@@ -333,7 +333,7 @@ export default function EmployeeForm({
           <Field label="Account Number"><input value={form.accountNumber} onChange={e => set("accountNumber", e.target.value)} /></Field>
           <Field label="IBAN"><input value={form.iban} onChange={e => set("iban", e.target.value)} /></Field>
         </Row>
-      </div>
+      </div>}
 
       {/* === Documents === */}
       <div className="card">

@@ -159,27 +159,30 @@ function taxPctLabel(rate: number | null, taxPct: number): string {
   return `${taxPct}%`;
 }
 
-// byProductOnly — roles granted `suppliers` (Engineer, say) get the
-// By-product list and Received only; the per-order view and its order values
-// stay with the owner. canEditRates — whether the rate / tax % cells on that
-// list can be corrected in place.
+// views — which of the three this role has (Access Register: Supplier Directory · By product / Every
+// order / Received only). Every order carries the order values; without it they are never sent here.
+// canEditRates — whether the rate / tax % cells on the By-product list can be corrected in place.
 export default function SupplierDirectoryClient({
-  rows, rateNotes = {}, byProductOnly = false, canEditRates = false, received = [], receivedNotCounted = 0,
-}: { rows: DirectoryRow[]; rateNotes?: RateNotes; byProductOnly?: boolean; canEditRates?: boolean; received?: ReceivedRow[]; receivedNotCounted?: number }) {
+  rows, rateNotes = {}, views = { byProduct: true, orders: true, received: true }, canEditRates = false, received = [], receivedNotCounted = 0,
+}: { rows: DirectoryRow[]; rateNotes?: RateNotes; views?: { byProduct: boolean; orders: boolean; received: boolean }; canEditRates?: boolean; received?: ReceivedRow[]; receivedNotCounted?: number }) {
+  // Without Every order, Received only is switched on from By product (as it always was for those roles).
+  const byProductOnly = !views.orders;
+  // Only Received only: that list is the page.
+  const receivedForced = views.received && !views.orders && !views.byProduct;
   const router = useRouter();
   const [q, setQ] = usePageState("q", "");
   const [supplierFilter, setSupplierFilter] = usePageState("supplier", "");
   const [fromDate, setFromDate] = usePageState("from", "");
   const [toDate, setToDate] = usePageState("to", "");
-  const [view, setView] = usePageState<ViewMode>("view", byProductOnly ? "byProduct" : "orders");
+  const [view, setView] = usePageState<ViewMode>("view", views.orders ? "orders" : "byProduct");
   // Every order → what arrived instead: each GRR line in the From–To by its GRR date (see ReceivedRow).
   const [receivedOnly, setReceivedOnly] = usePageState("receivedOnly", false);
   // Restricted roles are pinned to By-product no matter what `view` holds —
   // hiding the tabs alone would leave the per-order view one stray setView
   // away. Everything that branches on the view reads this, not `view`.
-  const activeView: ViewMode = byProductOnly ? "byProduct" : view;
+  const activeView: ViewMode = !views.orders ? "byProduct" : !views.byProduct ? "orders" : view;
   // Each view has its own sort choices; the first of each is the order that view has always had.
-  const [sort, setSort] = usePageState<DirSort>("sort", byProductOnly ? "az" : "date");
+  const [sort, setSort] = usePageState<DirSort>("sort", byProductOnly && !receivedForced ? "az" : "date");
 
   // ---- Inline rate / tax editing (By product view) ----
   // Saves a note against this product + supplier and nothing more: the PO the
@@ -243,7 +246,7 @@ export default function SupplierDirectoryClient({
   }).sort((a, b) => (RECEIVED_SORTS[sort]?.(a, b) ?? 0) || b.date.localeCompare(a.date)), [received, q, supplierFilter, fromDate, toDate, sort]);
   const receivedTotal = useMemo(() => filteredReceived.reduce((s, r) => s + r.net, 0), [filteredReceived]);
   // The owner switches Every order to it; roles without Every order switch By product to it.
-  const showReceived = receivedOnly && (activeView === "orders" || byProductOnly);
+  const showReceived = views.received && (receivedForced || (receivedOnly && (activeView === "orders" || byProductOnly)));
 
   const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
     gross: s.gross + (r.gross ?? 0),
@@ -441,13 +444,13 @@ export default function SupplierDirectoryClient({
             {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        {!byProductOnly && (
+        {views.orders && views.byProduct && (
           <div className="tabs" style={{ flexShrink: 0 }}>
             <button className={`tab ${view === "orders" ? "active" : ""}`} onClick={() => { setView("orders"); setSort("date"); }}>Every order</button>
             <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => { setView("byProduct"); setSort("az"); }}>By product</button>
           </div>
         )}
-        {(activeView === "orders" || byProductOnly) && (
+        {views.received && !receivedForced && (activeView === "orders" || byProductOnly) && (
           <button type="button" aria-pressed={receivedOnly}
             onClick={() => {
               const next = !receivedOnly;

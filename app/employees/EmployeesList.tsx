@@ -46,7 +46,7 @@ const EMP_SORTS: Record<EmpSort, (a: Row, b: Row) => number> = {
   joined: (a, b) => timeOf(b.joiningDate) - timeOf(a.joiningDate),
 };
 
-export default function EmployeesList({ rows }: { rows: Row[] }) {
+export default function EmployeesList({ rows, hide = {} }: { rows: Row[]; hide?: { salary?: boolean; banking?: boolean } }) {
   const router = useRouter();
   const canEdit = useCanEdit("employees");
   const today = new Date().toISOString().slice(0, 10);
@@ -133,7 +133,7 @@ export default function EmployeesList({ rows }: { rows: Row[] }) {
           <SortBy options={EMP_SORT_OPTIONS} value={sort} onChange={setSort} />
         </div>
         <div style={{ marginLeft: "auto", flexShrink: 0 }}>
-          <EmployeesToolbar rows={filtered} />
+          <EmployeesToolbar rows={filtered} hide={hide} />
         </div>
       </div>
 

@@ -1,7 +1,7 @@
-import { requireModule } from "@/lib/pageGuard";
+import { requireAnyModule } from "@/lib/pageGuard";
 
-// Vehicles — Log Book and the vehicle list — its own permission row.
+// Vehicles — the Log Book and All vehicles, each its own permission row; either opens the page.
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  await requireModule("station.vehicles");
+  await requireAnyModule(["station.vehicles", "station.vehiclelist"], "station.vehicles");
   return <>{children}</>;
 }

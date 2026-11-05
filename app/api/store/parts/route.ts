@@ -5,6 +5,7 @@ import { and, asc, eq, isNull, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema, roundQty } from "@/lib/store";
+import { storeModuleDenied, storePartsDenied } from "@/lib/storeAccess";
 
 const MODULES = new Set(["machinery", "consumables"]);
 function normalizeModule(m: string | null | undefined): "machinery" | "consumables" {
@@ -18,6 +19,8 @@ export async function GET(req: NextRequest) {
   if (guard instanceof NextResponse) return guard;
   try {
     const mod = normalizeModule(req.nextUrl.searchParams.get("module"));
+    const no = await storeModuleDenied(guard, mod);
+    if (no) return no;
     const rows = await db.select({
       id: storeParts.id,
       sku: storeParts.sku,
@@ -49,6 +52,8 @@ export async function POST(req: NextRequest) {
   try {
     const b = await req.json().catch(() => ({}));
     const mod = normalizeModule(b?.module);
+    const no = await storeModuleDenied(guard, mod);
+    if (no) return no;
     const name = String(b?.name || "").trim();
     const category = String(b?.category || "").trim();
     if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
@@ -121,6 +126,8 @@ export async function PUT(req: NextRequest) {
     const b = await req.json().catch(() => ({}));
     const id = Number(b?.id);
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const no = await storePartsDenied(guard, [id]);
+    if (no) return no;
     const name = String(b?.name || "").trim();
     if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
 

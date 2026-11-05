@@ -41,23 +41,28 @@ function widthFor(h: string): number {
   return 15;
 }
 const COL_WIDTHS = HEADERS.map(widthFor);
+// The salary and banking columns, left out for a role without Employees · Salary / Banking.
+const SALARY_COLS = new Set(HEADERS.slice(HEADERS.indexOf("Basic Salary (PKR)"), HEADERS.indexOf("Bank Name")));
+const BANK_COLS = new Set(["Bank Name", "Account Title", "Account Number", "IBAN"]);
 
-export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
+export default function EmployeesToolbar({ rows, hide = {} }: { rows: Row[]; hide?: { salary?: boolean; banking?: boolean } }) {
   const canAdd = useCanEdit("employees.add");
   const exportXlsx = () => {
+    const keep = HEADERS.map(h => !(hide.salary && SALARY_COLS.has(h)) && !(hide.banking && BANK_COLS.has(h)));
+    const pick = <T,>(list: T[]) => list.filter((_, i) => keep[i]);
     downloadRegisterXlsx({
       filename: "employees",
       sheetName: "Employees",
       title: `Employee Directory — ${rows.length} record${rows.length === 1 ? "" : "s"}`,
-      headers: HEADERS,
-      colWidths: COL_WIDTHS,
+      headers: pick(HEADERS),
+      colWidths: pick(COL_WIDTHS),
       freezeCols: 1,
       // CNIC/phone/account numbers etc. are stored as strings on purpose —
       // passed straight through (not run through Number()) so ExcelJS writes
       // them as text cells. That's what stops Excel from "helpfully"
       // reinterpreting a 13-digit CNIC as a number and mangling it into
       // scientific notation.
-      rows: rows.map(r => [
+      rows: rows.map(r => pick([
         r.employeeId,
         r.firstName, r.lastName, r.fatherName || "", r.dob || "", r.gender || "", r.maritalStatus || "", r.nationality || "", r.religion || "", r.bloodGroup || "",
         r.cnic || "", r.cnicExpiry || "", r.passportNumber || "", r.passportExpiry || "", r.ssiNumber || "", r.ssiExpiry || "", r.ubiNumber || "", r.ubiExpiry || "",
@@ -71,7 +76,7 @@ export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
         r.minimumWage ?? "", r.essiContribution ?? "",
         r.bankName || "", r.accountTitle || "", r.accountNumber || "", r.iban || "",
         r.notes || "",
-      ]),
+      ])),
     });
   };
 

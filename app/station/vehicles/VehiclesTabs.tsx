@@ -11,8 +11,8 @@ type LogBookProps = React.ComponentProps<typeof LogBookClient>;
 type VehiclesProps = React.ComponentProps<typeof VehiclesClient>;
 
 // Station → Vehicles: the Log Book and the list of vehicles, one switch apart.
-export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: LogBookProps & {
-  tab: Tab; drivers: VehiclesProps["drivers"];
+export default function VehiclesTabs({ tab: initialTab, tabs: allowed, listReadOnly, drivers, ...logBook }: LogBookProps & {
+  tab: Tab; tabs: { logbook: boolean; vehicles: boolean }; listReadOnly: boolean; drivers: VehiclesProps["drivers"];
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -40,8 +40,8 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
     <div className="fade-up">
       <div className="no-print page-head">
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
-          { key: "logbook", label: "📖 Log Book" },
-          { key: "vehicles", label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined },
+          ...(allowed.logbook ? [{ key: "logbook" as Tab, label: "📖 Log Book" }] : []),
+          ...(allowed.vehicles ? [{ key: "vehicles" as Tab, label: "🚐 All vehicles", count: logBook.vehicles.filter(v => v.active).length || undefined }] : []),
         ]} />
         <span className="spacer" />
         {/* Which page of the book: vehicle and month, at the right of the title
@@ -62,8 +62,8 @@ export default function VehiclesTabs({ tab: initialTab, drivers, ...logBook }: L
       </div>
 
       {tab === "logbook"
-        ? <LogBookClient {...logBook} filtersInHead onAddVehicle={() => showTab("vehicles")} />
-        : <VehiclesClient drivers={drivers} readOnly={logBook.readOnly} canDelete={logBook.canDelete} />}
+        ? <LogBookClient {...logBook} filtersInHead onAddVehicle={allowed.vehicles && !listReadOnly ? () => showTab("vehicles") : undefined} />
+        : <VehiclesClient drivers={drivers} readOnly={listReadOnly} canDelete={logBook.canDelete} />}
     </div>
   );
 }

@@ -76,7 +76,7 @@ function normalizeType(t: unknown): string {
 // GET /api/fleet/vehicles[?active=1] — the registry, with each vehicle's
 // current driver if it's out right now.
 export async function GET(req: NextRequest) {
-  const guard = await guardView("station.vehicles");
+  const guard = await guardView("station.vehiclelist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("station.vehicles");
+  const guard = await guardWrite("station.vehiclelist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station.vehicles");
+  const guard = await guardWrite("station.vehiclelist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

@@ -4,6 +4,7 @@ import { storeCategories, storeParts } from "@/lib/schema";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
+import { storeModuleDenied } from "@/lib/storeAccess";
 
 function normalizeModule(m: string | null | undefined): "machinery" | "consumables" {
   return m === "consumables" ? "consumables" : "machinery";
@@ -15,6 +16,8 @@ export async function GET(req: NextRequest) {
   if (guard instanceof NextResponse) return guard;
   try {
     const mod = normalizeModule(req.nextUrl.searchParams.get("module"));
+    const no = await storeModuleDenied(guard, mod);
+    if (no) return no;
     const rows = await db.select({ name: storeCategories.name })
       .from(storeCategories)
       .where(eq(storeCategories.module, mod))
@@ -31,6 +34,8 @@ export async function POST(req: NextRequest) {
   try {
     const b = await req.json().catch(() => ({}));
     const mod = normalizeModule(b?.module);
+    const no = await storeModuleDenied(guard, mod);
+    if (no) return no;
     const name = String(b?.name || "").trim();
     if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
     // Use raw SQL for the composite (module,name) ON CONFLICT since Drizzle
@@ -51,6 +56,8 @@ export async function DELETE(req: NextRequest) {
   if (guard instanceof NextResponse) return guard;
   const name = req.nextUrl.searchParams.get("name");
   const mod = normalizeModule(req.nextUrl.searchParams.get("module"));
+  const no = await storeModuleDenied(guard, mod);
+  if (no) return no;
   if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
   try {
     const used = await db.select({ id: storeParts.id }).from(storeParts)

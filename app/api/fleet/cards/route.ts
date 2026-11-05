@@ -17,7 +17,8 @@ function normalizeStatus(v: unknown): string {
 // GET /api/fleet/cards — every card, with the vehicle it belongs to and
 // whether it's out with someone right now.
 export async function GET() {
-  const guard = await guardView("station.cards");
+  // The card list is read by every PSO Cards view.
+  const guard = await guardView(["station.cards", "station.cardlist", "station.topups"]);
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -50,7 +51,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("station.cards");
+  const guard = await guardWrite("station.cardlist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station.cards");
+  const guard = await guardWrite("station.cardlist");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureFleetSchema();

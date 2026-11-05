@@ -8,6 +8,7 @@ import EmployeeProfileTabs from "@/components/EmployeeProfileTabs";
 import DeleteEmployeeButton from "@/components/DeleteEmployeeButton";
 import ProfileExportButton from "@/components/ProfileExportButton";
 import { isViewOnly } from "@/lib/pageGuard";
+import { employeeFieldAccess, maskEmployee } from "@/lib/employeeAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,11 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
     db.select().from(otherDocuments).where(eq(otherDocuments.employeeId, empId)),
     exitReasonFor(empId),
   ]);
-  const emp = empArr[0];
-  if (!emp) notFound();
+  if (!empArr[0]) notFound();
+  // Salary and bank details only for a role with Employees · Salary / Banking.
+  const access = await employeeFieldAccess();
+  const emp = maskEmployee(empArr[0], access);
+  const hide = { salary: !access.salary, banking: !access.banking };
 
   return (
     <div>
@@ -69,14 +73,14 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
           <Link href={`/employees/${emp.id}/attendance`} className="btn">📋 Attendance</Link>
           <Link href={`/employees/${emp.id}/leave`} className="btn">📅 Leaves</Link>
           <Link href={`/employees/${emp.id}/timeline`} className="btn">🕘 Timeline</Link>
-          <ProfileExportButton employee={emp} />
+          <ProfileExportButton employee={emp} hide={hide} />
           <Link href={`/employees/${emp.id}/print`} className="btn btn-print">🖨 Print Profile</Link>
           {!(await isViewOnly("employees")) && <Link href={`/employees/${emp.id}/edit`} className="btn">✏️ Edit</Link>}
           <DeleteEmployeeButton id={emp.id} />
         </div>
       </div>
 
-      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} otherDocuments={others} />
+      <EmployeeProfileTabs employee={emp} education={edu} experience={exp} otherDocuments={others} hide={hide} />
     </div>
   );
 }

@@ -8,11 +8,12 @@ type Exp = { id: number; company: string; position: string | null; fromDate: str
 type OtherDoc = { id: number; label: string; url: string; category?: string | null; formDate?: string | null };
 
 export default function EmployeeProfileTabs({
-  employee, education, experience, otherDocuments = [],
-}: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; }) {
+  employee, education, experience, otherDocuments = [], hide = {},
+}: { employee: any; education: Edu[]; experience: Exp[]; otherDocuments?: OtherDoc[]; hide?: { salary?: boolean; banking?: boolean } }) {
   const [tab, setTab] = usePageState<"personal" | "job" | "contact" | "documents" | "education" | "experience" | "banking" | "salary" | "salaryHistory">("tab", "personal");
 
-  const tabs: { key: typeof tab; label: string }[] = [
+  // Salary, Salary History and Banking only for a role with Employees · Salary / Banking.
+  const tabs = ([
     { key: "personal", label: "Personal" },
     { key: "contact", label: "Contact" },
     { key: "job", label: "Job" },
@@ -22,13 +23,16 @@ export default function EmployeeProfileTabs({
     { key: "documents", label: "Documents" },
     { key: "education", label: "Education" },
     { key: "experience", label: "Experience" },
-  ];
+  ] as { key: typeof tab; label: string }[]).filter(t =>
+    !(hide.salary && (t.key === "salary" || t.key === "salaryHistory")) && !(hide.banking && t.key === "banking"));
+  // A tab remembered from before it was taken away opens on Personal.
+  const shown = tabs.some(t => t.key === tab) ? tab : "personal";
 
   return (
     <div className="card" style={{ padding: 0 }}>
       <div style={{ display: "flex", gap: 6, padding: "12px 14px", overflowX: "auto", background: "var(--bg2)", borderBottom: "1px solid var(--border)", borderTopLeftRadius: "var(--radius)", borderTopRightRadius: "var(--radius)" }}>
         {tabs.map(t => {
-          const active = tab === t.key;
+          const active = shown === t.key;
           return (
             <button
               key={t.key}
@@ -55,7 +59,7 @@ export default function EmployeeProfileTabs({
       </div>
 
       <div style={{ padding: "1.25rem" }}>
-        {tab === "personal" && <Grid items={[
+        {shown === "personal" && <Grid items={[
           ["First Name", employee.firstName],
           ["Last Name", employee.lastName],
           ["Father's Name", employee.fatherName],
@@ -73,7 +77,7 @@ export default function EmployeeProfileTabs({
           ["ESSI No", employee.ubiNumber],
         ]} />}
 
-        {tab === "contact" && <Grid items={[
+        {shown === "contact" && <Grid items={[
           ["Phone", employee.phone],
           ["Alternate Phone", employee.altPhone],
           ["Email", employee.email],
@@ -85,7 +89,7 @@ export default function EmployeeProfileTabs({
           ["Emergency Phone", employee.emergencyPhone],
         ]} />}
 
-        {tab === "job" && <Grid items={[
+        {shown === "job" && <Grid items={[
           ["Employee ID", employee.employeeId],
           ["Designation", employee.designation],
           ["Department", employee.department],
@@ -100,7 +104,7 @@ export default function EmployeeProfileTabs({
             : []),
         ]} />}
 
-        {tab === "salary" && (() => {
+        {shown === "salary" && (() => {
           const basic = Number(employee.basicSalary || 0);
           const conv = Number(employee.conveyance || 0);
           const accom = Number(employee.accommodation || 0);
@@ -124,14 +128,14 @@ export default function EmployeeProfileTabs({
           ]} />;
         })()}
 
-        {tab === "banking" && <Grid items={[
+        {shown === "banking" && <Grid items={[
           ["Bank Name", employee.bankName],
           ["Account Title", employee.accountTitle],
           ["Account Number", employee.accountNumber],
           ["IBAN", employee.iban],
         ]} />}
 
-        {tab === "documents" && (() => {
+        {shown === "documents" && (() => {
           const filed = otherDocuments.filter(d => d.category === "leave-form" || d.category === "half-day-form");
           const misc = otherDocuments.filter(d => !d.category || d.category === "misc");
           return (
@@ -174,7 +178,7 @@ export default function EmployeeProfileTabs({
           );
         })()}
 
-        {tab === "education" && (
+        {shown === "education" && (
           education.length === 0 ? <div className="empty">No education records.</div> :
           <table>
             <thead><tr><th>Degree</th><th>Institution</th><th>Year</th><th>Grade</th><th>Certificate</th></tr></thead>
@@ -192,7 +196,7 @@ export default function EmployeeProfileTabs({
           </table>
         )}
 
-        {tab === "experience" && (
+        {shown === "experience" && (
           experience.length === 0 ? <div className="empty">No experience records.</div> :
           <table>
             <thead><tr><th>Company</th><th>Position</th><th>From</th><th>To</th><th>Description</th></tr></thead>
@@ -210,7 +214,7 @@ export default function EmployeeProfileTabs({
           </table>
         )}
 
-        {tab === "salaryHistory" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
+        {shown === "salaryHistory" && <SalaryHistory employeeDbId={employee.id} basicSalary={employee.basicSalary} />}
       </div>
     </div>
   );

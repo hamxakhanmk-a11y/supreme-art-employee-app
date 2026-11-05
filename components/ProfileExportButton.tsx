@@ -4,8 +4,10 @@ import { downloadRegisterXlsx } from "@/lib/xlsx";
 // Section-header rows (blank value) act as a visual divider — same grouping
 // as the print form and the profile tabs.
 const section = (title: string): [string, string] => [`— ${title} —`, ""];
+// A block of rows that may be left out.
+const block = (rows: [string, unknown][]): [string, unknown][] => rows;
 
-export default function ProfileExportButton({ employee }: { employee: any }) {
+export default function ProfileExportButton({ employee, hide = {} }: { employee: any; hide?: { salary?: boolean; banking?: boolean } }) {
   const exportXlsx = () => {
     const rows: [string, any][] = [
       ["Employee ID", employee.employeeId],
@@ -55,6 +57,7 @@ export default function ProfileExportButton({ employee }: { employee: any }) {
       ["Resignation Date", employee.resignationDate],
       ["KPI Template", employee.kpiTemplate],
 
+      ...(hide.salary ? [] : block([
       section("SALARY"),
       ["Basic Salary (PKR)", employee.basicSalary],
       ["Conveyance (PKR)", employee.conveyance],
@@ -70,12 +73,15 @@ export default function ProfileExportButton({ employee }: { employee: any }) {
       ["EOBI Employer Amount (PKR)", employee.eobiEmployerAmount],
       ["Minimum Wage (PKR)", employee.minimumWage],
       ["ESSI Contribution (PKR)", employee.essiContribution],
+      ])),
 
+      ...(hide.banking ? [] : block([
       section("BANKING"),
       ["Bank Name", employee.bankName],
       ["Account Title", employee.accountTitle],
       ["Account Number", employee.accountNumber],
       ["IBAN", employee.iban],
+      ])),
 
       section("NOTES"),
       ["Notes", employee.notes],

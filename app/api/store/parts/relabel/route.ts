@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema } from "@/lib/store";
+import { storeModuleDenied } from "@/lib/storeAccess";
 
 // Inks & Consumables → "Suppliers & Brands": change the supplier or the brand of
 // several rows at once (move items to another supplier, or rename one everywhere).
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
     const value = String(b?.value ?? "").trim().slice(0, 120);
     const ids: number[] = [...new Set((Array.isArray(b?.ids) ? b.ids : []).map((x: any) => parseInt(x, 10)).filter((n: number) => n > 0))].slice(0, 500) as number[];
     if (!ids.length) return NextResponse.json({ error: "Pick at least one item" }, { status: 400 });
+    // Suppliers & brands belong to the Consumables store.
+    const no = await storeModuleDenied(guard, "consumables");
+    if (no) return no;
 
     const all = rowsOf(await db.execute(sql`
       SELECT id, name, supplier, brand FROM parts WHERE module = 'consumables' AND deleted_at IS NULL`));

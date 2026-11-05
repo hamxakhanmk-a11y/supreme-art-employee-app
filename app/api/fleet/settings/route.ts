@@ -5,7 +5,7 @@ import { setLowBalanceLevel } from "@/lib/cardBalance";
 
 // PUT { lowBalance } — the balance under which a PSO card is flagged.
 export async function PUT(req: NextRequest) {
-  const guard = await guardWrite("station.cards");
+  const guard = await guardWrite("station.cardlist");
   if (guard instanceof NextResponse) return guard;
   try {
     const b = await req.json().catch(() => ({}));

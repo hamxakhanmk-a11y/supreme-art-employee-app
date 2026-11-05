@@ -10,8 +10,14 @@ export const dynamic = "force-dynamic";
 // The gate terminal (Station). A role that has only the office sections —
 // Vehicles, PSO Cards, the Monthly Report — lands on the first of those.
 const OFFICE_PAGES = [
+  ["station.out", "/station/out"],
+  ["station.outreport", "/station/out?tab=report"],
+  ["station.visits", "/station/visits"],
   ["station.vehicles", "/station/vehicles"],
+  ["station.vehiclelist", "/station/vehicles?tab=vehicles"],
   ["station.cards", "/station/pso"],
+  ["station.cardlist", "/station/pso?tab=cards"],
+  ["station.topups", "/station/pso?tab=topups"],
   ["station.monthly", "/station/monthly"],
 ] as const;
 

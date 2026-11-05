@@ -5,6 +5,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema } from "@/lib/store";
+import { storeModuleDenied, storePartsDenied } from "@/lib/storeAccess";
 
 // A deleted part stays in the Trash until someone removes it. Removing it from the Trash hides it for
 // good but keeps its row, so its stock in and out history stays in the reports; a part that never had
@@ -21,6 +22,8 @@ export async function GET(req: NextRequest) {
   try {
     await ensureStoreSchema();
     const mod = normalizeModule(req.nextUrl.searchParams.get("module"));
+    const no = await storeModuleDenied(guard, mod);
+    if (no) return no;
     const all = req.nextUrl.searchParams.get("all") === "1";
     const rows = await db.execute(sql`
       SELECT id, sku, name, category, machine, module, unit, qty, brand, supplier,
@@ -48,6 +51,8 @@ export async function POST(req: NextRequest) {
     const b = await req.json().catch(() => ({}));
     const id = Number(b?.id);
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    const no = await storePartsDenied(guard, [id]);
+    if (no) return no;
     const [target] = await db.select({ sku: storeParts.sku, name: storeParts.name, module: storeParts.module }).from(storeParts)
       .where(and(eq(storeParts.id, id), isNotNull(storeParts.deletedAt)));
     if (!target) return NextResponse.json({ error: "Trashed part not found" }, { status: 404 });
@@ -86,6 +91,8 @@ export async function DELETE(req: NextRequest) {
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });
   try {
     const id = parseInt(idParam);
+    const no = await storePartsDenied(guard, [id]);
+    if (no) return no;
     const [target] = await db.select({ module: storeParts.module }).from(storeParts)
       .where(and(eq(storeParts.id, id), isNotNull(storeParts.deletedAt)));
     await ensureStoreSchema();

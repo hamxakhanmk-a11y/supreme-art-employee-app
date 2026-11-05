@@ -5,12 +5,16 @@ import { desc, eq, inArray, sql } from "drizzle-orm";
 import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema, roundQty, batchBalances, ordinal } from "@/lib/store";
+import { storeModulesFor, storePartsDenied, storeTxnsDenied } from "@/lib/storeAccess";
 
 // GET — every movement, including those of parts that were deleted: their history is kept.
 export async function GET() {
   const guard = await guardAuth();
   if (guard instanceof NextResponse) return guard;
   try {
+    // Only the entries of the store sections this role has.
+    const mods = await storeModulesFor(guard.role);
+    if (!mods.length) return NextResponse.json([]);
     // This SELECT names challan_no, so the column has to exist before the very
     // first READ, not just before the first write. Without this the query
     // throws, loadAll()'s Promise.all rejects, and the whole store — parts,
@@ -33,6 +37,7 @@ export async function GET() {
              t.created_at AS "createdAt"
       FROM transactions t
       JOIN parts p ON p.id = t.part_id
+      WHERE p.module IN (${sql.join(mods.map(m => sql`${m}`), sql`, `)})
       ORDER BY t.id DESC
     `);
     const list = (rows as any).rows ?? (rows as any);
@@ -58,6 +63,8 @@ export async function POST(req: NextRequest) {
     if (!type || !partId || !date) {
       return NextResponse.json({ error: "type, partId, qty and date are required" }, { status: 400 });
     }
+    const no = await storePartsDenied(guard, [partId]);
+    if (no) return no;
     if (!isFinite(qty) || qty <= 0) {
       return NextResponse.json({ error: "Quantity must be greater than zero" }, { status: 400 });
     }
@@ -154,6 +161,8 @@ export async function DELETE(req: NextRequest) {
     // back) are grants of their own.
     const allowed = await guardWrite(historyOnly ? "store.delete" : "store.reverse");
     if (allowed instanceof NextResponse) return allowed;
+    const no = await storeTxnsDenied(guard, ids);
+    if (no) return no;
 
     const txns = await db.select().from(storeTransactions).where(inArray(storeTransactions.id, ids));
     if (!txns.length) return NextResponse.json({ ok: true, deleted: 0 });

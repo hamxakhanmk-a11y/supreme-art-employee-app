@@ -24,8 +24,10 @@ const STATUS: Record<string, { label: string; color: string; bg: string }> = {
 
 const BLANK = { id: 0, sn: "", vehicleId: "" as number | "", status: "in_use", notes: "" };
 
-export default function CardsPanel({ vehicles, readOnly, canDelete = false, onChanged }: {
+// topups: the card's top-up history (tap the balance) and loading money are Station · PSO Cards · Top-ups.
+export default function CardsPanel({ vehicles, readOnly, canDelete = false, onChanged, topups = { see: true, edit: !readOnly } }: {
   vehicles: VehicleRow[]; readOnly: boolean; canDelete?: boolean; onChanged?: () => void;
+  topups?: { see: boolean; edit: boolean };
 }) {
   const [list, setList] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,6 +218,7 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                     {(() => {
                       const bs = balanceState(c.balance, lowLevel);
                       return (
+                        !topups.see ? <span style={{ fontWeight: 700, color: BALANCE_COLOR[bs] }}>{c.balance === null ? "—" : rs(c.balance)}</span> :
                         <button type="button" onClick={() => { setMoney(null); setHistoryFor(historyFor === c.id ? null : c.id); }}
                           title="Show this card's top-ups"
                           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit",
@@ -234,9 +237,9 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                   {!readOnly && (
                     <td>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => openMoney(c)}>
+                        {topups.edit && <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => openMoney(c)}>
                           {c.balance === null ? "Set opening balance" : "⊕ Top up"}
-                        </button>
+                        </button>}
                         <button className="btn btn-sm" disabled={busy} onClick={() => edit(c)}>Edit</button>
                         {/* Deleting is its own grant (Station · Delete). */}
                         {canDelete && <button className="btn btn-sm btn-restricted" disabled={busy} onClick={() => remove(c)}>Delete</button>}
@@ -274,7 +277,7 @@ export default function CardsPanel({ vehicles, readOnly, canDelete = false, onCh
                 {historyFor === c.id && (
                   <tr>
                     <td colSpan={8} style={{ background: "var(--bg2)" }}>
-                      <TopupHistory cardId={c.id} readOnly={readOnly} canDelete={canDelete} onChanged={load} />
+                      <TopupHistory cardId={c.id} readOnly={!topups.edit} canDelete={canDelete} onChanged={load} />
                     </td>
                   </tr>
                 )}

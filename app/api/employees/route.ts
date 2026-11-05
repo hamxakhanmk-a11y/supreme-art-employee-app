@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { employees, educationRecords, experienceRecords, otherDocuments } from "@/lib/schema";
 import { desc } from "drizzle-orm";
-import { guardWrite } from "@/lib/auth";
+import { guardWrite, guardView } from "@/lib/auth";
+import { employeeFieldAccess, maskEmployee, writableEmployeeFields } from "@/lib/employeeAccess";
 import { logActivity } from "@/lib/activity";
 
+// Employees, for the Employees section and for Salary (which works from every employee's pay).
+// Salary and bank details only for a role that may see them.
 export async function GET() {
+  const guard = await guardView(["employees", "salary"]);
+  if (guard instanceof NextResponse) return guard;
+  const access = await employeeFieldAccess({ salaryModule: true });
   const rows = await db.select().from(employees).orderBy(desc(employees.createdAt));
-  return NextResponse.json(rows);
+  return NextResponse.json(rows.map(r => maskEmployee(r, access)));
 }
 
 export async function POST(req: NextRequest) {
@@ -16,7 +22,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const [created] = await db.insert(employees).values({
+    const access = await employeeFieldAccess();
+    const [created] = await db.insert(employees).values(writableEmployeeFields({
       employeeId: body.employeeId,
       firstName: body.firstName,
       lastName: body.lastName,
@@ -79,7 +86,7 @@ export async function POST(req: NextRequest) {
       ssiUrl: body.ssiUrl || null,
       ubiUrl: body.ubiUrl || null,
       notes: body.notes || null,
-    }).returning();
+    }, access)).returning();
 
     // Education
     if (Array.isArray(body.education) && body.education.length) {

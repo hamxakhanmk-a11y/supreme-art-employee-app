@@ -8,8 +8,8 @@ type Tab = "out" | "report";
 
 // Station → Who's Out: who is outside, and the report of every trip, one
 // switch apart — the same way PSO Cards and Vehicles hold their views.
-export default function OutTabs({ tab: initialTab, out, report }: {
-  tab: Tab; out: React.ReactNode; report: React.ReactNode;
+export default function OutTabs({ tab: initialTab, tabs: allowed = { out: true, report: true }, out, report }: {
+  tab: Tab; tabs?: { out: boolean; report: boolean }; out: React.ReactNode; report: React.ReactNode;
 }) {
   const params = useSearchParams();
   // Switching is instant; the address follows so a refresh or Back stays put.
@@ -25,8 +25,8 @@ export default function OutTabs({ tab: initialTab, out, report }: {
     <div className="fade-up">
       <div className="no-print page-head">
         <PageTabs<Tab> value={tab} onChange={showTab} tabs={[
-          { key: "out", label: "🚶 Who's Out" },
-          { key: "report", label: "📋 Report" },
+          ...(allowed.out ? [{ key: "out" as Tab, label: "🚶 Who's Out" }] : []),
+          ...(allowed.report ? [{ key: "report" as Tab, label: "📋 Report" }] : []),
         ]} />
         <span className="spacer" />
         <Link href="/station" className="btn btn-xs">🏭 Terminal</Link>
