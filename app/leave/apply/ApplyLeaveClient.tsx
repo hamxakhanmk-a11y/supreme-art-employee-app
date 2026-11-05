@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useCanEdit } from "@/components/MeProvider";
 
 type Emp = { id: number; employeeId: string; firstName: string; lastName: string; designation: string | null; department: string | null };
 type LT = { id: number; name: string; daysAllowed: number; isPaid: boolean; color: string | null };
@@ -25,6 +26,7 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
 
   // Inline "add new type" UI state
   const [showAddType, setShowAddType] = useState(false);
+  const canTypes = useCanEdit("forms.settings");
   const [newType, setNewType] = useState({ name: "", daysAllowed: "0", isPaid: true });
   const [addingType, setAddingType] = useState(false);
 
@@ -148,13 +150,13 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
           </div>
 
           {/* === Type of Leave + Duration (4 columns on one row) === */}
-          <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: -6 }}>
+          {canTypes && <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: -6 }}>
             <button type="button"
               onClick={() => setShowAddType(v => !v)}
               style={{ background: "transparent", border: "none", color: "var(--brand)", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>
               {showAddType ? "✕ Close" : "＋ Add custom type"}
             </button>
-          </div>
+          </div>}
           <div className="lf-4col" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 0.8fr", gap: 12 }}>
             <Field en="Type of Leave" ur="رخصت کی قسم" compact>
               <select required value={form.leaveTypeId} onChange={e => setForm({ ...form, leaveTypeId: e.target.value })}>
@@ -179,14 +181,14 @@ export default function ApplyLeaveClient({ employees, leaveTypes: initialTypes }
                 <div key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px 4px 10px", borderRadius: 999, background: "var(--bg2)", border: "1px solid var(--border)", fontSize: 11, color: "var(--text2)" }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: t.color || "#185FA5" }} />
                   <span>{t.name}</span>
-                  <button type="button" onClick={() => deleteType(t)} title={`Delete ${t.name}`}
-                    style={{ background: "transparent", border: "none", color: "#aaa", cursor: "pointer", padding: "0 4px", fontSize: 13, lineHeight: 1 }}>🗑</button>
+                  {canTypes && <button type="button" onClick={() => deleteType(t)} title={`Delete ${t.name}`}
+                    style={{ background: "transparent", border: "none", color: "#aaa", cursor: "pointer", padding: "0 4px", fontSize: 13, lineHeight: 1 }}>🗑</button>}
                 </div>
               ))}
             </div>
           )}
 
-          {showAddType && (
+          {showAddType && canTypes && (
             <div className="no-print" style={{ padding: 12, border: "1px dashed var(--border-strong)", borderRadius: 8, background: "var(--bg2)" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)", marginBottom: 8 }}>Add a new leave type</div>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "end" }}>

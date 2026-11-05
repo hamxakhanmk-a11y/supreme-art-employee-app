@@ -5,7 +5,7 @@ import { ViewOnlyNotice } from "@/components/MeProvider";
 export const dynamic = "force-dynamic";
 
 export default async function LeaveSettingsPage() {
-  if (await isViewOnly("forms")) return <ViewOnlyNotice />;
+  if (await isViewOnly("forms.settings")) return <ViewOnlyNotice />;
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 16 }}>

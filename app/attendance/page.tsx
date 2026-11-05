@@ -59,6 +59,7 @@ const ROW_PILLS = ["present", "absent", "leave"] as const;
 
 export default function AttendancePage() {
   const canEdit = useCanEdit("attendance");
+  const canClose = useCanEdit("attendance.close");
   const today = new Date().toISOString().slice(0, 10);
   // The day being marked always starts at today (not remembered), so nobody marks a past day by accident.
   const [date, setDate] = useState(today);
@@ -341,7 +342,7 @@ export default function AttendancePage() {
           </button>
           <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
           <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
-          {!closed ? (
+          {!canClose ? (closed && <span className="badge" style={{ background: "#DC2626", alignSelf: "center" }}>🔒 Day closed</span>) : !closed ? (
             <button onClick={closeDay} disabled={!rows.length}
               style={{
                 padding: "8px 16px", borderRadius: 8,

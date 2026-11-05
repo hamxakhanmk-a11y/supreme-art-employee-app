@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 // POST { date, entries: [{ employeeId, hours }] } — save the overtime for a date.
 // hours <= 0 clears that employee's record for the day; positive values upsert.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("attendance");
+  const guard = await guardWrite("attendance.overtime");
   if (guard instanceof NextResponse) return guard;
   await ensureOvertimeTable();
   try {

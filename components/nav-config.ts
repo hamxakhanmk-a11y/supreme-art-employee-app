@@ -150,7 +150,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
     case "users":
       return [
         { href: "/admin/users", label: "All Users" },
-        { href: "/admin/roles", label: "Role Permissions" },
+        { href: "/admin/roles", label: "Access Register" },
       ];
     default:
       return [];

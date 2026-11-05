@@ -6,6 +6,7 @@ import Link from "next/link";
 import PrintHeader from "@/components/PrintHeader";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { matchesQuery, cmpText } from "@/lib/listTools";
+import { useCanEdit } from "@/components/MeProvider";
 
 type ReqSort = "recent" | "startNew" | "startOld" | "name" | "days" | "status";
 const SORT_OPTIONS: SortOption<ReqSort>[] = [
@@ -39,6 +40,8 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes, ac
   actions?: React.ReactNode;
 }) {
   const router = useRouter();
+  const canDecide = useCanEdit("forms.approve");
+  const canDelete = useCanEdit("forms.delete");
   const [requests, setRequests] = useState<Req[]>(initial);
   const [query, setQuery] = usePageState("q", "");
   const [sort, setSort] = usePageState<ReqSort>("sort", "recent");
@@ -172,14 +175,14 @@ export default function LeaveRequestsClient({ initial, employees, leaveTypes, ac
                     </td>
                     <td className="no-print" style={{ textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: 6 }}>
-                        {r.status === "pending" && (
+                        {r.status === "pending" && canDecide && (
                           <>
                             <button onClick={() => decide(r, "approved")} className="btn btn-success btn-sm">Approve</button>
                             <button onClick={() => decide(r, "rejected")} className="btn btn-danger-soft btn-sm">Reject</button>
                           </>
                         )}
                         {e && <Link href={`/employees/${e.id}/leave`} className="btn btn-sm">History</Link>}
-                        <button onClick={() => remove(r)} className="btn btn-danger-soft btn-sm">Delete</button>
+                        {canDelete && <button onClick={() => remove(r)} className="btn btn-danger-soft btn-sm">Delete</button>}
                       </div>
                     </td>
                   </tr>

@@ -192,7 +192,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("employees");
+  const guard = await guardWrite("employees.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;

@@ -22,12 +22,13 @@ async function unstampAttendance(r: { employeeId: number; startDate: string; end
 // On approval of a half-day request, auto-stamp attendance for that date
 // with status="half-day" so the Monthly Register shows P with the ½ marker.
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("forms");
+  const body = await req.json().catch(() => ({}));
+  // Approving / rejecting is its own grant; changing the request's reason stays with Forms edit.
+  const guard = await guardWrite(body.status ? "forms.approve" : "forms");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;
     const reqId = parseInt(id);
-    const body = await req.json();
 
     // What the request was before this change, so an approval that is being
     // taken back (approved → rejected / pending) can undo its attendance.
@@ -122,7 +123,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("forms");
+  const guard = await guardWrite("forms.delete");
   if (guard instanceof NextResponse) return guard;
   try {
     const { id } = await ctx.params;

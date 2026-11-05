@@ -12,8 +12,14 @@ import { rolePermissions, customRoles } from "./schema";
 
 export type ModuleKey =
   | "employees"
+  | "employees.delete"
   | "attendance"
+  | "attendance.close"
+  | "attendance.overtime"
   | "forms"
+  | "forms.approve"
+  | "forms.delete"
+  | "forms.settings"
   // reports — legacy master key (auto-expands into every reports.* below) plus
   // fine-grained per-report keys so a role can be granted just one section.
   | "reports"
@@ -42,10 +48,16 @@ export type ModuleKey =
   | "station.monthly"
   | "station.delete"
   | "demand"
+  | "demand.delete"
   | "po"
+  | "po.delete"
   | "grn"
+  | "grn.delete"
   | "suppliers"
   | "store"
+  // stock in / stock out are their own grants, so a store keeper can be given just one
+  | "store.stockin"
+  | "store.stockout"
   // store actions that are their own grants, separate from store edit
   | "store.delete"
   | "store.reconcile"
@@ -53,8 +65,14 @@ export type ModuleKey =
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "employees",  label: "Employees",   hint: "Add / edit employee records & documents" },
-  { key: "attendance", label: "Attendance",  hint: "Mark attendance, close days, off-days" },
-  { key: "forms",      label: "Forms & Leave", hint: "Leave / half-day forms & approvals" },
+  { key: "employees.delete", label: "Employees · Delete", hint: "Delete an employee permanently" },
+  { key: "attendance", label: "Attendance",  hint: "Mark attendance and off-days" },
+  { key: "attendance.close",    label: "Attendance · Close / Reopen Day", hint: "Close a day so it can't be changed, or reopen it" },
+  { key: "attendance.overtime", label: "Attendance · Overtime",           hint: "Record overtime hours" },
+  { key: "forms",      label: "Forms & Leave", hint: "Fill in and edit leave / half-day forms" },
+  { key: "forms.approve",  label: "Leave · Approve / Reject", hint: "Approve or reject leave and half-day requests" },
+  { key: "forms.delete",   label: "Leave · Delete",           hint: "Delete a leave or half-day request" },
+  { key: "forms.settings", label: "Leave · Leave Types",      hint: "Add, change or remove leave types" },
   // Reports — tick the individual reports below rather than the umbrella.
   { key: "reports.attendance",  label: "Report · Attendance",  hint: "Attendance register + Excel export" },
   { key: "reports.leaves",      label: "Report · Leaves",      hint: "Leave history — filters & export" },
@@ -77,14 +95,19 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "station.monthly",  label: "Station · Monthly Report", hint: "Fleet monthly report — fuel rate & maintenance" },
   { key: "station.delete", label: "Station · Delete", hint: "Delete hourly-leave trips, vehicle trips, fuel records, top-ups and PSO cards" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
+  { key: "demand.delete", label: "Demand · Delete", hint: "Delete a material demand" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
+  { key: "po.delete",  label: "PO · Delete",  hint: "Delete a purchase order" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
+  { key: "grn.delete", label: "GRR · Delete", hint: "Delete a goods-receiving report" },
   // View = the Supplier Directory's By-product list (who supplies what, at
   // what rate). Edit additionally allows correcting a product's rate / tax %
   // in place, which writes to that line on its most recent PO. Super Admin
   // also gets the full report — the per-order view with order values.
   { key: "suppliers",  label: "Supplier Directory", hint: "Which supplier a product comes from & its rate — edit allows correcting the rate" },
-  { key: "store",      label: "Parts Store",  hint: "Spare-parts inventory: categories, parts, in/out transactions" },
+  { key: "store",      label: "Parts Store",  hint: "Store inventory — edit adds / edits parts, categories, machines and reverses entries" },
+  { key: "store.stockin",   label: "Store · Stock In",            hint: "Stock in, one part or in bulk" },
+  { key: "store.stockout",  label: "Store · Stock Out / Issue",   hint: "Stock out / issue, one part or in bulk" },
   { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
   { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
@@ -139,7 +162,37 @@ export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
   if (key === "store.delete" || key === "store.reconcile") return "action";
+  if (key in BUTTON_SPLIT) return "action";
   return "section";
+}
+
+// Buttons split out of a section's edit right into grants of their own (2026-11). Each names the section
+// whose edit used to cover it: every role that could edit that section is given the button once (see
+// migrateButtonSplit), so nobody loses anything the day it arrives; the owner then takes it away per role.
+export const BUTTON_SPLIT: Record<string, ModuleKey> = {
+  "employees.delete": "employees",
+  "attendance.close": "attendance",
+  "attendance.overtime": "attendance",
+  "forms.approve": "forms",
+  "forms.delete": "forms",
+  "forms.settings": "forms",
+  "demand.delete": "demand",
+  "po.delete": "po",
+  "grn.delete": "grn",
+  "store.stockin": "store",
+  "store.stockout": "store",
+};
+// The section a button belongs to: the button does nothing for a role that can't open that section.
+export const MODULE_PARENT: Record<string, ModuleKey> = {
+  ...BUTTON_SPLIT,
+  "store.delete": "store",
+  "store.reconcile": "store",
+};
+// A default (a role with no saved row yet) that can edit a section gets its split-out buttons too.
+function withSplitButtons(modules: ModuleKey[]): ModuleKey[] {
+  const out = new Set(modules);
+  for (const [btn, parent] of Object.entries(BUTTON_SPLIT)) if (out.has(parent)) out.add(btn as ModuleKey);
+  return [...out];
 }
 
 // ============ Roles ============
@@ -309,11 +362,42 @@ export async function migrateStationSplit() {
   `);
 }
 
+// The buttons split out of their sections (BUTTON_SPLIT): every saved role that could edit the section is
+// given the button at edit, once (the marker row), the same way as the Station split above. A role saved
+// before an edit list existed (edit_modules NULL) edits whatever it can open when can_edit is on.
+let buttonSplitChecked = false;
+export async function migrateButtonSplit() {
+  const steps = Object.entries(BUTTON_SPLIT).map(([btn, parent]) => `
+          UPDATE role_permissions SET modules = modules || ',${btn}'
+            WHERE (',' || modules || ',') LIKE '%,${parent},%' AND (',' || modules || ',') NOT LIKE '%,${btn},%'
+              AND ((edit_modules IS NOT NULL AND (',' || edit_modules || ',') LIKE '%,${parent},%') OR (edit_modules IS NULL AND can_edit));
+          UPDATE role_permissions SET edit_modules = edit_modules || ',${btn}'
+            WHERE edit_modules IS NOT NULL AND (',' || edit_modules || ',') LIKE '%,${parent},%' AND (',' || edit_modules || ',') NOT LIKE '%,${btn},%';`).join("");
+  // Keys and parents are this file's own constants (no user input), so the block is written out whole: a DO block can't take parameters.
+  await db.execute(sql.raw(`
+    DO $$ BEGIN
+      CREATE TABLE IF NOT EXISTS perm_migrations (
+        name varchar(60) PRIMARY KEY,
+        done_at timestamptz NOT NULL DEFAULT now()
+      );
+      IF NOT EXISTS (SELECT 1 FROM perm_migrations WHERE name = 'button-split-2026-11') THEN
+        IF to_regclass('role_permissions') IS NOT NULL THEN${steps}
+        END IF;
+        INSERT INTO perm_migrations (name) VALUES ('button-split-2026-11');
+      END IF;
+    END $$;
+  `));
+}
+
 export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
   if (!stationSplitChecked) {
     try { await migrateStationSplit(); stationSplitChecked = true; }
     catch { /* never lock anyone out over this; try again next load */ }
+  }
+  if (!buttonSplitChecked) {
+    try { await migrateButtonSplit(); buttonSplitChecked = true; }
+    catch { /* as above */ }
   }
 
   // Seed every editable role from its default (custom roles start blank), then
@@ -323,7 +407,7 @@ export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   for (const rm of await loadRoles()) {
     if (rm.key === "superadmin") continue; // always full — set below
     const d = DEFAULT_PERMS[rm.key];
-    const modules = d ? [...d.modules] : [];
+    const modules = d ? (d.canEdit ? withSplitButtons(d.modules) : [...d.modules]) : [];
     const editModules = d ? (d.canEdit ? [...d.modules] : []) : [];
     data[rm.key] = { modules, canEdit: !!editModules.length, editModules };
   }

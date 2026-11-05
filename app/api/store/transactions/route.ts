@@ -44,12 +44,13 @@ export async function GET() {
 
 // POST — create an in / out transaction and adjust the part's qty.
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const b = await req.json().catch(() => ({}));
+  const type = String(b?.type || "");
+  // Stock in and stock out are grants of their own (a store keeper may have just one).
+  const guard = await guardWrite(type === "out" ? "store.stockout" : "store.stockin");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureStoreSchema();
-    const b = await req.json().catch(() => ({}));
-    const type = String(b?.type || "");
     const partId = parseInt(b?.partId);
     // Fractional: ink is issued by weight, so 2.5 kg has to go through.
     const qty = roundQty(Number(b?.qty));

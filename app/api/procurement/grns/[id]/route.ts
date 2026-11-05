@@ -55,7 +55,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("grn");
+  const guard = await guardWrite("grn.delete");
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const { id } = await ctx.params;

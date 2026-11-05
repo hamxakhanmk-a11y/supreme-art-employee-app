@@ -321,8 +321,8 @@ input:focus,select:focus{outline:none;border-color:#8C2326;box-shadow:0 0 0 3px 
 .user-name{font-size:13px;font-weight:600;color:#1a1a1a}
 .user-role{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;display:block}
 .user-avatar{width:36px;height:36px;border-radius:50%;background:#8C2326;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0}
-/* Role gates */
-body.role-ceo .write-only{display:none!important}
+/* Role gates: each .write-only control is shown or hidden by the role's own grants (applyStoreAccess). */
+.acc-hide{display:none!important}
 /* Module-scoped fields. Machinery parts belong to a machine; consumables
    (inks) are tracked by brand/supplier and a rack location instead. */
 body.mod-consumables .machinery-only{display:none!important}
@@ -3247,6 +3247,28 @@ function whenHtml(t){
 // Role Permissions - the Super Admin has them, other roles only if given them.
 function canDelete(){return !!(state.user&&state.user.canDelete);}
 function canReconcile(){return !!(state.user&&state.user.canReconcile);}
+// Store edit (parts, categories, machines, reversing an entry), Stock In and Stock Out are separate grants too.
+function canStoreEdit(){return !!(state.user&&state.user.canEdit);}
+function canStockIn(){return !!(state.user&&state.user.canStockIn);}
+function canStockOut(){return !!(state.user&&state.user.canStockOut);}
+// Every .write-only control: a Stock In or Stock Out opener follows that grant, anything else store edit.
+const STOCK_IN_RE=/openSingleIn\(|openModal\('bulkIn'\)/,STOCK_OUT_RE=/openSingleOut\(|openModal\('bulkOut'\)/;
+function applyStoreAccess(root){
+  if(!root||!root.querySelectorAll||!state.user)return;
+  const els=[...(root.matches&&root.matches('.write-only')?[root]:[]),...root.querySelectorAll('.write-only')];
+  for(const el of els){
+    const oc=[el,...el.querySelectorAll('[onclick]')].map(x=>x.getAttribute('onclick')||'').join(' ');
+    const ok=STOCK_IN_RE.test(oc)?canStockIn():STOCK_OUT_RE.test(oc)?canStockOut():canStoreEdit();
+    el.classList.toggle('acc-hide',!ok);
+  }
+}
+let _storeAccessObs=null;
+function startStoreAccess(){
+  applyStoreAccess(document.body);
+  if(_storeAccessObs||typeof MutationObserver==='undefined')return;
+  _storeAccessObs=new MutationObserver(muts=>{for(const m of muts)for(const n of m.addedNodes)if(n.nodeType===1)applyStoreAccess(n);});
+  _storeAccessObs.observe(document.body,{childList:true,subtree:true});
+}
 let _ledgerShowIgnored=false;
 function ledgerOff(){
   const sums=new Map();
@@ -4458,6 +4480,7 @@ function renderUserBar(){
   // .admin-only / .write-only CSS gating keeps working.
   document.body.classList.remove('role-admin','role-user','role-ceo','role-machinery','role-consumables');
   if(state.user && state.user.role) document.body.classList.add('role-'+state.user.role);
+  startStoreAccess();
 }
 
 function showAuthScreen(mode){
@@ -4536,6 +4559,7 @@ async function initAuth(){
   } catch (_) { /* keep the fallback */ }
   state.user = user;
   hideAuthScreen();
+  startStoreAccess();
   applyModuleToUI();
   await loadAll();
   restoreKept();

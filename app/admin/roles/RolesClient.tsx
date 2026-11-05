@@ -1,44 +1,43 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+// The Access Register (the Tracker app's, brought over): one grid per section tab, a row for the section
+// itself and one for each of its buttons, a column per role. Clicking a box steps it to the next level and
+// saves straight away — no Save button. The Owner (Super Admin) always has everything.
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePageState } from "@/lib/usePageState";
 
-interface ModuleDef { key: string; label: string; hint: string }
+// kind (from lib/permissions moduleEditKind): "section" has View and Edit, "view" is a report (View only),
+// "action" is a button (on or off). parent: for a button, the section it sits in.
+interface ModuleDef { key: string; label: string; hint: string; kind: Kind; parent: string | null }
 interface RolePerm { role: string; label: string; color: string; builtin: boolean; modules: string[]; editModules: string[] }
 
-type Level = "none" | "view" | "edit";
-// Mirrors moduleEditKind() in lib/permissions: reports are view-only, purchase.*
-// permissions are actions (grant = edit), everything else has view vs edit.
 type Kind = "view" | "action" | "section";
-function kindOf(key: string): Kind {
-  if (key.startsWith("reports.")) return "view";
-  if (key.startsWith("purchase")) return "action";
-  if (key === "station.delete") return "action";
-  if (key === "store.delete" || key === "store.reconcile") return "action";
-  return "section";
-}
+type Level = "none" | "view" | "edit";
 
-// Which sub-tab a permission belongs under. Prefix rules first, then exact keys,
-// so new module keys slot in automatically (e.g. any future purchase.* or
-// reports.*). Order mirrors the top navigation.
+// Which tab a row sits under. Prefix rules first, then exact keys, so new keys slot in (any future
+// purchase.* or reports.*). Order follows the top navigation.
 const GROUP_ORDER = [
-  "Attendance", "Forms & Leave", "Salary", "Purchase",
-  "Station", "Procurement", "Store", "Reports", "Employees",
+  "Employees", "Attendance", "Forms & Leave", "Salary", "Purchase",
+  "Station", "Procurement", "Store", "Reports",
 ];
 function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
-  if (["demand", "po", "grn"].includes(key)) return "Procurement";
-  if (key.startsWith("station")) return "Station";   // station, .vehicles, .cards, .monthly, .delete
-  if (key.startsWith("store.")) return "Store";      // store.delete, store.reconcile
-  switch (key) {
-    case "employees":  return "Employees";
-    case "attendance": return "Attendance";
-    case "forms":      return "Forms & Leave";
-    case "capa":       return "Forms & Leave";
-    case "salary":     return "Salary";
-    case "store":      return "Store";
-    default:           return "Other";
-  }
+  if (/^(demand|po|grn)(\.|$)/.test(key) || key === "suppliers") return "Procurement";
+  if (key.startsWith("station")) return "Station";
+  if (key.startsWith("store")) return "Store";
+  if (key.startsWith("employees")) return "Employees";
+  if (key.startsWith("attendance")) return "Attendance";
+  if (key.startsWith("forms") || key === "capa") return "Forms & Leave";
+  if (key === "salary") return "Salary";
+  return "Other";
+}
+
+const LABEL: Record<Level, string> = { edit: "EDIT", view: "VIEW", none: "HIDDEN" };
+// The steps a click goes through, per kind of row (as in the Tracker: Edit → View → Hidden → Edit).
+function nextLevel(kind: Kind, cur: Level): Level {
+  if (kind === "view") return cur === "view" ? "none" : "view";
+  if (kind === "action") return cur === "edit" ? "none" : "edit";
+  return cur === "edit" ? "view" : cur === "view" ? "none" : "edit";
 }
 
 export default function RolesClient() {
@@ -46,9 +45,8 @@ export default function RolesClient() {
   const [roles, setRoles] = useState<RolePerm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [savingRole, setSavingRole] = useState<string | null>(null);
-  const [savedRole, setSavedRole] = useState<string | null>(null);
-  const [tab, setTab] = usePageState("tab", ""); // sub-tab shown, kept for when the user comes back
+  const [toast, setToast] = useState("");
+  const [tab, setTab] = usePageState("tab", ""); // kept for when the user comes back
 
   // New-role form
   const [showNew, setShowNew] = useState(false);
@@ -56,15 +54,22 @@ export default function RolesClient() {
   const [newColor, setNewColor] = useState("#0F766E");
   const [creating, setCreating] = useState(false);
 
+  // Saves go out one at a time per role, each with that role's whole list as it stands then, so quick
+  // clicks can't land out of order.
+  const rolesRef = useRef<RolePerm[]>([]);
+  useEffect(() => { rolesRef.current = roles; }, [roles]);
+  const queue = useRef<Record<string, Promise<void>>>({});
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   async function load() {
     try {
       const r = await fetch("/api/roles");
-      if (!r.ok) { setError("Failed to load role permissions"); setLoading(false); return; }
+      if (!r.ok) { setError("Failed to load the Access Register"); setLoading(false); return; }
       const d = await r.json();
       setModules(d.modules);
       setRoles(d.roles);
     } catch {
-      setError("Failed to load role permissions");
+      setError("Failed to load the Access Register");
     }
     setLoading(false);
   }
@@ -97,91 +102,71 @@ export default function RolesClient() {
     await load();
   }
 
-  // The sub-tabs actually present, in nav order (plus any stragglers).
   const tabs = useMemo(() => {
     const present = new Set(modules.map(m => groupOf(m.key)));
     const ordered = GROUP_ORDER.filter(g => present.has(g));
     for (const g of present) if (!ordered.includes(g)) ordered.push(g);
     return ordered;
   }, [modules]);
-
-  // Active tab falls back to the first one until the user picks another — no
-  // effect needed, so it stays in sync as modules load. A remembered tab that
-  // no longer exists falls back the same way.
   const activeTab = (tabs.includes(tab) ? tab : tabs[0]) || "";
+  const rows = useMemo(() => modules.filter(m => groupOf(m.key) === activeTab), [modules, activeTab]);
 
-  const tabModules = useMemo(
-    () => modules.filter(m => groupOf(m.key) === activeTab),
-    [modules, activeTab],
-  );
-
+  // A button can only be used (EDIT) or not (HIDDEN): one that is merely "viewable" does nothing, so it reads HIDDEN.
+  const kindOf = (key: string) => modules.find(m => m.key === key)?.kind;
   const levelOf = (r: RolePerm, key: string): Level =>
-    r.editModules.includes(key) ? "edit" : r.modules.includes(key) ? "view" : "none";
+    r.editModules.includes(key) ? "edit" : r.modules.includes(key) && kindOf(key) !== "action" ? "view" : "none";
 
-  // Apply a level to one module, honouring its kind (view-kind can't reach
-  // "edit"; edit implies access).
-  function applyLevel(r: RolePerm, key: string, level: Level): RolePerm {
-    const mod = new Set(r.modules);
-    const ed = new Set(r.editModules);
-    const k = kindOf(key);
-    const wantEdit = level === "edit" && k !== "view";
-    const wantView = level !== "none";
-    if (wantView) mod.add(key); else mod.delete(key);
-    if (wantEdit) ed.add(key); else ed.delete(key);
+  function withLevel(r: RolePerm, m: ModuleDef, level: Level): RolePerm {
+    const mod = new Set(r.modules), ed = new Set(r.editModules);
+    if (level === "none") mod.delete(m.key); else mod.add(m.key);
+    if (level === "edit" && m.kind !== "view") ed.add(m.key); else ed.delete(m.key);
     return { ...r, modules: [...mod], editModules: [...ed] };
   }
-  function setLevel(role: string, key: string, level: Level) {
-    setSavedRole(null);
-    setRoles(rs => rs.map(r => (r.role === role ? applyLevel(r, key, level) : r)));
-  }
-  // Bulk-set every module in the current sub-tab. "edit" grants edit where the
-  // kind allows (actions/sections) and view for reports; "view" grants view for
-  // sections/reports and clears actions (they have no view-only state).
-  function setTabLevel(role: string, level: Level) {
-    setSavedRole(null);
-    setRoles(rs => rs.map(r => {
-      if (r.role !== role) return r;
-      let out = r;
-      for (const m of tabModules) {
-        const k = kindOf(m.key);
-        const lvl: Level = level === "view" && k === "action" ? "none" : level;
-        out = applyLevel(out, m.key, lvl);
-      }
-      return out;
-    }));
+
+  function flash(msg: string) {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 2600);
   }
 
-  async function save(role: string) {
-    const r = roles.find(x => x.role === role);
-    if (!r) return;
-    setSavingRole(role);
+  // The ref is moved on at once (not after the next render), so a save queued behind this one sends it.
+  function put(role: string, m: ModuleDef, level: Level) {
+    rolesRef.current = rolesRef.current.map(x => (x.role === role ? withLevel(x, m, level) : x));
+    setRoles(rolesRef.current);
+  }
+
+  function cycle(r: RolePerm, m: ModuleDef) {
+    const role = r.role;
+    const before = levelOf(rolesRef.current.find(x => x.role === role) ?? r, m.key);
+    const next = nextLevel(m.kind, before);
     setError("");
-    try {
-      const res = await fetch("/api/roles", {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: r.role, modules: r.modules, editModules: r.editModules }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError(d.error || "Save failed");
-      } else {
-        setSavedRole(role);
-        setTimeout(() => setSavedRole(s => (s === role ? null : s)), 2500);
+    put(role, m, next);
+    queue.current[role] = (queue.current[role] || Promise.resolve()).then(async () => {
+      const cur = rolesRef.current.find(x => x.role === role);
+      if (!cur) return;
+      try {
+        const res = await fetch("/api/roles", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role, modules: cur.modules, editModules: cur.editModules }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
+        flash(`${r.label}: ${m.label} → ${LABEL[next]}`);
+      } catch (e) {
+        // Put the box back and say so; the grid then matches what is saved.
+        put(role, m, before);
+        setError(`${r.label}: ${m.label} was not saved — ${e instanceof Error ? e.message : "Save failed"}`);
       }
-    } catch {
-      setError("Save failed");
-    }
-    setSavingRole(null);
+    });
   }
 
   return (
     <div className="fade-up">
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 240 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Role Permissions</h1>
-          <p style={{ color: "var(--text2)", marginTop: 4, fontSize: 13 }}>
-            Pick a section tab, then choose which roles can open it. <b>Read-only</b> lets a role
-            view its sections but not make changes. The Owner (Super Admin) always has full access.
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Access Register</h1>
+          <p className="acc-reg-dek">
+            Who can open each section and use each of its buttons. <b>Click a box</b> to change it — it saves
+            straight away. The Owner (Super Admin) always has everything.
           </p>
         </div>
         <button onClick={() => setShowNew(v => !v)} className="btn btn-restricted" style={{ whiteSpace: "nowrap" }}>
@@ -193,156 +178,100 @@ export default function RolesClient() {
         <form onSubmit={createRole} style={{
           display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap",
           background: "var(--bg)", border: "1px dashed var(--border-strong, var(--border))",
-          borderRadius: 12, padding: 14, marginBottom: 16,
+          borderRadius: 12, padding: 14, marginBottom: 14,
         }}>
           <div>
-            <label className="form-label" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>Role name</label>
+            <label className="form-label">Role name</label>
             <input value={newLabel} onChange={e => setNewLabel(e.target.value)} maxLength={80}
-              placeholder="e.g. Warehouse" style={{ padding: "8px 11px", minWidth: 220 }} />
+              placeholder="e.g. Warehouse" style={{ minWidth: 220 }} />
           </div>
           <div>
-            <label className="form-label" style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text2)", marginBottom: 4 }}>Colour</label>
+            <label className="form-label">Colour</label>
             <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)}
-              style={{ width: 48, height: 38, padding: 2, cursor: "pointer" }} />
+              style={{ width: 48, height: 36, padding: 2, cursor: "pointer" }} />
           </div>
           <button type="submit" disabled={creating || !newLabel.trim()} className="btn btn-restricted">
             {creating ? "Creating…" : "Create role"}
           </button>
           <span style={{ fontSize: 11.5, color: "var(--text3)" }}>
-            New roles start with <b>no access</b> — grant sections below, then set it on the Users page.
+            A new role starts with <b>everything hidden</b> — open it up below, then give it to people on the Users page.
           </span>
         </form>
       )}
 
-      {error && <div style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+      <div className="acc-reg-legend">
+        <span><i className="acc-swatch allow" /> <b>EDIT</b> — open it and use it</span>
+        <span><i className="acc-swatch partial" /> <b>VIEW</b> — open it, look only</span>
+        <span><i className="acc-swatch deny" /> <b>HIDDEN</b> — not shown at all</span>
+        <span>Buttons are <b>EDIT</b> or <b>HIDDEN</b>; reports <b>VIEW</b> or <b>HIDDEN</b>.</span>
+      </div>
+
+      {error && <div role="alert" style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
       {loading ? (
         <div style={{ color: "var(--text2)", padding: 16 }}>Loading…</div>
       ) : (
         <>
-          {/* Section sub-tabs (mirror the top nav) */}
-          <div style={{
-            position: "sticky", top: 0, zIndex: 5, background: "var(--bg1, var(--bg))",
-            display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 0 10px",
-            borderBottom: "1px solid var(--border)", marginBottom: 14,
-          }}>
-            {tabs.map(t => {
-              const active = t === activeTab;
-              return (
-                <button key={t} onClick={() => setTab(t)} style={{
-                  padding: "6px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700,
-                  cursor: "pointer", border: `1px solid ${active ? "var(--brand)" : "var(--border)"}`,
-                  background: active ? "var(--brand)" : "transparent",
-                  color: active ? "#fff" : "var(--text2)",
-                }}>{t}</button>
-              );
-            })}
+          <div className="tabs" style={{ flexWrap: "wrap", marginBottom: 12 }}>
+            {tabs.map(t => (
+              <button key={t} className={`tab ${t === activeTab ? "active" : ""}`} onClick={() => setTab(t)}>{t}</button>
+            ))}
           </div>
 
-          <div style={{ fontSize: 12.5, color: "var(--text2)", marginBottom: 12 }}>
-            Showing <b style={{ color: "var(--text)" }}>{activeTab}</b> permissions for every role.
-            Set each section to <b>View</b> (open, read-only) or <b>Edit</b> (make changes). A role can be
-            View here and Edit on another tab.
+          <div className="acc-tablewrap">
+            <table className="acc-table">
+              <thead>
+                <tr>
+                  <th>{activeTab}</th>
+                  <th title="The Owner always has everything">Super Admin</th>
+                  {roles.map(r => (
+                    <th key={r.role} style={{ borderTop: `3px solid ${r.color || "var(--brand)"}` }}>
+                      {r.label}
+                      {!r.builtin && (
+                        <button className="acc-del" title={`Delete the ${r.label} role`} onClick={() => deleteRole(r.role, r.label)}>✕</button>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(m => {
+                  const parent = m.parent ? modules.find(p => p.key === m.parent) : null;
+                  return (
+                    <tr key={m.key} className={m.kind === "action" ? "acc-btn-row" : "acc-sec-row"}>
+                      <th className="acc-rowlabel">
+                        {m.kind === "action" && <span className="acc-tag">Button</span>}
+                        {m.kind === "view" && <span className="acc-tag">Report</span>}
+                        {m.label}
+                        <span className="acc-rowlabel-sub">{m.hint}</span>
+                      </th>
+                      <td className="acc-cell allow locked" title="Super Admin always has this">{m.kind === "view" ? "VIEW" : "EDIT"}</td>
+                      {roles.map(r => {
+                        const lvl = levelOf(r, m.key);
+                        // A button whose section the role can't open does nothing yet: said, not hidden.
+                        const idle = !!parent && lvl !== "none" && levelOf(r, parent.key) === "none";
+                        return (
+                          <td key={r.role} onClick={() => cycle(r, m)}
+                            className={`acc-cell editable ${lvl === "edit" ? "allow" : lvl === "view" ? "partial" : "deny"}${idle ? " idle" : ""}`}
+                            title={idle ? `No effect until ${r.label} can open ${parent!.label}` : "Click to change"}>
+                            {LABEL[lvl]}{idle && <sup>!</sup>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          <div style={{ display: "grid", gap: 14 }}>
-            {roles.map(r => {
-              const accent = r.color || "var(--brand)";
-              const viewCount = tabModules.filter(m => r.modules.includes(m.key)).length;
-              const editCount = tabModules.filter(m => r.editModules.includes(m.key)).length;
-              return (
-                <div key={r.role} style={{
-                  background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 12,
-                  padding: 16, borderTop: `3px solid ${accent}`,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: accent }}>{r.label}</span>
-                    {!r.builtin && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: accent, background: `${accent}18`, padding: "1px 7px", borderRadius: 999 }}>CUSTOM</span>
-                    )}
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}>{viewCount} view · {editCount} edit in {activeTab}</span>
-                    <div style={{ flex: 1 }} />
-                    <button onClick={() => setTabLevel(r.role, "edit")} style={linkBtn}>Edit all</button>
-                    <button onClick={() => setTabLevel(r.role, "view")} style={linkBtn}>View all</button>
-                    <button onClick={() => setTabLevel(r.role, "none")} style={linkBtn}>None</button>
-                    {!r.builtin && (
-                      <button onClick={() => deleteRole(r.role, r.label)} className="btn btn-xs btn-restricted">Delete role</button>
-                    )}
-                  </div>
-
-                  <div style={{
-                    display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 8,
-                  }}>
-                    {tabModules.map(m => (
-                      <ModuleRow key={m.key} m={m} level={levelOf(r, m.key)}
-                        onSet={lvl => setLevel(r.role, m.key, lvl)} />
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-                    <button onClick={() => save(r.role)} disabled={savingRole === r.role} style={saveBtn()}>
-                      {savingRole === r.role ? "Saving…" : "Save"}
-                    </button>
-                    {savedRole === r.role && <span style={{ fontSize: 13, color: "#166534", fontWeight: 600 }}>Saved ✓</span>}
-                    <span style={{ fontSize: 11, color: "var(--text3)" }}>Saves this role across all tabs.</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <p className="acc-foot">
+            A change reaches people the next time their page loads (or when they come back to the tab).
+            The server checks every button too, so a hidden button can&rsquo;t be used another way.
+          </p>
         </>
       )}
+
+      {toast && <div className="acc-toast" role="status">{toast}</div>}
     </div>
   );
 }
-
-// One permission row: a label + hint, and a control whose shape depends on the
-// module's kind — reports get View/Off, purchase actions get Allow/Off, and
-// normal sections get the full None / View / Edit segmented control.
-function ModuleRow({ m, level, onSet }: { m: ModuleDef; level: Level; onSet: (l: Level) => void }) {
-  const kind = kindOf(m.key);
-  const on = level !== "none";
-  return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px",
-      border: "1px solid var(--border)", borderRadius: 8,
-      background: on ? "var(--bg2)" : "transparent",
-    }}>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
-        <span style={{ display: "block", fontSize: 11, color: "var(--text2)", marginTop: 1 }}>{m.hint}</span>
-      </span>
-      <div style={{ display: "flex", flexShrink: 0, borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)" }}>
-        <Seg label="Off" active={kind === "action" ? level !== "edit" : level === "none"} onClick={() => onSet("none")} />
-        {kind === "action" ? (
-          <Seg label="Allow" active={level === "edit"} onClick={() => onSet("edit")} color="#15803D" />
-        ) : (
-          <>
-            <Seg label="View" active={level === "view"} onClick={() => onSet("view")} color="#185FA5" />
-            {kind === "section" && (
-              <Seg label="Edit" active={level === "edit"} onClick={() => onSet("edit")} color="#15803D" />
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-function Seg({ label, active, onClick, color = "#475569" }: { label: string; active: boolean; onClick: () => void; color?: string }) {
-  return (
-    <button onClick={onClick} style={{
-      border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700,
-      padding: "5px 9px", background: active ? color : "transparent",
-      color: active ? "#fff" : "var(--text3)",
-    }}>{label}</button>
-  );
-}
-
-const linkBtn: React.CSSProperties = {
-  background: "none", border: "none", color: "var(--brand)", fontWeight: 600,
-  fontSize: 12, cursor: "pointer", padding: "2px 4px",
-};
-const saveBtn = (): React.CSSProperties => ({
-  background: "#111", color: "#fff", border: "none", padding: "8px 20px",
-  borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer",
-});

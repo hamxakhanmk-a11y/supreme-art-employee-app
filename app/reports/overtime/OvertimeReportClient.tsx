@@ -7,6 +7,7 @@ import { sortEmployees, SORT_OPTIONS, type SortKey } from "@/lib/attendance";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { empMatches, cmpText } from "@/lib/listTools";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
+import { useCanEdit } from "@/components/MeProvider";
 
 type Emp = {
   id: number; employeeId: string; firstName: string; lastName: string;
@@ -28,6 +29,7 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
   year: number; month: number; daysInMonth: number; employees: Emp[]; records: Rec[];
 }) {
   const router = useRouter();
+  const canRecord = useCanEdit("attendance.overtime");
   const pathname = usePathname();
   const [query, setQuery] = usePageState("q", "");
   const [sort, setSort] = usePageState<OtSort>("sort", "id");
@@ -97,7 +99,7 @@ export default function OvertimeReportClient({ year, month, daysInMonth, employe
         <button className="btn btn-sm" onClick={() => changeMonth(-1)}>← Prev</button>
         <strong style={{ fontSize: 15 }}>{MONTHS[month - 1]} {year}</strong>
         <button className="btn btn-sm" onClick={() => changeMonth(1)}>Next →</button>
-        <Link href="/attendance/overtime" className="btn btn-sm">✎ Record overtime</Link>
+        {canRecord && <Link href="/attendance/overtime" className="btn btn-sm">✎ Record overtime</Link>}
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <SearchBox value={query} onChange={setQuery} placeholder="🔍  Search employee…" />

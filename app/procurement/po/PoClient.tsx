@@ -55,6 +55,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const reportRange = useReportRange(rows);
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("po");
+  const canDelete = useCanEdit("po.delete");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
@@ -472,7 +473,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
                   {canEdit && <button onClick={() => openEdit(p)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(p)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
+                  {canDelete && <button onClick={() => del(p)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}

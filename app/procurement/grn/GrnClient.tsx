@@ -51,6 +51,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   const reportRange = useReportRange(rows);
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("grn");
+  const canDelete = useCanEdit("grn.delete");
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -401,7 +402,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/grn/${g.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
                   {canEdit && <button onClick={() => openEdit(g)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(g)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
+                  {canDelete && <button onClick={() => del(g)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}

@@ -37,6 +37,9 @@ async function meResponse() {
       // The store's own grants, so the page can show only the buttons this role may use.
       canDelete: user.role === "superadmin" || await roleCanEdit(user.role, "store.delete"),
       canReconcile: user.role === "superadmin" || await roleCanEdit(user.role, "store.reconcile"),
+      canEdit: user.role === "superadmin" || await roleCanEdit(user.role, "store"),
+      canStockIn: user.role === "superadmin" || await roleCanEdit(user.role, "store.stockin"),
+      canStockOut: user.role === "superadmin" || await roleCanEdit(user.role, "store.stockout"),
     },
   });
 }

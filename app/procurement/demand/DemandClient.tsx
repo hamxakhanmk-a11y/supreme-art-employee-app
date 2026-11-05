@@ -47,6 +47,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
   const reportRange = useReportRange(rows);
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("demand");
+  const canDelete = useCanEdit("demand.delete");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
@@ -191,7 +192,7 @@ export default function DemandClient({ rows }: { rows: Demand[] }) {
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/demand/${d.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
                   {canEdit && <button onClick={() => openEdit(d)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
-                  {canEdit && <button onClick={() => del(d)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
+                  {canDelete && <button onClick={() => del(d)} className="btn btn-xs" style={{ color: "#A32D2D" }}>Delete</button>}
                 </td>
               </tr>
             ))}

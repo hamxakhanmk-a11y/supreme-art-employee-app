@@ -7,6 +7,7 @@ import { exitReasonFor } from "@/lib/employeesServer";
 import EmployeeProfileTabs from "@/components/EmployeeProfileTabs";
 import DeleteEmployeeButton from "@/components/DeleteEmployeeButton";
 import ProfileExportButton from "@/components/ProfileExportButton";
+import { isViewOnly } from "@/lib/pageGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
           <Link href={`/employees/${emp.id}/timeline`} className="btn">🕘 Timeline</Link>
           <ProfileExportButton employee={emp} />
           <Link href={`/employees/${emp.id}/print`} className="btn btn-print">🖨 Print Profile</Link>
-          <Link href={`/employees/${emp.id}/edit`} className="btn">✏️ Edit</Link>
+          {!(await isViewOnly("employees")) && <Link href={`/employees/${emp.id}/edit`} className="btn">✏️ Edit</Link>}
           <DeleteEmployeeButton id={emp.id} />
         </div>
       </div>

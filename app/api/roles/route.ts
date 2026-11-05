@@ -13,6 +13,8 @@ import {
   ensureRolePermissionsTable,
   createCustomRole,
   deleteCustomRole,
+  moduleEditKind,
+  MODULE_PARENT,
   type ModuleKey,
 } from "@/lib/permissions";
 
@@ -36,7 +38,9 @@ export async function GET() {
   }));
   // Every assignable role (incl. superadmin) for user-role pickers.
   const allRoles = metas.map(m => ({ key: m.key, label: m.label, color: m.color, builtin: m.builtin }));
-  return NextResponse.json({ modules: VISIBLE_MODULES, roles, allRoles });
+  // Each row says what it is (a section with View / Edit, a report, or a button) and, for a button, its section.
+  const modules = VISIBLE_MODULES.map(m => ({ ...m, kind: moduleEditKind(m.key), parent: MODULE_PARENT[m.key] ?? null }));
+  return NextResponse.json({ modules, roles, allRoles });
 }
 
 // Create a new custom role.

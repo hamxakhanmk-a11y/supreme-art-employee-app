@@ -13,7 +13,7 @@ type Emp = {
 };
 
 export default function OvertimeClient({ employees }: { employees: Emp[] }) {
-  const canEdit = useCanEdit("attendance");
+  const canEdit = useCanEdit("attendance.overtime");
 
   const today = new Date().toISOString().slice(0, 10);
   // The day being entered always starts at today (not remembered), so overtime is not put on a past day by accident.

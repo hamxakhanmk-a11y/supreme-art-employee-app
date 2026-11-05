@@ -1352,3 +1352,40 @@ a.od-line:hover { border-color: var(--brand); }
   .od-pop-bg { padding: 16px 8px; }
   .od-pop { max-height: calc(100vh - 32px); }
 }
+
+/* ---------- Access Register (Admin → Access Register) — the Tracker app's grid: a row per section and
+   button, a column per role, green EDIT / amber VIEW / red HIDDEN, click a box to step it on. ---------- */
+.acc-reg-dek { color: var(--text2); font-size: 13px; max-width: 78ch; margin: 4px 0 0; }
+.acc-reg-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.acc-reg-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.acc-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.acc-swatch.allow { background: var(--green-bg); border: 1px solid var(--green-border); }
+.acc-swatch.partial { background: var(--amber-bg); border: 1px solid var(--amber-border); }
+.acc-swatch.deny { background: var(--red-bg); border: 1px solid var(--red-border); }
+.acc-tablewrap { overflow: auto; max-height: calc(100vh - 250px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); }
+.acc-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; }
+.acc-table thead th { position: sticky; top: 0; z-index: 3; background: var(--text); color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; padding: 8px 6px; text-align: center; white-space: nowrap; }
+.acc-table thead th:first-child { text-align: left; padding-left: 12px; left: 0; z-index: 4; min-width: 220px; }
+.acc-table tbody th.acc-rowlabel { position: sticky; left: 0; z-index: 2; background: var(--bg2); text-align: left; font-weight: 600; font-size: 12.5px; padding: 7px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border2); white-space: normal; min-width: 220px; max-width: 280px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.acc-rowlabel-sub { display: block; font-weight: 400; font-size: 10.5px; color: var(--text2); margin-top: 2px; }
+.acc-btn-row th.acc-rowlabel { font-weight: 500; padding-left: 22px; }
+.acc-tag { display: inline-block; margin-right: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); vertical-align: 1px; }
+.acc-table td.acc-cell { text-align: center; padding: 6px 4px; border-bottom: 1px solid var(--border); border-left: 1px solid rgba(255,255,255,.6); font-weight: 700; font-size: 11.5px; min-width: 74px; user-select: none; background-image: none !important; }
+.acc-table td.acc-cell.allow { background-color: var(--green-bg); color: var(--green-text); }
+.acc-table td.acc-cell.partial { background-color: var(--amber-bg); color: var(--amber-text); }
+.acc-table td.acc-cell.deny { background-color: var(--red-bg); color: var(--red-text); }
+.acc-table td.acc-cell.editable { cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); transition: filter .12s, box-shadow .12s; }
+.acc-table td.acc-cell.editable:hover { filter: brightness(.93); box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.35); }
+.acc-table td.acc-cell.locked { opacity: .55; }
+.acc-table td.acc-cell.idle { opacity: .6; }
+.acc-table td.acc-cell sup { font-size: 9px; margin-left: 2px; }
+.acc-table tbody tr:hover { transform: none; box-shadow: none; }
+.acc-del { margin-left: 6px; border: none; background: rgba(255,255,255,.18); color: #fff; border-radius: 4px; font-size: 10px; padding: 0 5px; cursor: pointer; }
+.acc-del:hover { background: #b91c1c; }
+.acc-foot { margin-top: 10px; font-size: 11.5px; color: var(--text3); }
+.acc-toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 100; background: #111; color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 92vw; }
+@media (max-width: 860px) {
+  .acc-tablewrap { max-height: 70vh; }
+  .acc-table thead th:first-child, .acc-table tbody th.acc-rowlabel { min-width: 150px; max-width: 170px; }
+  .acc-table td.acc-cell { min-width: 62px; font-size: 10.5px; }
+}
