@@ -16,8 +16,14 @@ export interface RatePo {
 export interface RateOrder { poId: number; po: string; date: string; supplier: string; rate: number; uom: string }
 export interface RateIncrease { product: string; uom: string; before: RateOrder; now: RateOrder; rise: number; pct: number }
 
-// The product as a key: lower case, "×" and "*" read as "x", and everything but letters and digits dropped.
-export const productKey = (s: string) => s.toLowerCase().replace(/[×*]/g, "x").replace(/[^a-z0-9]/g, "");
+// The product as a key: lower case, "×" and "*" read as "x", a weight after a number written one way
+// ("50 gm" = "50gm" = "50 gram" = "50g"; "5 kgs" = "5 kg"), and everything but letters and digits dropped.
+// "300gsm" stays as it is.
+export const productKey = (s: string) => s.toLowerCase()
+  .replace(/[×*]/g, "x")
+  .replace(/(\d)\s*(?:grams?|grms?|gms?|gm|gr|g)(?![a-z])/g, "$1g")
+  .replace(/(\d)\s*(?:kilograms?|kilos?|kgs?)(?![a-z])/g, "$1kg")
+  .replace(/[^a-z0-9]/g, "");
 // A unit as a key: "Kgs." → "kg", "Reams" → "ream", "PCS" → "pc".
 export const unitKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(?<=[a-z]{2})s$/, "");
 

@@ -9,6 +9,7 @@ import { fmtMoney, fmtDate } from "@/lib/procurement";
 import { StatChip } from "@/components/ReportExportControls";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { cmpText } from "@/lib/listTools";
+import { productKey } from "@/lib/rateChanges";
 
 export interface DirectoryRow {
   product: string;
@@ -226,6 +227,37 @@ export default function SupplierDirectoryClient({
 
   const inRange = (r: DirectoryRow) => inReportRange(r.date, fromDate, toDate);
 
+  // By product treats one product however its name was typed (owner, 2026-11-05): case, spaces and
+  // punctuation ignored, "50 gm" = "50gm" = "50 gram" (see productKey). The group shows the name as
+  // the newest PO wrote it. Every order keeps each PO's own wording.
+  const canonRows = useMemo(() => {
+    const newest = new Map<string, DirectoryRow>();
+    for (const r of rows) {
+      const k = productKey(r.product) || r.product;
+      const cur = newest.get(k);
+      if (!cur || r.poNo > cur.poNo || (r.poNo === cur.poNo && (r.date || "") > (cur.date || ""))) newest.set(k, r);
+    }
+    return rows.map(r => {
+      const name = newest.get(productKey(r.product) || r.product)?.product ?? r.product;
+      return name === r.product ? r : { ...r, product: name };
+    });
+  }, [rows]);
+  // Rate notes under the same names. A note saved under another spelling still counts; one saved
+  // under the shown name wins.
+  const canonNotes = useMemo(() => {
+    const nameOf = new Map<string, string>();
+    for (const r of canonRows) nameOf.set(productKey(r.product) || r.product, r.product);
+    const out: RateNotes = {};
+    for (const [k, note] of Object.entries(rateNotes)) {
+      let product: string, supplier: string;
+      try { [product, supplier] = JSON.parse(k); } catch { continue; }
+      const name = nameOf.get(productKey(product) || product) ?? product;
+      const ck = noteKey(name, supplier);
+      if (!(ck in out) || product === name) out[ck] = note;
+    }
+    return out;
+  }, [canonRows, rateNotes]);
+
   const filteredOrders = useMemo(() => rows.filter(r => {
     if (supplierFilter && r.supplier !== supplierFilter) return false;
     if (!inRange(r)) return false;
@@ -278,7 +310,7 @@ export default function SupplierDirectoryClient({
   };
   const byProduct = useMemo(() => {
     const map = new Map<string, Map<string, SupplierAgg>>();
-    for (const r of rows) {
+    for (const r of canonRows) {
       if (!inRange(r)) continue;
       let suppliersMap = map.get(r.product);
       if (!suppliersMap) { suppliersMap = new Map(); map.set(r.product, suppliersMap); }
@@ -313,7 +345,7 @@ export default function SupplierDirectoryClient({
       if (supplierFilter) entries = entries.filter(([sp]) => sp === supplierFilter);
       entries.sort((a, b) => a[0].localeCompare(b[0]));
       entries.forEach(([supplier, agg], i) => {
-        const note = rateNotes[noteKey(product, supplier)];
+        const note = canonNotes[noteKey(product, supplier)];
         // Each field falls back independently, so noting just a tax % keeps
         // the PO's rate showing beside it.
         const shownRate = note?.rate ?? agg.rate;
@@ -328,7 +360,7 @@ export default function SupplierDirectoryClient({
       });
     }
     return flat;
-  }, [rows, rateNotes, q, supplierFilter, fromDate, toDate, sort]);
+  }, [canonRows, canonNotes, q, supplierFilter, fromDate, toDate, sort]);
 
   // ---- Rate history (By product view) ----
   // Every order of one product from one supplier, newest first. Built from all
@@ -338,13 +370,13 @@ export default function SupplierDirectoryClient({
   const [historyFor, setHistoryFor] = useState<{ product: string; supplier: string; allSuppliers?: boolean } | null>(null);
   const history = useMemo(() => {
     if (!historyFor) return [];
-    return rows
+    return canonRows
       .filter(r => r.product === historyFor.product && (historyFor.allSuppliers || r.supplier === historyFor.supplier))
       .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo);
-  }, [rows, historyFor]);
+  }, [canonRows, historyFor]);
   const suppliersOfHistory = useMemo(
-    () => historyFor ? new Set(rows.filter(r => r.product === historyFor.product).map(r => r.supplier)).size : 0,
-    [rows, historyFor]);
+    () => historyFor ? new Set(canonRows.filter(r => r.product === historyFor.product).map(r => r.supplier)).size : 0,
+    [canonRows, historyFor]);
 
   // The rate it was before: the latest earlier order's rate that differs from the one
   // shown, in yellow beside it. Nothing when the rate has never changed. Clicking it
@@ -352,7 +384,7 @@ export default function SupplierDirectoryClient({
   // start an inline edit of the cell it's in.
   const ratesByPair = useMemo(() => {
     const m = new Map<string, { rate: number; uom: string }[]>();
-    for (const r of [...rows].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo)) {
+    for (const r of [...canonRows].sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo)) {
       if (r.rate == null) continue;
       const k = noteKey(r.product, r.supplier);
       const list = m.get(k) ?? [];
@@ -360,7 +392,7 @@ export default function SupplierDirectoryClient({
       m.set(k, list);
     }
     return m;
-  }, [rows]);
+  }, [canonRows]);
   const oldRateTag = (product: string, supplier: string, shown: number | null) => {
     const old = ratesByPair.get(noteKey(product, supplier))?.find(x => x.rate !== shown);
     if (!old) return null;
