@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { roleCanAccess } from "@/lib/permissions";
 import { dashboardRange, loadExpenses } from "@/lib/ownerDashboard";
 import RangePicker from "../RangePicker";
 import ExpenseDetail from "./ExpenseDetail";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; recv?: string }> }) {
   const user = await getSession();
   if (!user) redirect("/login?next=/dashboard/expenses");
-  if (user.role !== "superadmin") redirect("/");
+  if (user.role !== "superadmin" && !(await roleCanAccess(user.role, "dashboard.owner"))) redirect("/");
   const sp = await searchParams;
   const { from, to, today } = dashboardRange(sp);
   const received = sp.recv === "1";

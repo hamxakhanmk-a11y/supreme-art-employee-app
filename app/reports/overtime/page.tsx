@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type SP = { year?: string; month?: string };
 
 export default async function OvertimeReportPage({ searchParams }: { searchParams: Promise<SP> }) {
-  await requireModule("reports.attendance");
+  await requireModule("reports.overtime");
   const sp = await searchParams;
   const now = new Date();
   const year = parseInt(sp.year || String(now.getFullYear()));

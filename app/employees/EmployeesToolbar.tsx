@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { downloadRegisterXlsx } from "@/lib/xlsx";
+import { useCanEdit } from "@/components/MeProvider";
 import type { employees } from "@/lib/schema";
 
 type Row = typeof employees.$inferSelect & { exitReason: string | null };
@@ -42,6 +43,7 @@ function widthFor(h: string): number {
 const COL_WIDTHS = HEADERS.map(widthFor);
 
 export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
+  const canAdd = useCanEdit("employees.add");
   const exportXlsx = () => {
     downloadRegisterXlsx({
       filename: "employees",
@@ -88,7 +90,7 @@ export default function EmployeesToolbar({ rows }: { rows: Row[] }) {
       )}
       <button onClick={exportXlsx} className="btn" disabled={!rows.length}>⬇ Excel</button>
       <Link href="/employees/form/print" className="btn">📄 Blank Form</Link>
-      <Link href="/employees/new" className="btn btn-primary">＋ Add Employee</Link>
+      {canAdd && <Link href="/employees/new" className="btn btn-primary">＋ Add Employee</Link>}
     </div>
   );
 }

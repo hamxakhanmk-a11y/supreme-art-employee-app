@@ -20,7 +20,8 @@ type Capa = {
 export default function CapaFormClient({ capa }: { capa: Capa }) {
   const router = useRouter();
   const me = useMe();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("capa");
+  const canDelete = useCanEdit("capa.delete");
 
   const [d, setD] = useState<CapaData>(() => parseCapaData(capa.data));
   const [issueDate, setIssueDate] = useState(capa.issueDate || "");
@@ -93,7 +94,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
                 ✓ Close CAPA
               </button>
             )}
-            <button className="btn btn-danger-soft btn-sm" onClick={remove}>Delete</button>
+            {canDelete && <button className="btn btn-danger-soft btn-sm" onClick={remove}>Delete</button>}
           </>
         )}
         <button className="btn btn-print" onClick={() => window.print()}>🖨 Print / PDF</button>

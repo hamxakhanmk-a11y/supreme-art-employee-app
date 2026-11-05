@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { employees } from "@/lib/schema";
 import { getSession } from "@/lib/auth";
+import { roleCanAccess } from "@/lib/permissions";
+import { isViewOnly } from "@/lib/pageGuard";
 import { dashboardRange } from "@/lib/ownerDashboard";
 import OwnerDashboard from "./dashboard/OwnerDashboard";
 
@@ -67,10 +69,10 @@ function severity(daysLeft: number): { label: string; color: string; bg: string;
   return { label: `${daysLeft}d left`, color: "#2d6a10", bg: "#eaf3de", border: "#cfe5b8" };
 }
 
-// The Super Admin gets the owner dashboard (app/dashboard/OwnerDashboard.tsx); everyone else this one.
+// The Super Admin (and any role given Owner Dashboard) gets the owner dashboard (app/dashboard/OwnerDashboard.tsx); everyone else this one.
 export default async function Home({ searchParams }: { searchParams: Promise<{ efrom?: string; eto?: string; afrom?: string; ato?: string; erecv?: string }> }) {
   const user = await getSession();
-  if (user?.role === "superadmin") {
+  if (user && (user.role === "superadmin" || await roleCanAccess(user.role, "dashboard.owner"))) {
     const sp = await searchParams;
     const exp = dashboardRange({ from: sp.efrom, to: sp.eto }), att = dashboardRange({ from: sp.afrom, to: sp.ato });
     return <OwnerDashboard exp={exp} att={att} received={sp.erecv === "1"} today={exp.today} />;
@@ -105,7 +107,7 @@ async function Dashboard() {
         <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 2 }}>
           <div className="hero-greet">{greeting}, Hamza 👋</div>
           <div className="hero-cta">
-            <Link href="/employees/new" className="hero-btn hero-btn-light">＋ Add Employee</Link>
+            {!(await isViewOnly("employees.add")) && <Link href="/employees/new" className="hero-btn hero-btn-light">＋ Add Employee</Link>}
             <Link href="/employees" className="hero-btn hero-btn-dark">View Employees</Link>
           </div>
         </div>

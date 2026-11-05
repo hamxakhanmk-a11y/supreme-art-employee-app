@@ -37,7 +37,7 @@ const FILTERS: { key: string; label: string }[] = [
 
 export default function CapaListClient({ initial }: { initial: Row[] }) {
   const router = useRouter();
-  const canEdit = useCanEdit();
+  const canEdit = useCanEdit("capa");
   const [rows] = useState<Row[]>(initial);
   // Status filter, search and sort are kept for when the user comes back to this screen.
   const [filter, setFilter] = usePageState("status", "all");

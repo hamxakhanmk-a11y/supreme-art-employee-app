@@ -219,7 +219,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/store/parts?id=42 — SOFT delete (moves to trash, purged after 7 days)
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.partdelete");
   if (guard instanceof NextResponse) return guard;
   const idParam = req.nextUrl.searchParams.get("id");
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });

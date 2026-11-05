@@ -27,7 +27,7 @@ export async function GET() {
 
 // POST { action: "hide" | "show", field: "supplier" | "brand", value }
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.settings");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureStoreSchema();

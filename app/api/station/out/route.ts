@@ -10,7 +10,7 @@ import { karachiNow } from "@/lib/gateTime";
 export async function GET(req: NextRequest) {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (user.role !== "superadmin" && !(await roleCanAccess(user.role, "station"))) {
+  if (user.role !== "superadmin" && !(await roleCanAccess(user.role, "station")) && !(await roleCanAccess(user.role, "station.out"))) {
     return NextResponse.json({ error: "No access" }, { status: 403 });
   }
   try {

@@ -3247,19 +3247,37 @@ function whenHtml(t){
 // Role Permissions - the Super Admin has them, other roles only if given them.
 function canDelete(){return !!(state.user&&state.user.canDelete);}
 function canReconcile(){return !!(state.user&&state.user.canReconcile);}
-// Store edit (parts, categories, machines, reversing an entry), Stock In and Stock Out are separate grants too.
+// Store edit (adding and editing parts) and each of the buttons below are separate grants too.
 function canStoreEdit(){return !!(state.user&&state.user.canEdit);}
 function canStockIn(){return !!(state.user&&state.user.canStockIn);}
 function canStockOut(){return !!(state.user&&state.user.canStockOut);}
-// Every .write-only control: a Stock In or Stock Out opener follows that grant, anything else store edit.
-const STOCK_IN_RE=/openSingleIn\(|openModal\('bulkIn'\)/,STOCK_OUT_RE=/openSingleOut\(|openModal\('bulkOut'\)/;
+function canReverse(){return !!(state.user&&state.user.canReverse);}
+function canPartDelete(){return !!(state.user&&state.user.canPartDelete);}
+function canStoreSettings(){return !!(state.user&&state.user.canSettings);}
+// A control is matched to its grant by the function its onclick calls (as the Tracker's Access Register does).
+const STORE_RULES=[
+  [/openSingleIn\(|openModal\('bulkIn'\)/,canStockIn],
+  [/openSingleOut\(|openModal\('bulkOut'\)/,canStockOut],
+  [/deleteTxn\(/,canReverse],
+  [/deletePart\(|restoreTrashPart\(|purgeTrashPart\(/,canPartDelete],
+  [/openModal\('addCat'\)|saveCat\(|deleteCat\(|openModal\('addMachine'\)|saveMachine\(|deleteMachine\(|openSupBrand\(|sbRename\(|sbApply\(|openAddBrand\(|setDropHidden\(/,canStoreSettings],
+];
+function storeRule(oc){for(const [re,fn] of STORE_RULES)if(re.test(oc))return fn;return null;}
+// Every .write-only control follows the grant its button needs (store edit when none of the rules match);
+// any other control with a rule (Hide / Show in a dropdown list, say) follows that rule.
 function applyStoreAccess(root){
   if(!root||!root.querySelectorAll||!state.user)return;
-  const els=[...(root.matches&&root.matches('.write-only')?[root]:[]),...root.querySelectorAll('.write-only')];
+  const els=new Set([...(root.matches&&root.matches('.write-only,[onclick]')?[root]:[]),...root.querySelectorAll('.write-only,[onclick]')]);
   for(const el of els){
-    const oc=[el,...el.querySelectorAll('[onclick]')].map(x=>x.getAttribute('onclick')||'').join(' ');
-    const ok=STOCK_IN_RE.test(oc)?canStockIn():STOCK_OUT_RE.test(oc)?canStockOut():canStoreEdit();
-    el.classList.toggle('acc-hide',!ok);
+    let fn;
+    if(el.classList.contains('write-only')){
+      const oc=[el,...el.querySelectorAll('[onclick]')].map(x=>x.getAttribute('onclick')||'').join(' ');
+      fn=storeRule(oc)||canStoreEdit;
+    }else{
+      fn=storeRule(el.getAttribute('onclick')||'');
+      if(!fn)continue;
+    }
+    el.classList.toggle('acc-hide',!fn());
   }
 }
 let _storeAccessObs=null;

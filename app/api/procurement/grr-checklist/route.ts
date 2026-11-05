@@ -16,7 +16,7 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const guard = await guardWrite("grn");
+  const guard = await guardWrite("grn.settings");
   if (guard instanceof NextResponse) return guard;
   const b = await req.json().catch(() => ({}));
   const checklist = cleanChecklist(b.checklist);

@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE — supports ?id=42 (single, reverse qty) OR JSON body { ids: [...], historyOnly?: bool }
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardAuth();
   if (guard instanceof NextResponse) return guard;
   try {
     let ids: number[] = [];
@@ -150,12 +150,10 @@ export async function DELETE(req: NextRequest) {
       historyOnly = body?.historyOnly === true;
     }
     if (!ids.length) return NextResponse.json({ error: "ID(s) required" }, { status: 400 });
-    // Deleting records from history (the quantity is kept) is its own grant;
-    // reversing an entry (the quantity comes back) stays with store edit.
-    if (historyOnly) {
-      const owner = await guardWrite("store.delete");
-      if (owner instanceof NextResponse) return owner;
-    }
+    // Deleting records from history (the quantity is kept) and reversing an entry (the quantity comes
+    // back) are grants of their own.
+    const allowed = await guardWrite(historyOnly ? "store.delete" : "store.reverse");
+    if (allowed instanceof NextResponse) return allowed;
 
     const txns = await db.select().from(storeTransactions).where(inArray(storeTransactions.id, ids));
     if (!txns.length) return NextResponse.json({ ok: true, deleted: 0 });

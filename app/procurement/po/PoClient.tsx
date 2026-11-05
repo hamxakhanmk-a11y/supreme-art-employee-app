@@ -56,6 +56,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("po");
   const canDelete = useCanEdit("po.delete");
+  const canSuppliers = useCanEdit("po.suppliers");
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
@@ -374,10 +375,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             </div>
           )}
           <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" onClick={saveSupplier} disabled={savingSupplier || !supplierName.trim()} className="btn btn-sm">
+            {canSuppliers && <button type="button" onClick={saveSupplier} disabled={savingSupplier || !supplierName.trim()} className="btn btn-sm">
               {savingSupplier ? "Saving…" : "＋ Save this supplier to the list"}
-            </button>
-            {selectedSupplierId && (
+            </button>}
+            {selectedSupplierId && canSuppliers && (
               <button type="button" onClick={deleteSupplier} className="btn btn-sm" style={{ color: "#A32D2D" }}>
                 🗑 Remove from list
               </button>

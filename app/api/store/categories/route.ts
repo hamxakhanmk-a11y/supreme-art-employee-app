@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.settings");
   if (guard instanceof NextResponse) return guard;
   try {
     const b = await req.json().catch(() => ({}));
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.settings");
   if (guard instanceof NextResponse) return guard;
   const name = req.nextUrl.searchParams.get("name");
   const mod = normalizeModule(req.nextUrl.searchParams.get("module"));

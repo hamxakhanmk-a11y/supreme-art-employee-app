@@ -4,6 +4,7 @@ import WhoIsOutClient from "./WhoIsOutClient";
 import OutTabs from "./OutTabs";
 import StationReportView, { reportRange } from "../report/StationReportView";
 import { karachiNow } from "@/lib/gateTime";
+import { requireModule } from "@/lib/pageGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ type SP = { date?: string; from?: string; to?: string; tab?: string };
 // Who's Out, one tab with two views: who is outside now (or on a chosen day),
 // and the Report — every trip in a date range, with each person's totals.
 export default async function WhoIsOutPage({ searchParams }: { searchParams: Promise<SP> }) {
+  await requireModule("station.out");
   const sp = await searchParams;
   const today = karachiNow().date;   // UTC would still be yesterday until 5am
   const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date || "") ? sp.date! : today;

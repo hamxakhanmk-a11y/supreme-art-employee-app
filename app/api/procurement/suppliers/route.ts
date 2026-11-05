@@ -20,7 +20,7 @@ export async function GET() {
 // supplier. If one with the same name already exists (case-insensitive) it's
 // updated with any new details rather than duplicated.
 export async function POST(req: Request) {
-  const guard = await guardWrite("po");
+  const guard = await guardWrite("po.suppliers");
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 // PATCH { id, registered } — retag a saved supplier as registered / unregistered
 // from the supplier lists panel.
 export async function PATCH(req: Request) {
-  const guard = await guardWrite("po");
+  const guard = await guardWrite("po.suppliers");
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));
@@ -71,7 +71,7 @@ export async function PATCH(req: Request) {
 // DELETE { id } — remove a saved supplier from the directory. Existing POs keep
 // their own copy of the supplier's details, so this only affects the picker.
 export async function DELETE(req: Request) {
-  const guard = await guardWrite("po");
+  const guard = await guardWrite("po.suppliers");
   if (guard instanceof NextResponse) return guard;
   await ensureProcurementTables();
   const b = await req.json().catch(() => ({}));

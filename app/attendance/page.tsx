@@ -60,6 +60,7 @@ const ROW_PILLS = ["present", "absent", "leave"] as const;
 export default function AttendancePage() {
   const canEdit = useCanEdit("attendance");
   const canClose = useCanEdit("attendance.close");
+  const canOffDay = useCanEdit("attendance.offday");
   const today = new Date().toISOString().slice(0, 10);
   // The day being marked always starts at today (not remembered), so nobody marks a past day by accident.
   const [date, setDate] = useState(today);
@@ -329,7 +330,7 @@ export default function AttendancePage() {
               {unmarkingAll ? "Unmarking…" : `✕ Unmark All (${rows.length - summary.unmarked})`}
             </button>
           )}
-          <button onClick={() => setShowOffPicker(v => !v)}
+          {canOffDay && <button onClick={() => setShowOffPicker(v => !v)}
             style={{
               padding: "8px 16px", borderRadius: 8,
               border: "1px solid #475569",
@@ -339,7 +340,7 @@ export default function AttendancePage() {
               cursor: "pointer",
             }}>
             🌙 Mark OFF Day
-          </button>
+          </button>}
           <button onClick={() => window.print()} className="btn btn-print">🖨 Print</button>
           <button onClick={exportCSV} className="btn" disabled={!rows.length}>⬇ Excel (CSV)</button>
           {!canClose ? (closed && <span className="badge" style={{ background: "#DC2626", alignSelf: "center" }}>🔒 Day closed</span>) : !closed ? (

@@ -11,9 +11,12 @@ import { db } from "./db";
 import { rolePermissions, customRoles } from "./schema";
 
 export type ModuleKey =
+  | "dashboard.owner"
   | "employees"
+  | "employees.add"
   | "employees.delete"
   | "attendance"
+  | "attendance.offday"
   | "attendance.close"
   | "attendance.overtime"
   | "forms"
@@ -30,6 +33,8 @@ export type ModuleKey =
   | "reports.procurement"
   | "reports.station"
   | "reports.activity"
+  | "reports.overtime"
+  | "reports.expenses"
   | "salary"
   | "kpi"
   // purchase — legacy master key (auto-expands into every purchase.* below)
@@ -46,27 +51,38 @@ export type ModuleKey =
   | "station.vehicles"
   | "station.cards"
   | "station.monthly"
+  | "station.out"
+  | "station.visits"
   | "station.delete"
   | "demand"
   | "demand.delete"
   | "po"
   | "po.delete"
+  | "po.suppliers"
   | "grn"
   | "grn.delete"
+  | "grn.settings"
   | "suppliers"
   | "store"
   // stock in / stock out are their own grants, so a store keeper can be given just one
   | "store.stockin"
   | "store.stockout"
+  | "store.reverse"
+  | "store.partdelete"
+  | "store.settings"
   // store actions that are their own grants, separate from store edit
   | "store.delete"
   | "store.reconcile"
-  | "capa";
+  | "capa"
+  | "capa.delete";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
-  { key: "employees",  label: "Employees",   hint: "Add / edit employee records & documents" },
+  { key: "dashboard.owner", label: "Owner Dashboard", hint: "The owner's dashboard on Profile — expense, CNIC expiry, late comers, who / what is out" },
+  { key: "employees",  label: "Employees",   hint: "Employee list & profiles — edit changes an employee's details" },
+  { key: "employees.add",    label: "Employees · Add",    hint: "Add a new employee" },
   { key: "employees.delete", label: "Employees · Delete", hint: "Delete an employee permanently" },
-  { key: "attendance", label: "Attendance",  hint: "Mark attendance and off-days" },
+  { key: "attendance", label: "Attendance",  hint: "Mark Today — edit marks attendance" },
+  { key: "attendance.offday",   label: "Attendance · Mark OFF Day",       hint: "Mark the whole day OFF for everyone" },
   { key: "attendance.close",    label: "Attendance · Close / Reopen Day", hint: "Close a day so it can't be changed, or reopen it" },
   { key: "attendance.overtime", label: "Attendance · Overtime",           hint: "Record overtime hours" },
   { key: "forms",      label: "Forms & Leave", hint: "Fill in and edit leave / half-day forms" },
@@ -81,6 +97,8 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "reports.procurement", label: "Report · Procurement", hint: "Procurement master report — Demand → PO → GRR" },
   { key: "reports.station",     label: "Report · Station",     hint: "Hourly-leave register from Station" },
   { key: "reports.activity",    label: "Report · Activity Log", hint: "Audit trail of who did what" },
+  { key: "reports.overtime",    label: "Report · Overtime",     hint: "Overtime report — monthly hours per employee" },
+  { key: "reports.expenses",    label: "Report · Expense Report", hint: "Purchase expenses — every requisition line, by category" },
   { key: "salary",     label: "Salary",      hint: "Generate & view salary slips" },
   { key: "kpi",        label: "KPI",         hint: "Assign templates & enter monthly KPI values" },
   // Purchase — tick the individual actions below rather than the umbrella.
@@ -93,24 +111,32 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "station.vehicles", label: "Station · Vehicles",       hint: "Vehicles page — Log Book and the vehicle list, PINs, drivers" },
   { key: "station.cards",    label: "Station · PSO Cards",      hint: "PSO Cards page — Cards Logbook, card list, top-ups & balances" },
   { key: "station.monthly",  label: "Station · Monthly Report", hint: "Fleet monthly report — fuel rate & maintenance" },
+  { key: "station.out",      label: "Station · Who's Out",      hint: "Who is out of the gate right now, and the out-and-back report" },
+  { key: "station.visits",   label: "Station · Visits Report",  hint: "Visitors' report" },
   { key: "station.delete", label: "Station · Delete", hint: "Delete hourly-leave trips, vehicle trips, fuel records, top-ups and PSO cards" },
   { key: "demand",     label: "Raise Demand", hint: "Procurement — create material demand forms" },
   { key: "demand.delete", label: "Demand · Delete", hint: "Delete a material demand" },
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "po.delete",  label: "PO · Delete",  hint: "Delete a purchase order" },
+  { key: "po.suppliers", label: "PO · Saved Supplier List", hint: "Save a supplier to the list, or remove one, on the PO form" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
   { key: "grn.delete", label: "GRR · Delete", hint: "Delete a goods-receiving report" },
+  { key: "grn.settings", label: "GRR · Checklist Settings", hint: "The GRR inspection checklist: categories and their points" },
   // View = the Supplier Directory's By-product list (who supplies what, at
   // what rate). Edit additionally allows correcting a product's rate / tax %
   // in place, which writes to that line on its most recent PO. Super Admin
   // also gets the full report — the per-order view with order values.
   { key: "suppliers",  label: "Supplier Directory", hint: "Which supplier a product comes from & its rate — edit allows correcting the rate" },
-  { key: "store",      label: "Parts Store",  hint: "Store inventory — edit adds / edits parts, categories, machines and reverses entries" },
+  { key: "store",      label: "Parts Store",  hint: "Store inventory — edit adds and edits parts" },
   { key: "store.stockin",   label: "Store · Stock In",            hint: "Stock in, one part or in bulk" },
   { key: "store.stockout",  label: "Store · Stock Out / Issue",   hint: "Stock out / issue, one part or in bulk" },
+  { key: "store.reverse",   label: "Store · Reverse Entry",       hint: "Reverse a stock in / out — the quantity goes back" },
+  { key: "store.partdelete", label: "Store · Delete Part / Trash", hint: "Move a part to Trash, restore it, or delete it for good" },
+  { key: "store.settings",  label: "Store · Categories, Machines, Suppliers & Brands", hint: "Add / remove categories and machines, rename suppliers & brands, hide dropdown entries" },
   { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
   { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
+  { key: "capa.delete", label: "CAPA · Delete", hint: "Delete an open CAPA (a closed one stays the owner's)" },
 ];
 
 // Dormant features remain valid permission keys so saving another role cannot
@@ -127,7 +153,7 @@ export const VISIBLE_MODULES = MODULES.filter((m) => !HIDDEN_MODULE_KEYS.has(m.k
 const MASTER_EXPANSION: Record<string, ModuleKey[]> = {
   reports: [
     "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
-    "reports.procurement", "reports.station", "reports.activity",
+    "reports.procurement", "reports.station", "reports.activity", "reports.overtime",
   ],
   purchase: ["purchase.raise", "purchase.edit", "purchase.receive", "purchase.delete", "purchase.hr-approve"],
 };
@@ -144,7 +170,7 @@ function expandMasters(modules: ModuleKey[]): ModuleKey[] {
 export const ALL_MODULE_KEYS: ModuleKey[] = MODULES.map((m) => m.key);
 
 // Every Station section; any one opens the Station tab (delete is an action, not a page).
-export const STATION_KEYS: ModuleKey[] = ["station", "station.vehicles", "station.cards", "station.monthly"];
+export const STATION_KEYS: ModuleKey[] = ["station", "station.vehicles", "station.cards", "station.monthly", "station.out", "station.visits"];
 
 export interface RolePerm {
   modules: ModuleKey[];       // sections the role can OPEN (view access)
@@ -157,8 +183,10 @@ export interface RolePerm {
 //  - "action":  purchase.* — the permission IS an action, so granting = edit.
 //  - "section": everything else — has a real view-vs-edit distinction.
 export type EditKind = "view" | "action" | "section";
+// Pages that are only looked at (like the reports): View or Hidden.
+const VIEW_KEYS = new Set(["dashboard.owner", "station.out", "station.visits"]);
 export function moduleEditKind(key: string): EditKind {
-  if (key.startsWith("reports.")) return "view";
+  if (key.startsWith("reports.") || VIEW_KEYS.has(key)) return "view";
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
   if (key === "store.delete" || key === "store.reconcile") return "action";
@@ -166,32 +194,54 @@ export function moduleEditKind(key: string): EditKind {
   return "section";
 }
 
-// Buttons split out of a section's edit right into grants of their own (2026-11). Each names the section
-// whose edit used to cover it: every role that could edit that section is given the button once (see
-// migrateButtonSplit), so nobody loses anything the day it arrives; the owner then takes it away per role.
-export const BUTTON_SPLIT: Record<string, ModuleKey> = {
-  "employees.delete": "employees",
-  "attendance.close": "attendance",
-  "attendance.overtime": "attendance",
-  "forms.approve": "forms",
-  "forms.delete": "forms",
-  "forms.settings": "forms",
-  "demand.delete": "demand",
-  "po.delete": "po",
-  "grn.delete": "grn",
-  "store.stockin": "store",
-  "store.stockout": "store",
-};
+// Buttons and pages split out of what used to cover them, into grants of their own (2026-11), in batches.
+// buttons: each names the section whose EDIT covered it — every role that could edit that section is given
+// the button once. pages: each names the grant that used to open it — every role that could open that is
+// given the page once. Each batch runs once (its marker row, see migrateButtonSplit), so nobody gains or
+// loses anything the day it arrives, and what the owner takes away afterwards stays away.
+const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: Record<string, ModuleKey> }[] = [
+  { name: "button-split-2026-11", pages: {}, buttons: {
+    "employees.delete": "employees",
+    "attendance.close": "attendance",
+    "attendance.overtime": "attendance",
+    "forms.approve": "forms",
+    "forms.delete": "forms",
+    "forms.settings": "forms",
+    "demand.delete": "demand",
+    "po.delete": "po",
+    "grn.delete": "grn",
+    "store.stockin": "store",
+    "store.stockout": "store",
+  } },
+  { name: "button-split-2026-11b", buttons: {
+    "employees.add": "employees",
+    "attendance.offday": "attendance",
+    "po.suppliers": "po",
+    "grn.settings": "grn",
+    "store.reverse": "store",
+    "store.partdelete": "store",
+    "store.settings": "store",
+    "capa.delete": "capa",
+  }, pages: {
+    "reports.overtime": "reports.attendance",
+    "station.out": "station",
+    "station.visits": "station",
+  } },
+];
+export const BUTTON_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.buttons));
+const PAGE_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.pages));
 // The section a button belongs to: the button does nothing for a role that can't open that section.
 export const MODULE_PARENT: Record<string, ModuleKey> = {
   ...BUTTON_SPLIT,
   "store.delete": "store",
   "store.reconcile": "store",
 };
-// A default (a role with no saved row yet) that can edit a section gets its split-out buttons too.
-function withSplitButtons(modules: ModuleKey[]): ModuleKey[] {
+// A default (a role with no saved row yet) gets the split-out pages of what it opens and, when it edits,
+// the split-out buttons too.
+function withSplits(modules: ModuleKey[], canEdit: boolean): ModuleKey[] {
   const out = new Set(modules);
-  for (const [btn, parent] of Object.entries(BUTTON_SPLIT)) if (out.has(parent)) out.add(btn as ModuleKey);
+  for (const [page, from] of Object.entries(PAGE_SPLIT)) if (out.has(from)) out.add(page as ModuleKey);
+  if (canEdit) for (const [btn, parent] of Object.entries(BUTTON_SPLIT)) if (out.has(parent)) out.add(btn as ModuleKey);
   return [...out];
 }
 
@@ -223,7 +273,7 @@ export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.k
 // procurement and engineer start narrow — tune them in Role Permissions.
 // Grants that belong to the Super Admin until the owner ticks them for a role:
 // a role without a stored row would otherwise inherit "everything" below.
-const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile"];
+const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses"];
 const EVERYTHING_BUT_OWNER_ONLY = ALL_MODULE_KEYS.filter(k => !OWNER_ONLY_BY_DEFAULT.includes(k));
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
   superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
@@ -362,29 +412,38 @@ export async function migrateStationSplit() {
   `);
 }
 
-// The buttons split out of their sections (BUTTON_SPLIT): every saved role that could edit the section is
-// given the button at edit, once (the marker row), the same way as the Station split above. A role saved
-// before an edit list existed (edit_modules NULL) edits whatever it can open when can_edit is on.
+// The splits (SPLIT_BATCHES), each batch once (its marker row), the same way as the Station split above: a
+// button goes to every saved role that could edit its section, at edit; a page to every role that could open
+// what used to open it. A role saved before an edit list existed (edit_modules NULL) edits whatever it can
+// open when can_edit is on.
 let buttonSplitChecked = false;
 export async function migrateButtonSplit() {
-  const steps = Object.entries(BUTTON_SPLIT).map(([btn, parent]) => `
+  const has = (col: string, k: string) => `(',' || ${col} || ',') LIKE '%,${k},%'`;
+  const blocks = SPLIT_BATCHES.map(b => {
+    const buttons = Object.entries(b.buttons).map(([btn, parent]) => `
           UPDATE role_permissions SET modules = modules || ',${btn}'
-            WHERE (',' || modules || ',') LIKE '%,${parent},%' AND (',' || modules || ',') NOT LIKE '%,${btn},%'
-              AND ((edit_modules IS NOT NULL AND (',' || edit_modules || ',') LIKE '%,${parent},%') OR (edit_modules IS NULL AND can_edit));
+            WHERE ${has("modules", parent)} AND NOT ${has("modules", btn)}
+              AND ((edit_modules IS NOT NULL AND ${has("edit_modules", parent)}) OR (edit_modules IS NULL AND can_edit));
           UPDATE role_permissions SET edit_modules = edit_modules || ',${btn}'
-            WHERE edit_modules IS NOT NULL AND (',' || edit_modules || ',') LIKE '%,${parent},%' AND (',' || edit_modules || ',') NOT LIKE '%,${btn},%';`).join("");
+            WHERE edit_modules IS NOT NULL AND ${has("edit_modules", parent)} AND NOT ${has("edit_modules", btn)};`).join("");
+    // A page split off a report: a role stored with the old "reports" umbrella opened it too.
+    const pages = Object.entries(b.pages).map(([page, from]) => `
+          UPDATE role_permissions SET modules = modules || ',${page}'
+            WHERE (${has("modules", from)}${from.startsWith("reports.") ? ` OR ${has("modules", "reports")}` : ""}) AND NOT ${has("modules", page)};`).join("");
+    return `
+      IF NOT EXISTS (SELECT 1 FROM perm_migrations WHERE name = '${b.name}') THEN
+        IF to_regclass('role_permissions') IS NOT NULL THEN${buttons}${pages}
+        END IF;
+        INSERT INTO perm_migrations (name) VALUES ('${b.name}');
+      END IF;`;
+  }).join("");
   // Keys and parents are this file's own constants (no user input), so the block is written out whole: a DO block can't take parameters.
   await db.execute(sql.raw(`
     DO $$ BEGIN
       CREATE TABLE IF NOT EXISTS perm_migrations (
         name varchar(60) PRIMARY KEY,
         done_at timestamptz NOT NULL DEFAULT now()
-      );
-      IF NOT EXISTS (SELECT 1 FROM perm_migrations WHERE name = 'button-split-2026-11') THEN
-        IF to_regclass('role_permissions') IS NOT NULL THEN${steps}
-        END IF;
-        INSERT INTO perm_migrations (name) VALUES ('button-split-2026-11');
-      END IF;
+      );${blocks}
     END $$;
   `));
 }
@@ -407,8 +466,9 @@ export async function loadAllPerms(): Promise<Record<string, RolePerm>> {
   for (const rm of await loadRoles()) {
     if (rm.key === "superadmin") continue; // always full — set below
     const d = DEFAULT_PERMS[rm.key];
-    const modules = d ? (d.canEdit ? withSplitButtons(d.modules) : [...d.modules]) : [];
-    const editModules = d ? (d.canEdit ? [...d.modules] : []) : [];
+    const modules = d ? withSplits(d.modules, d.canEdit) : [];
+    // Edits everything it opens (split-out buttons included) when the default is editable.
+    const editModules = d && d.canEdit ? [...modules] : [];
     data[rm.key] = { modules, canEdit: !!editModules.length, editModules };
   }
 

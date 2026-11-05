@@ -59,7 +59,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const guard = await guardWrite("capa");
+  const guard = await guardWrite("capa.delete");
   if (guard instanceof NextResponse) return guard;
   await ensureCapaTable();
   const { id } = await ctx.params;

@@ -15,7 +15,7 @@ const norm = (s: any) => String(s ?? "").trim().toLowerCase();
 
 // POST { ids: number[], field: "supplier" | "brand", value: string }   (value "" clears it)
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.settings");
   if (guard instanceof NextResponse) return guard;
   try {
     await ensureStoreSchema();

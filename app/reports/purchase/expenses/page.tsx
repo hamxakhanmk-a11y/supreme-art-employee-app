@@ -1,9 +1,10 @@
-// Expense Report — read-only, Super Admin only.
+// Expense Report — read-only; the Super Admin, or a role given Report · Expense Report.
 // Every expense line item raised through the Purchase Requisition register,
 // with its category and value. Does not touch the Purchase register or its
 // forms in any way — pure read over existing purchase_requisitions rows.
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { roleCanAccess } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { purchaseRequisitions } from "@/lib/schema";
 import { parsePrItems } from "@/lib/purchase";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function ExpenseReportPage() {
   const user = await getSession();
   if (!user) redirect("/login?next=/reports/purchase/expenses");
-  if (user.role !== "superadmin") redirect("/");
+  if (user.role !== "superadmin" && !(await roleCanAccess(user.role, "reports.expenses"))) redirect("/");
 
   const prs = await db.select({
     id: purchaseRequisitions.id,

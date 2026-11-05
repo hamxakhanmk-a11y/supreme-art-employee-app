@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("employees");
+  const guard = await guardWrite("employees.add");
   if (guard instanceof NextResponse) return guard;
   try {
     const body = await req.json();

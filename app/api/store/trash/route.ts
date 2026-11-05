@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 // POST { id } — restore a trashed part
 export async function POST(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.partdelete");
   if (guard instanceof NextResponse) return guard;
   try {
     const b = await req.json().catch(() => ({}));
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 // DELETE /api/store/trash?id=42 — remove from the Trash for good. A part with stock in or out history is
 // kept (hidden) so that history stays; one with none is deleted.
 export async function DELETE(req: NextRequest) {
-  const guard = await guardWrite("store");
+  const guard = await guardWrite("store.partdelete");
   if (guard instanceof NextResponse) return guard;
   const idParam = req.nextUrl.searchParams.get("id");
   if (!idParam) return NextResponse.json({ error: "ID required" }, { status: 400 });

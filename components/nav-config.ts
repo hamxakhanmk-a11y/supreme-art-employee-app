@@ -19,9 +19,9 @@ export interface ModuleDef {
 // or "does the user have any Purchase access?" should import these lists.
 export const REPORT_SUBKEYS = [
   "reports.attendance", "reports.leaves", "reports.halfday", "reports.salary",
-  "reports.procurement", "reports.station", "reports.activity",
+  "reports.procurement", "reports.station", "reports.activity", "reports.overtime", "reports.expenses",
 ];
-export const STATION_SUBKEYS = ["station", "station.vehicles", "station.cards", "station.monthly"];
+export const STATION_SUBKEYS = ["station", "station.vehicles", "station.cards", "station.monthly", "station.out", "station.visits"];
 export const PURCHASE_SUBKEYS = ["purchase.raise", "purchase.edit", "purchase.receive", "purchase.delete", "purchase.hr-approve"];
 
 export const MODULES_BASE: ModuleDef[] = [
@@ -80,7 +80,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/", label: "Dashboard" },
         { href: "/employees", label: "Employees" },
         { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: "suppliers" },
-        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", superadminOnly: true },
+        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", needs: "reports.expenses" },
       ];
     case "attendance":
       return [
@@ -89,7 +89,7 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/reports/attendance", label: "📊 Attendance Register", variant: "report", needs: "reports.attendance" },
         { href: "/reports/leaves", label: "📊 Leave History", variant: "report", needs: "reports.leaves" },
         { href: "/reports/half-day", label: "📊 Half-Day History", variant: "report", needs: "reports.halfday" },
-        { href: "/reports/overtime", label: "📊 Overtime Report", variant: "report", needs: "reports.attendance" },
+        { href: "/reports/overtime", label: "📊 Overtime Report", variant: "report", needs: "reports.overtime" },
       ];
     case "forms": {
       if (path === "/forms") return [];
@@ -124,13 +124,13 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
     case "purchase":
       return [
         { href: "/purchase", label: "PR Register" },
-        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", superadminOnly: true },
+        { href: "/reports/purchase/expenses", label: "📊 Expense Report", variant: "report", needs: "reports.expenses" },
       ];
     case "station":
       return [
         { href: "/station", label: "Terminal", needs: "station" },
-        { href: "/station/out", label: "Who's Out", needs: "station" },
-        { href: "/station/visits", label: "Visits Report", needs: "station" },
+        { href: "/station/out", label: "Who's Out", needs: "station.out" },
+        { href: "/station/visits", label: "Visits Report", needs: "station.visits" },
         { href: "/station/vehicles", label: "Vehicles", needs: "station.vehicles" },
         { href: "/station/pso", label: "PSO Cards", needs: "station.cards" },
         { href: "/station/monthly", label: "Monthly Report", needs: "station.monthly" },

@@ -3,6 +3,7 @@ import { employees } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { stationTrips } from "@/lib/stationServer";
 import { karachiNow } from "@/lib/gateTime";
+import { requireModule } from "@/lib/pageGuard";
 import VisitsReportClient, { type VisitRow, type Staff } from "./VisitsReportClient";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/;
 // visits and time split Personal / Official, and every reason they gave.
 // Opens on today; This month and a custom range are a click away.
 export default async function VisitsReportPage({ searchParams }: { searchParams: Promise<SP> }) {
+  await requireModule("station.visits");
   const sp = await searchParams;
   const today = karachiNow().date;   // UTC would still be yesterday until 5am
   const from = ISO.test(sp.from || "") ? sp.from! : today;

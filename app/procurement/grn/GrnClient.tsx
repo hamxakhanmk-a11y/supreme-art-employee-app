@@ -52,6 +52,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   const datedRows = reportRange.rows;
   const canEdit = useCanEdit("grn");
   const canDelete = useCanEdit("grn.delete");
+  const canSettings = useCanEdit("grn.settings");
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -192,7 +193,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
   return (
     <div className="fade-up">
       <ReportExportControls range={reportRange} filename="grn-register" sheet={{sheetName:"GRR", title:"GOODS RECEIPTS REGISTER", headers:["Item","GRR #","Date","PO #","Gate Pass","Invoice","DC No","Invoice Qty","Quantity","Remarks","Inspection","Category","Board Grammage","Viscosity","Inspection Date","Inspection Remarks","Received by","Verified by"], colWidths:[34,12,14,12,18,18,16,12,12,30,26,24,16,16,16,30,24,24], rows:shown.flatMap(g=>{const lines=parseItems<GrnItem>(g.items);const ins=parseInspection(g.inspection);const result=ins.result?INSPECTION_RESULTS[ins.result].choice:"";return (lines.length?lines:[blankItem(1)]).map(it=>[it.item,docNoLabel(g.grnNo,g.registered),fmtDate(g.date),docNoLabel(g.poNo,g.registered),g.gatePassNo,g.invNo,g.dcNo,it.invoiceQty||"",it.quantity,it.remarks,result,checklistLabels(checklist,ins.categories),ins.grammage,ins.viscosity,ins.date?fmtDate(ins.date):"",ins.remarks,g.receivedBy,g.verifiedBy]);})}} chips={<StatChip label="GRRs" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search GRR, PO, gate pass, item…" />} sort={<SortBy options={GRN_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? <>
-        <button onClick={() => setSettingsOpen(v => !v)} className="btn" title="The inspection checklist: categories and their points">⚙ Settings</button>
+        {canSettings && <button onClick={() => setSettingsOpen(v => !v)} className="btn" title="The inspection checklist: categories and their points">⚙ Settings</button>}
         {open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <button onClick={startCreate} className="btn btn-primary">＋ New GRR</button>}
       </> : null} tabs={<>
         <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
@@ -205,7 +206,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
       </>} />
 
 
-      {settingsOpen && canEdit && (
+      {settingsOpen && canSettings && (
         <ChecklistSettings checklist={checklist} onClose={() => setSettingsOpen(false)}
           onSaved={() => { setSettingsOpen(false); router.refresh(); }} />
       )}

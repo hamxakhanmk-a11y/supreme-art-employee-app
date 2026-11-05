@@ -16,7 +16,7 @@ type Level = "none" | "view" | "edit";
 // Which tab a row sits under. Prefix rules first, then exact keys, so new keys slot in (any future
 // purchase.* or reports.*). Order follows the top navigation.
 const GROUP_ORDER = [
-  "Employees", "Attendance", "Forms & Leave", "Salary", "Purchase",
+  "Profile", "Employees", "Attendance", "Forms & Leave", "Salary", "Purchase",
   "Station", "Procurement", "Store", "Reports",
 ];
 function groupOf(key: string): string {
@@ -27,7 +27,8 @@ function groupOf(key: string): string {
   if (key.startsWith("store")) return "Store";
   if (key.startsWith("employees")) return "Employees";
   if (key.startsWith("attendance")) return "Attendance";
-  if (key.startsWith("forms") || key === "capa") return "Forms & Leave";
+  if (key.startsWith("forms") || key.startsWith("capa")) return "Forms & Leave";
+  if (key.startsWith("dashboard")) return "Profile";
   if (key === "salary") return "Salary";
   return "Other";
 }
