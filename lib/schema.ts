@@ -515,7 +515,8 @@ export const purchaseOrders = pgTable("purchase_orders", {
   supplierStrn: varchar("supplier_strn", { length: 40 }),
   specification: text("specification"),
   terms: text("terms"),
-  discount: doublePrecision("discount").default(0),
+  discount: doublePrecision("discount").default(0),   // whole-PO discount in Rs (worked out from discount_text)
+  discountText: varchar("discount_text", { length: 20 }), // as typed: "5000" or "5%"
   // Supplier tax status for THIS order. true = registered (has sales-tax
   // invoice), false = unregistered, null = not yet marked.
   registered: boolean("registered"),

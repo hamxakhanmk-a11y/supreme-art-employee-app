@@ -7,14 +7,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { usePageState } from "@/lib/usePageState";
 import { useCanEdit } from "@/components/MeProvider";
-import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
+import { parseItems, fmtDate, poLineMoney, fmtMoney, poGrandTotal, poWholeDiscount, poDiscountInput, financialYear, normSupplier, docNoLabel, UNREGISTERED_YEAR_LIMIT, PO_DEFAULT_TERMS, PO_DEFAULT_TAX, type PoItem, type DemandItem } from "@/lib/procurement";
 
 interface Po {
   id: number; poNo: number; demandNo: number | null; date: string;
   supplierName: string | null; supplierBrand: string | null; supplierAddress: string | null; supplierPhone: string | null;
   supplierConcernedPerson: string | null; supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
-  items: string; status: string; registered: boolean | null; discount: number | null;
+  items: string; status: string; registered: boolean | null; discount: number | null; discountText?: string | null;
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
@@ -83,6 +83,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const [orderPlacedBy, setOrderPlacedBy] = useState("");
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [items, setItems] = useState<PoItem[]>([blankItem(1), blankItem(2), blankItem(3)]);
+  const [poDiscount, setPoDiscount] = useState("");   // whole-PO discount as typed: "5000" or "5%"
   const [taxFilter, setTaxFilter] = usePageState<"all" | "reg" | "unreg" | "unmarked">("taxFilter", "all");
   const [q, setQ] = usePageState("q", "");
   const [sort, setSort] = usePageState<PoSort>("sort", "numDesc");
@@ -95,7 +96,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setSupplierConcernedPerson(""); setSupplierNtn(""); setSupplierStrn("");
     setExpectedDate(""); setTerms(PO_DEFAULT_TERMS.join("\n")); setOrderPlacedBy("");
     setRegistered(null);
-    setItems([blankItem(1), blankItem(2), blankItem(3)]); setErr("");
+    setItems([blankItem(1), blankItem(2), blankItem(3)]); setPoDiscount(""); setErr("");
   }
   // Creating is list-bound: you start a PO in the Registered or Unregistered
   // list, and that decides its sequence (10000 vs 10000u). It can't be changed
@@ -119,6 +120,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setExpectedDate((p.expectedDate || "").slice(0, 10));
     setTerms(p.terms || ""); setOrderPlacedBy(p.orderPlacedBy || "");
     setRegistered(p.registered);
+    setPoDiscount(p.discountText || (p.discount ? String(p.discount) : ""));
     const its = parseItems<PoItem>(p.items);
     setItems(its.length
       ? its.map((it, i) => ({ srNo: i + 1, description: it.description || it.item || "", quantity: it.quantity || "", uom: it.uom || "", rate: it.rate || "", tax: it.tax ?? String(PO_DEFAULT_TAX), discount: it.discount || "" }))
@@ -205,6 +207,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
           demandId: demandId || null, demandNo: demandNoManual, manualPoNo, date,
           supplierName, supplierBrand, supplierAddress, supplierPhone, supplierConcernedPerson,
           supplierNtn, supplierStrn, expectedDate, terms, orderPlacedBy, registered, items: clean,
+          discountText: poDiscount,
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -236,7 +239,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         && (p.date || "").slice(0, 10) >= fy.start && (p.date || "").slice(0, 10) <= fy.end)
       .reduce((s, p) => s + poGrandTotal(parseItems<PoItem>(p.items), p.discount), 0);
   }
-  const thisPoTotal = poGrandTotal(items, null);
+  const thisPoTotal = poGrandTotal(items, poWholeDiscount(items, poDiscount));
   const usedForForm = registered === false ? unregUsed(supplierName) : 0;
   const remainingForForm = UNREGISTERED_YEAR_LIMIT - usedForForm;
   const projected = usedForForm + thisPoTotal;
@@ -387,7 +390,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <span style={{ fontSize: 11.5, color: "var(--text3)" }}>Pick from the list to auto-fill, or just type — saving is optional.</span>
           </div>
 
-          <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%) · Discount comes off the Net Value: type Rs (500) or a percent (5%)</span></SectionLabel>
+          <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%) · Discount comes off the Net Value: type Rs (500) or a percent (5%) — per line, or on the whole PO under the lines</span></SectionLabel>
           <div style={{ overflow: "auto" }}>
             <table style={{ width: "100%", minWidth: 860 }}>
               <thead>
@@ -425,6 +428,9 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
               {(() => {
                 const t = items.reduce((a, it) => { const m = poLineMoney(it); a.net += m.net; a.discount += m.discount; return a; }, { net: 0, discount: 0 });
                 if (!t.net) return null;
+                const whole = poWholeDiscount(items, poDiscount);
+                const wholePct = poDiscountInput(poDiscount).pct;
+                const after = t.net - t.discount - whole;
                 return (
                   <tfoot>
                     <tr>
@@ -433,10 +439,21 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                       <td style={calcCell}>{t.discount ? fmtMoney(t.discount) : "—"}</td>
                       <td></td>
                     </tr>
-                    {t.discount > 0 && (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: "right", fontWeight: 700 }}>
+                        Discount on whole PO
+                        <div style={{ fontWeight: 400, fontSize: 11, color: "var(--text3)" }}>Rs off the total, or a percent of it (5%)</div>
+                      </td>
+                      <td>
+                        <input value={poDiscount} onChange={e => setPoDiscount(e.target.value)} className="auth-input" style={numInput} placeholder="0 or 5%" title="Rs off the whole PO, or a percent of the lines' total after their own discounts (e.g. 5%)" />
+                        {wholePct != null && whole > 0 && <div style={{ fontSize: 10.5, color: "var(--text3)", textAlign: "right", marginTop: 1 }}>Rs {fmtMoney(whole)}</div>}
+                      </td>
+                      <td></td>
+                    </tr>
+                    {(t.discount > 0 || whole > 0) && (
                       <tr>
                         <td colSpan={8} style={{ textAlign: "right", fontWeight: 700 }}>Total after discount</td>
-                        <td colSpan={2} style={{ ...calcCell, fontWeight: 800, color: "var(--text)" }}>Rs {fmtMoney(t.net - t.discount, false)}</td>
+                        <td colSpan={2} style={{ ...calcCell, fontWeight: 800, color: "var(--text)" }}>Rs {fmtMoney(after, false)}</td>
                         <td></td>
                       </tr>
                     )}

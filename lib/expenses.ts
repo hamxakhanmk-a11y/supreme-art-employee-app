@@ -3,7 +3,7 @@
 // ORDERED (the default) — what was ordered in the period:
 //  - Purchase: every requisition line's own value and category, on the requisition's date.
 //  - Procurement: every PO line placed in the period at its value (qty × rate + tax, less the line's
-//    discount), exactly as the
+//    discount and its share of any whole-PO discount), exactly as the
 //    Supplier Directory's Every order view adds it up (poLineValue below is shared with it). A PO has no
 //    category of its own, so it takes those of the GRRs made against it.
 // RECEIVED — what came in during the period:
@@ -114,6 +114,14 @@ export function poLineValue(it: Pick<PoItem, "quantity" | "rate" | "tax" | "disc
   return { rate, qty, taxPct, gross, taxValue, net, discount, total: net - discount };
 }
 
+// What is left of each line after the whole-PO discount (0…1): the discount is spread over the lines by
+// their value after their own discounts, the way the Received side shares it out.
+export function poWholeFactor(items: Pick<PoItem, "quantity" | "rate" | "tax" | "discount">[], discount: number | null | undefined): number {
+  const sum = items.reduce((s, it) => s + (poLineValue(it).total ?? 0), 0);
+  const d = Number(discount) || 0;
+  return sum > 0 && d > 0 ? Math.max(0, sum - d) / sum : 1;
+}
+
 export function isRejectedPr(pr: Pick<PrInput, "hodApproval" | "hrApproval">): boolean {
   return pr.hodApproval === "Not Approved" || pr.hrApproval === "Rejected";
 }
@@ -220,7 +228,7 @@ export function procurementExpenses(
   }
 }
 
-// Ordered: every PO line placed in the period, at its full value, on the PO's date.
+// Ordered: every PO line placed in the period, at its value less its discounts, on the PO's date.
 export function orderedExpenses(
   pos: PoInput[], grns: GrnInput[], checklist: GrrChecklist, from: string, to: string,
   lines: ExpenseLine[], skipped: SkippedLine[],
@@ -244,14 +252,16 @@ export function orderedExpenses(
     const href = `/procurement/po/${po.id}`;
     const got = catsByPo.get(po.id);
     const cats = got && got.length ? got : [UNCATEGORISED];
-    for (const [idx, it] of parseItems<PoItem>(po.items).entries()) {
+    const poItems = parseItems<PoItem>(po.items);
+    const factor = poWholeFactor(poItems, po.discount);
+    for (const [idx, it] of poItems.entries()) {
       const description = (it.description || it.item || "").trim();
       if (!description) continue;   // the directory leaves a line without a description out too
       const v = poLineValue(it);
       if (v.total == null) { skipped.push({ source: "procurement", reason: SKIP.poNoValue, date, ref, description, href }); continue; }
-      const calc = `${num(v.qty!)} × ${num(v.rate!)}${v.taxPct ? ` + ${num(v.taxPct)}%` : ""}${v.discount > 0 ? ` − ${num(v.discount)} discount` : ""} (ordered)` + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
+      const calc = `${num(v.qty!)} × ${num(v.rate!)}${v.taxPct ? ` + ${num(v.taxPct)}%` : ""}${v.discount > 0 ? ` − ${num(v.discount)} discount` : ""}${factor < 1 ? " − whole-PO discount share" : ""} (ordered)` + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
       for (const category of cats) {
-        lines.push({ source: "procurement", date, category, amount: v.total / cats.length, calc, po: ref, poDate: date,
+        lines.push({ source: "procurement", date, category, amount: v.total * factor / cats.length, calc, po: ref, poDate: date,
           lineId: `po${po.id}:${idx}`, supplier: (po.supplierName || "").trim(), qty: v.qty!, rate: v.rate!, taxPct: v.taxPct, ref, description, href });
       }
     }

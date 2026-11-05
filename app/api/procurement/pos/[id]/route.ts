@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands, grns } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, recomputePoStatus, syncSupplierFromPo } from "@/lib/procurement";
+import { ensureProcurementTables, poWholeDiscount, PO_DEFAULT_REMARKS, recomputePoStatus, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   const b = await req.json().catch(() => ({}));
   const items = Array.isArray(b.items) ? b.items : [];
+  // Whole-PO discount as typed ("5000" or "5%"); the Rs is worked out here from the lines.
+  const discountText = String(b.discountText ?? "").trim().slice(0, 20) || null;
   // Manual demand ref (printed on the PO), same rule as create.
   let demandNo: number | null = null;
   if (b.demandNo != null && String(b.demandNo).trim() !== "") {
@@ -54,7 +56,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     expectedDate: b.expectedDate || null,
     specification: b.specification || null,
     terms: b.terms || null,
-    discount: Number(b.discount) || 0,
+    discount: poWholeDiscount(items, discountText),
+    discountText,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,
     remarks: b.remarks ?? PO_DEFAULT_REMARKS,

@@ -308,6 +308,19 @@ export function fmtMoney(n: number, blankZero = true): string {
 // this amount per supplier, per financial year.
 export const UNREGISTERED_YEAR_LIMIT = 75000;
 
+// The lines added up after their own discounts — what a whole-PO discount comes off.
+export function poLinesTotal(items: PoItem[]): number {
+  return items.reduce((s, it) => s + poLineMoney(it).total, 0);
+}
+
+// The whole-PO discount in Rs, as typed under the lines: "5000" is Rs 5,000 off, "5%" is 5% of the
+// lines' total after their own discounts. Never more than that total.
+export function poWholeDiscount(items: PoItem[], raw: string | null | undefined): number {
+  const total = poLinesTotal(items);
+  const d = poDiscountInput(raw);
+  return Math.min(total, d.pct != null ? total * d.pct / 100 : d.amount);
+}
+
 // A PO's grand total = sum of line net values less each line's discount, less any whole-PO discount.
 export function poGrandTotal(items: PoItem[], discount: number | null | undefined = 0): number {
   const net = items.reduce((s, it) => s + poLineMoney(it).total, 0);
@@ -657,6 +670,7 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS specification text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS terms text;
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount double precision DEFAULT 0;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS discount_text varchar(20);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS gate_pass_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS inv_no varchar(60);
   ALTER TABLE grns ADD COLUMN IF NOT EXISTS dc_no varchar(60);

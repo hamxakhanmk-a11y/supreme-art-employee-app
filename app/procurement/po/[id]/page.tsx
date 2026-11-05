@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, poLineMoney, poGrandTotal, fmtMoney, docNoLabel, FORM_META, FORM_COPIES, type PoItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, poLineMoney, poGrandTotal, poDiscountInput, fmtMoney, docNoLabel, FORM_META, FORM_COPIES, type PoItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,9 @@ export default async function PoView({ params, searchParams }: { params: Promise
   }, { gross: 0, taxValue: 0, net: 0, discount: 0 });
   // What the PO comes to: each line less its discount (and any old whole-PO discount).
   const grandTotal = poGrandTotal(items, p.discount);
-  const hasDiscount = totals.discount > 0 || (Number(p.discount) || 0) > 0;
+  const wholeDiscount = Number(p.discount) || 0;
+  const wholePct = poDiscountInput(p.discountText).pct;
+  const hasDiscount = totals.discount > 0 || wholeDiscount > 0;
 
   return (
     <div className="fade-up">
@@ -113,6 +115,12 @@ export default async function PoView({ params, searchParams }: { params: Promise
                 <td className="r"><b>{fmtMoney(totals.net)}</b></td>
                 <td className="r"><b>{fmtMoney(totals.discount)}</b></td>
               </tr>
+              {wholeDiscount > 0 && (
+                <tr>
+                  <td className="r" colSpan={8}><b>Discount on whole PO{wholePct != null ? ` (${wholePct}%)` : ""}</b></td>
+                  <td className="r" colSpan={2}><b>{fmtMoney(wholeDiscount, false)}</b></td>
+                </tr>
+              )}
               {hasDiscount && (
                 <tr className="pf-grand">
                   <td className="r" colSpan={8}><b>Total after discount</b></td>

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders, demands } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, PO_DEFAULT_REMARKS, nextPoNo, syncSupplierFromPo } from "@/lib/procurement";
+import { ensureProcurementTables, poWholeDiscount, PO_DEFAULT_REMARKS, nextPoNo, syncSupplierFromPo } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +48,8 @@ export async function POST(req: Request) {
   }
 
   const items = Array.isArray(b.items) ? b.items : [];
+  // Whole-PO discount as typed ("5000" or "5%"); the Rs is worked out here from the lines.
+  const discountText = String(b.discountText ?? "").trim().slice(0, 20) || null;
   const [row] = await db.insert(purchaseOrders).values({
     poNo,
     demandId,
@@ -65,7 +67,8 @@ export async function POST(req: Request) {
     expectedDate: b.expectedDate || null,
     specification: b.specification || null,
     terms: b.terms || null,
-    discount: Number(b.discount) || 0,
+    discount: poWholeDiscount(items, discountText),
+    discountText,
     registered,
     orderPlacedBy: b.orderPlacedBy || null,
     approvedBy: b.approvedBy || null,

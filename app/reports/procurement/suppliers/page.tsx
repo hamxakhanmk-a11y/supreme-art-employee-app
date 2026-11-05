@@ -19,7 +19,7 @@ import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
 import { ensureProcurementTables, parseItems, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
-import { procurementExpenses, poLineValue, type ExpenseLine, type SkippedLine } from "@/lib/expenses";
+import { procurementExpenses, poLineValue, type ExpenseLine, type SkippedLine, poWholeFactor } from "@/lib/expenses";
 import SupplierDirectoryClient, { type DirectoryRow, type ReceivedRow } from "./SupplierDirectoryClient";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +65,7 @@ export default async function SupplierDirectoryPage() {
   const rows: DirectoryRow[] = [];
   for (const po of pos) {
     const items = parseItems<PoItem>(po.items);
+    const wholeFactor = poWholeFactor(items, po.discount);
     const receipts = new Map(computePoReceipts(items, grnItemsByPo.get(po.id) ?? []).map(r => [r.srNo, r]));
     for (const it of items) {
       const desc = (it.description || it.item || "").trim();
@@ -83,7 +84,8 @@ export default async function SupplierDirectoryPage() {
       const gross = isOwner ? v.gross : null;
       const taxValue = isOwner ? v.taxValue : 0;
       const net = isOwner ? v.net : null;
-      const discount = isOwner ? v.discount : 0;
+      // The line's own discount plus its share of any whole-PO discount.
+      const discount = isOwner ? v.discount + (v.total ?? 0) * (1 - wholeFactor) : 0;
 
       rows.push({
         product: desc,
