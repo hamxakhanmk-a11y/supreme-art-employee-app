@@ -306,6 +306,7 @@ export default function SupplierDirectoryClient({
   type FlatRow = {
     product: string; supplier: string; agg: SupplierAgg;
     isFirstOfProduct: boolean; groupSize: number;
+    productCount: number;   // the product's POs from every supplier (in the dates)
     shownRate: number | null; shownTaxPct: number; shownUom: string; poUom: string; noted: boolean;
   };
   const byProduct = useMemo(() => {
@@ -355,6 +356,7 @@ export default function SupplierDirectoryClient({
         const shownUom = note?.uom || poUom;
         flat.push({
           product, supplier, agg, isFirstOfProduct: i === 0, groupSize: entries.length,
+          productCount: [...suppliersMap.values()].reduce((t, a) => t + a.count, 0),
           shownRate, shownTaxPct, shownUom, poUom, noted: note != null,
         });
       });
@@ -647,9 +649,9 @@ export default function SupplierDirectoryClient({
               {byProduct.map((r, i) => (
                 <tr
                   key={`${r.product}__${r.supplier}__${i}`}
-                  onClick={() => (r.agg.count > 1 ? setHistoryFor({ product: r.product, supplier: r.supplier }) : openPo(r.agg.poId))}
+                  onClick={() => (r.productCount > 1 ? setHistoryFor({ product: r.product, supplier: r.supplier, allSuppliers: r.agg.count === 1 }) : openPo(r.agg.poId))}
                   className="rpt-row-clickable"
-                  title={r.agg.count > 1 ? `Tap to see all ${r.agg.count} POs of this product from this supplier` : "Tap to open the PO for this product"}
+                  title={r.agg.count > 1 ? `Tap to see all ${r.agg.count} POs of this product from this supplier` : r.productCount > 1 ? `Tap to see all ${r.productCount} POs of this product` : "Tap to open the PO for this product"}
                 >
                   {r.isFirstOfProduct && (
                     <td
@@ -662,6 +664,14 @@ export default function SupplierDirectoryClient({
                       }}
                     >
                       {r.product}
+                      {r.groupSize > 1 && (
+                        <div>
+                          <button type="button" className="sd-pos-btn" style={{ marginLeft: 0, marginTop: 4 }} title="Every PO of this product, from all its suppliers"
+                            onClick={e => { e.stopPropagation(); setHistoryFor({ product: r.product, supplier: r.supplier, allSuppliers: true }); }}>
+                            All {r.productCount} POs ›
+                          </button>
+                        </div>
+                      )}
                     </td>
                   )}
                   <td className="wrap">
