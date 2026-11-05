@@ -5,13 +5,10 @@
 // product + supplier, which is kept separately (supplier_product_rates) as
 // reference only.
 //
-// Two levels of access:
-//   • Super Admin          — the whole report, including the per-order view
-//                            with each order's gross / tax / net value.
-//   • `suppliers` grant    — the By-product list only (product, supplier,
-//     (e.g. Engineer)        contact details, rate, tax %). Order values are
-//                            never sent to the browser for these roles.
-//   • `suppliers` + edit   — the above, plus editing rate / tax % in place.
+// Access:
+//   • Super Admin or a `suppliers` grant (e.g. Engineer) — the whole report: Every order with each
+//                            order's gross / tax / net value, Received only, and By product.
+//   • `suppliers` + edit (and Super Admin) — the above, plus editing rate / tax % in place.
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { roleCanAccess, roleCanEdit } from "@/lib/permissions";
@@ -74,14 +71,8 @@ export default async function SupplierDirectoryPage() {
       const { rate, taxPct } = v;
 
       // Gross/Tax/Net only mean something once both qty and rate are usable
-      // numbers — otherwise leave them blank rather than show a misleading 0.
-      // They're also what the per-order view is made of, so for roles limited
-      // to By-product they're left out of the payload entirely rather than
-      // merely hidden — otherwise every order's value would still be sitting
-      // in the page's data for anyone who looked.
-      const gross = isOwner ? v.gross : null;
-      const taxValue = isOwner ? v.taxValue : 0;
-      const net = isOwner ? v.net : null;
+      // numbers — otherwise poLineValue leaves them blank rather than a misleading 0.
+      const { gross, taxValue, net } = v;
 
       rows.push({
         product: desc,
@@ -112,12 +103,12 @@ export default async function SupplierDirectoryPage() {
     }
   }
 
-  // Received only (the owner's): every GRR line, on its GRR date, valued exactly as the dashboard's Procurement
+  // Received only: every GRR line, on its GRR date, valued exactly as the dashboard's Procurement
   // is (lib/expenses.ts: received qty × PO rate + tax, less the PO's discount share, never more than ordered,
   // rejected GRRs left out). All dates are worked out here; the page narrows them to its From–To.
   const received: ReceivedRow[] = [];
   let receivedNotCounted = 0;
-  if (isOwner) {
+  {
     const lines: ExpenseLine[] = [], skipped: SkippedLine[] = [];
     procurementExpenses(grnRows, pos.map(p => ({ ...p, supplierName: p.supplierName })), await loadChecklist(), "0000-01-01", "9999-12-31", lines, skipped);
     receivedNotCounted = skipped.length;
@@ -147,7 +138,6 @@ export default async function SupplierDirectoryPage() {
       rateNotes={rateNotes}
       received={received}
       receivedNotCounted={receivedNotCounted}
-      byProductOnly={!isOwner}
       canEditRates={canEditRates}
     />
   );
