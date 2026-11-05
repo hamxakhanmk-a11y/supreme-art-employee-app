@@ -408,6 +408,44 @@ body:not(.role-admin) .admin-only{display:none!important}
 .mod-pill.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;box-shadow:0 3px 10px rgba(140,35,38,0.25)}
 /* ===== Top bar spacing ===== */
 .top-bar{margin-top:0}
+/* ===== Phone: the menu becomes a sideways-scrolling row of tabs above the page (instead of a column
+   that took half the screen), and the controls, tables and windows are tighter. ===== */
+@media (max-width:760px){
+  .app{flex-direction:column}
+  .sidebar{width:100%;min-width:0;flex:none;flex-direction:row;align-items:center;overflow-x:auto;overflow-y:hidden;padding:6px 8px;gap:5px;border-right:none;border-bottom:1px solid var(--border);scrollbar-width:none}
+  .sidebar::-webkit-scrollbar{display:none}
+  .sidebar .divider{width:1px;height:20px;margin:0 2px;flex:none}
+  .nav-item{flex:0 0 auto;white-space:nowrap;padding:5px 12px;font-size:12.5px;gap:6px;margin:0}
+  .nav-item i{font-size:14px}
+  .main{flex:1;min-height:0;padding:0 10px 12px}
+  .hero{padding:8px 12px}
+  .hero-greet{font-size:11px;letter-spacing:1px;white-space:normal}
+  .hero-btn{padding:5px 11px;font-size:12px}
+  .page-header{margin-bottom:.75rem}
+  .page-title{font-size:17px}
+  .btn{padding:5px 10px;font-size:12px;gap:4px}
+  .btn-sm{padding:3px 8px;font-size:11.5px}
+  input,select,textarea{padding:6px 9px}
+  th{padding:7px 8px}
+  td{padding:7px 8px;font-size:12.5px}
+  .card{padding:.75rem}
+  .search-bar{gap:6px}
+  .search-bar input[type=text],.search-bar .st-group input[type=text]{max-width:100%;width:100%}
+  .st-group{flex-wrap:wrap;flex-shrink:1;max-width:100%}
+  .st-group>*{flex:0 1 auto;min-width:0}
+  .st-group>input[type=text],.st-group>select{flex:1 1 140px}
+  .txn-card td{overflow-wrap:break-word}
+  .badge{white-space:nowrap}
+  .st-actions{flex-wrap:wrap;flex-shrink:1;margin-left:0}
+  .search-bar>select{flex:1 1 130px;width:auto!important;max-width:100%}
+  .search-bar select.st-sort{min-width:0}
+  .ig{padding:6px 10px 2px}
+  .ig-btns{flex-wrap:wrap}
+  .modal{padding:1rem;max-width:98vw;max-height:92vh}
+  .modal-title{margin-bottom:.75rem}
+  .modal-actions{margin-top:1rem}
+  .two-col{gap:8px}
+}
 @media print{
   .hero{display:none!important}
 }
@@ -1425,6 +1463,12 @@ function showPage(id,el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   if(el)el.classList.add('active');
+  // On a phone the menu is one sideways-scrolling row: keep the open tab in view.
+  const bar=el&&el.parentElement;
+  if(bar&&bar.scrollWidth>bar.clientWidth+1){
+    const left=el.getBoundingClientRect().left-bar.getBoundingClientRect().left+bar.scrollLeft;
+    bar.scrollLeft=Math.max(0,left-(bar.clientWidth-el.offsetWidth)/2);
+  }
   // Tab switches no longer refetch — state is kept fresh by mutations and the
   // initial load. Use the module switcher or reload the page to force a refresh.
   refresh();

@@ -463,11 +463,13 @@ th.num, th.num-strong { text-align: right; }
     scrollbar-width: none;
     border-right: none !important;
     border-bottom: 1px solid var(--border);
-    padding: 8px 10px !important;
-    gap: 6px !important;
+    padding: 6px 8px !important;
+    gap: 5px !important;
+    box-sizing: border-box;
   }
   .app-sidebar::-webkit-scrollbar { display: none; }
-  .app-sidebar .sb-item { flex: 0 0 auto; white-space: nowrap; margin: 0 !important; }
+  .app-sidebar .sb-item { flex: 0 0 auto; white-space: nowrap; margin: 0 !important; padding: 6px 13px; font-size: 12.5px; }
+  .app-sidebar .sb-item--report { padding-top: 6px; }
   .app-sidebar .sb-item--report::before { display: none; }
   .app-sidebar .flow-indicator { display: none; }
   /* Same specificity as the base .flow-connected > .sb-item.active rule
@@ -482,10 +484,73 @@ th.num, th.num-strong { text-align: right; }
     color: #fff !important;
     transform: none !important;
   }
-  .app-main { padding: 12px; }
-  .topnav-row { padding: 0 12px !important; gap: 10px !important; }
+  .app-main { padding: 10px; }
   .topnav-date { display: none; }
-  .rpt-table-wrap { max-height: 55vh; }
+  .rpt-table-wrap { max-height: 62vh; }
+
+  /* Top bar on a phone: the logo and the user's button on one row, the section tabs on a full-width
+     row of their own under it (sideways-scrolling), instead of all three squeezed onto one line where
+     the tabs shrank to a single visible one. It scrolls away with the page, leaving the screen to the
+     page itself. */
+  .topnav { position: static !important; }
+  .topnav-row { flex-wrap: wrap; height: auto !important; padding: 6px 10px !important; gap: 6px 8px !important; }
+  .topnav-brand { gap: 7px !important; }
+  .topnav-brand img { width: 22px !important; height: 22px !important; }
+  .topnav-brand-text { font-size: 13.5px !important; white-space: nowrap; }
+  .topnav-modules { order: 3; flex: 0 0 100%; margin-left: 0 !important; padding: 2px; }
+  .topnav-modules .mode-btn { flex: 0 0 auto; white-space: nowrap; padding: 4px 10px; font-size: 11.5px; }
+  .topnav-user { padding: 2px 9px 2px 2px !important; font-size: 12px !important; gap: 6px !important; }
+  .topnav-avatar { width: 22px !important; height: 22px !important; font-size: 10px !important; }
+
+  /* Smaller controls and tighter tables, so more of a list or report fits on the screen. */
+  .btn { padding: 5px 11px; font-size: 12px; gap: 4px; }
+  .btn-sm { padding: 3px 8px; font-size: 11.5px; }
+  .btn-xs { padding: 2px 7px; font-size: 11px; }
+  .tabs { padding: 3px; }
+  .tab { padding: 5px 12px; font-size: 12px; }
+  .mode-btn { padding: 5px 11px; font-size: 12.5px; }
+  input, select, textarea { padding: 6px 9px; }
+  .head-filter input, .head-filter select { padding: 4px 6px; }
+  th { padding: 8px 9px; }
+  td { padding: 7px 9px; font-size: 12.5px; }
+  .rpt-table th, .rpt-table td { padding: 7px 9px; }
+  .rpt-table { font-size: 12.5px; }
+  .card { padding: 12px; }
+  .badge { padding: 3px 9px; }
+  .empty { padding: 2rem 1rem; }
+  .stat { padding: 10px 12px; }
+  .stat-value { font-size: 20px; }
+  .section-title { margin-bottom: 8px; padding-bottom: 6px; }
+  .app-main h1 { font-size: 18px !important; }
+  .app-main h2 { font-size: 15px !important; }
+  .app-main td .avatar { width: 36px !important; height: 36px !important; font-size: 11px !important; }
+
+  /* Registers (attendance month / date range): Department and Designation are left off, as on paper, and
+     the frozen Emp ID column narrows, so the day columns get most of the screen. */
+  .register-table .col-dept, .register-table .emp-dept, .register-table .col-desig, .register-table .emp-desig,
+  .range-table .col-dept, .range-table .emp-dept, .range-table .col-desig, .range-table .emp-desig { display: none; }
+  .register-table .fz1, .range-table .fz1, .ot-table .fz1 { width: 68px !important; min-width: 68px !important; max-width: 68px !important; padding-left: 6px !important; }
+  .register-table .fz2, .range-table .fz2, .ot-table .fz2 { left: 68px !important; min-width: 96px; max-width: 120px; white-space: normal; line-height: 1.2; }
+
+  /* Toolbars (search, sort, filters, dates, buttons) wrap group by group to the screen's width;
+     a group that does not fit on one line wraps inside itself instead of pushing the page wider
+     than the phone, and nothing in it is wider than the screen. */
+  .app-main [style*="flex-wrap"] > * { max-width: 100%; min-width: 0; flex-shrink: 1 !important; }
+  .app-main [style*="flex-wrap"] > div { flex-wrap: wrap; }
+  .app-main input:not([type=checkbox]):not([type=radio]), .app-main select { max-width: 100%; }
+}
+@media (max-width: 560px) {
+  /* Three or four fields side by side become two, so none is squeezed to a sliver. */
+  .app-main [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .app-main [style*="grid-template-columns:1fr 1fr 1fr"],
+  .app-main [style*="grid-template-columns: 1.4fr 1fr 1fr"],
+  .app-main [style*="grid-template-columns:1.4fr 1fr 1fr"],
+  .app-main [style*="grid-template-columns: 2fr 110px 110px"],
+  .app-main [style*="grid-template-columns:2fr 110px 110px"],
+  .app-main [style*="grid-template-columns: 1fr 1fr 180px auto"],
+  .app-main [style*="grid-template-columns:1fr 1fr 180px auto"],
+  .app-main [style*="grid-template-columns: 180px 140px 1fr"],
+  .app-main [style*="grid-template-columns:180px 140px 1fr"] { grid-template-columns: 1fr 1fr !important; }
 }
 @media (max-width: 480px) {
   .app-body { zoom: 0.78; }
@@ -570,7 +635,7 @@ th.num, th.num-strong { text-align: right; }
 .hero-mark-text { color: #fff; font-family: 'Georgia', 'Times New Roman', serif; font-size: 8px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 1px; white-space: nowrap; }
 
 @media (max-width: 700px) {
-  .hero { padding: 14px 18px; }
+  .hero { padding: 6px 12px; }
   .hero-mark { display: none; }
 }
 

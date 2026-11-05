@@ -41,7 +41,8 @@ export default function StoreFrame({ module, version }: {
       position: "fixed",
       // Sit just below the 56px topbar. There's no employee-app sub-nav
       // row here — the store's iframe brings its own sidebar.
-      top: 56, left: 0, right: 0, bottom: 0,
+      // (--topnav-h: the bar's real height, taller on a phone where it takes two rows.)
+      top: "var(--topnav-h, 56px)", left: 0, right: 0, bottom: 0,
       background: "#f5f5f3",
     }}>
       <iframe

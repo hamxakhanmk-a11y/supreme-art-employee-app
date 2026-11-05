@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/components/MeProvider";
 import { MODULES_BASE, MODULE_HOME, pathToModule } from "@/components/nav-config";
 import { useFlowIndicator } from "@/components/useFlowIndicator";
@@ -24,6 +24,19 @@ export default function TopNav() {
   // Each tab leads back to the page (and its filters in the address) last open in that section.
   const [nav, setNav] = useState<NavMemory | null>(null);
   useEffect(() => { setNav(readNavMemory()); }, [pathname]);
+  // On a phone the bar takes two rows; its real height goes into --topnav-h for what sits under it (the Store).
+  const headerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty("--topnav-h", el.offsetHeight + "px");
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hidden]);
+  // When the tabs scroll sideways (a phone), bring the open section's tab into view.
+  useEffect(() => { scrollActiveIntoView(flowRef.current, ".mode-btn.active"); }, [pathname, meState.modules.length, flowRef]);
 
   if (hidden) return null;
   const activeModule = pathToModule(pathname);
@@ -44,6 +57,8 @@ export default function TopNav() {
 
   return (
     <header
+      ref={headerRef}
+      className="topnav"
       style={{
         position: "sticky",
         top: 0,
@@ -63,14 +78,14 @@ export default function TopNav() {
           gap: 16,
         }}
       >
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" }}>
+        <Link href="/" className="topnav-brand" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" }}>
           <Image src="/logo.png" alt="Supreme Art" width={28} height={28} priority style={{ width: 28, height: 28, objectFit: "contain" }} />
-          <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
+          <span className="topnav-brand-text" style={{ fontSize: 16, fontWeight: 600, letterSpacing: "-0.02em" }}>
             Supreme Art <span style={{ color: "var(--brand)" }}>ERP</span>
           </span>
         </Link>
 
-        <div ref={flowRef} className="mode-switch flow-connected" style={{ marginLeft: "1rem" }}>
+        <div ref={flowRef} className="mode-switch flow-connected topnav-modules" style={{ marginLeft: "1rem" }}>
           <span className="flow-indicator flow-indicator-x" aria-hidden="true" />
           {modules.map((m) => {
             const active = m.key === activeModule;
@@ -93,6 +108,7 @@ export default function TopNav() {
           <div style={{ position: "relative" }}>
             <button
               onClick={() => setMenuOpen(o => !o)}
+              className="topnav-user"
               style={{
                 display: "flex", alignItems: "center", gap: 8,
                 background: "var(--bg2)", border: "1px solid var(--border)",
@@ -101,7 +117,7 @@ export default function TopNav() {
               }}
               title={me.email}
             >
-              <span style={{
+              <span className="topnav-avatar" style={{
                 width: 26, height: 26, borderRadius: "50%",
                 background: "var(--brand)", color: "#fff",
                 fontSize: 12, fontWeight: 800,
@@ -149,6 +165,15 @@ export default function TopNav() {
       {/* Sub-nav lives in the left sidebar now — see components/Sidebar.tsx */}
     </header>
   );
+}
+
+// Scrolls a sideways-scrolling strip of tabs so its active one is in view (centred), without moving the page.
+export function scrollActiveIntoView(box: HTMLElement | null, selector: string) {
+  if (!box || box.scrollWidth <= box.clientWidth + 1) return;
+  const a = box.querySelector<HTMLElement>(selector);
+  if (!a) return;
+  const left = a.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft;
+  box.scrollLeft = Math.max(0, left - (box.clientWidth - a.offsetWidth) / 2);
 }
 
 const menuItem: React.CSSProperties = {

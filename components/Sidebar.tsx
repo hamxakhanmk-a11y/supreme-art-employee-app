@@ -6,6 +6,7 @@ import { readNavMemory, type NavMemory } from "@/lib/usePageState";
 import { useMe } from "@/components/MeProvider";
 import { getSubNav, pathToModule } from "@/components/nav-config";
 import { useFlowIndicator } from "@/components/useFlowIndicator";
+import { scrollActiveIntoView } from "@/components/TopNav";
 
 // The vertical sub-nav column, sitting between the top bar and the page.
 // Only renders when the current module has sub-tabs — hidden entirely on
@@ -23,6 +24,8 @@ export default function Sidebar() {
   // A sub-tab opens with the filters it last had in the address (month, dates, tab…).
   const [nav, setNav] = useState<NavMemory | null>(null);
   useEffect(() => { setNav(readNavMemory()); }, [pathname]);
+  // On a phone the sub-tabs are one sideways-scrolling row: keep the open one in view.
+  useEffect(() => { scrollActiveIntoView(flowRef.current, ".sb-item.active"); }, [pathname, meState.modules.length, flowRef]);
 
   if (HIDE_ON.some(p => pathname === p || pathname.startsWith(p + "/"))) return null;
 
