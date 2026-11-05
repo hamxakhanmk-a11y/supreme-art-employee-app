@@ -1303,6 +1303,9 @@ select.edit-cell:focus { border-color: var(--brand); background: var(--bg); }
 .od-list > div { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px dashed var(--border); }
 .od-list > div:first-child { border-top: none; }
 .od-list > div > span { min-width: 0; overflow-wrap: anywhere; }
+/* Rate increases: the earlier and the new order under the product. */
+.od-rate-was { font-size: 11.5px; margin-top: 1px; }
+.od-list > div > b .od-red { white-space: nowrap; }
 .od-list > div > b { flex-shrink: 0; max-width: 55%; text-align: right; overflow-wrap: anywhere; font-weight: 700; }
 .od-list a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
 .od-dim { color: var(--text2); font-weight: 400; font-size: 12px; }

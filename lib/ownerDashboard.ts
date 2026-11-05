@@ -8,6 +8,7 @@ import { ensureFleetSchema } from "./fleet";
 import { lateMinutes } from "./attendance";
 import { karachiNow } from "./gateTime";
 import { summarizeExpenses, type ExpenseSummary, type ExpenseMode } from "./expenses";
+import { rateIncreases, type RateIncrease } from "./rateChanges";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -66,6 +67,16 @@ export async function loadExpenses(from: string, to: string, mode: ExpenseMode =
   ]);
   const pos = [...new Map([...byId, ...byNo].map(p => [p.id, p])).values()];
   return summarizeExpenses({ prs, grns: [...others, ...grnRows], pos, checklist }, from, to, "received");
+}
+
+// Products ordered on a PO in the period at a higher rate than their previous PO (lib/rateChanges.ts).
+export async function poRateIncreases(from: string, to: string): Promise<RateIncrease[]> {
+  await ensureProcurementTables();
+  const pos = await db.select({
+    id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, date: purchaseOrders.date,
+    supplierName: purchaseOrders.supplierName, items: purchaseOrders.items,
+  }).from(purchaseOrders);
+  return rateIncreases(pos.map(p => ({ ...p, date: p.date ? String(p.date) : null })), from, to);
 }
 
 export interface CnicAlert { id: number; empCode: string; name: string; designation: string | null; expiry: string; daysLeft: number }

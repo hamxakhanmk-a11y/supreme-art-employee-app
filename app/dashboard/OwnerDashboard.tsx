@@ -3,7 +3,7 @@
 // else keeps the Profile dashboard in app/page.tsx.
 import { currentlyOut } from "@/lib/stationServer";
 import { vehiclesOut } from "@/lib/fleetServer";
-import { loadExpenses, cnicAlerts, lateComers, daysOffOver2, cardsOut } from "@/lib/ownerDashboard";
+import { loadExpenses, cnicAlerts, lateComers, daysOffOver2, cardsOut, poRateIncreases } from "@/lib/ownerDashboard";
 import { formatMins } from "@/lib/station";
 import DashboardView, { type DashData, type Loaded, type Range } from "./DashboardView";
 
@@ -26,7 +26,7 @@ async function settle<T>(p: Promise<T>): Promise<Loaded<T>> {
 // Expense and Attendance each have their own period; Late today, CNIC expiry and Outside are as of now.
 // received: the Expense band shows what came in during its period; otherwise (the default) what was ordered.
 export default async function OwnerDashboard({ exp: er, att: ar, received, today }: { exp: Range; att: Range; received: boolean; today: string }) {
-  const [exp, cnic, late, lateToday, off, people, vehicles, cards] = await Promise.all([
+  const [exp, cnic, late, lateToday, off, people, vehicles, cards, rates] = await Promise.all([
     settle(loadExpenses(er.from, er.to, received ? "received" : "ordered").then(s => ({
       total: s.total, purchase: s.purchase, procurement: s.procurement, earlierPos: s.procurementEarlierPos, skipped: s.skipped.length,
       // Only the totals travel to the page; every line is on the expense page.
@@ -42,7 +42,9 @@ export default async function OwnerDashboard({ exp: er, att: ar, received, today
       destination: String(r.destination || ""), at: karachiTime(r.outAt), since: since(r.outAt),
     })))),
     settle(cardsOut()),
+    // On POs placed in the Expense band's period.
+    settle(poRateIncreases(er.from, er.to)),
   ]);
-  const data: DashData = { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards };
+  const data: DashData = { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates };
   return <DashboardView data={data} />;
 }
