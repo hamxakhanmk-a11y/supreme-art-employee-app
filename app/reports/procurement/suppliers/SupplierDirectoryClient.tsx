@@ -159,7 +159,7 @@ function taxPctLabel(rate: number | null, taxPct: number): string {
 }
 
 // byProductOnly — roles granted `suppliers` (Engineer, say) get the
-// By-product list and nothing else; the per-order view and its order values
+// By-product list and Received only; the per-order view and its order values
 // stay with the owner. canEditRates — whether the rate / tax % cells on that
 // list can be corrected in place.
 export default function SupplierDirectoryClient({
@@ -241,7 +241,8 @@ export default function SupplierDirectoryClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }).sort((a, b) => (RECEIVED_SORTS[sort]?.(a, b) ?? 0) || b.date.localeCompare(a.date)), [received, q, supplierFilter, fromDate, toDate, sort]);
   const receivedTotal = useMemo(() => filteredReceived.reduce((s, r) => s + r.net, 0), [filteredReceived]);
-  const showReceived = receivedOnly && activeView === "orders";
+  // The owner switches Every order to it; roles without Every order switch By product to it.
+  const showReceived = receivedOnly && (activeView === "orders" || byProductOnly);
 
   const ordersTotals = useMemo(() => filteredOrders.reduce((s, r) => ({
     gross: s.gross + (r.gross ?? 0),
@@ -431,7 +432,7 @@ export default function SupplierDirectoryClient({
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search product or supplier…" />
-          <SortBy options={activeView === "orders" ? ORDER_SORT_OPTIONS : PRODUCT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
+          <SortBy options={activeView === "orders" || showReceived ? ORDER_SORT_OPTIONS : PRODUCT_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />
           <select value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)} style={{ maxWidth: 220, width: "auto" }}>
             <option value="">All suppliers</option>
             {suppliers.map(s => <option key={s} value={s}>{s}</option>)}
@@ -443,8 +444,14 @@ export default function SupplierDirectoryClient({
             <button className={`tab ${view === "byProduct" ? "active" : ""}`} onClick={() => { setView("byProduct"); setSort("az"); }}>By product</button>
           </div>
         )}
-        {activeView === "orders" && (
-          <button type="button" onClick={() => setReceivedOnly(v => !v)} aria-pressed={receivedOnly}
+        {(activeView === "orders" || byProductOnly) && (
+          <button type="button" aria-pressed={receivedOnly}
+            onClick={() => {
+              const next = !receivedOnly;
+              setReceivedOnly(next);
+              // Without Every order the button swaps between two lists with different sort choices.
+              if (byProductOnly) setSort(next ? "date" : "az");
+            }}
             title="Show what arrived instead: every GRR line in the dates, by its GRR date, valued as the dashboard's Procurement"
             style={{
               padding: "6px 14px", fontSize: 12.5, fontWeight: 600, borderRadius: 999, cursor: "pointer", flexShrink: 0,
