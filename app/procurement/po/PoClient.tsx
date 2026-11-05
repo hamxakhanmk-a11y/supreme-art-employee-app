@@ -24,7 +24,7 @@ interface Supplier {
   concernedPerson: string | null; ntn: string | null; strn: string | null; registered: boolean | null;
 }
 
-const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX) });
+const blankItem = (n: number): PoItem => ({ srNo: n, description: "", quantity: "", uom: "", rate: "", tax: String(PO_DEFAULT_TAX), discount: "" });
 
 // "numDesc" (highest PO number first) is the order the page has always loaded in.
 type PoSort = "numDesc" | "numAsc" | "latest" | "oldest" | "supplier" | "delivery" | "demand" | "status";
@@ -121,7 +121,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     setRegistered(p.registered);
     const its = parseItems<PoItem>(p.items);
     setItems(its.length
-      ? its.map((it, i) => ({ srNo: i + 1, description: it.description || it.item || "", quantity: it.quantity || "", uom: it.uom || "", rate: it.rate || "", tax: it.tax ?? String(PO_DEFAULT_TAX) }))
+      ? its.map((it, i) => ({ srNo: i + 1, description: it.description || it.item || "", quantity: it.quantity || "", uom: it.uom || "", rate: it.rate || "", tax: it.tax ?? String(PO_DEFAULT_TAX), discount: it.discount || "" }))
       : [blankItem(1)]);
     setErr(""); setOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -387,21 +387,21 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             <span style={{ fontSize: 11.5, color: "var(--text3)" }}>Pick from the list to auto-fill, or just type — saving is optional.</span>
           </div>
 
-          <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%)</span></SectionLabel>
+          <SectionLabel>ITEMS <span style={{ fontWeight: 400, color: "var(--text3)" }}>· Gross, Tax Value &amp; Net Value are calculated automatically (default tax {PO_DEFAULT_TAX}%) · Discount comes off the Net Value: type Rs (500) or a percent (5%)</span></SectionLabel>
           <div style={{ overflow: "auto" }}>
-            <table style={{ width: "100%", minWidth: 760 }}>
+            <table style={{ width: "100%", minWidth: 860 }}>
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>S.No</th><th style={{ minWidth: 180 }}>Description</th>
                   <th style={{ width: 70 }}>Qty</th><th style={{ width: 70 }}>UOM</th>
                   <th style={{ width: 90 }}>Rate</th><th style={{ width: 100 }}>Gross</th>
                   <th style={{ width: 64 }}>Tax %</th><th style={{ width: 100 }}>Tax Value</th>
-                  <th style={{ width: 110 }}>Net Value</th><th style={{ width: 34 }}></th>
+                  <th style={{ width: 110 }}>Net Value</th><th style={{ width: 100 }}>Discount</th><th style={{ width: 34 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it, i) => {
-                  const { gross, taxValue, net } = poLineMoney(it);
+                  const { gross, taxValue, net, discount, discountPct } = poLineMoney(it);
                   return (
                     <tr key={i}>
                       <td style={{ textAlign: "center", color: "var(--text3)" }}>{it.srNo}</td>
@@ -413,11 +413,36 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                       <td><input value={it.tax} onChange={e => setItem(i, "tax", e.target.value)} className="auth-input" style={numInput} inputMode="decimal" /></td>
                       <td style={calcCell}>{fmtMoney(taxValue) || "—"}</td>
                       <td style={{ ...calcCell, fontWeight: 700 }}>{fmtMoney(net) || "—"}</td>
+                      <td>
+                        <input value={it.discount ?? ""} onChange={e => setItem(i, "discount", e.target.value)} className="auth-input" style={numInput} placeholder="0 or 5%" title="Rs off this line, or a percent of its Net Value (e.g. 5%)" />
+                        {discountPct != null && discount > 0 && <div style={{ fontSize: 10.5, color: "var(--text3)", textAlign: "right", marginTop: 1 }}>Rs {fmtMoney(discount)}</div>}
+                      </td>
                       <td style={{ textAlign: "center" }}><button onClick={() => removeRow(i)} style={{ background: "none", border: "none", color: "#A32D2D", cursor: "pointer", fontSize: 16 }}>✕</button></td>
                     </tr>
                   );
                 })}
               </tbody>
+              {(() => {
+                const t = items.reduce((a, it) => { const m = poLineMoney(it); a.net += m.net; a.discount += m.discount; return a; }, { net: 0, discount: 0 });
+                if (!t.net) return null;
+                return (
+                  <tfoot>
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: "right", fontWeight: 700 }}>Total</td>
+                      <td style={{ ...calcCell, fontWeight: 700 }}>{fmtMoney(t.net, false)}</td>
+                      <td style={calcCell}>{t.discount ? fmtMoney(t.discount) : "—"}</td>
+                      <td></td>
+                    </tr>
+                    {t.discount > 0 && (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: "right", fontWeight: 700 }}>Total after discount</td>
+                        <td colSpan={2} style={{ ...calcCell, fontWeight: 800, color: "var(--text)" }}>Rs {fmtMoney(t.net - t.discount, false)}</td>
+                        <td></td>
+                      </tr>
+                    )}
+                  </tfoot>
+                );
+              })()}
             </table>
           </div>
           <button onClick={addRow} className="btn btn-sm" style={{ marginTop: 8 }}>＋ Add row</button>

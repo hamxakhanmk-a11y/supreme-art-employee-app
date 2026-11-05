@@ -34,7 +34,8 @@ export interface PoItem {
   uom: string;
   rate: string;
   tax: string;              // percent, e.g. "18"
-  item?: string;            // legacy — old POs stored the name here
+  discount?: string;        // off the line's net value: Rs ("500") or a percent ("5%"); older POs have none
+  item?: string;           // legacy — old POs stored the name here
   specifications?: string;  // legacy
 }
 // A received-goods line. `remarks` is a per-line note (condition, shortfall
@@ -261,15 +262,38 @@ export function qtyDifference(invoiceQty: string | undefined, received: string |
 export const PO_DEFAULT_TAX = 18;
 
 // Derived money for one PO line: gross = qty × rate, tax value = gross × tax%,
-// net = gross + tax value. Tolerant of blanks (treated as 0).
-export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string }) {
+// net = gross + tax value, then the line's discount comes off the net: total = net − discount.
+// Tolerant of blanks (treated as 0).
+export function poLineMoney(it: { quantity?: string; rate?: string; tax?: string; discount?: string }) {
   const qty = parseFloat(it.quantity ?? "") || 0;
   const rate = parseFloat(it.rate ?? "") || 0;
   const taxPct = parseFloat(it.tax ?? "") || 0;
   const gross = qty * rate;
   const taxValue = gross * taxPct / 100;
   const net = gross + taxValue;
-  return { qty, rate, taxPct, gross, taxValue, net };
+  const d = poDiscountInput(it.discount);
+  const discount = Math.min(net, d.pct != null ? net * d.pct / 100 : d.amount);
+  return { qty, rate, taxPct, gross, taxValue, net, discount, discountPct: d.pct, total: net - discount };
+}
+
+// A line's discount as typed: "500" is Rs 500 off, "5%" is 5% of the net value. Blank or junk is none.
+export function poDiscountInput(raw: string | null | undefined): { amount: number; pct: number | null } {
+  const s = String(raw ?? "").replace(/,/g, "").trim();
+  if (s.endsWith("%")) {
+    const p = parseFloat(s);
+    return { amount: 0, pct: p > 0 ? Math.min(100, p) : null };
+  }
+  const n = parseFloat(s);
+  return { amount: n > 0 ? n : 0, pct: null };
+}
+
+// The part of a line's net value its discount takes off (0…1), so a part-received line gets the same
+// share: a percent is that percent; Rs off is spread over the ordered quantity.
+export function poLineDiscountShare(it: { quantity?: string; rate?: string; tax?: string; discount?: string }): number {
+  const d = poDiscountInput(it.discount);
+  if (d.pct != null) return d.pct / 100;
+  const m = poLineMoney(it);
+  return m.net > 0 ? m.discount / m.net : 0;
 }
 
 // Money formatter for the printed PO — thousands separators, 2 decimals, blank
@@ -284,9 +308,9 @@ export function fmtMoney(n: number, blankZero = true): string {
 // this amount per supplier, per financial year.
 export const UNREGISTERED_YEAR_LIMIT = 75000;
 
-// A PO's grand total = sum of line net values, less any discount.
+// A PO's grand total = sum of line net values less each line's discount, less any whole-PO discount.
 export function poGrandTotal(items: PoItem[], discount: number | null | undefined = 0): number {
-  const net = items.reduce((s, it) => s + poLineMoney(it).net, 0);
+  const net = items.reduce((s, it) => s + poLineMoney(it).total, 0);
   return Math.max(0, net - (Number(discount) || 0));
 }
 

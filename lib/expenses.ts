@@ -2,13 +2,15 @@
 //
 // ORDERED (the default) — what was ordered in the period:
 //  - Purchase: every requisition line's own value and category, on the requisition's date.
-//  - Procurement: every PO line placed in the period at its full value (qty × rate + tax), exactly as the
+//  - Procurement: every PO line placed in the period at its value (qty × rate + tax, less the line's
+//    discount), exactly as the
 //    Supplier Directory's Every order view adds it up (poLineValue below is shared with it). A PO has no
 //    category of its own, so it takes those of the GRRs made against it.
 // RECEIVED — what came in during the period:
 //  - Purchase: requisitions Admin has marked received, on the day they were marked.
 //  - Procurement: what actually arrived on a GRR (its received quantity), valued at the
-//    linked PO line's rate plus tax, less that PO's discount in proportion. On the GRR's
+//    linked PO line's rate plus tax, less the line's own discount (the same share of it as was
+//    received) and that PO's whole-PO discount in proportion. On the GRR's
 //    date, under the GRR's categories (split equally when it has several). A PO line never
 //    costs more than it was ordered for: the GRRs against it are taken in date order and
 //    whatever goes past the ordered quantity is not valued again (a GRR typed in another
@@ -20,7 +22,7 @@
 // lib/ownerDashboard.ts), which keeps the arithmetic testable on its own.
 import { parsePrItems } from "./purchase";
 import {
-  parseItems, parseInspection, withValueCategories, checklistCategory, qtyToNum, docNoLabel,
+  parseItems, parseInspection, withValueCategories, checklistCategory, qtyToNum, docNoLabel, poDiscountInput, poLineDiscountShare,
   type PoItem, type GrnItem, type GrrChecklist,
 } from "./procurement";
 
@@ -87,24 +89,29 @@ export const SKIP = {
 
 const inRange = (d: string, from: string, to: string) => d >= from && d <= to;
 // A PO line's money, reading its numbers the way the Supplier Directory does: "1,450" is 1450, "18%" is 18.
-function lineMoney(qty: number, it: Pick<PoItem, "rate" | "tax">) {
+// `qty` of a PO line, at its rate plus tax, less the line's own discount (the same share of it as of the line).
+function lineMoney(qty: number, it: Pick<PoItem, "quantity" | "rate" | "tax" | "discount">) {
   const rate = qtyToNum(it.rate) ?? 0, taxPct = qtyToNum(it.tax) ?? 0;
   const gross = qty * rate;
-  return { rate, taxPct, net: gross + gross * taxPct / 100 };
+  const lineDiscount = poLineDiscountShare(it);
+  return { rate, taxPct, lineDiscount, net: (gross + gross * taxPct / 100) * (1 - lineDiscount) };
 }
 const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 const num = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: 3 });
 
 // A PO line's value as the Supplier Directory shows it: qty × rate, plus tax. Null when the rate or the
-// quantity is missing (the directory shows a dash and adds nothing). No discount: that is on the whole PO.
-export function poLineValue(it: Pick<PoItem, "quantity" | "rate" | "tax">) {
+// quantity is missing (the directory shows a dash and adds nothing). `discount` is the line's own discount
+// (the PO's Discount column) and `total` = net − discount is what the line costs.
+export function poLineValue(it: Pick<PoItem, "quantity" | "rate" | "tax" | "discount">) {
   const rateNum = qtyToNum(it.rate), qtyNum = qtyToNum(it.quantity);
   const rate = rateNum && rateNum > 0 ? rateNum : null;
   const qty = qtyNum && qtyNum > 0 ? qtyNum : null;
   const taxPct = qtyToNum(it.tax) || 0;
-  if (rate == null || qty == null) return { rate, qty, taxPct, gross: null, taxValue: 0, net: null };
-  const gross = qty * rate, taxValue = gross * taxPct / 100;
-  return { rate, qty, taxPct, gross, taxValue, net: gross + taxValue };
+  if (rate == null || qty == null) return { rate, qty, taxPct, gross: null, taxValue: 0, net: null, discount: 0, total: null };
+  const gross = qty * rate, taxValue = gross * taxPct / 100, net = gross + taxValue;
+  const d = poDiscountInput(it.discount);
+  const discount = Math.min(net, d.pct != null ? net * d.pct / 100 : d.amount);
+  return { rate, qty, taxPct, gross, taxValue, net, discount, total: net - discount };
 }
 
 export function isRejectedPr(pr: Pick<PrInput, "hodApproval" | "hrApproval">): boolean {
@@ -202,7 +209,7 @@ export function procurementExpenses(
       if (!(m.rate > 0)) { skip(SKIP.grrNoRate, description); continue; }
       if (valued <= 0) { skip(SKIP.grrPastPo, description); continue; }
       const amount = m.net * factor;
-      const calc = `${num(valued)} × ${num(m.rate)}${m.taxPct ? ` + ${num(m.taxPct)}%` : ""}${factor < 1 ? " − discount share" : ""}`
+      const calc = `${num(valued)} × ${num(m.rate)}${m.taxPct ? ` + ${num(m.taxPct)}%` : ""}${m.lineDiscount > 0 ? ` − ${num(m.lineDiscount * 100)}% discount` : ""}${factor < 1 ? " − discount share" : ""}`
         + (valued < qty ? ` (GRR says ${num(qty)}; PO ordered ${num(orderedQty!)}${before > 0 ? `, ${num(Math.min(before, orderedQty!))} received before` : ""})` : "")
         + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
       for (const category of cats) {
@@ -241,10 +248,10 @@ export function orderedExpenses(
       const description = (it.description || it.item || "").trim();
       if (!description) continue;   // the directory leaves a line without a description out too
       const v = poLineValue(it);
-      if (v.net == null) { skipped.push({ source: "procurement", reason: SKIP.poNoValue, date, ref, description, href }); continue; }
-      const calc = `${num(v.qty!)} × ${num(v.rate!)}${v.taxPct ? ` + ${num(v.taxPct)}%` : ""} (ordered)` + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
+      if (v.total == null) { skipped.push({ source: "procurement", reason: SKIP.poNoValue, date, ref, description, href }); continue; }
+      const calc = `${num(v.qty!)} × ${num(v.rate!)}${v.taxPct ? ` + ${num(v.taxPct)}%` : ""}${v.discount > 0 ? ` − ${num(v.discount)} discount` : ""} (ordered)` + (cats.length > 1 ? ` ÷ ${cats.length} categories` : "");
       for (const category of cats) {
-        lines.push({ source: "procurement", date, category, amount: v.net / cats.length, calc, po: ref, poDate: date,
+        lines.push({ source: "procurement", date, category, amount: v.total / cats.length, calc, po: ref, poDate: date,
           lineId: `po${po.id}:${idx}`, supplier: (po.supplierName || "").trim(), qty: v.qty!, rate: v.rate!, taxPct: v.taxPct, ref, description, href });
       }
     }

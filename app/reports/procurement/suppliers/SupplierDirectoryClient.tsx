@@ -28,6 +28,7 @@ export interface DirectoryRow {
   taxPct: number;
   taxValue: number;
   net: number | null;
+  discount: number;      // the PO line's own discount (PO Discount column), Rs
   received: "none" | "partial" | "full";   // what has arrived of this PO line on GRRs
   receivedQty: number;
   orderedQty: number | null;
@@ -248,7 +249,8 @@ export default function SupplierDirectoryClient({
     gross: s.gross + (r.gross ?? 0),
     tax: s.tax + r.taxValue,
     net: s.net + (r.net ?? 0),
-  }), { gross: 0, tax: 0, net: 0 }), [filteredOrders]);
+    discount: s.discount + (r.discount || 0),
+  }), { gross: 0, tax: 0, net: 0, discount: 0 }), [filteredOrders]);
 
   // One row per (product, supplier) pair — every order of that product from
   // that supplier, any month, collapses into this single row (count tracks
@@ -385,14 +387,15 @@ export default function SupplierDirectoryClient({
         filename: "product-supplier-directory",
         sheets: [{
           sheetName: "By order", title: "SUPPLIER DIRECTORY — EVERY ORDER",
-          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,38,28,20,18,12,18,18,18],
-          headers: ["Date", "Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Gross", "Tax", "Net Value"],
+          letterhead: reportLetterhead(fromDate, toDate), colWidths: [34,38,28,20,18,12,18,18,18,16],
+          headers: ["Date", "Product / Description", "Supplier", "Brand", "Rate", "Tax %", "Gross", "Tax", "Net Value", "Discount"],
           rows: [
             ...filteredOrders.map(r => [
               r.date ? fmtDate(r.date) : "—", r.product, r.supplier, r.supplierBrand || "", rateLabel(r.rate, r.uom),
-              taxPctLabel(r.rate, r.taxPct), moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net),
+              taxPctLabel(r.rate, r.taxPct), moneyOrDash(r.gross), taxLabel(r.gross, r.taxValue, r.taxPct), moneyOrDash(r.net), r.discount ? fmtMoney(r.discount, false) : "—",
             ]),
-            ["", "", "", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false)],
+            ["", "", "", "", "", "Total", fmtMoney(ordersTotals.gross, false), fmtMoney(ordersTotals.tax, false), fmtMoney(ordersTotals.net, false), fmtMoney(ordersTotals.discount, false)],
+            ...(ordersTotals.discount > 0 ? [["", "", "", "", "", "", "", "Total after discount", fmtMoney(ordersTotals.net - ordersTotals.discount, false), ""]] : []),
           ],
         }],
       });
@@ -524,11 +527,12 @@ export default function SupplierDirectoryClient({
                 <th className="num">Gross</th>
                 <th className="num">Tax</th>
                 <th className="num">Net Value</th>
+                <th className="num">Discount</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 && (
-                <tr><td colSpan={9} className="empty">No matching orders.</td></tr>
+                <tr><td colSpan={10} className="empty">No matching orders.</td></tr>
               )}
               {filteredOrders.map((r, i) => (
                 <tr
@@ -553,6 +557,7 @@ export default function SupplierDirectoryClient({
                   <td className="num">{moneyOrDash(r.gross)}</td>
                   <td className="num">{taxLabel(r.gross, r.taxValue, r.taxPct)}</td>
                   <td className="num" style={{ fontWeight: 700 }}>{moneyOrDash(r.net)}</td>
+                  <td className="num">{r.discount ? fmtMoney(r.discount, false) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -563,7 +568,14 @@ export default function SupplierDirectoryClient({
                   <td className="num">{fmtMoney(ordersTotals.gross, false)}</td>
                   <td className="num">{fmtMoney(ordersTotals.tax, false)}</td>
                   <td className="num">{fmtMoney(ordersTotals.net, false)}</td>
+                  <td className="num">{fmtMoney(ordersTotals.discount, false)}</td>
                 </tr>
+                {ordersTotals.discount > 0 && (
+                  <tr className="rpt-total-row">
+                    <td colSpan={8} style={{ textAlign: "right" }}>Total after discount</td>
+                    <td className="num" colSpan={2}>{fmtMoney(ordersTotals.net - ordersTotals.discount, false)}</td>
+                  </tr>
+                )}
               </tfoot>
             )}
           </table>

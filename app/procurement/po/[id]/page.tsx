@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { purchaseOrders } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
-import { ensureProcurementTables, parseItems, fmtDate, poLineMoney, fmtMoney, docNoLabel, FORM_META, FORM_COPIES, type PoItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, fmtDate, poLineMoney, poGrandTotal, fmtMoney, docNoLabel, FORM_META, FORM_COPIES, type PoItem } from "@/lib/procurement";
 import ProcurementPrint from "@/components/procurement/ProcurementPrint";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +22,13 @@ export default async function PoView({ params, searchParams }: { params: Promise
   const termLines = (p.terms || "").split("\n").map(t => t.trim()).filter(Boolean);
   // Column totals for the footer row.
   const totals = items.reduce((a, it) => {
-    const { gross, taxValue, net } = poLineMoney(it);
-    a.gross += gross; a.taxValue += taxValue; a.net += net;
+    const { gross, taxValue, net, discount } = poLineMoney(it);
+    a.gross += gross; a.taxValue += taxValue; a.net += net; a.discount += discount;
     return a;
-  }, { gross: 0, taxValue: 0, net: 0 });
+  }, { gross: 0, taxValue: 0, net: 0, discount: 0 });
+  // What the PO comes to: each line less its discount (and any old whole-PO discount).
+  const grandTotal = poGrandTotal(items, p.discount);
+  const hasDiscount = totals.discount > 0 || (Number(p.discount) || 0) > 0;
 
   return (
     <div className="fade-up">
@@ -73,13 +76,14 @@ export default async function PoView({ params, searchParams }: { params: Promise
               <th style={{ width: 42 }}>Tax %</th>
               <th style={{ width: 72 }}>Tax Value</th>
               <th style={{ width: 78 }}>Net Value</th>
+              <th style={{ width: 66 }}>Discount</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
-              <tr><td className="c">1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+              <tr><td className="c">1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
             ) : items.map(it => {
-              const { rate, gross, taxPct, taxValue, net } = poLineMoney(it);
+              const { rate, gross, taxPct, taxValue, net, discount, discountPct } = poLineMoney(it);
               return (
                 <tr key={it.srNo}>
                   <td className="c">{it.srNo}</td>
@@ -91,6 +95,10 @@ export default async function PoView({ params, searchParams }: { params: Promise
                   <td className="c">{it.tax !== "" && it.tax != null ? `${taxPct}%` : ""}</td>
                   <td className="r">{fmtMoney(taxValue)}</td>
                   <td className="r">{fmtMoney(net)}</td>
+                  <td className="r">
+                    {fmtMoney(discount)}
+                    {discountPct != null && discount > 0 && <div className="pf-disc-pct">{discountPct}%</div>}
+                  </td>
                 </tr>
               );
             })}
@@ -103,7 +111,14 @@ export default async function PoView({ params, searchParams }: { params: Promise
                 <td></td>
                 <td className="r"><b>{fmtMoney(totals.taxValue)}</b></td>
                 <td className="r"><b>{fmtMoney(totals.net)}</b></td>
+                <td className="r"><b>{fmtMoney(totals.discount)}</b></td>
               </tr>
+              {hasDiscount && (
+                <tr className="pf-grand">
+                  <td className="r" colSpan={8}><b>Total after discount</b></td>
+                  <td className="r" colSpan={2}><b>{fmtMoney(grandTotal, false)}</b></td>
+                </tr>
+              )}
             </tfoot>
           )}
         </table>
@@ -142,6 +157,7 @@ export default async function PoView({ params, searchParams }: { params: Promise
         <style>{`
           .pf-po-items td.r, .pf-po-items th.r { text-align: right; }
           .pf-po-items tfoot td { border-top: 1.5px solid #000; }
+          .pf-po-items .pf-disc-pct { font-size: 0.85em; color: #555; }
         `}</style>
       </ProcurementPrint>
     </div>

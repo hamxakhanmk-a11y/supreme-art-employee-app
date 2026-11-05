@@ -83,6 +83,7 @@ export default async function SupplierDirectoryPage() {
       const gross = isOwner ? v.gross : null;
       const taxValue = isOwner ? v.taxValue : 0;
       const net = isOwner ? v.net : null;
+      const discount = isOwner ? v.discount : 0;
 
       rows.push({
         product: desc,
@@ -102,6 +103,7 @@ export default async function SupplierDirectoryPage() {
         taxPct,
         taxValue,
         net,
+        discount,
         received: (() => {
           const r = receipts.get(it.srNo);
           if (!r || !(r.hasReceipt || r.received > 0)) return "none" as const;
