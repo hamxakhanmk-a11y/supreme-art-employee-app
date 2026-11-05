@@ -334,13 +334,17 @@ export default function SupplierDirectoryClient({
   // Every order of one product from one supplier, newest first. Built from all
   // of the rows rather than the date-filtered ones, so the history is complete
   // whatever range the list above is showing.
-  const [historyFor, setHistoryFor] = useState<{ product: string; supplier: string } | null>(null);
+  // allSuppliers: every supplier's orders of the product, not only this supplier's.
+  const [historyFor, setHistoryFor] = useState<{ product: string; supplier: string; allSuppliers?: boolean } | null>(null);
   const history = useMemo(() => {
     if (!historyFor) return [];
     return rows
-      .filter(r => r.product === historyFor.product && r.supplier === historyFor.supplier)
+      .filter(r => r.product === historyFor.product && (historyFor.allSuppliers || r.supplier === historyFor.supplier))
       .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.poNo - a.poNo);
   }, [rows, historyFor]);
+  const suppliersOfHistory = useMemo(
+    () => historyFor ? new Set(rows.filter(r => r.product === historyFor.product).map(r => r.supplier)).size : 0,
+    [rows, historyFor]);
 
   // The rate it was before: the latest earlier order's rate that differs from the one
   // shown, in yellow beside it. Nothing when the rate has never changed. Clicking it
@@ -611,9 +615,9 @@ export default function SupplierDirectoryClient({
               {byProduct.map((r, i) => (
                 <tr
                   key={`${r.product}__${r.supplier}__${i}`}
-                  onClick={() => openPo(r.agg.poId)}
+                  onClick={() => (r.agg.count > 1 ? setHistoryFor({ product: r.product, supplier: r.supplier }) : openPo(r.agg.poId))}
                   className="rpt-row-clickable"
-                  title="Tap to open this supplier's most recent PO for this product"
+                  title={r.agg.count > 1 ? `Tap to see all ${r.agg.count} POs of this product from this supplier` : "Tap to open the PO for this product"}
                 >
                   {r.isFirstOfProduct && (
                     <td
@@ -630,7 +634,12 @@ export default function SupplierDirectoryClient({
                   )}
                   <td className="wrap">
                     {r.supplier}
-                    {r.agg.count > 1 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--text3)" }}>×{r.agg.count}</span>}
+                    {r.agg.count > 1 && (
+                      <button type="button" className="sd-pos-btn" title="Every PO of this product from this supplier"
+                        onClick={e => { e.stopPropagation(); setHistoryFor({ product: r.product, supplier: r.supplier }); }}>
+                        {r.agg.count} POs ›
+                      </button>
+                    )}
                   </td>
                   <td style={{ fontSize: 12 }}>{r.agg.brand || "—"}</td>
                   {!canEditRates ? (
@@ -709,14 +718,20 @@ export default function SupplierDirectoryClient({
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100,
           display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
         }}>
-          <div onClick={ev => ev.stopPropagation()} className="card" style={{ maxWidth: 560, width: "100%", padding: 20, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+          <div onClick={ev => ev.stopPropagation()} className="card" style={{ maxWidth: 760, width: "100%", padding: 20, maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>Rate history</div>
-                <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>{historyFor.product} — {historyFor.supplier}</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Every PO of this product</div>
+                <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>{historyFor.product} — {historyFor.allSuppliers ? "all suppliers" : historyFor.supplier}</div>
               </div>
               <button className="btn btn-sm" onClick={() => setHistoryFor(null)}>Close</button>
             </div>
+            {suppliersOfHistory > 1 && (
+              <div className="tabs" style={{ marginTop: 10, alignSelf: "flex-start" }}>
+                <button className={`tab ${historyFor.allSuppliers ? "" : "active"}`} onClick={() => setHistoryFor({ ...historyFor, allSuppliers: false })}>{historyFor.supplier}</button>
+                <button className={`tab ${historyFor.allSuppliers ? "active" : ""}`} onClick={() => setHistoryFor({ ...historyFor, allSuppliers: true })}>All {suppliersOfHistory} suppliers</button>
+              </div>
+            )}
             {(() => {
               const rates = history.map(h => h.rate).filter((x): x is number => x != null);
               const uom = history.find(h => h.uom)?.uom || "";
@@ -734,21 +749,26 @@ export default function SupplierDirectoryClient({
             <div style={{ overflowY: "auto" }}>
               <table className="rpt-table">
                 <thead>
-                  <tr><th>Date</th><th>PO #</th><th>Rate</th><th>Tax %</th><th>Change</th></tr>
+                  <tr><th>Date</th><th>PO #</th>{historyFor.allSuppliers && <th>Supplier</th>}<th className="num">Qty</th><th>Rate</th><th>Tax %</th><th>Change</th><th>Received</th></tr>
                 </thead>
                 <tbody>
                   {history.map((h, i) => {
                     // Compared with the next row down, i.e. the previous order that had a rate.
-                    const prev = history.slice(i + 1).find(p => p.rate != null);
+                    const prev = history.slice(i + 1).find(p => p.rate != null && (!historyFor.allSuppliers || p.supplier === h.supplier));
                     const diff = h.rate != null && prev?.rate != null ? h.rate - prev.rate : null;
                     return (
                       <tr key={`${h.poId}-${i}`} className="rpt-row-clickable" onClick={() => openPo(h.poId)} title="Open this Purchase Order">
                         <td>{h.date ? fmtDate(h.date) : "—"}</td>
-                        <td>{h.poNo}</td>
+                        <td style={{ fontWeight: 700, color: "var(--brand)" }}>{h.poNo}</td>
+                        {historyFor.allSuppliers && <td className="wrap">{h.supplier}</td>}
+                        <td className="num">{h.orderedQty != null ? h.orderedQty.toLocaleString() : "—"}{h.orderedQty != null && h.uom ? <span style={{ color: "var(--text3)" }}> {h.uom}</span> : null}</td>
                         <td>{rateLabel(h.rate, h.uom)}</td>
                         <td>{taxPctLabel(h.rate, h.taxPct)}</td>
                         <td style={{ fontWeight: 700, color: diff == null || diff === 0 ? "var(--text3)" : diff > 0 ? "#DC2626" : "#15803D" }}>
                           {diff == null ? "—" : diff === 0 ? "same" : `${diff > 0 ? "▲" : "▼"} ${fmtMoney(Math.abs(diff), false)}`}
+                        </td>
+                        <td style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", color: h.received === "full" ? "#15803D" : h.received === "partial" ? "#B45309" : "var(--text3)" }}>
+                          {h.received === "full" ? "✓ Received" : h.received === "partial" ? `◐ ${h.receivedQty.toLocaleString()} so far` : "Not yet"}
                         </td>
                       </tr>
                     );
@@ -757,7 +777,7 @@ export default function SupplierDirectoryClient({
               </table>
             </div>
             <p style={{ fontSize: 11, color: "var(--text3)", margin: "10px 0 0" }}>
-              Rates as entered on each Purchase Order. A rate noted by hand on the list is not part of this history.
+              Newest first. Tap a line to open that Purchase Order. Rates as entered on each PO — a rate noted by hand on the list is not part of this history.
             </p>
           </div>
         </div>

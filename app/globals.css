@@ -1392,3 +1392,7 @@ a.od-line:hover { border-color: var(--brand); }
   .acc-table thead th:first-child, .acc-table tbody th.acc-rowlabel { min-width: 150px; max-width: 170px; }
   .acc-table td.acc-cell { min-width: 62px; font-size: 10.5px; }
 }
+
+/* Supplier Directory, By product: a product with several POs from a supplier — opens the list of them. */
+.sd-pos-btn { margin-left: 6px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--brand); font-size: 11px; font-weight: 700; line-height: 1.7; cursor: pointer; white-space: nowrap; }
+.sd-pos-btn:hover { border-color: var(--brand); }
