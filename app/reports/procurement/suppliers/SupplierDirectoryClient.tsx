@@ -208,7 +208,8 @@ export default function SupplierDirectoryClient({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           product: row.product, supplier: row.supplier,
-          rate: rateDraft.trim(), tax: taxDraft.trim(), uom: uomDraft.trim(),
+          // The PO's own unit is not saved as a note, so the row keeps following the POs until it is changed.
+          rate: rateDraft.trim(), tax: taxDraft.trim(), uom: uomDraft.trim() === row.poUom ? "" : uomDraft.trim(),
         }),
       });
       if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "Save failed"); }
@@ -273,7 +274,7 @@ export default function SupplierDirectoryClient({
   type FlatRow = {
     product: string; supplier: string; agg: SupplierAgg;
     isFirstOfProduct: boolean; groupSize: number;
-    shownRate: number | null; shownTaxPct: number; shownUom: string; noted: boolean;
+    shownRate: number | null; shownTaxPct: number; shownUom: string; poUom: string; noted: boolean;
   };
   const byProduct = useMemo(() => {
     const map = new Map<string, Map<string, SupplierAgg>>();
@@ -291,10 +292,10 @@ export default function SupplierDirectoryClient({
       } else {
         cur.count += 1;
         if (r.poNo > cur.poNo) {
-          cur.rate = r.rate; cur.uom = r.uom; cur.taxPct = r.taxPct; cur.poNo = r.poNo; cur.poId = r.poId;
+          cur.rate = r.rate; cur.uom = r.uom || cur.uom; cur.taxPct = r.taxPct; cur.poNo = r.poNo; cur.poId = r.poId;
           cur.brand = r.supplierBrand; cur.address = r.supplierAddress; cur.phone = r.supplierPhone;
           cur.concernedPerson = r.supplierConcernedPerson; cur.ntn = r.supplierNtn; cur.strn = r.supplierStrn;
-        }
+        } else if (!cur.uom && r.uom) cur.uom = r.uom;
       }
     }
     let products = [...map.entries()];
@@ -303,8 +304,11 @@ export default function SupplierDirectoryClient({
     if (s) products = products.filter(([product, m]) => product.toLowerCase().includes(s) || [...m.keys()].some(sp => sp.toLowerCase().includes(s)));
     products.sort((a, b) => (PRODUCT_SORTS[sort]?.(a, b) ?? 0) || a[0].localeCompare(b[0]));
 
+    // A product's unit from any supplier's PO, for a supplier whose POs never gave one.
+    const productUom = (m: Map<string, SupplierAgg>) => [...m.values()].sort((a, b) => b.poNo - a.poNo).find(a => a.uom)?.uom || "";
     const flat: FlatRow[] = [];
     for (const [product, suppliersMap] of products) {
+      const anyUom = productUom(suppliersMap);
       let entries = [...suppliersMap.entries()];
       if (supplierFilter) entries = entries.filter(([sp]) => sp === supplierFilter);
       entries.sort((a, b) => a[0].localeCompare(b[0]));
@@ -314,11 +318,12 @@ export default function SupplierDirectoryClient({
         // the PO's rate showing beside it.
         const shownRate = note?.rate ?? agg.rate;
         const shownTaxPct = note?.taxPct ?? agg.taxPct;
-        // The unit noted here, else the latest PO's.
-        const shownUom = note?.uom || agg.uom || "";
+        // The unit noted here, else the POs': this supplier's latest that has one, else any supplier's for the product.
+        const poUom = agg.uom || anyUom;
+        const shownUom = note?.uom || poUom;
         flat.push({
           product, supplier, agg, isFirstOfProduct: i === 0, groupSize: entries.length,
-          shownRate, shownTaxPct, shownUom, noted: note != null,
+          shownRate, shownTaxPct, shownUom, poUom, noted: note != null,
         });
       });
     }

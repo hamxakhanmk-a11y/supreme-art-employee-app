@@ -388,6 +388,14 @@ export function qtyToNum(s: string | number | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+// A PO line's unit: its UOM, or a unit typed into the quantity instead ("500 Pcs", "2 Nos.").
+export function lineUnit(it: { uom?: string | null; quantity?: string | number | null }): string {
+  const u = String(it.uom ?? "").trim();
+  if (u) return u;
+  const m = String(it.quantity ?? "").trim().match(/^[\d.,\s]+([A-Za-z][A-Za-z .]{0,19})$/);
+  return m ? m[1].trim().replace(/\.$/, "") : "";
+}
+
 const normDesc = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 

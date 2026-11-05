@@ -8,7 +8,7 @@
 // then PO number), from any supplier. The unit has to agree — 200 a kg and 250 a drum are not a rise —
 // unless one of the two orders has none ("Kg" / "kgs" / "KG." agree). The rate is the PO line's rate
 // before tax and discounts.
-import { parseItems, qtyToNum, docNoLabel, type PoItem } from "./procurement";
+import { parseItems, qtyToNum, docNoLabel, lineUnit, type PoItem } from "./procurement";
 
 export interface RatePo {
   id: number; poNo: number; registered: boolean | null; date: string | null; supplierName: string | null; items: string | null;
@@ -37,7 +37,7 @@ export function rateIncreases(pos: RatePo[], from: string, to: string): RateIncr
       const list = byProduct.get(key) ?? [];
       list.push({
         product, poId: po.id, poNo: po.poNo, sr: Number(it.srNo) || 0, po: `PO ${docNoLabel(po.poNo, po.registered)}`,
-        date, supplier: (po.supplierName || "").trim(), rate, uom: String(it.uom || "").trim(),
+        date, supplier: (po.supplierName || "").trim(), rate, uom: lineUnit(it),
       });
       byProduct.set(key, list);
     }

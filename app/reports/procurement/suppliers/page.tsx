@@ -17,7 +17,7 @@ import { getSession } from "@/lib/auth";
 import { grantsOf } from "@/lib/pageGuard";
 import { db } from "@/lib/db";
 import { purchaseOrders, supplierProductRates, grns } from "@/lib/schema";
-import { ensureProcurementTables, parseItems, computePoReceipts, loadChecklist, type PoItem, type GrnItem } from "@/lib/procurement";
+import { ensureProcurementTables, parseItems, computePoReceipts, loadChecklist, lineUnit, type PoItem, type GrnItem } from "@/lib/procurement";
 import { procurementExpenses, poLineValue, type ExpenseLine, type SkippedLine, poWholeFactor } from "@/lib/expenses";
 import SupplierDirectoryClient, { type DirectoryRow, type ReceivedRow } from "./SupplierDirectoryClient";
 
@@ -103,7 +103,7 @@ export default async function SupplierDirectoryPage() {
         poNo: po.poNo,
         date: po.date || "",  // ISO yyyy-mm-dd, formatted for display client-side
         rate,
-        uom: (it.uom || "").trim(),
+        uom: lineUnit(it),   // the UOM, or a unit typed into the quantity
         gross,
         taxPct,
         taxValue,
