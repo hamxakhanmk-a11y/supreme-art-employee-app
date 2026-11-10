@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
   let profile;
   try {
     profile = await exchangeCodeForProfile(code, redirectUri(req));
-  } catch {
+  } catch (e) {
+    // Shows Google's reason (e.g. invalid_client = wrong/missing client secret)
+    // in the deployment's function logs.
+    console.error("Google sign-in: code exchange failed:", e instanceof Error ? e.message : e);
     return loginRedirect(req, "exchange");
   }
   if (!profile.email || !profile.emailVerified) return loginRedirect(req, "unverified");
