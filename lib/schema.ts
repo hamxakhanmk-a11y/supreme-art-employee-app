@@ -300,6 +300,12 @@ export const attendanceDevices = pgTable("attendance_devices", {
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   // How often the bridge syncs, so the app knows when a heartbeat is overdue.
   pollIntervalSeconds: integer("poll_interval_seconds"),
+  // lastSeenAt is the bridge's last check-in; deviceReadAt the last time it
+  // actually read the device. When it can't, deviceError says why, since
+  // deviceErrorSince.
+  deviceReadAt: timestamp("device_read_at", { withTimezone: true }),
+  deviceError: text("device_error"),
+  deviceErrorSince: timestamp("device_error_since", { withTimezone: true }),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

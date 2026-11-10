@@ -27,6 +27,9 @@ export async function ensureDeviceTables() {
       last_seen_at timestamptz NOT NULL DEFAULT now()
     )`);
   await db.execute(sql`ALTER TABLE attendance_devices ADD COLUMN IF NOT EXISTS poll_interval_seconds integer`);
+  await db.execute(sql`ALTER TABLE attendance_devices ADD COLUMN IF NOT EXISTS device_read_at timestamptz`);
+  await db.execute(sql`ALTER TABLE attendance_devices ADD COLUMN IF NOT EXISTS device_error text`);
+  await db.execute(sql`ALTER TABLE attendance_devices ADD COLUMN IF NOT EXISTS device_error_since timestamptz`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS attendance_device_users (
       device_serial varchar(40) NOT NULL,

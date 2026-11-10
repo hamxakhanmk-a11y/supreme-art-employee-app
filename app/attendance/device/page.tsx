@@ -11,6 +11,7 @@ type Device = {
   bridgeVersion: string | null; deviceTime: string | null; clockDriftSeconds: number | null;
   counts: Record<string, number> | null; invalidPunchCount: number | null;
   lastSyncedAt: string | null; pollIntervalSeconds: number | null; lastSeenAt: string;
+  deviceReadAt: string | null; deviceError: string | null; deviceErrorSince: string | null;
 };
 type Punch = {
   id: number; deviceSerial: string; deviceUserId: string; punchedAt: string;
@@ -143,16 +144,36 @@ export default function DeviceLogPage() {
         const stale = now - new Date(d.lastSeenAt).getTime() > staleAfterMs(d);
         const next = nextSyncAt(d);
         const drift = d.clockDriftSeconds;
+        // Bridge silent = PC, bridge or internet down. Bridge reporting an
+        // error = it's running but can't reach the device on the LAN.
+        const unreachable = !stale && !!d.deviceError;
+        const readAt = d.deviceReadAt ?? d.lastSeenAt;
         return (
           <div key={d.serial} className="card" style={{ padding: 16, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
               <span style={{ fontWeight: 800, fontSize: 15 }}>{d.name || "Device"}</span>
               <span style={{ color: "#888", fontSize: 12.5 }}>{d.serial}{d.ip ? ` · ${d.ip}` : ""}{d.firmware ? ` · ${d.firmware}` : ""}</span>
-              <span className={`badge ${stale ? "badge-inactive" : "badge-active"}`}>{stale ? "Offline" : "Online"}</span>
+              <span className={`badge ${stale ? "badge-inactive" : unreachable ? "badge-warning" : "badge-active"}`}>
+                {stale ? "Offline" : unreachable ? "Device unreachable" : "Online"}
+              </span>
             </div>
+            {stale && (
+              <div style={{ background: "var(--red-bg)", color: "var(--red-text)", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 12 }}>
+                The bridge PC hasn&apos;t checked in since {dateTime(d.lastSeenAt)}. Check the PC is on, connected to the internet, and the
+                <strong> ZK Attendance Bridge</strong> task is running.
+              </div>
+            )}
+            {unreachable && (
+              <div style={{ background: "var(--amber-bg)", color: "var(--amber-text)", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 12 }}>
+                The bridge PC is running but hasn&apos;t been able to reach the device since {dateTime(d.deviceErrorSince)}: <em>{d.deviceError}</em>.
+                Check the device&apos;s network cable and switch port, its IP (Menu → Comm. → Ethernet), and that the bridge PC is on the same network.
+                Figures below are from the last successful read, {ago(readAt, now)}.
+              </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-              <Tile label="Last sync" value={ago(d.lastSeenAt, now)} warn={stale}
+              <Tile label="Bridge check-in" value={ago(d.lastSeenAt, now)} warn={stale}
                 sub={stale ? `expected ${time(new Date(next).toISOString())}` : `every ${span(intervalMs(d) / 1000)} · next ~${fmt(new Date(next).toISOString(), { hour: "2-digit", minute: "2-digit" })}`} />
+              <Tile label="Last device read" value={ago(readAt, now)} sub={dateTime(readAt)} warn={unreachable || stale} />
               <Tile label="Latest punch synced" value={time(d.lastSyncedAt)} sub={fmt(d.lastSyncedAt, { day: "2-digit", month: "short", year: "numeric" })} />
               <Tile label="Clock drift" value={drift === null ? "—" : `${drift > 0 ? "+" : ""}${drift}s`}
                 sub="device vs bridge PC" warn={drift !== null && Math.abs(drift) > 120} />

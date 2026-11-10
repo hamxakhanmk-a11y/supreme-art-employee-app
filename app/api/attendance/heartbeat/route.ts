@@ -24,6 +24,30 @@ export async function POST(req: NextRequest) {
   if (!serial) return NextResponse.json({ error: "deviceSerial required" }, { status: 400 });
 
   const now = new Date();
+
+  // The bridge is running but couldn't reach the device: record that and
+  // leave the last known device details (counts, users, clock) as they were.
+  if (body.deviceReachable === false) {
+    const status = {
+      ip: shortString(body.ip, 45),
+      bridgeVersion: shortString(body.bridgeVersion, 20),
+      pollIntervalSeconds: int(body.pollIntervalSeconds),
+      deviceError: typeof body.deviceError === "string" ? body.deviceError.trim().slice(0, 300) || "Unknown error" : "Unknown error",
+      lastSeenAt: now,
+    };
+    try {
+      await ensureDeviceTables();
+      await db.insert(attendanceDevices).values({ serial, ...status, deviceErrorSince: now })
+        .onConflictDoUpdate({
+          target: attendanceDevices.serial,
+          set: { ...status, deviceErrorSince: sql`coalesce(${attendanceDevices.deviceErrorSince}, now())` },
+        });
+      return NextResponse.json({ ok: true, deviceReachable: false });
+    } catch (e) {
+      return errorResponse(e);
+    }
+  }
+
   const fields = {
     name: shortString(body.deviceName, 80),
     firmware: shortString(body.firmware, 80),
@@ -35,6 +59,9 @@ export async function POST(req: NextRequest) {
     invalidPunchCount: int(body.invalidPunchCount),
     lastSyncedAt: parseTimestamp(body.lastSyncedTimestamp),
     pollIntervalSeconds: int(body.pollIntervalSeconds),
+    deviceReadAt: now,
+    deviceError: null,
+    deviceErrorSince: null,
     lastSeenAt: now,
   };
 
