@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useCanEdit } from "@/components/MeProvider";
 import {
   CAPA_STAGES, CAPA_CATEGORIES, CAPA_STATUS_META, CAPA_FORM_REV, CAPA_FOOTER_NOTE, CAPA_DOC_NO,
-  parseCapaData, type CapaData, type CapaStatus,
+  CAPA_TYPE_META, capaTypeOf, parseCapaData, type CapaData, type CapaStatus, type CapaType,
 } from "@/lib/capa";
 
 type Capa = {
   id: number;
   capaRef: string;
   status: string;
+  capaType?: string;
   issueDate: string | null;
   data: string;
   createdByName: string | null;
@@ -25,6 +26,10 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
   const [d, setD] = useState<CapaData>(() => parseCapaData(capa.data));
   const [issueDate, setIssueDate] = useState(capa.issueDate || "");
   const [status, setStatus] = useState(capa.status);
+  // Customer (a customer's complaint) or internal (raised inside the factory).
+  const [capaType, setCapaType] = useState<CapaType>(capaTypeOf(capa.capaType));
+  const internal = capaType === "internal";
+  const typeMeta = CAPA_TYPE_META[capaType];
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
@@ -41,7 +46,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
     const res = await fetch(`/api/capa/${capa.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: d, status: nextStatus ?? status, issueDate: issueDate || null }),
+      body: JSON.stringify({ data: d, status: nextStatus ?? status, issueDate: issueDate || null, capaType }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -77,9 +82,14 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           fontSize: 10, fontWeight: 800, letterSpacing: 0.4,
           background: meta.bg, color: meta.fg,
         }}>{meta.label}</span>
+        <TypeTag type={capaType} />
         <div style={{ flex: 1 }} />
         {canEdit && !locked && (
           <>
+            <select value={capaType} onChange={e => setCapaType(capaTypeOf(e.target.value))} style={{ width: 150 }} title="Customer complaint, or raised inside the factory">
+              <option value="customer">Customer CAPA</option>
+              <option value="internal">Internal CAPA</option>
+            </select>
             <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: 150 }}>
               <option value="open">Open</option>
               <option value="in_progress">In Progress</option>
@@ -127,7 +137,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Supreme Art" className="capa-logo" />
           <div className="capa-head-text">
-            <h1 className="capa-title">CORRECTIVE &amp; PREVENTIVE ACTION REPORT</h1>
+            <h1 className="capa-title">{internal ? "INTERNAL " : ""}CORRECTIVE &amp; PREVENTIVE ACTION REPORT</h1>
             <div className="capa-sub">Supreme Art (Private) Limited</div>
           </div>
           <div className="capa-logo-spacer" />
@@ -136,15 +146,27 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         <div className="capa-refbar">
           <span className="capa-lbl">CAPA No.:</span>
           <strong>{capa.capaRef}</strong>
+          <span style={{ flex: 1 }} />
+          <span className="capa-lbl">Type:</span>
+          <TypeTag type={capaType} print />
         </div>
 
-        <SectionHead n={1} title="COMPANY DETAILS" />
+        {/* An internal CAPA keeps the same fields, worded for a finding inside the factory. */}
+        <SectionHead n={1} title={internal ? "INTERNAL DETAILS" : "COMPANY DETAILS"} />
         <div className="capa-grid">
-          <Cell label="Company / Customer (raising the complaint)" value={d.company_name} onChange={v => set("company_name", v)} ph="e.g. Global Pharmaceuticals (Pvt) Ltd" ro={ro} />
-          <Cell label="Contact Person" value={d.contact_person} onChange={v => set("contact_person", v)} ph="Name + designation" ro={ro} />
-          <Cell label="Job Name" value={d.job_name} onChange={v => set("job_name", v)} ph="e.g. Tavizem 100mg/5ml Suspension" ro={ro} />
-          <Cell label="Reference / PO No." value={d.ref_no} onChange={v => set("ref_no", v)} ph="Optional" ro={ro} />
-          <DateCell label="Complaint Date" value={issueDate} onChange={setIssueDate} ro={ro} />
+          {internal ? <>
+            <Cell label="Department / Section (where it was found)" value={d.company_name} onChange={v => set("company_name", v)} ph="e.g. Printing, Die Cutting, QC" ro={ro} />
+            <Cell label="Raised By" value={d.contact_person} onChange={v => set("contact_person", v)} ph="Name + designation" ro={ro} />
+            <Cell label="Job Name" value={d.job_name} onChange={v => set("job_name", v)} ph="e.g. Tavizem 100mg/5ml Suspension" ro={ro} />
+            <Cell label="Reference (Job / Batch No.)" value={d.ref_no} onChange={v => set("ref_no", v)} ph="Optional" ro={ro} />
+            <DateCell label="Date Raised" value={issueDate} onChange={setIssueDate} ro={ro} />
+          </> : <>
+            <Cell label="Company / Customer (raising the complaint)" value={d.company_name} onChange={v => set("company_name", v)} ph="e.g. Global Pharmaceuticals (Pvt) Ltd" ro={ro} />
+            <Cell label="Contact Person" value={d.contact_person} onChange={v => set("contact_person", v)} ph="Name + designation" ro={ro} />
+            <Cell label="Job Name" value={d.job_name} onChange={v => set("job_name", v)} ph="e.g. Tavizem 100mg/5ml Suspension" ro={ro} />
+            <Cell label="Reference / PO No." value={d.ref_no} onChange={v => set("ref_no", v)} ph="Optional" ro={ro} />
+            <DateCell label="Complaint Date" value={issueDate} onChange={setIssueDate} ro={ro} />
+          </>}
         </div>
 
         <SectionHead n={2} title="PROBLEM DESCRIPTION" />
@@ -186,7 +208,7 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         </div>
 
         <div className="capa-foot">
-          {capa.capaRef} · {CAPA_FORM_REV} · {CAPA_FOOTER_NOTE}
+          {capa.capaRef} · {typeMeta.label} CAPA · {CAPA_FORM_REV} · {CAPA_FOOTER_NOTE}
         </div>
       </div>
 
@@ -260,6 +282,10 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         .capa-cell input:disabled, .capa-cell textarea:disabled {
           background: transparent; color: var(--text); opacity: 1; cursor: default;
         }
+        .capa-type-tag {
+          display: inline-block; padding: 3px 11px; border-radius: 999px;
+          font-size: 10px; font-weight: 800; letter-spacing: 0.06em; border: 1px solid;
+        }
         .capa-foot {
           margin-top: 22px; padding-top: 10px;
           border-top: 1px solid var(--border);
@@ -309,6 +335,8 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
             border-radius: 0; padding: 1px 0; min-height: 0;
           }
           .capa-foot { margin-top: 10px; padding-top: 6px; font-size: 8pt; }
+          /* The CUSTOMER / INTERNAL tag prints as a boxed word, in colour where the printer allows. */
+          .capa-type-tag { font-size: 8pt; padding: 1px 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
           /* The report is as long as its contents: every answer prints in full
              (see components/PrintTextareas.tsx), so a heavily written-up CAPA
@@ -320,6 +348,15 @@ export default function CapaFormClient({ capa }: { capa: Capa }) {
         }
       `}</style>
     </div>
+  );
+}
+
+function TypeTag({ type, print }: { type: CapaType; print?: boolean }) {
+  const m = CAPA_TYPE_META[type];
+  return (
+    <span className={`capa-type-tag${print ? "" : " no-print"}`} style={{ background: m.bg, color: m.fg, borderColor: m.border }}>
+      {m.tag}
+    </span>
   );
 }
 

@@ -2,19 +2,19 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { capaReports } from "@/lib/schema";
-import { guardWrite, getSession } from "@/lib/auth";
+import { guardWrite, guardView } from "@/lib/auth";
 import { roleCanEdit } from "@/lib/permissions";
 
 // A closed CAPA is a signed-off record: reopening, changing or deleting it needs CAPA · Change Closed.
 const mayChangeClosed = async (role: string) => role === "superadmin" || await roleCanEdit(role, "capa.closed");
 import { logActivity } from "@/lib/activity";
-import { ensureCapaTable } from "@/lib/capa";
+import { ensureCapaTable, capaTypeOf } from "@/lib/capa";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const user = await getSession();
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const user = await guardView("capa");
+  if (user instanceof NextResponse) return user;
   await ensureCapaTable();
   const { id } = await ctx.params;
   const [row] = await db.select().from(capaReports).where(eq(capaReports.id, parseInt(id)));
@@ -22,7 +22,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json({ capa: row });
 }
 
-// PUT — save the form. Body: { data, status?, issueDate? }
+// PUT — save the form. Body: { data, status?, issueDate?, capaType? }
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const guard = await guardWrite("capa");
   if (guard instanceof NextResponse) return guard;
@@ -48,6 +48,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const [row] = await db.update(capaReports).set({
     data: JSON.stringify(b.data ?? {}),
     status: nextStatus,
+    capaType: b.capaType === undefined ? existing.capaType : capaTypeOf(b.capaType),
     issueDate: b.issueDate ?? existing.issueDate,
     updatedAt: new Date(),
     closedAt: isClosing ? new Date() : (nextStatus === "closed" ? existing.closedAt : null),

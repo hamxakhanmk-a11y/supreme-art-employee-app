@@ -688,7 +688,9 @@ export const capaReports = pgTable("capa_reports", {
   seq: integer("seq").notNull(),                             // running number within the year
   year: integer("year").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | in_progress | closed
-  issueDate: date("issue_date"),                             // complaint date
+  // customer = raised on a customer's complaint; internal = raised inside the factory (our own finding)
+  capaType: varchar("capa_type", { length: 20 }).notNull().default("customer"),
+  issueDate: date("issue_date"),                             // complaint date (internal: date raised)
   data: text("data").notNull().default("{}"),                // JSON blob of all form fields
   createdByUserId: integer("created_by_user_id"),
   createdByName: varchar("created_by_name", { length: 120 }),

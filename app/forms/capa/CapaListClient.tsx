@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCanEdit } from "@/components/MeProvider";
-import { CAPA_STATUS_META, parseCapaData, fmtDate, type CapaStatus } from "@/lib/capa";
+import { CAPA_STATUS_META, CAPA_TYPE_META, capaTypeOf, parseCapaData, fmtDate, type CapaStatus, type CapaType } from "@/lib/capa";
 import { SearchBox, SortBy, type SortOption } from "@/components/ListControls";
 import { matchesQuery, cmpText } from "@/lib/listTools";
 import { usePageState } from "@/lib/usePageState";
@@ -22,11 +22,19 @@ type Row = {
   id: number;
   capaRef: string;
   status: string;
+  capaType?: string;
   issueDate: string | null;
   data: string;
   createdByName: string | null;
   createdAt: string;
 };
+
+// Customer / internal, beside the status filter.
+const TYPE_FILTERS: { key: "all" | CapaType; label: string }[] = [
+  { key: "all", label: "All types" },
+  { key: "customer", label: "Customer" },
+  { key: "internal", label: "Internal" },
+];
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "All" },
@@ -41,6 +49,7 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
   const [rows] = useState<Row[]>(initial);
   // Status filter, search and sort are kept for when the user comes back to this screen.
   const [filter, setFilter] = usePageState("status", "all");
+  const [typeFilter, setTypeFilter] = usePageState<"all" | CapaType>("type", "all");
   const [q, setQ] = usePageState("q", "");
   const [sort, setSort] = usePageState<CapaSort>("sort", "newest");
   const [creating, setCreating] = useState(false);
@@ -48,10 +57,11 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
 
   const filtered = useMemo(() => {
     let list = filter === "all" ? rows : rows.filter(r => r.status === filter);
+    if (typeFilter !== "all") list = list.filter(r => capaTypeOf(r.capaType) === typeFilter);
     if (q.trim()) {
       list = list.filter(r => {
         const d = parseCapaData(r.data);
-        return matchesQuery(q, [r.capaRef, d.company_name, d.job_name, d.problem_description, d.detected_by]);
+        return matchesQuery(q, [r.capaRef, d.company_name, d.job_name, d.problem_description, d.detected_by, CAPA_TYPE_META[capaTypeOf(r.capaType)].label]);
       });
     }
     // "newest" is the order the server sends (highest id first); the rest re-order it.
@@ -64,22 +74,34 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
       status: (a, b) => cmpText(a.status, b.status) || b.id - a.id,
     };
     return [...list].sort(cmp[sort]);
-  }, [rows, filter, q, sort]);
+  }, [rows, filter, typeFilter, q, sort]);
 
-  const counts = useMemo(() => ({
-    all: rows.length,
-    open: rows.filter(r => r.status === "open").length,
-    in_progress: rows.filter(r => r.status === "in_progress").length,
-    closed: rows.filter(r => r.status === "closed").length,
-  } as Record<string, number>), [rows]);
+  // Status counts follow the type picked, and type counts the status picked, so each says what a tap shows.
+  const counts = useMemo(() => {
+    const ofType = typeFilter === "all" ? rows : rows.filter(r => capaTypeOf(r.capaType) === typeFilter);
+    return {
+      all: ofType.length,
+      open: ofType.filter(r => r.status === "open").length,
+      in_progress: ofType.filter(r => r.status === "in_progress").length,
+      closed: ofType.filter(r => r.status === "closed").length,
+    } as Record<string, number>;
+  }, [rows, typeFilter]);
+  const typeCounts = useMemo(() => {
+    const ofStatus = filter === "all" ? rows : rows.filter(r => r.status === filter);
+    return {
+      all: ofStatus.length,
+      customer: ofStatus.filter(r => capaTypeOf(r.capaType) === "customer").length,
+      internal: ofStatus.filter(r => capaTypeOf(r.capaType) === "internal").length,
+    } as Record<string, number>;
+  }, [rows, filter]);
 
-  async function createCapa() {
+  async function createCapa(capaType: CapaType) {
     setCreating(true);
     setError(null);
     const res = await fetch("/api/capa", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ capaType }),
     });
     setCreating(false);
     if (!res.ok) {
@@ -108,14 +130,29 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
             </button>
           ))}
         </div>
+        <div className="tabs" style={{ flexShrink: 0 }}>
+          {TYPE_FILTERS.map(f => (
+            <button key={f.key} onClick={() => setTypeFilter(f.key)}
+              className={`tab ${typeFilter === f.key ? "active" : ""}`}>
+              {f.label}
+              <span style={{ opacity: 0.75, fontWeight: 700 }}>{typeCounts[f.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <SearchBox value={q} onChange={setQ} placeholder="🔍  Search ref, company, job, issue…" width={230} />
           <SortBy options={SORT_OPTIONS} value={sort} onChange={setSort} minWidth={165} />
         </div>
         {canEdit && (
           <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-            <button className="btn btn-primary" onClick={createCapa} disabled={creating}>
+            <button className="btn btn-primary" onClick={() => createCapa("customer")} disabled={creating}
+              title="A CAPA for a customer's complaint">
               {creating ? "Creating…" : "＋ New CAPA"}
+            </button>
+            <button className="btn" onClick={() => createCapa("internal")} disabled={creating}
+              title="A CAPA raised inside the factory — our own finding, not a customer complaint"
+              style={{ borderColor: CAPA_TYPE_META.internal.fg, color: CAPA_TYPE_META.internal.fg }}>
+              ＋ Internal CAPA
             </button>
           </div>
         )}
@@ -132,8 +169,8 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)" }}>
-                <Th style={{ width: 130 }}>CAPA No.</Th>
-                <Th>Company / Customer</Th>
+                <Th style={{ width: 180 }}>CAPA No.</Th>
+                <Th>Company / Customer · Department</Th>
                 <Th>Job Name</Th>
                 <Th style={{ width: 120 }}>Complaint Date</Th>
                 <Th style={{ width: 120 }}>Status</Th>
@@ -146,7 +183,15 @@ export default function CapaListClient({ initial }: { initial: Row[] }) {
                 const meta = CAPA_STATUS_META[(r.status as CapaStatus)] || CAPA_STATUS_META.open;
                 return (
                   <tr key={r.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <Td><Link href={`/forms/capa/${r.id}`} style={{ fontWeight: 700, color: "var(--brand)", textDecoration: "none" }}>{r.capaRef}</Link></Td>
+                    <Td>
+                      <Link href={`/forms/capa/${r.id}`} style={{ fontWeight: 700, color: "var(--brand)", textDecoration: "none" }}>{r.capaRef}</Link>
+                      {capaTypeOf(r.capaType) === "internal" && (
+                        <span style={{
+                          display: "inline-block", marginLeft: 6, padding: "1px 7px", borderRadius: 999, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.4,
+                          background: CAPA_TYPE_META.internal.bg, color: CAPA_TYPE_META.internal.fg, border: `1px solid ${CAPA_TYPE_META.internal.border}`,
+                        }}>INTERNAL</span>
+                      )}
+                    </Td>
                     <Td>{d.company_name || <span style={{ color: "var(--text3)" }}>—</span>}</Td>
                     <Td>{d.job_name || <span style={{ color: "var(--text3)" }}>—</span>}</Td>
                     <Td>{fmtDate(r.issueDate) || <span style={{ color: "var(--text3)" }}>—</span>}</Td>

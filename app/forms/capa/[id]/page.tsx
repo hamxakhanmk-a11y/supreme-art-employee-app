@@ -23,6 +23,7 @@ export default async function CapaDetailPage({ params }: { params: Promise<{ id:
         id: row.id,
         capaRef: row.capaRef,
         status: row.status,
+        capaType: row.capaType,
         issueDate: row.issueDate,
         data: row.data,
         createdByName: row.createdByName,

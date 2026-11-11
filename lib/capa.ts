@@ -31,6 +31,18 @@ export const CAPA_CATEGORIES = [
 
 export type CapaStatus = "open" | "in_progress" | "closed";
 
+// A customer CAPA answers a customer's complaint; an internal CAPA is raised inside the factory
+// (our own inspection, audit or a department's finding). Same form and numbering, tagged INTERNAL.
+export type CapaType = "customer" | "internal";
+export const CAPA_TYPES: CapaType[] = ["customer", "internal"];
+export const CAPA_TYPE_META: Record<CapaType, { label: string; tag: string; fg: string; bg: string; border: string }> = {
+  customer: { label: "Customer", tag: "CUSTOMER", fg: "#1e3a8a", bg: "#e0e7ff", border: "#c7d2fe" },
+  internal: { label: "Internal", tag: "INTERNAL", fg: "#6b21a8", bg: "#f3e8ff", border: "#d8b4fe" },
+};
+export function capaTypeOf(v: unknown): CapaType {
+  return v === "internal" ? "internal" : "customer";
+}
+
 export const CAPA_STATUS_META: Record<CapaStatus, { label: string; fg: string; bg: string }> = {
   open:        { label: "OPEN",        fg: "#991b1b", bg: "#fee2e2" },
   in_progress: { label: "IN PROGRESS", fg: "#92400e", bg: "#fef3c7" },
@@ -78,6 +90,7 @@ export interface CapaRow {
   seq: number;
   year: number;
   status: string;
+  capaType: string;
   issueDate: string | null;
   data: string;
   createdByName: string | null;
@@ -139,6 +152,8 @@ export async function ensureCapaTable() {
     )
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS capa_reports_status_idx ON capa_reports(status)`);
+  // Added later: customer / internal. Every CAPA before it was a customer one.
+  await db.execute(sql`ALTER TABLE capa_reports ADD COLUMN IF NOT EXISTS capa_type varchar(20) NOT NULL DEFAULT 'customer'`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS capa_reports_year_seq_uidx ON capa_reports(year, seq)`);
   ensured = true;
 }
