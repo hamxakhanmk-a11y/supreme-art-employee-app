@@ -1383,6 +1383,36 @@ a.od-line:hover { border-color: var(--brand); }
 .acc-table td.acc-cell.idle { opacity: .6; }
 .acc-table td.acc-cell sup { font-size: 9px; margin-left: 2px; }
 .acc-table tbody tr:hover { transform: none; box-shadow: none; }
+/* Access Register switches (as the Tracker's, 2026-11-11): each box is a sliding toggle, the coloured knob on the
+   chosen side - green Edit (or View on a report), amber View, red Hide. The table fits its box: names a fixed
+   column, the roles share what is left. */
+.acc-table.acc-table-tg { table-layout: fixed; min-width: 860px; }
+.acc-table.acc-table-tg thead th { padding: 7px 2px; font-size: 9.5px; white-space: normal; }
+.acc-table.acc-table-tg thead th:first-child { width: 210px; min-width: 0; padding-left: 10px; }
+.acc-table.acc-table-tg tbody th.acc-rowlabel { min-width: 0; max-width: none; padding: 6px 8px; }
+.acc-table td.acc-cell.acc-cell-tg { background-color: transparent; padding: 4px 3px; min-width: 0; opacity: 1; }
+.acc-table td.acc-cell.acc-cell-tg.idle { opacity: .6; }
+.acc-tg { box-sizing: border-box; position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); width: 100%; max-width: calc(var(--n) * 32px + 6px); margin: 0 auto; padding: 2px; background: #fff; border: 1px solid #d8c5c5; border-radius: 7px; box-shadow: 0 1px 3px rgba(91,33,33,.10); }
+.acc-tg::before { content: ""; position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) / var(--n)); border-radius: 5px; background: var(--tg); box-shadow: 0 1px 4px rgba(0,0,0,.22); transform: translateX(calc(100% * var(--i))); transition: transform .34s cubic-bezier(.34,1.2,.64,1), background-color .25s ease; }
+.acc-tg-allow { --tg: #16a34a; }
+.acc-tg-partial { --tg: #d97706; }
+.acc-tg-deny { --tg: #b91c1c; }
+.acc-tg button { position: relative; z-index: 1; min-width: 0; margin: 0; padding: 3px 0; background: transparent !important; border: 0 !important; box-shadow: none !important; font-size: 9.5px; font-weight: 800; letter-spacing: 0; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: clip; cursor: pointer; transition: color .2s ease; }
+.acc-tg button:not(.is-on):hover { color: var(--text); }
+.acc-tg button.is-on { color: #fff; cursor: default; }
+.acc-tg.is-locked { opacity: .5; }
+.acc-tg.is-locked button { cursor: not-allowed; }
+.acc-idle-mark { display: block; margin-top: 2px; font-size: 9px; font-weight: 700; color: var(--amber-text); }
+.acc-swatch.acc-swatch-tg.allow { background: #16a34a; border-color: #16a34a; }
+.acc-swatch.acc-swatch-tg.partial { background: #d97706; border-color: #d97706; }
+.acc-swatch.acc-swatch-tg.deny { background: #b91c1c; border-color: #b91c1c; }
+@media (max-width: 1150px) {
+  .acc-table.acc-table-tg thead th:first-child { width: 160px; }
+  .acc-table.acc-table-tg tbody th.acc-rowlabel { font-size: 11px; }
+  .acc-table td.acc-cell.acc-cell-tg { padding: 4px 2px; }
+  .acc-tg button { font-size: 8.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .acc-tg::before { transition: none; } }
 .acc-del { margin-left: 6px; border: none; background: rgba(255,255,255,.18); color: #fff; border-radius: 4px; font-size: 10px; padding: 0 5px; cursor: pointer; }
 .acc-del:hover { background: #b91c1c; }
 .acc-foot { margin-top: 10px; font-size: 11.5px; color: var(--text3); }

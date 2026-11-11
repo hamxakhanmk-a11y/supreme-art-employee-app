@@ -1,7 +1,8 @@
 "use client";
 // The Access Register (the Tracker app's, brought over): one grid per section tab, a row for the section
-// itself and one for each of its buttons, a column per role. Clicking a box steps it to the next level and
-// saves straight away — no Save button. The Owner (Super Admin) always has everything.
+// itself and one for each of its buttons, a column per role. Each box is a small sliding switch (as the
+// Tracker's, 2026-11-11): click a side and the knob slides there at once, then it saves — no Save button,
+// and a failed save slides it back. The Owner (Super Admin) always has everything.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePageState } from "@/lib/usePageState";
 
@@ -34,11 +35,34 @@ function groupOf(key: string): string {
 }
 
 const LABEL: Record<Level, string> = { edit: "EDIT", view: "VIEW", none: "HIDDEN" };
-// The steps a click goes through, per kind of row (as in the Tracker: Edit → View → Hidden → Edit).
-function nextLevel(kind: Kind, cur: Level): Level {
-  if (kind === "view") return cur === "view" ? "none" : "view";
-  if (kind === "action") return cur === "edit" ? "none" : "edit";
-  return cur === "edit" ? "view" : cur === "view" ? "none" : "edit";
+// The sides of each kind of row's switch, left to right: a section Edit | View | Hide, a page or report
+// View | Hide, a button Edit | Hide.
+const TOGGLE: Record<Kind, [Level, string][]> = {
+  section: [["edit", "Edit"], ["view", "View"], ["none", "Hide"]],
+  view: [["view", "View"], ["none", "Hide"]],
+  action: [["edit", "Edit"], ["none", "Hide"]],
+};
+const TIP: Record<Level, string> = { edit: "Edit — open it and use it", view: "View — open it, look only", none: "Hidden — not shown at all" };
+// The knob's colour: green for full access (Edit, or View on a page that is only looked at), amber for
+// look-only, red for hidden.
+function tone(kind: Kind, level: Level): "allow" | "partial" | "deny" {
+  if (level === "none") return "deny";
+  return level === "edit" || kind === "view" ? "allow" : "partial";
+}
+
+function Toggle({ kind, level, locked, onPick }: { kind: Kind; level: Level; locked?: boolean; onPick?: (l: Level) => void }) {
+  const opts = TOGGLE[kind];
+  const i = Math.max(0, opts.findIndex(o => o[0] === level));
+  return (
+    <div className={`acc-tg acc-tg-${tone(kind, opts[i][0])}${locked ? " is-locked" : ""}`}
+      style={{ "--n": opts.length, "--i": i } as React.CSSProperties}>
+      {opts.map(([v, label], j) => (
+        <button key={v} type="button" className={j === i ? "is-on" : ""} aria-pressed={j === i} disabled={locked}
+          title={kind === "view" && v === "view" ? "View — the page is shown" : TIP[v]}
+          onClick={() => { if (j !== i) onPick?.(v); }}>{label}</button>
+      ))}
+    </div>
+  );
 }
 
 export default function RolesClient() {
@@ -138,10 +162,10 @@ export default function RolesClient() {
     setRoles(rolesRef.current);
   }
 
-  function cycle(r: RolePerm, m: ModuleDef) {
+  function setLevel(r: RolePerm, m: ModuleDef, next: Level) {
     const role = r.role;
     const before = levelOf(rolesRef.current.find(x => x.role === role) ?? r, m.key);
-    const next = nextLevel(m.kind, before);
+    if (next === before) return;
     setError("");
     put(role, m, next);
     queue.current[role] = (queue.current[role] || Promise.resolve()).then(async () => {
@@ -168,8 +192,8 @@ export default function RolesClient() {
         <div style={{ flex: 1, minWidth: 240 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Access Register</h1>
           <p className="acc-reg-dek">
-            Who can open each section and use each of its buttons. <b>Click a box</b> to change it — it saves
-            straight away. The Owner (Super Admin) always has everything.
+            Who can open each section and use each of its buttons. <b>Click a side of a switch</b> to change it —
+            it saves straight away. The Owner (Super Admin) always has everything.
           </p>
         </div>
         <button onClick={() => setShowNew(v => !v)} className="btn btn-restricted" style={{ whiteSpace: "nowrap" }}>
@@ -203,10 +227,10 @@ export default function RolesClient() {
       )}
 
       <div className="acc-reg-legend">
-        <span><i className="acc-swatch allow" /> <b>EDIT</b> — open it and use it</span>
-        <span><i className="acc-swatch partial" /> <b>VIEW</b> — open it, look only</span>
-        <span><i className="acc-swatch deny" /> <b>HIDDEN</b> — not shown at all</span>
-        <span>Buttons are <b>EDIT</b> or <b>HIDDEN</b>; reports <b>VIEW</b> or <b>HIDDEN</b>.</span>
+        <span><i className="acc-swatch acc-swatch-tg allow" /> <b>Edit</b> — open it and use it (a report: <b>View</b>)</span>
+        <span><i className="acc-swatch acc-swatch-tg partial" /> <b>View</b> — open it, look only</span>
+        <span><i className="acc-swatch acc-swatch-tg deny" /> <b>Hide</b> — not shown at all</span>
+        <span>Buttons are <b>Edit</b> or <b>Hide</b>; reports and pages <b>View</b> or <b>Hide</b>.</span>
       </div>
 
       {error && <div role="alert" style={{ color: "#7C1F1F", fontSize: 13, marginBottom: 10 }}>{error}</div>}
@@ -222,7 +246,7 @@ export default function RolesClient() {
           </div>
 
           <div className="acc-tablewrap">
-            <table className="acc-table">
+            <table className="acc-table acc-table-tg">
               <thead>
                 <tr>
                   <th>{activeTab}</th>
@@ -248,16 +272,18 @@ export default function RolesClient() {
                         {m.label}
                         <span className="acc-rowlabel-sub">{m.hint}</span>
                       </th>
-                      <td className="acc-cell allow locked" title="Super Admin always has this">{m.kind === "view" ? "VIEW" : "EDIT"}</td>
+                      <td className="acc-cell acc-cell-tg" title="Super Admin always has this">
+                        <Toggle kind={m.kind} level={m.kind === "view" ? "view" : "edit"} locked />
+                      </td>
                       {roles.map(r => {
                         const lvl = levelOf(r, m.key);
                         // A button whose section the role can't open does nothing yet: said, not hidden.
                         const idle = !!parent && lvl !== "none" && levelOf(r, parent.key) === "none";
                         return (
-                          <td key={r.role} onClick={() => cycle(r, m)}
-                            className={`acc-cell editable ${lvl === "edit" ? "allow" : lvl === "view" ? "partial" : "deny"}${idle ? " idle" : ""}`}
-                            title={idle ? `No effect until ${r.label} can open ${parent!.label}` : "Click to change"}>
-                            {LABEL[lvl]}{idle && <sup>!</sup>}
+                          <td key={r.role} className={`acc-cell acc-cell-tg${idle ? " idle" : ""}`}
+                            title={idle ? `No effect until ${r.label} can open ${parent!.label}` : undefined}>
+                            <Toggle kind={m.kind} level={lvl} onPick={l => setLevel(r, m, l)} />
+                            {idle && <span className="acc-idle-mark">! no effect</span>}
                           </td>
                         );
                       })}
