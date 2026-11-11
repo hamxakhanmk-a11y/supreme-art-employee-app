@@ -1121,7 +1121,7 @@ body:not(.role-admin) .admin-only{display:none!important}
       <div>
         <div id="st-summary" style="font-size:13.5px;margin-bottom:12px"></div>
         <div class="two-col">
-          <div class="form-group"><label class="form-label">Batch no.</label><input id="st-batch" oninput="stRefresh()" placeholder="e.g. 01-2026"></div>
+          <div class="form-group"><label class="form-label">Batch no.</label><input id="st-batch" oninput="stRefresh()" placeholder="e.g. 01-11-26"></div>
           <div class="form-group"><label class="form-label">Received on</label><input id="st-date" type="date" onchange="stDateChanged()"></div>
         </div>
         <div class="form-group"><label class="form-label">Description</label><input id="st-desc" oninput="stRefresh()"></div>
@@ -1146,7 +1146,7 @@ body:not(.role-admin) .admin-only{display:none!important}
         </div>
         <div class="two-col">
           <div class="form-group"><label class="form-label">P.O. No.</label><input id="st-po" placeholder="Optional"></div>
-          <div class="form-group"><label class="form-label">DC No.</label><input id="st-dc" placeholder="Optional"></div>
+          <div class="form-group"><label class="form-label">Invoice No.</label><input id="st-inv" oninput="stRefresh()" placeholder="Optional"></div>
         </div>
         <div style="border-top:1px dashed #e0d6c6;margin:2px 0 10px"></div>
         <div class="form-label" style="margin-bottom:4px">Reprint range <span style="color:#aaa;font-weight:400;text-transform:none">(optional &mdash; leave empty to print all)</span></div>
@@ -3499,9 +3499,10 @@ async function setDropHidden(field,value,hide){
 const STICKER_UOMS=['kg','g','liters','ml','pcs','meters','rolls','boxes','sets','pairs','sheets','packets'];
 const _st={partId:0,batch:1,txnId:0,po:'',inv:'',label:'',autoBatch:'',ref:0,rows:[{q:'',n:'1'}]};
 const stVal=id=>document.getElementById(id).value.trim();
-// The batch number as it is written on a sticker: the batch's number and the year it was received, 02-2026.
-function batchNo(n,iso){return String(n).padStart(2,'0')+'-'+String(iso||today()).slice(0,4);}
-// Changing the date moves the year in a batch number nobody has typed over.
+// The batch number as it is written on a sticker: the batch's number, then the month and year it was received -
+// 01-11-26 is batch 1, received in November 2026.
+function batchNo(n,iso){const d=String(iso||today());return String(n).padStart(2,'0')+'-'+d.slice(5,7)+'-'+d.slice(2,4);}
+// Changing the date moves the month and year in a batch number nobody has typed over.
 function stDateChanged(){
   const b=document.getElementById('st-batch');
   if(_st.autoBatch&&b.value.trim()===_st.autoBatch){
@@ -3547,7 +3548,7 @@ function showStickerDialog(o){
   document.getElementById('st-supplier').value=p?p.supplier||'':'';
   document.getElementById('st-brand').value=p?p.brand||'':'';
   document.getElementById('st-po').value=o.po||'';
-  document.getElementById('st-dc').value=o.dc||'';
+  document.getElementById('st-inv').value=o.inv||'';
   const unit=p?p.unit:'';
   const uoms=STICKER_UOMS.includes(unit)||!unit?STICKER_UOMS:[unit].concat(STICKER_UOMS);
   const uom=document.getElementById('st-uom');
@@ -3594,7 +3595,7 @@ function stickerPlan(strict){
 function stickerData(stickers,total){
   const p=partOf(_st.partId);
   return {batchNo:stVal('st-batch'),date:stickerDay(stVal('st-date')),desc:stVal('st-desc'),code:(p&&p.sku)||'',supplier:stVal('st-supplier'),brand:stVal('st-brand'),
-    po:stVal('st-po'),dc:stVal('st-dc'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
+    po:stVal('st-po'),inv:stVal('st-inv'),unit:stVal('st-uom'),per:stVal('st-per'),stickers,total};
 }
 // What the window says and shows: the heading of the quantity, how many stickers and what they add up to, the preview.
 function stRefresh(){
@@ -3623,17 +3624,17 @@ async function printSticker(){
   if(plan.error){await warnDialog('Check the stickers',plan.error);return;}
   const n=plan.stickers.length;
   if(n>50&&!await confirmDialog({title:'Print '+n+' stickers?',message:'That is '+n+' labels, one page each.',confirmText:'Print',variant:'confirm'}))return;
-  const po=stVal('st-po');
+  const po=stVal('st-po'),inv=stVal('st-inv');
   // A batch number typed over the automatic one is kept too: '' means the automatic one.
   const bn=stVal('st-batch');
   const label=bn&&bn!==_st.autoBatch?bn:'';
-  // The PO and batch numbers stay with the stock in they belong to, so a reprint has them.
-  if(_st.txnId&&(po!==_st.po||label!==_st.label)){
+  // The PO, invoice and batch numbers stay with the stock in they belong to, so a reprint has them.
+  if(_st.txnId&&(po!==_st.po||inv!==_st.inv||label!==_st.label)){
     try{
-      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:_st.inv,batchLabel:label});
+      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:inv,batchLabel:label});
       const t=state.transactions.find(x=>x.id===_st.txnId);
-      if(t){t.poNo=po;t.batchLabel=label;}
-      _st.po=po;_st.label=label;
+      if(t){t.poNo=po;t.invoiceNo=inv;t.batchLabel=label;}
+      _st.po=po;_st.inv=inv;_st.label=label;
     }catch(err){/* printing goes ahead; the numbers just are not kept */}
   }
   try{localStorage.setItem('storeStickerPer',stVal('st-per'));}catch(err){}
@@ -3682,7 +3683,7 @@ function stickerDocHtml(d){
     +'<div class="date"><small>RECEIVED ON</small><b>'+e(d.date)+'</b></div></div>'
     +'<div class="line desc">'+cell('desc','DESCRIPTION','<span class="clamp">'+e(d.desc)+'</span><em>'+e(d.code)+'</em>','desc')+'</div>'
     +'<div class="line">'+cell('supplier','SUPPLIER','<span class="fit2">'+e(d.supplier)+'</span>')+cell('brand','BRAND','<span class="fit2">'+e(d.brand)+'</span>')+'</div>'
-    +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','DC #','<span class="fit2">'+e(d.dc)+'</span>')+'</div>'
+    +'<div class="line">'+cell('po','P.O. #','<span class="fit2">'+e(d.po)+'</span>')+cell('dc','INVOICE #','<span class="fit2">'+e(d.inv)+'</span>')+'</div>'
     +'<div class="line">'+cell('qty','QUANTITY'+(per?' / '+e(per):''),'<span class="fit1">'+(s.qty==null?'':fmtQty(s.qty))+'<i>'+e(d.unit)+'</i></span>','qty')+cell('cas',(per?e(per):'CASE')+' #','<span class="fit1">'+s.no+' OF '+d.total+'</span>')+'</div>'
     +'</div>';
   const css=`
@@ -3718,7 +3719,7 @@ function stickerDocHtml(d){
   `;
   // Long text shrinks to fit its box instead of being cut off (the description may take up to three lines).
   const script=`
-    function fitWidth(el,box,min){el.style.fontSize='';var size=parseFloat(getComputedStyle(el).fontSize);while(el.scrollWidth>box.clientWidth+0.5&&size>min){size-=0.5;el.style.fontSize=size+'px';}}
+    function fitWidth(el,box,min){el.style.fontSize='';var size=parseFloat(getComputedStyle(el).fontSize);var cs=getComputedStyle(box);var room=box.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);while(el.scrollWidth>room+0.5&&size>min){size-=0.5;el.style.fontSize=size+'px';}}
     function fitWrap(el,box,min){el.style.fontSize='';var size=parseFloat(getComputedStyle(el).fontSize);while((el.scrollHeight>box.clientHeight+0.5||el.scrollWidth>box.clientWidth+0.5)&&size>min){size-=0.5;el.style.fontSize=size+'px';}}
     function fitDesc(clamp){var v=clamp.parentElement;clamp.style.fontSize='';var size=parseFloat(getComputedStyle(clamp).fontSize),em=v.querySelector('em');var room=v.clientHeight-(em?em.offsetHeight+2:0)-3;while((clamp.scrollHeight>room+0.5||clamp.scrollHeight>size*1.16*3+2)&&size>9){size-=0.5;clamp.style.fontSize=size+'px';}}
     function fitAll(){document.querySelectorAll('.sticker').forEach(function(s){
