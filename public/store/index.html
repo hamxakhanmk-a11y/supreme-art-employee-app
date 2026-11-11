@@ -459,6 +459,10 @@ body:not(.role-admin) .admin-only{display:none!important}
   table{font-size:11px}
   th,td{padding:6px 8px}
 }
+/* Issuance Log with every category: a heading row before each category (owner, 2026-11-11). */
+#issuance-table tr.iss-cat-head td{background:#efe7da;color:#7C1F1F;font-weight:800;font-size:12px;letter-spacing:.5px;text-transform:uppercase;padding:7px 12px;border-top:2px solid #7C1F1F;cursor:default}
+#issuance-table tr.iss-cat-head td span{color:#777;font-weight:600;text-transform:none;letter-spacing:0}
+#issuance-table tr.iss-cat-head:hover{transform:none!important;box-shadow:none!important}
 </style>
 </head>
 <body>
@@ -4267,7 +4271,10 @@ function renderIssuance(){
   const tb=document.getElementById('issuance-table');
   if(!tb)return;
   if(!txns.length){tb.innerHTML='<tr><td colspan="12"><div class="empty"><i class="ti ti-search"></i>No records found</div></td></tr>';updateBulkInfo('iss');return;}
-  tb.innerHTML=txns.map((t,i)=>`<tr class="txn-row-link" onclick="openTxnInReport(${t.id})" title="Open this movement in the ${t.type==='in'?'Stock In':'Stock Out'} report">
+  // All categories: one category after another, each under its name, as the print has it (owner, 2026-11-11);
+  // the chosen sort holds within each, and the numbering starts again in each.
+  const groups=StoreMovement.category?[['',txns]]:issByCategory(txns);
+  tb.innerHTML=groups.map(([cat,list])=>(StoreMovement.category?'':issCatHead(cat,list.length))+list.map((t,i)=>`<tr class="txn-row-link" onclick="openTxnInReport(${t.id})" title="Open this movement in the ${t.type==='in'?'Stock In':'Stock Out'} report">
     <td class="no-print" onclick="event.stopPropagation()"><input type="checkbox" class="txn-chk-iss" data-id="${t.id}" onchange="updateBulkInfo('iss')"></td>
     <td style="color:#bbb;font-size:12px">${i+1}</td>
     <td style="white-space:nowrap">${whenHtml(t)}</td>
@@ -4278,8 +4285,17 @@ function renderIssuance(){
     <td style="font-weight:600">${fmtQty(bal[t.id])??'—'} ${getPartUnit(t.partId)}</td>
     <td>${userText(t.type==='in'?t.ref:t.issuedTo)||'—'}</td>
     <td class="machinery-only" style="color:#888">${userText(t.type==='in'?t.notes:t.purpose)||'—'}</td>${batchCell(t)}
-  </tr>`).join('');
+  </tr>`).join('')).join('');
   updateBulkInfo('iss');
+}
+// The Issuance Log's entries by category: categories A-Z, those with none last, each keeping the order it was given.
+function issByCategory(txns){
+  const by=new Map();
+  txns.forEach(t=>{const c=getPartCat(t.partId)||'';if(!by.has(c))by.set(c,[]);by.get(c).push(t);});
+  return [...by.entries()].sort((a,b)=>!a[0]?1:!b[0]?-1:a[0].localeCompare(b[0]));
+}
+function issCatHead(cat,n){
+  return '<tr class="iss-cat-head"><td colspan="20">'+_escHtml(cat||'No category')+' <span>('+n+' entr'+(n===1?'y':'ies')+')</span></td></tr>';
 }
 
 function renderCategories(){

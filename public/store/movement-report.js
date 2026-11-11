@@ -113,7 +113,7 @@
       '<td class="numeric outgoing">' + display(r.totalOut) + '</td><td class="numeric"><b>' + display(r.stockNow) + '</b></td></tr>';
     }).join('') + '</tbody>';
   }
-  const css = '.movement-table{border-collapse:collapse;width:100%;background:#fff;font:11px Arial,sans-serif}.movement-table th,.movement-table td{border:1px solid #bbb;padding:3px 5px;white-space:nowrap;text-align:right}.movement-table td{background:#fff}.movement-table th{background:#f3eee4;color:#111;text-align:center;font-size:12px}.movement-table td.part-name{text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:160px;max-width:260px}.movement-table small{display:block;font-size:9px;font-weight:normal}.movement-table .incoming{color:#15803d}.movement-table .outgoing{color:#a32d2d}.movement-table tbody tr{transform:none!important;box-shadow:none!important;break-inside:avoid}.movement-table thead{display:table-header-group}';
+  const css = '.movement-table{border-collapse:collapse;width:100%;background:#fff;font:11px Arial,sans-serif}.movement-table th,.movement-table td{border:1px solid #bbb;padding:3px 5px;white-space:nowrap;text-align:right}.movement-table td{background:#fff}.movement-table th{background:#f3eee4;color:#111;text-align:center;font-size:12px}.movement-table td.part-name{text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:160px;max-width:260px}.movement-table small{display:block;font-size:9px;font-weight:normal}.movement-table .incoming{color:#15803d}.movement-table .outgoing{color:#a32d2d}.movement-table tbody tr{transform:none!important;box-shadow:none!important;break-inside:avoid}.movement-table thead{display:table-header-group}.movement-table tr.cat-head td{background:#efe7da;color:#7C1F1F;font:800 12px Arial,sans-serif;text-align:left;text-transform:uppercase;letter-spacing:.5px;border-top:2px solid #7C1F1F;padding:6px 10px}';
   api.selectAll = checked => {
     for (const r of api.current?.rows || []) checked ? api.selected.add(String(r.id)) : api.selected.delete(String(r.id));
     el('movement-output').querySelectorAll('[data-movement-id]').forEach(c => c.checked = checked);
@@ -146,9 +146,12 @@
       if (sortBy === 'name-desc') shownRows.reverse();
       else if (sortBy === 'qty-desc') shownRows.sort((a,b) => b.totalOut - a.totalOut);
       else if (sortBy === 'qty-asc') shownRows.sort((a,b) => a.totalOut - b.totalOut);
+      // All categories: one category after another under its name, as the print has it; the sort holds within each.
+      const byCategory = !api.category;
+      if (byCategory) shownRows.sort((a,b) => (!a.category) - (!b.category) || a.category.localeCompare(b.category));
       const shown = { ...api.current, rows: shownRows };
       output.innerHTML = '<style>' + css + '</style>' +
-        (shown.rows.length ? '<div style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(shown,0,shown.groups.length,true) + tableRows(shown,0,shown.groups.length,true) + '</table></div>' : '<p>No parts match these filters.</p>');
+        (shown.rows.length ? '<div style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(shown,0,shown.groups.length,true) + tableRows(shown,0,shown.groups.length,true,byCategory) + '</table></div>' : '<p>No parts match these filters.</p>');
       output.querySelectorAll('[data-movement-id]').forEach(c => c.onchange = () => c.checked ? api.selected.add(c.dataset.movementId) : api.selected.delete(c.dataset.movementId));
     } catch (error) { api.current = null; output.textContent = error.message; }
     return true;
