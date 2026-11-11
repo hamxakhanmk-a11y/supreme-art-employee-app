@@ -61,7 +61,7 @@
         });
         // Inks & Consumables keep a row per supplier + brand, so the row says which.
         const tag = (p.supplier || p.brand) ? ' \u2014 ' + (p.supplier || 'no supplier') + (p.brand ? ' \u00B7 ' + p.brand : '') : '';
-        return { id:p.id, name:(p.sku && !String(p.name || '').trim().startsWith('[' + p.sku + ']') ? '[' + p.sku + '] ' : '') + p.name + tag + (p.deleted ? ' (deleted)' : ''),
+        return { id:p.id, category:p.category || '', name:(p.sku && !String(p.name || '').trim().startsWith('[' + p.sku + ']') ? '[' + p.sku + '] ' : '') + p.name + tag + (p.deleted ? ' (deleted)' : ''),
           unit:p.unit || '', opening, values, totalOut:round(totalOut), stockNow:number(p.qty) };
       }).sort((a,b) => a.name.localeCompare(b.name));
     return { from,to,mode,groups,rows,category };
@@ -99,12 +99,19 @@
       '<th rowspan="2">Total out</th><th rowspan="2">Stock now</th></tr><tr>' +
       model.groups.slice(start,end).map(() => '<th>In</th><th>Out</th><th>Balance</th>').join('') + '</tr></thead>';
   }
-  function tableRows(model, start = 0, end = model.groups.length, checks = false) {
-    return '<tbody>' + model.rows.map(r => '<tr>' +
+  // byCategory: a heading row before each category's parts (printing with every category shown).
+  function tableRows(model, start = 0, end = model.groups.length, checks = false, byCategory = false) {
+    const span = 5 + (end - start) * 3 + (checks ? 1 : 0);
+    let last = null;
+    return '<tbody>' + model.rows.map(r => {
+      let head = '';
+      if (byCategory && r.category !== last) { last = r.category; head = '<tr class="cat-head"><td colspan="' + span + '">' + esc(r.category || 'No category') + '</td></tr>'; }
+      return head + '<tr>' +
       (checks ? '<td><input type="checkbox" aria-label="Select part" data-movement-id="' + esc(r.id) + '"' + (api.selected.has(String(r.id)) ? ' checked' : '') + '></td>' : '') +
       '<td class="part-name">' + esc(r.name) + '</td><td>' + esc(r.unit) + '</td><td class="numeric">' + display(start ? r.values[start-1].balance : r.opening) + '</td>' +
       r.values.slice(start,end).map(v => '<td class="numeric incoming">' + display(v.incoming) + '</td><td class="numeric outgoing">' + display(v.outgoing) + '</td><td class="numeric">' + display(v.balance) + '</td>').join('') +
-      '<td class="numeric outgoing">' + display(r.totalOut) + '</td><td class="numeric"><b>' + display(r.stockNow) + '</b></td></tr>').join('') + '</tbody>';
+      '<td class="numeric outgoing">' + display(r.totalOut) + '</td><td class="numeric"><b>' + display(r.stockNow) + '</b></td></tr>';
+    }).join('') + '</tbody>';
   }
   const css = '.movement-table{border-collapse:collapse;width:100%;background:#fff;font:11px Arial,sans-serif}.movement-table th,.movement-table td{border:1px solid #bbb;padding:3px 5px;white-space:nowrap;text-align:right}.movement-table td{background:#fff}.movement-table th{background:#f3eee4;color:#111;text-align:center;font-size:12px}.movement-table td.part-name{text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:160px;max-width:260px}.movement-table small{display:block;font-size:9px;font-weight:normal}.movement-table .incoming{color:#15803d}.movement-table .outgoing{color:#a32d2d}.movement-table tbody tr{transform:none!important;box-shadow:none!important;break-inside:avoid}.movement-table thead{display:table-header-group}';
   api.selectAll = checked => {
@@ -151,6 +158,9 @@
     api.render();
     if (!api.current) return true;
     const model = {...api.current, rows:api.current.rows.filter(r => !api.selected.size || api.selected.has(String(r.id)))};
+    // Every category shown: printed one category after another, each under its name (owner, 2026-11-11).
+    const byCategory = !model.category;
+    if (byCategory) model.rows = model.rows.slice().sort((a,b) => (!a.category) - (!b.category) || a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
     if (!model.rows.length) { warnDialog('Nothing to export','No parts match these filters.'); return true; }
     const moduleName = state.module === 'consumables' ? 'INKS & CONSUMABLES' : 'MACHINERY & ELECTRICAL';
     const title = moduleName + ' — ISSUANCE MOVEMENT REPORT';
@@ -171,10 +181,10 @@
       const end = Math.min(start+4,model.groups.length);
       pages += '<section><header><div class="logo"><img src="/logo-urdu.png">SUPREME ART PRIVATE LIMITED</div><div class="heading"><h1>' + esc(title) + '</h1><div class="report-control"><span>' + code + '</span><span>Date: ' + fmt(model.from) + ' to ' + fmt(model.to) + '</span><span>Issue Status: 01</span></div></div></header>' +
         '<p class="note">Category: ' + esc(model.category || 'All') + ' · Periods ' + (start+1) + '–' + end + ' of ' + model.groups.length + '. Opening balance is at the first displayed period. Total out covers the full selected range; stock now is current inventory.</p>' +
-        '<table class="movement-table">' + tableHead(model,start,end) + tableRows(model,start,end) + '</table></section>';
+        '<table class="movement-table">' + tableHead(model,start,end) + tableRows(model,start,end,false,byCategory && kind !== 'excel') + '</table></section>';
     }
     win.document.write('<!doctype html><html><head><title>' + esc(title) + '</title><style>' + css +
-      '@page{size:A4 landscape;margin:5mm}body{margin:0;color:#111}header{display:flex;align-items:center;background:#f3eee4;border:1px solid #222;padding:2px 4px;gap:8px;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}.logo{width:150px;text-align:center;color:#a32d2d;font:bold 9px Arial}.logo img{display:block;width:80px;height:39px;object-fit:contain;margin:auto}.heading{flex:1;text-align:center}.heading h1{font:bold 14px Georgia;color:#a32d2d;margin:2px 2px 4px}.report-control{display:grid;grid-template-columns:1fr 2fr 1fr;font:10.5pt "Times New Roman";line-height:1.1}.report-control span{padding:1px 2px}.note{font:8px Arial;margin:3px}section{margin-bottom:8px;break-after:auto}.movement-table{table-layout:fixed;width:100%;font-size:13px;line-height:1.15}.movement-table th,.movement-table td{padding:2px 3px;white-space:normal;overflow-wrap:anywhere}.movement-table td.numeric{font:15px/13px "Arial Narrow",Arial,sans-serif;letter-spacing:-.4px;white-space:nowrap}.movement-table th{background:#f3eee4!important;color:#111!important;font-size:10pt!important;line-height:1.1;print-color-adjust:exact;-webkit-print-color-adjust:exact}.movement-table th.part-name-heading{width:18%}.movement-table td.part-name{min-width:0;max-width:none;text-align:right}.movement-table small{font-size:8px}</style></head><body>' + pages + '</body></html>');
+      '@page{size:A4 landscape;margin:5mm}body{margin:0;color:#111}header{display:flex;align-items:center;background:#f3eee4;border:1px solid #222;padding:2px 4px;gap:8px;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}.logo{width:150px;text-align:center;color:#a32d2d;font:bold 9px Arial}.logo img{display:block;width:80px;height:39px;object-fit:contain;margin:auto}.heading{flex:1;text-align:center}.heading h1{font:bold 14px Georgia;color:#a32d2d;margin:2px 2px 4px}.report-control{display:grid;grid-template-columns:1fr 2fr 1fr;font:10.5pt "Times New Roman";line-height:1.1}.report-control span{padding:1px 2px}.note{font:8px Arial;margin:3px}section{margin-bottom:8px;break-after:auto}.movement-table{table-layout:fixed;width:100%;font-size:13px;line-height:1.15}.movement-table th,.movement-table td{padding:2px 3px;white-space:normal;overflow-wrap:anywhere}.movement-table td.numeric{font:15px/13px "Arial Narrow",Arial,sans-serif;letter-spacing:-.4px;white-space:nowrap}.movement-table th{background:#f3eee4!important;color:#111!important;font-size:10pt!important;line-height:1.1;print-color-adjust:exact;-webkit-print-color-adjust:exact}.movement-table th.part-name-heading{width:18%}.movement-table td.part-name{min-width:0;max-width:none;text-align:right}.movement-table small{font-size:8px}.movement-table tr.cat-head td{background:#e9e1d3!important;color:#7C1F1F;font:bold 10pt Arial;text-align:left;text-transform:uppercase;letter-spacing:.5px;border-top:1.5px solid #7C1F1F;break-after:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}</style></head><body>' + pages + '</body></html>');
     win.document.close();
     const image = win.document.querySelector('img');
     (image?.decode ? image.decode().catch(() => {}) : Promise.resolve()).then(() => win.print());
