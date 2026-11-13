@@ -420,6 +420,13 @@ th.num, th.num-strong { text-align: right; }
 .rpt-table-wrap--fit .rpt-table th, .rpt-table-wrap--fit .rpt-table td { padding: 7px 10px; }
 /* Long names wrap instead of widening the table, so it fits the screen without sideways scrolling. */
 .rpt-table-wrap--fit .rpt-table th.wrap, .rpt-table-wrap--fit .rpt-table td.wrap { white-space: normal; min-width: 120px; max-width: 420px; }
+/* Supplier Directory, Every order: ten columns kept to the screen - tighter cells, the product / supplier / brand
+   columns wrap at a width that shrinks with the screen. */
+.rpt-table-wrap--fit .rpt-table.sd-orders th, .rpt-table-wrap--fit .rpt-table.sd-orders td { padding: 7px 8px; }
+.rpt-table.sd-orders td.wrap:nth-child(2), .rpt-table.sd-orders th.wrap:nth-child(2) { min-width: 150px; max-width: min(300px, 22vw); }
+.rpt-table.sd-orders td.wrap:nth-child(3), .rpt-table.sd-orders th.wrap:nth-child(3) { min-width: 100px; max-width: min(170px, 11vw); }
+.rpt-table.sd-orders td.wrap:nth-child(4), .rpt-table.sd-orders th.wrap:nth-child(4) { min-width: 54px; max-width: 90px; }
+@media (max-width: 1400px) { .rpt-table.sd-orders { font-size: 12.5px; } .rpt-table-wrap--fit .rpt-table.sd-orders th, .rpt-table-wrap--fit .rpt-table.sd-orders td { padding: 6px 6px; } }
 .rpt-total-row td {
   position: sticky; bottom: 0; z-index: 2;
   background: var(--bg2); font-weight: 700; color: var(--text);

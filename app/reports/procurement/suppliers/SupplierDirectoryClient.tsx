@@ -566,13 +566,14 @@ export default function SupplierDirectoryClient({
             )}
           </table>
         ) : activeView === "orders" ? (
-          <table className="rpt-table">
+          // Ten columns: kept to the screen width (sd-orders in globals.css) - the text columns wrap.
+          <table className="rpt-table sd-orders">
             <thead>
               <tr>
                 <th>Date</th>
                 <th className="wrap">Product / Description</th>
                 <th className="wrap">Supplier</th>
-                <th>Brand</th>
+                <th className="wrap">Brand</th>
                 <th>Rate</th>
                 <th>Tax %</th>
                 <th className="num">Gross</th>
@@ -602,11 +603,12 @@ export default function SupplierDirectoryClient({
                     )}
                   </td>
                   <td className="wrap">{r.supplier}</td>
-                  <td style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
+                  <td className="wrap" style={{ fontSize: 12 }}>{r.supplierBrand || "—"}</td>
                   <td>{rateLabel(r.rate, r.uom)}</td>
                   <td>{taxPctLabel(r.rate, r.taxPct)}</td>
                   <td className="num">{moneyOrDash(r.gross)}</td>
-                  <td className="num">{taxLabel(r.gross, r.taxValue, r.taxPct)}</td>
+                  {/* The Tax % column beside it already says the rate. */}
+                  <td className="num">{r.gross == null ? "—" : fmtMoney(r.taxValue, false) || "—"}</td>
                   <td className="num" style={{ fontWeight: 700 }}>{moneyOrDash(r.net)}</td>
                   <td className="num">{r.discount ? fmtMoney(r.discount, false) : "—"}</td>
                 </tr>
