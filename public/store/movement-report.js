@@ -10,6 +10,13 @@
   const round = n => Math.round((n + Number.EPSILON) * 1e6) / 1e6;
   const number = n => Number(n || 0);
   const display = n => number(n).toLocaleString('en-GB', { maximumFractionDigits: 6 });
+  // Search the way people type: every word somewhere in the text, any order; punctuation and spaces ignored.
+  const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[\u00D7*]/g, 'x').replace(/[^a-z0-9]+/g, ' ').trim();
+  function hit(query, text) {
+    const q = norm(query); if (!q) return true;
+    const hay = norm(text), tight = hay.replace(/ /g, '');
+    return q.split(' ').every(w => hay.includes(w) || tight.includes(w));
+  }
   function periods(from, to, mode) {
     if (!Number.isFinite(utc(from)) || !Number.isFinite(utc(to)) || from > to) throw Error('Choose a valid From date on or before To date.');
     const result = [];
@@ -39,10 +46,10 @@
       if (!byPart.has(key)) byPart.set(key, []);
       byPart.get(key).push(t);
     }
-    const query = search.trim().toLowerCase();
+    const query = search;
     const rows = parts.filter(p => (!p.deleted || (byPart.get(String(p.id)) || []).some(t => day(t.date) >= from && day(t.date) <= to)) &&
       (!category || p.category === category) &&
-      (!query || [p.name,p.sku,p.category,p.brand,p.supplier].join(' ').toLowerCase().includes(query)))
+      hit(query, [p.name,p.sku,p.category,p.brand,p.supplier].join(' ')))
       .map(p => {
         const txns = byPart.get(String(p.id)) || [];
         // Undo every retained movement from the start date onwards, including
@@ -108,12 +115,16 @@
       if (byCategory && r.category !== last) { last = r.category; head = '<tr class="cat-head"><td colspan="' + span + '">' + esc(r.category || 'No category') + '</td></tr>'; }
       return head + '<tr>' +
       (checks ? '<td><input type="checkbox" aria-label="Select part" data-movement-id="' + esc(r.id) + '"' + (api.selected.has(String(r.id)) ? ' checked' : '') + '></td>' : '') +
-      '<td class="part-name">' + esc(r.name) + '</td><td>' + esc(r.unit) + '</td><td class="numeric">' + display(start ? r.values[start-1].balance : r.opening) + '</td>' +
-      r.values.slice(start,end).map(v => '<td class="numeric incoming">' + display(v.incoming) + '</td><td class="numeric outgoing">' + display(v.outgoing) + '</td><td class="numeric">' + display(v.balance) + '</td>').join('') +
-      '<td class="numeric outgoing">' + display(r.totalOut) + '</td><td class="numeric"><b>' + display(r.stockNow) + '</b></td></tr>';
+      // On screen a figure opens its entries: In / Out of a period in Stock In / Stock Out for those dates.
+      (() => {
+        const go = (type, from, to, n) => checks && n > 0 ? ' data-mv="' + type + '" data-part="' + esc(r.id) + '" data-from="' + from + '" data-to="' + to + '" title="Open these in Stock ' + (type === 'in' ? 'In' : 'Out') + '"' : '';
+        return '<td class="part-name"' + (checks ? ' data-mv="out" data-part="' + esc(r.id) + '" data-from="' + model.from + '" data-to="' + model.to + '" title="Open this item\'s stock outs for the whole range"' : '') + '>' + esc(r.name) + '</td><td>' + esc(r.unit) + '</td><td class="numeric">' + display(start ? r.values[start-1].balance : r.opening) + '</td>' +
+          r.values.slice(start,end).map((v, k) => { const g = model.groups[start + k]; return '<td class="numeric incoming"' + go('in', g.start, g.end, v.incoming) + '>' + display(v.incoming) + '</td><td class="numeric outgoing"' + go('out', g.start, g.end, v.outgoing) + '>' + display(v.outgoing) + '</td><td class="numeric">' + display(v.balance) + '</td>'; }).join('') +
+          '<td class="numeric outgoing"' + go('out', model.from, model.to, r.totalOut) + '>' + display(r.totalOut) + '</td><td class="numeric"><b>' + display(r.stockNow) + '</b></td></tr>';
+      })();
     }).join('') + '</tbody>';
   }
-  const css = '.movement-table{border-collapse:collapse;width:100%;background:#fff;font:11px Arial,sans-serif}.movement-table th,.movement-table td{border:1px solid #bbb;padding:3px 5px;white-space:nowrap;text-align:right}.movement-table td{background:#fff}.movement-table th{background:#f3eee4;color:#111;text-align:center;font-size:12px}.movement-table td.part-name{text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:160px;max-width:260px}.movement-table small{display:block;font-size:9px;font-weight:normal}.movement-table .incoming{color:#15803d}.movement-table .outgoing{color:#a32d2d}.movement-table tbody tr{transform:none!important;box-shadow:none!important;break-inside:avoid}.movement-table thead{display:table-header-group}.movement-table tr.cat-head td{background:#efe7da;color:#7C1F1F;font:800 12px Arial,sans-serif;text-align:left;text-transform:uppercase;letter-spacing:.5px;border-top:2px solid #7C1F1F;padding:6px 10px}';
+  const css = '.movement-table{border-collapse:collapse;width:100%;background:#fff;font:11px Arial,sans-serif}.movement-table th,.movement-table td{border:1px solid #bbb;padding:3px 5px;white-space:nowrap;text-align:right}.movement-table td{background:#fff}.movement-table th{background:#f3eee4;color:#111;text-align:center;font-size:12px}.movement-table td.part-name{text-align:right;white-space:normal;overflow-wrap:anywhere;min-width:160px;max-width:260px}.movement-table small{display:block;font-size:9px;font-weight:normal}.movement-table .incoming{color:#15803d}.movement-table .outgoing{color:#a32d2d}.movement-table tbody tr{transform:none!important;box-shadow:none!important;break-inside:avoid}.movement-table thead{display:table-header-group}.mv-screen .movement-table thead{position:sticky;top:0;z-index:3}.mv-screen .movement-table thead th{box-shadow:inset 0 -1px 0 #bbb}.mv-screen .movement-table tbody tr:not(.cat-head):hover td{background:#fbf6ee}.mv-screen [data-mv]{cursor:pointer}.mv-screen td[data-mv]:hover{text-decoration:underline;font-weight:700}.movement-table tr.cat-head td{background:#efe7da;color:#7C1F1F;font:800 12px Arial,sans-serif;text-align:left;text-transform:uppercase;letter-spacing:.5px;border-top:2px solid #7C1F1F;padding:6px 10px}';
   api.selectAll = checked => {
     for (const r of api.current?.rows || []) checked ? api.selected.add(String(r.id)) : api.selected.delete(String(r.id));
     el('movement-output').querySelectorAll('[data-movement-id]').forEach(c => c.checked = checked);
@@ -151,8 +162,13 @@
       if (byCategory) shownRows.sort((a,b) => (!a.category) - (!b.category) || a.category.localeCompare(b.category));
       const shown = { ...api.current, rows: shownRows };
       output.innerHTML = '<style>' + css + '</style>' +
-        (shown.rows.length ? '<div style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(shown,0,shown.groups.length,true) + tableRows(shown,0,shown.groups.length,true,byCategory) + '</table></div>' : '<p>No parts match these filters.</p>');
+        (shown.rows.length ? '<div class="mv-screen" style="overflow:auto;max-height:65vh;touch-action:pan-x pan-y"><table class="movement-table">' + tableHead(shown,0,shown.groups.length,true) + tableRows(shown,0,shown.groups.length,true,byCategory) + '</table></div>' : '<p>No parts match these filters.</p>');
       output.querySelectorAll('[data-movement-id]').forEach(c => c.onchange = () => c.checked ? api.selected.add(c.dataset.movementId) : api.selected.delete(c.dataset.movementId));
+      output.onclick = e => {
+        const cell = e.target.closest('[data-mv]');
+        if (!cell || typeof openPartInReport !== 'function') return;
+        openPartInReport(Number(cell.dataset.part), cell.dataset.mv, cell.dataset.from, cell.dataset.to);
+      };
     } catch (error) { api.current = null; output.textContent = error.message; }
     return true;
   };

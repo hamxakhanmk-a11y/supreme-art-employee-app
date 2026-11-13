@@ -463,6 +463,10 @@ body:not(.role-admin) .admin-only{display:none!important}
 #issuance-table tr.iss-cat-head td{background:#efe7da;color:#7C1F1F;font-weight:800;font-size:12px;letter-spacing:.5px;text-transform:uppercase;padding:7px 12px;border-top:2px solid #7C1F1F;cursor:default}
 #issuance-table tr.iss-cat-head td span{color:#777;font-weight:600;text-transform:none;letter-spacing:0}
 #issuance-table tr.iss-cat-head:hover{transform:none!important;box-shadow:none!important}
+/* Issuance Log, transaction history: the headings stay put while the rows scroll (owner, 2026-11-12). */
+#page-issuance .txn-card{max-height:calc(100vh - 210px);overflow:auto}
+#page-issuance .txn-card thead th{position:sticky;top:0;z-index:3;background:#f7f2e9;box-shadow:inset 0 -1px 0 #e3d8c6}
+#issuance-table tr.iss-cat-head td{position:sticky;top:34px;z-index:2}
 </style>
 </head>
 <body>
@@ -1379,6 +1383,23 @@ function openTxnInReport(id,origin){
   flashTxnRow(prefix,t.id);
 }
 
+// From the Issuance Log's daily / weekly / monthly report (owner, 2026-11-12): click an In or Out figure and
+// Stock In or Stock Out opens on that item for that period; the part's name or Total out opens its stock outs
+// for the report's whole range. "Back to Issuance Log" puts both reports back as they were.
+function openPartInReport(partId,type,from,to){
+  const target=type==='in'?'stockin':'stockout';
+  const prefix=type==='in'?'in':'out';
+  storeReturn={
+    target,prefix,txnId:0,origin:{page:'issuance'},label:getPartName(partId),
+    filters:{search:fieldVal(prefix+'-search'),from:fieldVal(prefix+'-date-from'),to:fieldVal(prefix+'-date-to')},
+  };
+  setFieldVal(prefix+'-search',getPartName(partId));
+  setFieldVal(prefix+'-date-from',from||'');
+  setFieldVal(prefix+'-date-to',to||'');
+  showPage(target,navItemFor(target));
+  renderStoreReturnBar();
+}
+
 // Put the report back the way it was, and forget the jump.
 function clearStoreReturn(){
   if(!storeReturn)return;
@@ -1584,6 +1605,15 @@ document.addEventListener('mousedown',e=>{
 
 function skuPrefix(p){return p.sku&&!(p.name||'').trim().startsWith('['+p.sku+']')?'['+p.sku+'] ':'';}
 function partLabel(p){return skuPrefix(p)+p.name+inkTag(p);}
+// Search the way people type (owner, 2026-11-12): every word typed has to be somewhere in the text - any
+// order, any case, spaces / brackets / quote marks ignored, and "300gsm" finds "300 gsm".
+function normSearch(s){return String(s==null?'':s).toLowerCase().replace(/[\u00D7*]/g,'x').replace(/[^a-z0-9]+/g,' ').trim();}
+function searchHit(query,...texts){
+  const q=normSearch(query);
+  if(!q)return true;
+  const hay=normSearch(texts.join(' ')),tight=hay.replace(/ /g,'');
+  return q.split(' ').every(w=>hay.includes(w)||tight.includes(w));
+}
 function partSearchString(p){
   return ((p.sku||'')+' '+p.name+' '+(p.category||'')+' '+parseMachines(p.machine).join(' ')+' '+(isInks()?(p.brand||'')+' '+(p.supplier||''):'')).toLowerCase();
 }
@@ -1780,7 +1810,7 @@ function openBatches(partId){
 function renderInkCombo(prefix,query){
   const dd=document.getElementById(prefix+'-dropdown');
   const q=(query||'').trim().toLowerCase();
-  const items=state.parts.filter(p=>!q||partSearchString(p).includes(q))
+  const items=state.parts.filter(p=>searchHit(q,partSearchString(p)))
     .sort((a,b)=>inkKey(a).localeCompare(inkKey(b))||inkSort(a,b)).slice(0,80);
   if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching items</div>';return;}
   const e=_escHtml;
@@ -1813,7 +1843,7 @@ function renderComboList(prefix,query){
   if(isInks())return renderInkCombo(prefix,query);
   const dd=document.getElementById(prefix+'-dropdown');
   const q=(query||'').trim().toLowerCase();
-  const items=state.parts.filter(p=>!q||partSearchString(p).includes(q)).slice(0,60);
+  const items=state.parts.filter(p=>searchHit(q,partSearchString(p))).slice(0,60);
   if(!items.length){dd.innerHTML='<div class="combo-empty"><i class="ti ti-search"></i> No matching parts</div>';return;}
   dd.innerHTML=items.map(p=>{
     const cls=p.qty===0?'out':(p.qty<=p.minQty?'low':'');
@@ -2276,9 +2306,7 @@ function getSectionData(sec){
     const rk=inks?(document.getElementById('inv-rack-filter')||{value:''}).value:'';
     return state.parts.filter(p=>{
       const machList=parseMachines(p.machine);
-      const hay=[p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'']
-        .map(v=>(v||'').toLowerCase());
-      const txt=!s||hay.some(v=>v.includes(s))||(!inks&&machList.some(x=>x.toLowerCase().includes(s)));
+      const txt=searchHit(s,p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'',inks?'':machList.join(' '));
       const cat=!c||p.category===c;
       const mach=!m||(m==='__none__'?machList.length===0:machList.includes(m));
       const rack=!rk||(rk==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rk);
@@ -2290,7 +2318,7 @@ function getSectionData(sec){
     const dF=(document.getElementById('in-date-from')||{value:''}).value;
     const dT=(document.getElementById('in-date-to')||{value:''}).value;
     return [...state.transactions].filter(t=>t.type==='in').sort((a,b)=>b.id-a.id).filter(t=>{
-      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||((t.ref||'')+' '+(t.notes||'')+' '+(t.challanNo||'')).toLowerCase().includes(s);
+      const ms=searchHit(s,getPartName(t.partId),getPartCat(t.partId),t.ref,t.notes,t.challanNo,t.poNo,t.invoiceNo);
       return ms&&inDateRange(t.date,dF,dT);
     });
   }
@@ -2299,7 +2327,7 @@ function getSectionData(sec){
     const dF=(document.getElementById('out-date-from')||{value:''}).value;
     const dT=(document.getElementById('out-date-to')||{value:''}).value;
     return [...state.transactions].filter(t=>t.type==='out').sort((a,b)=>b.id-a.id).filter(t=>{
-      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||((t.issuedTo||'')+' '+(t.purpose||'')+' '+(t.challanNo||'')).toLowerCase().includes(s);
+      const ms=searchHit(s,getPartName(t.partId),getPartCat(t.partId),t.issuedTo,t.purpose,t.challanNo);
       return ms&&inDateRange(t.date,dF,dT);
     });
   }
@@ -2308,7 +2336,7 @@ function getSectionData(sec){
     const dF=(document.getElementById('iss-date-from')||{value:''}).value;
     const dT=(document.getElementById('iss-date-to')||{value:''}).value;
     return [...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
-      const ms=!s||getPartName(t.partId).toLowerCase().includes(s)||((t.issuedTo||'')+(t.ref||'')+(t.purpose||'')+(t.challanNo||'')).toLowerCase().includes(s);
+      const ms=searchHit(s,getPartName(t.partId),getPartCat(t.partId),t.issuedTo,t.ref,t.purpose,t.notes,t.challanNo);
       return ms&&inDateRange(t.date,dF,dT)&&(!StoreMovement.category||getPartCat(t.partId)===StoreMovement.category);
     });
   }
@@ -4062,9 +4090,7 @@ function renderInventory(){
   }
   const parts=state.parts.filter(p=>{
     const machList=parseMachines(p.machine);
-    const hay=[p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'']
-      .map(v=>(v||'').toLowerCase());
-    const txt=!search||hay.some(v=>v.includes(search))||(!inks&&machList.some(m=>m.toLowerCase().includes(search)));
+    const txt=searchHit(search,p.name,p.sku,p.category,inks?p.brand:'',inks?p.supplier:'',inks?p.rackNo:'',inks?'':machList.join(' '));
     const cat=!catF||p.category===catF;
     const mach=!machF||(machF==='__none__'?machList.length===0:machList.includes(machF));
     const rack=!rackF||(rackF==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rackF);
@@ -4198,7 +4224,7 @@ function renderStockIn(){
   const dFrom=(document.getElementById('in-date-from')||{value:''}).value;
   const dTo=(document.getElementById('in-date-to')||{value:''}).value;
   const txns=[...state.transactions].filter(t=>t.type==='in').sort((a,b)=>b.id-a.id).filter(t=>{
-    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.ref||'')+' '+(t.notes||'')+' '+(t.challanNo||'')).toLowerCase().includes(search);
+    const ms=searchHit(search,getPartName(t.partId),getPartCat(t.partId),t.ref,t.notes,t.challanNo,t.poNo,t.invoiceNo);
     return ms&&inDateRange(t.date,dFrom,dTo);
   });
   sortTxns(txns,(document.getElementById('in-sort')||{value:''}).value);
@@ -4229,7 +4255,7 @@ function renderStockOut(){
   const dFrom=(document.getElementById('out-date-from')||{value:''}).value;
   const dTo=(document.getElementById('out-date-to')||{value:''}).value;
   const txns=[...state.transactions].filter(t=>t.type==='out').sort((a,b)=>b.id-a.id).filter(t=>{
-    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.issuedTo||'')+' '+(t.purpose||'')+' '+(t.challanNo||'')).toLowerCase().includes(search);
+    const ms=searchHit(search,getPartName(t.partId),getPartCat(t.partId),t.issuedTo,t.purpose,t.challanNo);
     return ms&&inDateRange(t.date,dFrom,dTo);
   });
   sortTxns(txns,(document.getElementById('out-sort')||{value:''}).value);
@@ -4262,7 +4288,7 @@ function renderIssuance(){
   const dFrom=(document.getElementById('iss-date-from')||{value:''}).value;
   const dTo=(document.getElementById('iss-date-to')||{value:''}).value;
   const txns=[...state.transactions].sort((a,b)=>b.id-a.id).filter(t=>{
-    const ms=!search||getPartName(t.partId).toLowerCase().includes(search)||((t.issuedTo||'')+(t.ref||'')+(t.purpose||'')+(t.challanNo||'')).toLowerCase().includes(search);
+    const ms=searchHit(search,getPartName(t.partId),getPartCat(t.partId),t.issuedTo,t.ref,t.purpose,t.notes,t.challanNo);
     return ms&&inDateRange(t.date,dFrom,dTo)&&(!StoreMovement.category||getPartCat(t.partId)===StoreMovement.category);
   });
   sortTxns(txns,(document.getElementById('iss-sort')||{value:''}).value);
