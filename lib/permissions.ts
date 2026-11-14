@@ -80,6 +80,7 @@ export type ModuleKey =
   | "store.reverse"
   | "store.partdelete"
   | "store.settings"
+  | "store.orders"
   // store actions that are their own grants, separate from store edit
   | "store.delete"
   | "store.reconcile"
@@ -153,6 +154,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "store.stockout",  label: "Store · Stock Out / Issue",   hint: "Stock out / issue, one part or in bulk" },
   { key: "store.reverse",   label: "Store · Reverse Entry",       hint: "Reverse a stock in / out — the quantity goes back" },
   { key: "store.partdelete", label: "Store · Delete Part / Trash", hint: "Move a part to Trash, restore it, or delete it for good" },
+  { key: "store.orders",    label: "Store · Orders", hint: "Inks & Consumables → Orders: book an order with a supplier, change, cancel or delete it (receiving it is Stock In)" },
   { key: "store.settings",  label: "Store · Categories, Machines, Suppliers & Brands", hint: "Add / remove categories and machines, rename suppliers & brands, hide dropdown entries" },
   { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
   { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
@@ -270,6 +272,8 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
     "station.cardlist": "station.cards",
     "station.topups": "station.cards",
   } },
+  // The Orders tab (Inks & Consumables): every role that could edit the Store can book orders.
+  { name: "button-split-2026-11d", pages: {}, buttons: { "store.orders": "store" } },
 ];
 export const BUTTON_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.buttons));
 const PAGE_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.pages));

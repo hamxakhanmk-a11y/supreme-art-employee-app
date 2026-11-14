@@ -43,6 +43,7 @@ async function meResponse() {
       canReverse: user.role === "superadmin" || await roleCanEdit(user.role, "store.reverse"),
       canPartDelete: user.role === "superadmin" || await roleCanEdit(user.role, "store.partdelete"),
       canSettings: user.role === "superadmin" || await roleCanEdit(user.role, "store.settings"),
+      canOrders: user.role === "superadmin" || await roleCanEdit(user.role, "store.orders"),
     },
   });
 }

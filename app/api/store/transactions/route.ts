@@ -33,6 +33,7 @@ export async function GET() {
              t.po_no AS "poNo",
              t.invoice_no AS "invoiceNo",
              t.batch_label AS "batchLabel",
+             t.order_id AS "orderId",
              t.created_by AS "createdBy",
              t.created_at AS "createdAt"
       FROM transactions t
@@ -113,16 +114,25 @@ export async function POST(req: NextRequest) {
     const issuedTo = (b?.issuedTo || "").toString(), purpose = (b?.purpose || "").toString();
     const challanNo = (b?.challanNo || "").toString();
     const poNo = (b?.poNo || "").toString().trim().slice(0, 60), invoiceNo = (b?.invoiceNo || "").toString().trim().slice(0, 60);
+    // A stock in received against an order (Orders → Receive): the order has to be this item's and not cancelled.
+    let orderId: number | null = null;
+    if (type === "in" && b?.orderId) {
+      orderId = parseInt(b.orderId);
+      const found = await db.execute(sql`SELECT part_id, cancelled_at FROM store_orders WHERE id = ${orderId}`) as unknown as { rows?: Record<string, unknown>[] } & Record<string, unknown>[];
+      const [o] = found.rows ?? found;
+      if (!o || Number(o.part_id) !== partId) return NextResponse.json({ error: "That order is not for this item." }, { status: 400 });
+      if (o.cancelled_at) return NextResponse.json({ error: "That order was cancelled." }, { status: 400 });
+    }
     const saved = await db.execute(sql`
       WITH upd AS (
         UPDATE parts SET qty = ROUND((qty ${type === "in" ? sql`+` : sql`-`} ${qty})::numeric, 3)::double precision
         WHERE id = ${partId} ${type === "out" ? sql`AND qty >= ${qty}` : sql``}
         RETURNING id
       )
-      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, batch, po_no, invoice_no, created_by, created_at)
-      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${batch}::integer, ${poNo}, ${invoiceNo}, ${guard.name || ""}, now() FROM upd
+      INSERT INTO transactions (type, part_id, qty, date, ref, notes, issued_to, purpose, challan_no, batch, po_no, invoice_no, order_id, created_by, created_at)
+      SELECT ${type}, upd.id, ${qty}, ${date}::date, ${ref}, ${notes}, ${issuedTo}, ${purpose}, ${challanNo}, ${batch}::integer, ${poNo}, ${invoiceNo}, ${orderId}::integer, ${guard.name || ""}, now() FROM upd
       RETURNING id, type, part_id AS "partId", qty, date::text AS date, ref, notes,
-                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", batch, po_no AS "poNo", invoice_no AS "invoiceNo", created_by AS "createdBy", created_at AS "createdAt"
+                issued_to AS "issuedTo", purpose, challan_no AS "challanNo", batch, po_no AS "poNo", invoice_no AS "invoiceNo", order_id AS "orderId", created_by AS "createdBy", created_at AS "createdAt"
     `);
     const row = ((saved as any).rows ?? (saved as any))[0];
     if (!row) {
@@ -133,7 +143,7 @@ export async function POST(req: NextRequest) {
     const logLabel = `${p.sku ? `[${p.sku}] ` : ""}${p.name}`;
     await logActivity({
       user: guard, action: `store.${p.module}.txn.${type}`,
-      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${logLabel}"${batch ? ` (${ordinal(batch)} batch)` : ""}${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
+      summary: `${type === "in" ? "stocked" : "issued"} ${qty} ${p.unit || ""} of "${logLabel}"${orderId ? ` against order ${orderId}` : ""}${batch ? ` (${ordinal(batch)} batch)` : ""}${b?.issuedTo ? ` to ${b.issuedTo}` : ""}${b?.challanNo ? ` (challan ${b.challanNo})` : ""}`.trim(),
     });
     return NextResponse.json(row);
   } catch (e: any) {

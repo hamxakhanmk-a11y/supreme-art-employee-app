@@ -471,6 +471,27 @@ body:not(.role-admin) .admin-only{display:none!important}
 .reorder-flag{display:inline-flex;align-items:baseline;gap:6px;margin-left:8px;padding:2px 9px;border-radius:999px;background:#fff4e0;border:1px solid #f0b86b;color:#9a4d00;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:help}
 .reorder-flag small{font-size:10.5px;font-weight:600;color:#8a6a3e}
 td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:0;border-radius:8px;padding:3px 8px}
+/* Reorder warning colours (owner, 2026-11-14): green - ordered enough, amber - some ordered, red - not ordered, blue - on order. */
+.reorder-flag.ok{background:#e9f7ec;border-color:#86c99a;color:#1c6b33}.reorder-flag.ok small{color:#3d7d50}
+.reorder-flag.part{background:#fff4e0;border-color:#f0b86b;color:#9a4d00}
+.reorder-flag.none{background:#fdecec;border-color:#ee9a9a;color:#a32d2d}.reorder-flag.none small{color:#a85b5b}
+.reorder-flag.info{background:#eaf2fd;border-color:#9dbfeb;color:#1d4f91}.reorder-flag.info small{color:#4b6b96}
+.reorder-flag.can-order{cursor:pointer}.reorder-flag.can-order:hover{filter:brightness(.96);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.ig-total .reorder-flag{margin:0 10px 0 0}
+.ig-total .reorder-flag small{text-transform:none;letter-spacing:0;margin-left:0;font-size:10.5px}
+/* The card heading stays one line on a wide screen: a long name wraps, the warning, total and buttons keep to the right. */
+@media (min-width:761px){.ig-head{flex-wrap:nowrap}.ig-title{flex:1 1 auto}.ig-total{flex:0 0 auto}}
+/* Orders tab */
+#page-orders .ord-card{max-height:calc(100vh - 210px);overflow:auto}
+#page-orders .ord-card thead th{position:sticky;top:0;z-index:3;background:#f7f2e9;box-shadow:inset 0 -1px 0 #e3d8c6}
+#page-orders tr.ord-row:hover>td{background:#fbf6ee}
+#page-orders tr.ord-cancelled td{color:#aaa}#page-orders tr.ord-cancelled td b{text-decoration:line-through}
+.ord-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid}
+.ord-badge.pending{background:#eaf2fd;border-color:#9dbfeb;color:#1d4f91}
+.ord-badge.partial{background:#fff4e0;border-color:#f0b86b;color:#9a4d00}
+.ord-badge.overdue{background:#fdecec;border-color:#ee9a9a;color:#a32d2d}
+.ord-badge.received{background:#e9f7ec;border-color:#86c99a;color:#1c6b33}
+.ord-badge.cancelled{background:#f2f2f2;border-color:#ddd;color:#888}
 </style>
 </head>
 <body>
@@ -527,6 +548,7 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
     <div class="nav-item" onclick="showPage('stockin',this)"><i class="ti ti-arrow-bar-to-down"></i> Stock In</div>
     <div class="nav-item" onclick="showPage('stockout',this)"><i class="ti ti-arrow-bar-up"></i> Stock Out</div>
     <div class="nav-item" onclick="showPage('issuance',this)"><i class="ti ti-clipboard-list"></i> Issuance Log</div>
+    <div class="nav-item consumables-only" onclick="showPage('orders',this)"><i class="ti ti-truck-delivery"></i> Orders</div>
     <div class="divider"></div>
     <div class="nav-item" onclick="showPage('categories',this)"><i class="ti ti-tag"></i> Categories</div>
     <div class="nav-item machinery-only" onclick="showPage('machines',this)"><i class="ti ti-building-factory-2"></i> Machines</div>
@@ -714,6 +736,38 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
     </div>
 
     <!-- CATEGORIES -->
+    <!-- ORDERS (Inks & Consumables): what has been ordered from suppliers and is coming -->
+    <div class="page" id="page-orders">
+      <div class="search-bar no-print">
+        <span id="ord-chips" class="st-contents"></span>
+        <div class="st-group">
+          <input type="text" placeholder="Search item, supplier, P.O. No...." id="ord-search" oninput="renderOrders()">
+          <select id="ord-status" class="st-sort" title="Which orders" onchange="renderOrders()">
+            <option value="open">Open: still to come</option>
+            <option value="overdue">Overdue only</option>
+            <option value="received">Received</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="all">All orders</option>
+          </select>
+          <select id="ord-sort" class="st-sort" title="Sort by" onchange="renderOrders()">
+            <option value="">Sort: Newest order first</option>
+            <option value="expected">Sort: Expected soonest</option>
+            <option value="oldest">Sort: Oldest order first</option>
+            <option value="name">Sort: Item A-Z</option>
+          </select>
+        </div>
+        <div class="st-actions">
+          <button class="btn btn-sm btn-primary write-only" onclick="openOrderForm()"><i class="ti ti-plus"></i> New Order</button>
+        </div>
+      </div>
+      <div class="card fit-card txn-card ord-card">
+        <table>
+          <thead><tr><th>#</th><th>Ordered on</th><th>Item</th><th>Supplier</th><th>P.O. No.</th><th>Ordered</th><th>Received</th><th>Still to come</th><th>Expected</th><th>Status</th><th class="no-print">Actions</th></tr></thead>
+          <tbody id="orders-table"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="page" id="page-categories">
       <div class="search-bar no-print">
         <span id="cat-chips" class="st-contents"></span>
@@ -988,6 +1042,51 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('bulkOut')">Cancel</button>
       <button class="btn" style="background:#A32D2D;color:#fff;border-color:#A32D2D" onclick="saveBulkStock('out')">Save All</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-order">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-truck-delivery"></i> <span id="ord-form-title">New Order</span></div>
+    <input type="hidden" id="ord-id">
+    <div class="form-group"><label class="form-label">Item *</label><input id="ord-part" list="ord-part-list" placeholder="Type to find the item - name, supplier, brand..." oninput="ordPartPicked()" autocomplete="off"><datalist id="ord-part-list"></datalist><div id="ord-part-note" style="font-size:11.5px;color:#888;margin-top:3px"></div></div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Quantity ordered * <span id="ord-unit" style="color:#888;text-transform:none"></span></label><input id="ord-qty" type="number" min="0" step="any" placeholder="e.g. 13"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><input id="ord-supplier" placeholder="Who it is ordered from"></div>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">P.O. No.</label><input id="ord-po" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">Ordered on *</label><input id="ord-date" type="date"></div>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Expected arrival</label><input id="ord-expected" type="date"></div>
+      <div class="form-group"><label class="form-label">Notes</label><input id="ord-notes" placeholder="Optional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('order')">Cancel</button>
+      <button class="btn btn-primary" id="ord-save" onclick="saveOrder()">Save Order</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-orderReceive">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-package-import"></i> Receive against order</div>
+    <input type="hidden" id="rcv-id">
+    <div id="rcv-summary" style="background:#fbf6ee;border:1px solid #efe4cf;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px"></div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Quantity received * <span id="rcv-unit" style="color:#888;text-transform:none"></span></label><input id="rcv-qty" type="number" min="0" step="any"></div>
+      <div class="form-group"><label class="form-label">Received on *</label><input id="rcv-date" type="date"></div>
+    </div>
+    <div class="two-col">
+      <div class="form-group"><label class="form-label">Challan No.</label><input id="rcv-challan" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">Invoice No.</label><input id="rcv-invoice" placeholder="Optional"></div>
+    </div>
+    <div style="font-size:11.5px;color:#888;margin:-4px 0 10px">Saved as a stock in (a new batch), linked to this order. Reversing that stock in takes it off the order again.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('orderReceive')">Cancel</button>
+      <button class="btn btn-primary" id="rcv-save" onclick="saveReceiveOrder()">Save Stock In</button>
     </div>
   </div>
 </div>
@@ -1322,6 +1421,8 @@ async function loadAll(){
     ]);
     state.employees=emps;state.recipients=recips;
   }catch(e){state.employees=[];state.recipients=[];console.warn('Issued-to list unavailable:',e.message);}
+  // Orders (Inks & Consumables), fetched on their own so one unavailable list can't take the store down.
+  await loadOrders();
   try{
     const ig=await apiFetch('/api/store/ledger');
     state.ledgerIgnores=new Map(ig.map(x=>[x.partId,Number(x.diff)]));
@@ -3322,9 +3423,11 @@ function canStockOut(){return !!(state.user&&state.user.canStockOut);}
 function canReverse(){return !!(state.user&&state.user.canReverse);}
 function canPartDelete(){return !!(state.user&&state.user.canPartDelete);}
 function canStoreSettings(){return !!(state.user&&state.user.canSettings);}
+function canOrders(){return !!(state.user&&state.user.canOrders);}
 // A control is matched to its grant by the function its onclick calls (as the Tracker's Access Register does).
 const STORE_RULES=[
-  [/openSingleIn\(|openModal\('bulkIn'\)/,canStockIn],
+  [/openSingleIn\(|openModal\('bulkIn'\)|openReceiveOrder\(/,canStockIn],
+  [/openOrderForm\(|cancelOrder\(|deleteOrder\(/,canOrders],
   [/openSingleOut\(|openModal\('bulkOut'\)/,canStockOut],
   [/deleteTxn\(/,canReverse],
   [/deletePart\(|restoreTrashPart\(|purgeTrashPart\(/,canPartDelete],
@@ -3944,6 +4047,179 @@ function reorderOf(parts){
   return {used,stock,need:r(used-stock),unit:units[0]};
 }
 function reorderTip(o){return 'Issued '+fmtQty(o.used)+' '+o.unit+' in the last 3 months (since '+fmtDate(reorderSince())+'); '+fmtQty(o.stock)+' '+o.unit+' in stock now, so '+fmtQty(o.need)+' '+o.unit+' more is needed to cover another 3 months like it.';}
+// The warning, coloured by what is already on order (Orders tab, Inks & Consumables): green - ordered enough;
+// amber - some ordered; red - nothing ordered. With no reorder needed but stock coming, a blue "On order".
+// Click it to book an order for what is still short.
+function reorderFlag(parts,short){
+  const o=reorderOf(parts);
+  if(!o)return '';
+  const e=_escHtml,u=e(o.unit),inks=isInks();
+  const on=inks?pendingOrdered(parts.map(p=>p.id)):0;
+  const need=o.need>0.0005?o.need:0;
+  if(!need&&!(on>0))return '';
+  const left=Math.round((need-on)*1000)/1000;
+  const pick=parts.slice().sort((a,b)=>usedSince3Months(b.id)-usedSince3Months(a.id))[0];
+  const click=inks&&left>0.0005?' onclick="openOrderForm({partId:'+pick.id+',qty:'+left+'})"':'';
+  const tip=need?reorderTip(o)+(inks?' On order: '+fmtQty(on)+' '+o.unit+'.':''):'Nothing to reorder; '+fmtQty(on)+' '+o.unit+' on order.';
+  let cls,head,sub;
+  if(!inks){cls='';head='\u26A0 '+(short?'':'Reorder ')+fmtQty(need)+' '+u;sub='used '+fmtQty(o.used)+(short?' in 3 mo.':' in 3 months \u00B7 '+fmtQty(o.stock)+' in stock');}
+  else if(!need){cls='info';head='On order '+fmtQty(on)+' '+u;sub='enough for 3 months';}
+  else if(on>=need-0.0005){cls='ok';head='\u2713 Ordered '+fmtQty(on)+' '+u;sub='reorder '+fmtQty(need)+' \u00B7 on order';}
+  else if(on>0){cls='part';head='\u26A0 Reorder '+fmtQty(need)+' '+u;sub='only '+fmtQty(on)+' on order \u00B7 '+fmtQty(left)+' short';}
+  else{cls='none';head='\u26A0 Reorder '+fmtQty(need)+' '+u;sub='used '+fmtQty(o.used)+' in 3 months \u00B7 '+fmtQty(o.stock)+' in stock \u00B7 not ordered';}
+  return '<span class="reorder-flag '+cls+(click?' can-order':'')+'" title="'+e(tip+(click?' Click to order the rest.':''))+'"'+click+'>'+head+'<small>'+sub+'</small></span>';
+}
+
+// ===== ORDERS (Inks & Consumables → Orders): booked with suppliers and coming =====
+// An order's stock ins carry its id, so what has come in (and what is still to come) is worked out from them.
+async function loadOrders(){
+  if(state.module!=='consumables'){state.orders=[];return;}
+  try{state.orders=await apiFetch('/api/store/orders?module='+encodeURIComponent(state.module));}
+  catch(e){state.orders=[];console.warn('Orders unavailable:',e.message);}
+}
+function orderPending(o){return o.cancelledAt?0:Math.max(0,Math.round((o.qty-o.receivedQty)*1000)/1000);}
+function pendingOrdered(partIds){
+  const ids=new Set(partIds);
+  return Math.round((state.orders||[]).filter(o=>ids.has(o.partId)).reduce((t,o)=>t+orderPending(o),0)*1000)/1000;
+}
+function daysApart(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
+function orderStatus(o){
+  if(o.cancelledAt)return {key:'cancelled',label:'Cancelled',cls:'cancelled'};
+  if(o.receivedQty>=o.qty-0.0005)return {key:'received',label:'Received',cls:'received'};
+  const part=o.receivedQty>0;
+  if(o.expectedDate&&o.expectedDate<today()){const d=daysApart(o.expectedDate,today());return {key:'overdue',label:'Overdue '+d+' day'+(d===1?'':'s')+(part?' \u00B7 part in':''),cls:'overdue'};}
+  if(part)return {key:'partial',label:'Part received',cls:'partial'};
+  if(o.expectedDate){const d=daysApart(today(),o.expectedDate);return {key:'pending',label:d===0?'Due today':'Due in '+d+' day'+(d===1?'':'s'),cls:'pending'};}
+  return {key:'pending',label:'Pending',cls:'pending'};
+}
+function renderOrders(){
+  const tb=document.getElementById('orders-table');
+  if(!tb||state.module!=='consumables')return;
+  const e=_escHtml;
+  const all=state.orders||[];
+  const which=(document.getElementById('ord-status')||{value:'open'}).value;
+  const q=(document.getElementById('ord-search')||{value:''}).value;
+  const sortV=(document.getElementById('ord-sort')||{value:''}).value;
+  const st=new Map(all.map(o=>[o.id,orderStatus(o)]));
+  const open=o=>['pending','partial','overdue'].includes(st.get(o.id).key);
+  let list=all.filter(o=>which==='all'?true:which==='open'?open(o):st.get(o.id).key===which)
+    .filter(o=>searchHit(q,getPartName(o.partId),getPartCat(o.partId),o.supplier,o.poNo,o.notes));
+  if(sortV==='expected')list.sort((a,b)=>(a.expectedDate||'9999').localeCompare(b.expectedDate||'9999')||b.id-a.id);
+  else if(sortV==='oldest')list.sort((a,b)=>a.orderDate.localeCompare(b.orderDate)||a.id-b.id);
+  else if(sortV==='name')list.sort((a,b)=>stNameCmp(getPartName(a.partId),getPartName(b.partId))||b.id-a.id);
+  else list.sort((a,b)=>b.orderDate.localeCompare(a.orderDate)||b.id-a.id);
+  const openN=all.filter(open).length,lateN=all.filter(o=>st.get(o.id).key==='overdue').length;
+  stChips('ord-chips',[[list.length,'Orders'],openN?[openN,'Still to come']:null,lateN?[lateN,'Overdue','out','Expected date has passed']:null]);
+  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><i class="ti ti-truck-delivery"></i>'+(all.length?'No orders match':'No orders yet - book one with New Order, or click a red Reorder warning in Inventory')+'</div></td></tr>';return;}
+  tb.innerHTML=list.map((o,i)=>{
+    const p=partOf(o.partId),u=e(p?p.unit:''),s=st.get(o.id),pend=orderPending(o);
+    const acts=[];
+    if(pend>0)acts.push('<button class="btn btn-sm write-only" style="color:#2d6a10" title="Stock in what has arrived against this order" onclick="openReceiveOrder('+o.id+')"><i class="ti ti-package-import"></i> Receive</button>');
+    if(!o.cancelledAt&&s.key!=='received')acts.push('<button class="btn btn-sm write-only" title="Change this order" onclick="openOrderForm(null,'+o.id+')"><i class="ti ti-edit"></i> Edit</button>');
+    if(s.key!=='received')acts.push('<button class="btn btn-sm write-only" style="color:#A32D2D" title="'+(o.cancelledAt?'Open this order again':'Call this order off (what came in stays)')+'" onclick="cancelOrder('+o.id+','+(o.cancelledAt?'false':'true')+')">'+(o.cancelledAt?'Re-open':'Cancel')+'</button>');
+    if(!(o.receivedQty>0))acts.push('<button class="btn btn-sm write-only" style="color:#A32D2D" title="Delete this order" onclick="deleteOrder('+o.id+')"><i class="ti ti-trash"></i></button>');
+    return '<tr class="ord-row ord-'+s.cls+'">'
+      +'<td style="color:#bbb;font-size:12px">'+(i+1)+'</td>'
+      +'<td style="white-space:nowrap">'+fmtDate(o.orderDate)+'</td>'
+      +'<td><b>'+e(p?skuPrefix(p)+p.name:'Unknown')+'</b>'+(p&&(p.supplier||p.brand)?'<div style="font-size:11.5px;color:#888">'+e(p.supplier||'no supplier')+(p.brand?' \u00B7 '+e(p.brand):'')+'</div>':'')+(o.notes?'<div style="font-size:11.5px;color:#999;font-style:italic">'+e(o.notes)+'</div>':'')+'</td>'
+      +'<td>'+e(o.supplier||'\u2014')+'</td>'
+      +'<td style="font-family:monospace">'+e(o.poNo||'\u2014')+'</td>'
+      +'<td style="white-space:nowrap;font-weight:600">'+fmtQty(o.qty)+' '+u+'</td>'
+      +'<td style="white-space:nowrap;color:#2d6a10">'+(o.receivedQty>0?fmtQty(o.receivedQty)+' '+u+(o.lastReceived?'<div style="font-size:11px;color:#999">last '+fmtDate(o.lastReceived)+'</div>':''):'\u2014')+'</td>'
+      +'<td style="white-space:nowrap;font-weight:800">'+(pend>0?fmtQty(pend)+' '+u:'\u2014')+'</td>'
+      +'<td style="white-space:nowrap">'+(o.expectedDate?fmtDate(o.expectedDate):'\u2014')+'</td>'
+      +'<td><span class="ord-badge '+s.cls+'">'+s.label+'</span></td>'
+      +'<td class="no-print"><div class="row-actions">'+acts.join('')+'</div></td></tr>';
+  }).join('');
+}
+// New order (or the order to change): the item from a list of every item of the store; from a Reorder warning
+// the item and the quantity still short come filled in.
+function openOrderForm(pre,id){
+  const o=id?(state.orders||[]).find(x=>x.id===id):null;
+  const parts=state.parts.slice().sort((a,b)=>stNameCmp(getPartName(a.id),getPartName(b.id)));
+  document.getElementById('ord-part-list').innerHTML=parts.map(p=>'<option value="'+_escHtml(getPartName(p.id))+'">').join('');
+  const partId=o?o.partId:(pre&&pre.partId)||0;
+  const p=partId?partOf(partId):null;
+  document.getElementById('ord-form-title').textContent=o?'Change Order':'New Order';
+  document.getElementById('ord-id').value=o?o.id:'';
+  document.getElementById('ord-part').value=p?getPartName(p.id):'';
+  document.getElementById('ord-part').disabled=!!o;
+  document.getElementById('ord-qty').value=o?o.qty:(pre&&pre.qty?pre.qty:'');
+  document.getElementById('ord-supplier').value=o?o.supplier:(p?p.supplier||'':'');
+  document.getElementById('ord-po').value=o?o.poNo:'';
+  document.getElementById('ord-date').value=o?o.orderDate:today();
+  document.getElementById('ord-expected').value=o?(o.expectedDate||''):'';
+  document.getElementById('ord-notes').value=o?o.notes:'';
+  ordPartPicked(true);
+  openModal('order');
+}
+function ordPartByLabel(){const v=document.getElementById('ord-part').value.trim();return state.parts.find(p=>getPartName(p.id)===v)||null;}
+function ordPartPicked(keepSupplier){
+  const p=ordPartByLabel();
+  document.getElementById('ord-unit').textContent=p?'('+p.unit+')':'';
+  const note=document.getElementById('ord-part-note');
+  if(!p){note.textContent='';return;}
+  const ro=reorderOf(state.parts.filter(x=>inkKey(x)===inkKey(p)))||{used:0,stock:p.qty,need:0,unit:p.unit};
+  const on=pendingOrdered(state.parts.filter(x=>inkKey(x)===inkKey(p)).map(x=>x.id));
+  note.textContent='In stock '+fmtQty(ro.stock)+' '+p.unit+' \u00B7 used '+fmtQty(ro.used)+' in the last 3 months \u00B7 on order '+fmtQty(on)+(ro.need>0?' \u00B7 reorder '+fmtQty(ro.need):'')+' (all brands of this item)';
+  if(!keepSupplier&&!document.getElementById('ord-supplier').value)document.getElementById('ord-supplier').value=p.supplier||'';
+}
+async function saveOrder(){
+  const id=document.getElementById('ord-id').value;
+  const o=id?(state.orders||[]).find(x=>String(x.id)===id):null;
+  const p=o?partOf(o.partId):ordPartByLabel();
+  if(!p){await warnDialog('Choose the item','Pick the item from the list as you type.');return;}
+  const body={id:o?o.id:undefined,partId:p.id,qty:document.getElementById('ord-qty').value,supplier:document.getElementById('ord-supplier').value,
+    poNo:document.getElementById('ord-po').value,orderDate:document.getElementById('ord-date').value,expectedDate:document.getElementById('ord-expected').value,notes:document.getElementById('ord-notes').value};
+  const btn=document.getElementById('ord-save');btn.disabled=true;
+  try{
+    await apiFetch('/api/store/orders',o?'PUT':'POST',body);
+    closeModal('order');
+    await loadOrders();refresh();
+  }catch(err){await warnDialog('Could not save the order',err.message);}
+  finally{btn.disabled=false;}
+}
+async function cancelOrder(id,cancel){
+  const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
+  if(cancel&&!await confirmDialog({title:'Cancel this order?',message:getPartName(o.partId)+' - '+fmtQty(orderPending(o))+' still to come. What has already come in stays in stock.',confirmText:'Cancel order',variant:'danger'}))return;
+  try{await apiFetch('/api/store/orders','PUT',{id,cancel});await loadOrders();refresh();}
+  catch(err){await warnDialog('Could not change the order',err.message);}
+}
+async function deleteOrder(id){
+  const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
+  if(!await confirmDialog({title:'Delete this order?',message:getPartName(o.partId)+' - '+fmtQty(o.qty)+' ordered on '+fmtDate(o.orderDate)+'. This cannot be undone.',confirmText:'Delete',variant:'danger'}))return;
+  try{await apiFetch('/api/store/orders?id='+id,'DELETE');await loadOrders();refresh();}
+  catch(err){await warnDialog('Could not delete the order',err.message);}
+}
+// Receive: a stock in of this item, linked to the order (a new batch, as every stock in is).
+function openReceiveOrder(id){
+  const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
+  const p=partOf(o.partId);if(!p)return;
+  const e=_escHtml,u=e(p.unit||'');
+  document.getElementById('rcv-id').value=id;
+  document.getElementById('rcv-summary').innerHTML='<b>'+e(getPartName(p.id))+'</b><div style="color:#666;margin-top:3px">Ordered '+fmtQty(o.qty)+' '+u+' on '+fmtDate(o.orderDate)+(o.supplier?' from '+e(o.supplier):'')+(o.poNo?' \u00B7 P.O. '+e(o.poNo):'')+' \u00B7 received '+fmtQty(o.receivedQty)+' \u00B7 <b>'+fmtQty(orderPending(o))+' '+u+' still to come</b></div>';
+  document.getElementById('rcv-unit').textContent='('+p.unit+')';
+  document.getElementById('rcv-qty').value=orderPending(o);
+  document.getElementById('rcv-date').value=today();
+  document.getElementById('rcv-challan').value='';
+  document.getElementById('rcv-invoice').value='';
+  openModal('orderReceive');
+}
+async function saveReceiveOrder(){
+  const id=Number(document.getElementById('rcv-id').value);
+  const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
+  const qty=Number(document.getElementById('rcv-qty').value);
+  if(!(qty>0)){await warnDialog('Quantity required','Enter how much has arrived.');return;}
+  if(qty>orderPending(o)+0.0005&&!await confirmDialog({title:'More than was ordered?',message:'Only '+fmtQty(orderPending(o))+' is still to come on this order. Receive '+fmtQty(qty)+' anyway?',confirmText:'Receive',variant:'confirm'}))return;
+  const btn=document.getElementById('rcv-save');btn.disabled=true;
+  try{
+    await apiFetch('/api/store/transactions','POST',{type:'in',partId:o.partId,qty,date:document.getElementById('rcv-date').value,
+      challanNo:document.getElementById('rcv-challan').value.trim(),invoiceNo:document.getElementById('rcv-invoice').value.trim(),poNo:o.poNo||'',ref:o.supplier||'',orderId:o.id});
+    closeModal('orderReceive');
+    await loadAll();refresh();
+  }catch(err){await warnDialog('Could not save the stock in',err.message);}
+  finally{btn.disabled=false;}
+}
 
 function renderInkGroups(visible,sortV){
   const host=document.getElementById('inv-groups');
@@ -3986,9 +4262,8 @@ function renderInkGroups(visible,sortV){
     return '<div class="ig">'
       +'<div class="ig-head">'
       +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span>'
-      +((ro=>ro&&ro.need>0.0005?'<span class="reorder-flag" title="'+e(reorderTip(ro))+'">\u26A0 Reorder '+fmtQty(ro.need)+' '+e(ro.unit)+'<small>used '+fmtQty(ro.used)+' in 3 months \u00B7 '+fmtQty(ro.stock)+' in stock</small></span>':'')(reorderOf(all)))
       +'</div>'
-      +'<div class="ig-total"><span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
+      +'<div class="ig-total">'+reorderFlag(all)+'<span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
       +'<button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all suppliers and brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
       +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div>'
       +'</div>'+rowHtml+'</div>';
@@ -4134,13 +4409,13 @@ function renderInventory(){
   const lowN=parts.filter(p=>p.qty!==0&&p.qty<=p.minQty).length, outN=parts.filter(p=>p.qty===0).length;
   // To reorder: products (Inks & Consumables, every brand together) or parts whose last 3 months beat their stock.
   const reN=inks
-    ?[...new Set(parts.map(inkKey))].filter(k=>{const o=reorderOf(state.parts.filter(p=>inkKey(p)===k));return o&&o.need>0.0005;}).length
+    ?[...new Set(parts.map(inkKey))].filter(k=>{const g=state.parts.filter(p=>inkKey(p)===k),o=reorderOf(g);return o&&o.need-pendingOrdered(g.map(p=>p.id))>0.0005;}).length
     :parts.filter(p=>{const o=reorderOf([p]);return o&&o.need>0.0005;}).length;
   stChips('inv-chips',[
     [stCount(parts.length,state.parts.length),inks?'Items':'Parts'],
     lowN?[lowN,'Low','low','Low stock']:null,
     outN?[outN,'Out','out','Out of stock']:null,
-    reN?[reN,'Reorder','low','Used more in the last 3 months than is in stock']:null
+    reN?[reN,'Reorder','out',inks?'Used more in the last 3 months than is in stock and on order':'Used more in the last 3 months than is in stock']:null
   ]);
   const sortV=(document.getElementById('inv-sort')||{value:''}).value;
   if(inks){renderInkGroups(parts,sortV);return;}
@@ -4184,7 +4459,7 @@ function renderInventory(){
       <td style="font-weight:700;font-size:15px">${fmtQty(p.qty)}</td>
       <td style="color:#888">${p.minQty}</td>
       <td><span class="badge ${s.cls}">${s.label}</span></td>
-      <td>${(o=>o&&o.need>0.0005?`<span class="reorder-flag" title="${_escHtml(reorderTip(o))}">\u26A0 ${fmtQty(o.need)} ${_escHtml(o.unit)}<small>used ${fmtQty(o.used)} in 3 mo.</small></span>`:'<span style="color:#bbb">\u2014</span>')(reorderOf([p]))}</td>
+      <td>${reorderFlag([p],true)||'<span style="color:#bbb">\u2014</span>'}</td>
       <td class="no-print">
         <div class="row-actions">
           <button class="btn btn-sm" title="Every stock in and out of this part" onclick="openPartHistory(${p.id})"><i class="ti ti-history"></i> History</button>
@@ -4582,7 +4857,7 @@ async function showSetupLinkDialog(url,hours,name,email,purpose,emailed){
   });
 }
 
-function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderCategories();renderMachines();renderTrash();/* renderUsers removed after merge */}
+function renderAll(){renderDashboard();renderInventory();renderStockIn();renderStockOut();renderIssuance();renderOrders();renderCategories();renderMachines();renderTrash();/* renderUsers removed after merge */}
 
 // ---- AUTH ----
 function applyModuleToUI(){

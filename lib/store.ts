@@ -82,6 +82,23 @@ DO $$ BEGIN
     PRIMARY KEY (field, value)
   );
 
+  -- Orders placed with suppliers (Inks & Consumables → Orders): booked and coming. What has arrived against
+  -- one is the stock ins carrying its id (transactions.order_id); cancelled_at marks one called off.
+  CREATE TABLE IF NOT EXISTS store_orders (
+    id SERIAL PRIMARY KEY,
+    part_id INTEGER NOT NULL REFERENCES parts(id) ON DELETE CASCADE,
+    qty DOUBLE PRECISION NOT NULL,
+    supplier TEXT NOT NULL DEFAULT '',
+    po_no TEXT NOT NULL DEFAULT '',
+    order_date DATE NOT NULL,
+    expected_date DATE,
+    notes TEXT NOT NULL DEFAULT '',
+    cancelled_at TIMESTAMPTZ,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_id INTEGER;
+
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'parts' AND column_name = 'qty' AND data_type = 'integer'
