@@ -98,6 +98,15 @@ DO $$ BEGIN
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
   ALTER TABLE transactions ADD COLUMN IF NOT EXISTS order_id INTEGER;
+  -- Booked from a Procurement PO line the Store does not have yet: the item by name and unit, no part until it
+  -- is received (then the item is added and linked). module says which store such an order belongs to.
+  ALTER TABLE store_orders ALTER COLUMN part_id DROP NOT NULL;
+  ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS item_name TEXT NOT NULL DEFAULT '';
+  ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS unit TEXT NOT NULL DEFAULT '';
+  ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS module TEXT NOT NULL DEFAULT 'consumables';
+  -- The Procurement PO (and its line) the order was booked from.
+  ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS po_id INTEGER;
+  ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS po_sr INTEGER;
 
   IF EXISTS (
     SELECT 1 FROM information_schema.columns

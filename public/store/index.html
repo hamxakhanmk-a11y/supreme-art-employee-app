@@ -492,6 +492,29 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
 .ord-badge.overdue{background:#fdecec;border-color:#ee9a9a;color:#a32d2d}
 .ord-badge.received{background:#e9f7ec;border-color:#86c99a;color:#1c6b33}
 .ord-badge.cancelled{background:#f2f2f2;border-color:#ddd;color:#888}
+/* Inventory: each card has its reorder warning and + Order beside it, in the space to its right. */
+.inv-groups{grid-template-columns:minmax(0,980px) minmax(170px,300px)}
+.ig-side{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-top:6px}
+.ig-side .reorder-flag{margin:0;flex-direction:column;align-items:flex-start;gap:1px;border-radius:10px;padding:5px 11px;white-space:normal;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ig-order{border:1px dashed #c9b48f;background:#fffdf8;color:#7C1F1F;font-size:11.5px;font-weight:800;border-radius:999px;padding:3px 12px;cursor:pointer}
+.ig-order:hover{background:#7C1F1F;color:#fff;border-style:solid}
+@media (max-width:760px){.inv-groups{grid-template-columns:minmax(0,1fr)}.ig-side{flex-direction:row;flex-wrap:wrap;padding:0 4px 6px}}
+/* Orders: green - the item is in the store, red - a new item */
+#page-orders tr.ord-instore>td:first-child{box-shadow:inset 4px 0 0 #2f9e57}
+#page-orders tr.ord-new>td:first-child{box-shadow:inset 4px 0 0 #d64545}
+.ord-tag{display:inline-block;margin-right:6px;padding:0 6px;border-radius:6px;font-size:9.5px;font-weight:800;letter-spacing:.04em;vertical-align:1px}
+.ord-tag.in{background:#e9f7ec;color:#1c6b33;border:1px solid #86c99a}.ord-tag.new{background:#fdecec;color:#a32d2d;border:1px solid #ee9a9a}
+.ord-rcv{color:#1c6b33;font-weight:700}
+.ord-lines-head{font-size:12px;color:#666;margin:2px 0 8px}
+.ord-key{display:inline-block;padding:0 6px;border-radius:5px;font-weight:800;font-size:11px}.ord-key.in{background:#e9f7ec;color:#1c6b33;border:1px solid #2f9e57}.ord-key.new{background:#fdecec;color:#a32d2d;border:1px solid #d64545}
+.ord-line{border:2px solid;border-radius:12px;padding:9px 12px;margin-bottom:9px;background:#fff}
+.ord-line.in{border-color:#2f9e57;background:#f6fcf7}.ord-line.new{border-color:#d64545;background:#fff7f7}
+.ord-line-top{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
+.ord-booked{margin-left:auto;font-size:11px;font-weight:700;color:#9a4d00;background:#fff4e0;border-radius:6px;padding:1px 7px}
+.ord-line-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.ord-line-row .lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase}.ord-line-row .unit{color:#888;font-size:12px;margin-right:8px}
+.ord-line-row select{flex:1;min-width:220px}
+.ord-line-note{font-size:11.5px;margin-top:5px;color:#666}.ord-line.in .ord-line-note{color:#1c6b33}.ord-line.new .ord-line-note{color:#a32d2d}
 </style>
 </head>
 <body>
@@ -747,6 +770,7 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
             <option value="overdue">Overdue only</option>
             <option value="received">Received</option>
             <option value="cancelled">Cancelled</option>
+            <option value="new">New items (not in the store yet)</option>
             <option value="all">All orders</option>
           </select>
           <select id="ord-sort" class="st-sort" title="Sort by" onchange="renderOrders()">
@@ -1047,16 +1071,23 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
 </div>
 
 <div class="modal-overlay" id="modal-order">
-  <div class="modal">
+  <div class="modal" style="width:720px">
     <div class="modal-title"><i class="ti ti-truck-delivery"></i> <span id="ord-form-title">New Order</span></div>
     <input type="hidden" id="ord-id">
-    <div class="form-group"><label class="form-label">Item *</label><input id="ord-part" list="ord-part-list" placeholder="Type to find the item - name, supplier, brand..." oninput="ordPartPicked()" autocomplete="off"><datalist id="ord-part-list"></datalist><div id="ord-part-note" style="font-size:11.5px;color:#888;margin-top:3px"></div></div>
-    <div class="two-col">
+    <!-- The P.O. first: its supplier, dates and lines come from Procurement -->
+    <div class="form-group">
+      <label class="form-label">P.O. No. <span style="color:#888;text-transform:none;font-weight:500">- type it and the order fills in from Procurement</span></label>
+      <div style="display:flex;gap:8px"><input id="ord-po" placeholder="e.g. 10501" oninput="ordPoTyped()" onkeydown="if(event.key==='Enter'){event.preventDefault();ordPoLookup()}" style="flex:1"><button type="button" class="btn" id="ord-po-find" onclick="ordPoLookup()"><i class="ti ti-search"></i> Find P.O.</button></div>
+      <div id="ord-po-msg" style="font-size:12px;margin-top:4px;color:#888"></div>
+    </div>
+    <div id="ord-po-area"></div>
+    <!-- Or one item by hand -->
+    <div id="ord-manual">
+      <div class="form-group"><label class="form-label">Item *</label><input id="ord-part" list="ord-part-list" placeholder="Type to find the item - name, supplier, brand..." oninput="ordPartPicked()" autocomplete="off"><datalist id="ord-part-list"></datalist><div id="ord-part-note" style="font-size:11.5px;color:#888;margin-top:3px"></div></div>
       <div class="form-group"><label class="form-label">Quantity ordered * <span id="ord-unit" style="color:#888;text-transform:none"></span></label><input id="ord-qty" type="number" min="0" step="any" placeholder="e.g. 13"></div>
-      <div class="form-group"><label class="form-label">Supplier</label><input id="ord-supplier" placeholder="Who it is ordered from"></div>
     </div>
     <div class="two-col">
-      <div class="form-group"><label class="form-label">P.O. No.</label><input id="ord-po" placeholder="Optional"></div>
+      <div class="form-group"><label class="form-label">Supplier</label><input id="ord-supplier" placeholder="Who it is ordered from"></div>
       <div class="form-group"><label class="form-label">Ordered on *</label><input id="ord-date" type="date"></div>
     </div>
     <div class="two-col">
@@ -1072,9 +1103,25 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
 
 <div class="modal-overlay" id="modal-orderReceive">
   <div class="modal">
-    <div class="modal-title"><i class="ti ti-package-import"></i> Receive against order</div>
+    <div class="modal-title"><i class="ti ti-package-import"></i> <span id="rcv-title">Receive against order</span></div>
     <input type="hidden" id="rcv-id">
     <div id="rcv-summary" style="background:#fbf6ee;border:1px solid #efe4cf;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px"></div>
+    <!-- A new item (booked from a PO line the Store did not have): added to the store as it comes in -->
+    <div id="rcv-new" style="display:none;border:2px solid #e8a3a3;background:#fff7f7;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:#a32d2d;margin-bottom:6px">NEW ITEM - not in the store yet</div>
+      <div class="form-group"><label class="form-label">It is this Store item</label><select id="rcv-existing" onchange="rcvExistingPicked()"></select></div>
+      <div id="rcv-new-fields">
+        <div class="form-group"><label class="form-label">Name *</label><input id="rcv-name"></div>
+        <div class="two-col">
+          <div class="form-group"><label class="form-label">Category *</label><select id="rcv-cat"></select></div>
+          <div class="form-group"><label class="form-label">Unit *</label><input id="rcv-unit-new" placeholder="kg"></div>
+        </div>
+        <div class="two-col">
+          <div class="form-group"><label class="form-label">Supplier</label><input id="rcv-sup"></div>
+          <div class="form-group"><label class="form-label">Brand</label><input id="rcv-brand"></div>
+        </div>
+      </div>
+    </div>
     <div class="two-col">
       <div class="form-group"><label class="form-label">Quantity received * <span id="rcv-unit" style="color:#888;text-transform:none"></span></label><input id="rcv-qty" type="number" min="0" step="any"></div>
       <div class="form-group"><label class="form-label">Received on *</label><input id="rcv-date" type="date"></div>
@@ -4059,7 +4106,7 @@ function reorderFlag(parts,short){
   if(!need&&!(on>0))return '';
   const left=Math.round((need-on)*1000)/1000;
   const pick=parts.slice().sort((a,b)=>usedSince3Months(b.id)-usedSince3Months(a.id))[0];
-  const click=inks&&left>0.0005?' onclick="openOrderForm({partId:'+pick.id+',qty:'+left+'})"':'';
+  const click=inks&&left>0.0005&&canOrders()?' onclick="openOrderForm({partId:'+pick.id+',qty:'+left+'})"':'';
   const tip=need?reorderTip(o)+(inks?' On order: '+fmtQty(on)+' '+o.unit+'.':''):'Nothing to reorder; '+fmtQty(on)+' '+o.unit+' on order.';
   let cls,head,sub;
   if(!inks){cls='';head='\u26A0 '+(short?'':'Reorder ')+fmtQty(need)+' '+u;sub='used '+fmtQty(o.used)+(short?' in 3 mo.':' in 3 months \u00B7 '+fmtQty(o.stock)+' in stock');}
@@ -4092,6 +4139,8 @@ function orderStatus(o){
   if(o.expectedDate){const d=daysApart(today(),o.expectedDate);return {key:'pending',label:d===0?'Due today':'Due in '+d+' day'+(d===1?'':'s'),cls:'pending'};}
   return {key:'pending',label:'Pending',cls:'pending'};
 }
+function orderName(o){const p=o.partId?partOf(o.partId):null;return p?skuPrefix(p)+p.name:(o.itemName||'Unknown item');}
+function orderUnit(o){const p=o.partId?partOf(o.partId):null;return p?p.unit||'':o.unit||'';}
 function renderOrders(){
   const tb=document.getElementById('orders-table');
   if(!tb||state.module!=='consumables')return;
@@ -4102,26 +4151,30 @@ function renderOrders(){
   const sortV=(document.getElementById('ord-sort')||{value:''}).value;
   const st=new Map(all.map(o=>[o.id,orderStatus(o)]));
   const open=o=>['pending','partial','overdue'].includes(st.get(o.id).key);
-  let list=all.filter(o=>which==='all'?true:which==='open'?open(o):st.get(o.id).key===which)
-    .filter(o=>searchHit(q,getPartName(o.partId),getPartCat(o.partId),o.supplier,o.poNo,o.notes));
+  let list=all.filter(o=>which==='all'?true:which==='open'?open(o):which==='new'?!o.partId:st.get(o.id).key===which)
+    .filter(o=>searchHit(q,orderName(o),o.partId?getPartName(o.partId):'',o.partId?getPartCat(o.partId):'',o.supplier,o.poNo,o.notes));
   if(sortV==='expected')list.sort((a,b)=>(a.expectedDate||'9999').localeCompare(b.expectedDate||'9999')||b.id-a.id);
   else if(sortV==='oldest')list.sort((a,b)=>a.orderDate.localeCompare(b.orderDate)||a.id-b.id);
-  else if(sortV==='name')list.sort((a,b)=>stNameCmp(getPartName(a.partId),getPartName(b.partId))||b.id-a.id);
+  else if(sortV==='name')list.sort((a,b)=>stNameCmp(orderName(a),orderName(b))||b.id-a.id);
   else list.sort((a,b)=>b.orderDate.localeCompare(a.orderDate)||b.id-a.id);
-  const openN=all.filter(open).length,lateN=all.filter(o=>st.get(o.id).key==='overdue').length;
-  stChips('ord-chips',[[list.length,'Orders'],openN?[openN,'Still to come']:null,lateN?[lateN,'Overdue','out','Expected date has passed']:null]);
-  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><i class="ti ti-truck-delivery"></i>'+(all.length?'No orders match':'No orders yet - book one with New Order, or click a red Reorder warning in Inventory')+'</div></td></tr>';return;}
+  const openN=all.filter(open).length,lateN=all.filter(o=>st.get(o.id).key==='overdue').length,newN=all.filter(o=>!o.partId&&open(o)).length;
+  stChips('ord-chips',[[list.length,'Orders'],openN?[openN,'Still to come']:null,lateN?[lateN,'Overdue','out','Expected date has passed']:null,newN?[newN,'New items','out','Ordered but not in the store yet - added when they arrive']:null]);
+  if(!list.length){tb.innerHTML='<tr><td colspan="11"><div class="empty"><i class="ti ti-truck-delivery"></i>'+(all.length?'No orders match':'No orders yet - book one with New Order, or with + Order beside an item in Inventory')+'</div></td></tr>';return;}
   tb.innerHTML=list.map((o,i)=>{
-    const p=partOf(o.partId),u=e(p?p.unit:''),s=st.get(o.id),pend=orderPending(o);
+    const p=o.partId?partOf(o.partId):null,u=e(orderUnit(o)),s=st.get(o.id),pend=orderPending(o);
     const acts=[];
-    if(pend>0)acts.push('<button class="btn btn-sm write-only" style="color:#2d6a10" title="Stock in what has arrived against this order" onclick="openReceiveOrder('+o.id+')"><i class="ti ti-package-import"></i> Receive</button>');
+    if(pend>0){
+      acts.push('<button class="btn btn-sm write-only ord-rcv" title="All of it has arrived - stock in what is still to come" onclick="openReceiveOrder('+o.id+',\'all\')"><i class="ti ti-circle-check"></i> Received</button>');
+      acts.push('<button class="btn btn-sm write-only" style="color:#9a4d00" title="Part of it has arrived - stock in what came" onclick="openReceiveOrder('+o.id+',\'part\')"><i class="ti ti-circle-half-2"></i> Partial</button>');
+    }
     if(!o.cancelledAt&&s.key!=='received')acts.push('<button class="btn btn-sm write-only" title="Change this order" onclick="openOrderForm(null,'+o.id+')"><i class="ti ti-edit"></i> Edit</button>');
     if(s.key!=='received')acts.push('<button class="btn btn-sm write-only" style="color:#A32D2D" title="'+(o.cancelledAt?'Open this order again':'Call this order off (what came in stays)')+'" onclick="cancelOrder('+o.id+','+(o.cancelledAt?'false':'true')+')">'+(o.cancelledAt?'Re-open':'Cancel')+'</button>');
-    if(!(o.receivedQty>0))acts.push('<button class="btn btn-sm write-only" style="color:#A32D2D" title="Delete this order" onclick="deleteOrder('+o.id+')"><i class="ti ti-trash"></i></button>');
-    return '<tr class="ord-row ord-'+s.cls+'">'
+    if(!(o.receivedQty>0))acts.push('<button class="btn btn-sm write-only" style="color:#A32D2D" title="Delete this order" onclick="deleteOrder('+o.id+')"><i class="ti ti-trash"></i> Delete</button>');
+    const tag=p?'<span class="ord-tag in">IN STORE</span>':'<span class="ord-tag new">NEW ITEM</span>';
+    return '<tr class="ord-row ord-'+s.cls+' '+(p?'ord-instore':'ord-new')+'">'
       +'<td style="color:#bbb;font-size:12px">'+(i+1)+'</td>'
       +'<td style="white-space:nowrap">'+fmtDate(o.orderDate)+'</td>'
-      +'<td><b>'+e(p?skuPrefix(p)+p.name:'Unknown')+'</b>'+(p&&(p.supplier||p.brand)?'<div style="font-size:11.5px;color:#888">'+e(p.supplier||'no supplier')+(p.brand?' \u00B7 '+e(p.brand):'')+'</div>':'')+(o.notes?'<div style="font-size:11.5px;color:#999;font-style:italic">'+e(o.notes)+'</div>':'')+'</td>'
+      +'<td>'+tag+'<b>'+e(orderName(o))+'</b>'+(p&&(p.supplier||p.brand)?'<div style="font-size:11.5px;color:#888">'+e(p.supplier||'no supplier')+(p.brand?' \u00B7 '+e(p.brand):'')+'</div>':'')+(!p?'<div style="font-size:11.5px;color:#a32d2d">added to the store when it arrives</div>':'')+(o.notes?'<div style="font-size:11.5px;color:#999;font-style:italic">'+e(o.notes)+'</div>':'')+'</td>'
       +'<td>'+e(o.supplier||'\u2014')+'</td>'
       +'<td style="font-family:monospace">'+e(o.poNo||'\u2014')+'</td>'
       +'<td style="white-space:nowrap;font-weight:600">'+fmtQty(o.qty)+' '+u+'</td>'
@@ -4132,26 +4185,89 @@ function renderOrders(){
       +'<td class="no-print"><div class="row-actions">'+acts.join('')+'</div></td></tr>';
   }).join('');
 }
-// New order (or the order to change): the item from a list of every item of the store; from a Reorder warning
-// the item and the quantity still short come filled in.
+
+// ---- New Order: from a Procurement P.O. (its lines, each matched to a Store item - green - or new - red), or
+// one item by hand. From a Reorder warning / + Order, the item and the quantity still short come filled in.
+let _ordPo=null,_ordPoTimer=null;
 function openOrderForm(pre,id){
   const o=id?(state.orders||[]).find(x=>x.id===id):null;
   const parts=state.parts.slice().sort((a,b)=>stNameCmp(getPartName(a.id),getPartName(b.id)));
   document.getElementById('ord-part-list').innerHTML=parts.map(p=>'<option value="'+_escHtml(getPartName(p.id))+'">').join('');
   const partId=o?o.partId:(pre&&pre.partId)||0;
   const p=partId?partOf(partId):null;
+  _ordPo=null;
+  document.getElementById('ord-po-area').innerHTML='';
+  document.getElementById('ord-po-msg').textContent='';
   document.getElementById('ord-form-title').textContent=o?'Change Order':'New Order';
   document.getElementById('ord-id').value=o?o.id:'';
-  document.getElementById('ord-part').value=p?getPartName(p.id):'';
+  document.getElementById('ord-po').value=o?o.poNo:'';
+  document.getElementById('ord-po').disabled=!!o;
+  document.getElementById('ord-po-find').style.display=o?'none':'';
+  document.getElementById('ord-manual').style.display='';
+  document.getElementById('ord-part').value=p?getPartName(p.id):(o?o.itemName:'');
   document.getElementById('ord-part').disabled=!!o;
   document.getElementById('ord-qty').value=o?o.qty:(pre&&pre.qty?pre.qty:'');
   document.getElementById('ord-supplier').value=o?o.supplier:(p?p.supplier||'':'');
-  document.getElementById('ord-po').value=o?o.poNo:'';
   document.getElementById('ord-date').value=o?o.orderDate:today();
   document.getElementById('ord-expected').value=o?(o.expectedDate||''):'';
   document.getElementById('ord-notes').value=o?o.notes:'';
   ordPartPicked(true);
   openModal('order');
+}
+function ordPoTyped(){
+  clearTimeout(_ordPoTimer);
+  const v=document.getElementById('ord-po').value.replace(/[^0-9]/g,'');
+  if(!v){_ordPo=null;document.getElementById('ord-po-area').innerHTML='';document.getElementById('ord-po-msg').textContent='';document.getElementById('ord-manual').style.display='';return;}
+  _ordPoTimer=setTimeout(ordPoLookup,600);
+}
+async function ordPoLookup(){
+  if(document.getElementById('ord-id').value)return;
+  const v=document.getElementById('ord-po').value.replace(/[^0-9]/g,'');
+  const msg=document.getElementById('ord-po-msg');
+  if(!v){msg.textContent='';return;}
+  msg.style.color='#888';msg.textContent='Looking for P.O. '+v+' in Procurement...';
+  try{
+    const r=await apiFetch('/api/store/po-lookup?poNo='+encodeURIComponent(v)+'&module='+encodeURIComponent(state.module));
+    if(document.getElementById('ord-po').value.replace(/[^0-9]/g,'')!==v)return;   // typed on meanwhile
+    if(!r.pos||!r.pos.length){_ordPo=null;document.getElementById('ord-po-area').innerHTML='';document.getElementById('ord-manual').style.display='';msg.style.color='#9a4d00';msg.textContent='No P.O. '+v+' in Procurement - fill the order in by hand below.';return;}
+    _ordPo={list:r.pos,pick:0};
+    renderOrdPo();
+  }catch(err){msg.style.color='#a32d2d';msg.textContent='Could not look up the P.O.: '+err.message;}
+}
+function ordPoPick(i){_ordPo.pick=i;renderOrdPo(true);}
+function renderOrdPo(keepFields){
+  const e=_escHtml,po=_ordPo.list[_ordPo.pick];
+  const msg=document.getElementById('ord-po-msg');
+  msg.style.color='#1c6b33';
+  msg.innerHTML='Found in Procurement: <b>P.O. '+e(po.label)+'</b>'+(po.registered===true?' (registered)':po.registered===false?' (unregistered)':'')+' \u00B7 '+e(po.supplierName||'no supplier')+' \u00B7 '+fmtDate(po.date)
+    +(_ordPo.list.length>1?' \u00B7 there are '+_ordPo.list.length+' with this number: '+_ordPo.list.map((x,i)=>'<a href="#" onclick="event.preventDefault();ordPoPick('+i+')" style="font-weight:'+(i===_ordPo.pick?800:400)+'">'+e(x.label)+(x.registered===false?' unreg.':'')+'</a>').join(' / '):'');
+  if(!keepFields||true){
+    document.getElementById('ord-supplier').value=po.supplierName||document.getElementById('ord-supplier').value;
+    if(po.date)document.getElementById('ord-date').value=po.date;
+    if(po.expectedDate)document.getElementById('ord-expected').value=po.expectedDate;
+  }
+  document.getElementById('ord-manual').style.display='none';
+  const opts=state.parts.slice().sort((a,b)=>stNameCmp(getPartName(a.id),getPartName(b.id)));
+  document.getElementById('ord-po-area').innerHTML='<div class="ord-lines-head">The P.O.\u2019s lines - tick what to book. <span class="ord-key in">green</span> is already in the store, <span class="ord-key new">red</span> is new (added to the store when it arrives).</div>'
+    +po.items.map((it,i)=>{
+      const left=Math.max(0,Math.round((it.quantity-it.booked)*1000)/1000);
+      const m=it.match;
+      return '<div class="ord-line '+(m?'in':'new')+'" data-i="'+i+'">'
+        +'<label class="ord-line-top"><input type="checkbox" class="ord-line-chk"'+(left>0?' checked':'')+'> <b>'+e(it.description)+'</b>'+(it.booked>0?'<span class="ord-booked">'+fmtQty(it.booked)+' already booked</span>':'')+'</label>'
+        +'<div class="ord-line-row">'
+        +'<span class="lbl">Qty</span><input type="number" min="0" step="any" class="ord-line-qty" value="'+(left||it.quantity||'')+'" style="width:100px"><span class="unit">'+e(it.uom||'')+'</span>'
+        +'<span class="lbl">Store item</span><select class="ord-line-part" onchange="ordLineMatch(this)"><option value="">New item \u2014 add to the store when it arrives</option>'
+        +opts.map(p=>'<option value="'+p.id+'"'+(m&&m.partId===p.id?' selected':'')+'>'+e(getPartName(p.id))+'</option>').join('')+'</select>'
+        +'</div>'
+        +'<div class="ord-line-note">'+(m?(m.how==='close name'?'Matched by a close name \u2014 check it is the same item.':'In the store.')+(m.others?' ('+m.others+' more brand'+(m.others===1?'':'s')+' of it - pick another if needed)':''):'Not in the store \u2014 it will be added (name, category, unit) when it arrives, or pick the Store item it is.')+'</div>'
+        +'</div>';
+    }).join('');
+}
+function ordLineMatch(sel){
+  const tile=sel.closest('.ord-line');
+  const isIn=!!sel.value;
+  tile.classList.toggle('in',isIn);tile.classList.toggle('new',!isIn);
+  tile.querySelector('.ord-line-note').textContent=isIn?'In the store.':'Not in the store \u2014 it will be added (name, category, unit) when it arrives.';
 }
 function ordPartByLabel(){const v=document.getElementById('ord-part').value.trim();return state.parts.find(p=>getPartName(p.id)===v)||null;}
 function ordPartPicked(keepSupplier){
@@ -4159,21 +4275,35 @@ function ordPartPicked(keepSupplier){
   document.getElementById('ord-unit').textContent=p?'('+p.unit+')':'';
   const note=document.getElementById('ord-part-note');
   if(!p){note.textContent='';return;}
-  const ro=reorderOf(state.parts.filter(x=>inkKey(x)===inkKey(p)))||{used:0,stock:p.qty,need:0,unit:p.unit};
-  const on=pendingOrdered(state.parts.filter(x=>inkKey(x)===inkKey(p)).map(x=>x.id));
+  const g=state.parts.filter(x=>inkKey(x)===inkKey(p));
+  const ro=reorderOf(g)||{used:0,stock:p.qty,need:0,unit:p.unit};
+  const on=pendingOrdered(g.map(x=>x.id));
   note.textContent='In stock '+fmtQty(ro.stock)+' '+p.unit+' \u00B7 used '+fmtQty(ro.used)+' in the last 3 months \u00B7 on order '+fmtQty(on)+(ro.need>0?' \u00B7 reorder '+fmtQty(ro.need):'')+' (all brands of this item)';
   if(!keepSupplier&&!document.getElementById('ord-supplier').value)document.getElementById('ord-supplier').value=p.supplier||'';
 }
 async function saveOrder(){
   const id=document.getElementById('ord-id').value;
   const o=id?(state.orders||[]).find(x=>String(x.id)===id):null;
-  const p=o?partOf(o.partId):ordPartByLabel();
-  if(!p){await warnDialog('Choose the item','Pick the item from the list as you type.');return;}
-  const body={id:o?o.id:undefined,partId:p.id,qty:document.getElementById('ord-qty').value,supplier:document.getElementById('ord-supplier').value,
-    poNo:document.getElementById('ord-po').value,orderDate:document.getElementById('ord-date').value,expectedDate:document.getElementById('ord-expected').value,notes:document.getElementById('ord-notes').value};
+  const shared={supplier:document.getElementById('ord-supplier').value,orderDate:document.getElementById('ord-date').value,expectedDate:document.getElementById('ord-expected').value,notes:document.getElementById('ord-notes').value};
+  let method='POST',body;
+  if(o){
+    method='PUT';body={id:o.id,qty:document.getElementById('ord-qty').value,poNo:document.getElementById('ord-po').value,...shared};
+  }else if(_ordPo){
+    const po=_ordPo.list[_ordPo.pick];
+    const lines=[...document.querySelectorAll('#ord-po-area .ord-line')].filter(t=>t.querySelector('.ord-line-chk').checked).map(t=>{
+      const it=po.items[Number(t.dataset.i)],partId=Number(t.querySelector('.ord-line-part').value)||null;
+      return {partId,itemName:partId?'':it.description,unit:partId?'':it.uom,qty:t.querySelector('.ord-line-qty').value,poNo:po.label,poId:po.id,poSr:it.srNo,...shared};
+    });
+    if(!lines.length){await warnDialog('Nothing ticked','Tick the P.O. lines to book.');return;}
+    body={module:state.module,orders:lines};
+  }else{
+    const p=ordPartByLabel();
+    if(!p){await warnDialog('Choose the item','Pick the item from the list as you type, or type a P.O. No. at the top.');return;}
+    body={module:state.module,partId:p.id,qty:document.getElementById('ord-qty').value,poNo:document.getElementById('ord-po').value,...shared};
+  }
   const btn=document.getElementById('ord-save');btn.disabled=true;
   try{
-    await apiFetch('/api/store/orders',o?'PUT':'POST',body);
+    await apiFetch('/api/store/orders',method,body);
     closeModal('order');
     await loadOrders();refresh();
   }catch(err){await warnDialog('Could not save the order',err.message);}
@@ -4181,30 +4311,47 @@ async function saveOrder(){
 }
 async function cancelOrder(id,cancel){
   const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
-  if(cancel&&!await confirmDialog({title:'Cancel this order?',message:getPartName(o.partId)+' - '+fmtQty(orderPending(o))+' still to come. What has already come in stays in stock.',confirmText:'Cancel order',variant:'danger'}))return;
+  if(cancel&&!await confirmDialog({title:'Cancel this order?',message:orderName(o)+' - '+fmtQty(orderPending(o))+' still to come. What has already come in stays in stock.',confirmText:'Cancel order',variant:'danger'}))return;
   try{await apiFetch('/api/store/orders','PUT',{id,cancel});await loadOrders();refresh();}
   catch(err){await warnDialog('Could not change the order',err.message);}
 }
 async function deleteOrder(id){
   const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
-  if(!await confirmDialog({title:'Delete this order?',message:getPartName(o.partId)+' - '+fmtQty(o.qty)+' ordered on '+fmtDate(o.orderDate)+'. This cannot be undone.',confirmText:'Delete',variant:'danger'}))return;
+  if(!await confirmDialog({title:'Delete this order?',message:orderName(o)+' - '+fmtQty(o.qty)+' ordered on '+fmtDate(o.orderDate)+'. This cannot be undone.',confirmText:'Delete',variant:'danger'}))return;
   try{await apiFetch('/api/store/orders?id='+id,'DELETE');await loadOrders();refresh();}
   catch(err){await warnDialog('Could not delete the order',err.message);}
 }
-// Receive: a stock in of this item, linked to the order (a new batch, as every stock in is).
-function openReceiveOrder(id){
+// ---- Received (all that is still to come) / Partial (what came): a stock in linked to the order, a new batch.
+// A new item is added to the store first (or matched to the Store item it is), then received.
+function openReceiveOrder(id,mode){
   const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
-  const p=partOf(o.partId);if(!p)return;
-  const e=_escHtml,u=e(p.unit||'');
+  const p=o.partId?partOf(o.partId):null;
+  const e=_escHtml,u=e(orderUnit(o));
+  const part=mode==='part';
   document.getElementById('rcv-id').value=id;
-  document.getElementById('rcv-summary').innerHTML='<b>'+e(getPartName(p.id))+'</b><div style="color:#666;margin-top:3px">Ordered '+fmtQty(o.qty)+' '+u+' on '+fmtDate(o.orderDate)+(o.supplier?' from '+e(o.supplier):'')+(o.poNo?' \u00B7 P.O. '+e(o.poNo):'')+' \u00B7 received '+fmtQty(o.receivedQty)+' \u00B7 <b>'+fmtQty(orderPending(o))+' '+u+' still to come</b></div>';
-  document.getElementById('rcv-unit').textContent='('+p.unit+')';
-  document.getElementById('rcv-qty').value=orderPending(o);
+  document.getElementById('rcv-title').textContent=part?'Partial delivery':'Received - all of it';
+  document.getElementById('rcv-summary').innerHTML='<b>'+e(p?getPartName(p.id):orderName(o))+'</b><div style="color:#666;margin-top:3px">Ordered '+fmtQty(o.qty)+' '+u+' on '+fmtDate(o.orderDate)+(o.supplier?' from '+e(o.supplier):'')+(o.poNo?' \u00B7 P.O. '+e(o.poNo):'')+' \u00B7 received '+fmtQty(o.receivedQty)+' \u00B7 <b>'+fmtQty(orderPending(o))+' '+u+' still to come</b></div>';
+  document.getElementById('rcv-unit').textContent=u?'('+orderUnit(o)+')':'';
+  document.getElementById('rcv-qty').value=part?'':orderPending(o);
   document.getElementById('rcv-date').value=today();
   document.getElementById('rcv-challan').value='';
   document.getElementById('rcv-invoice').value='';
+  const nw=document.getElementById('rcv-new');
+  nw.style.display=p?'none':'';
+  if(!p){
+    const opts=state.parts.slice().sort((a,b)=>stNameCmp(getPartName(a.id),getPartName(b.id)));
+    document.getElementById('rcv-existing').innerHTML='<option value="">None \u2014 add it to the store as a new item</option>'+opts.map(x=>'<option value="'+x.id+'">'+e(getPartName(x.id))+'</option>').join('');
+    document.getElementById('rcv-name').value=o.itemName||'';
+    document.getElementById('rcv-cat').innerHTML=state.categories.map(c=>'<option>'+e(c)+'</option>').join('');
+    document.getElementById('rcv-unit-new').value=o.unit||'kg';
+    document.getElementById('rcv-sup').value=o.supplier||'';
+    document.getElementById('rcv-brand').value='';
+    rcvExistingPicked();
+  }
   openModal('orderReceive');
+  if(part)setTimeout(()=>document.getElementById('rcv-qty').focus(),50);
 }
+function rcvExistingPicked(){document.getElementById('rcv-new-fields').style.display=document.getElementById('rcv-existing').value?'none':'';}
 async function saveReceiveOrder(){
   const id=Number(document.getElementById('rcv-id').value);
   const o=(state.orders||[]).find(x=>x.id===id);if(!o)return;
@@ -4213,7 +4360,18 @@ async function saveReceiveOrder(){
   if(qty>orderPending(o)+0.0005&&!await confirmDialog({title:'More than was ordered?',message:'Only '+fmtQty(orderPending(o))+' is still to come on this order. Receive '+fmtQty(qty)+' anyway?',confirmText:'Receive',variant:'confirm'}))return;
   const btn=document.getElementById('rcv-save');btn.disabled=true;
   try{
-    await apiFetch('/api/store/transactions','POST',{type:'in',partId:o.partId,qty,date:document.getElementById('rcv-date').value,
+    let partId=o.partId;
+    if(!partId){
+      partId=Number(document.getElementById('rcv-existing').value)||0;
+      if(!partId){
+        const name=document.getElementById('rcv-name').value.trim(),category=document.getElementById('rcv-cat').value,unit=document.getElementById('rcv-unit-new').value.trim();
+        if(!name||!category||!unit){await warnDialog('The new item','Give the new item a name, category and unit.');return;}
+        const made=await apiFetch('/api/store/parts','POST',{module:state.module,name,category,unit,supplier:document.getElementById('rcv-sup').value.trim(),brand:document.getElementById('rcv-brand').value.trim()});
+        partId=made.id;
+      }
+      await apiFetch('/api/store/orders','PUT',{id:o.id,partId});
+    }
+    await apiFetch('/api/store/transactions','POST',{type:'in',partId,qty,date:document.getElementById('rcv-date').value,
       challanNo:document.getElementById('rcv-challan').value.trim(),invoiceNo:document.getElementById('rcv-invoice').value.trim(),poNo:o.poNo||'',ref:o.supplier||'',orderId:o.id});
     closeModal('orderReceive');
     await loadAll();refresh();
@@ -4263,10 +4421,13 @@ function renderInkGroups(visible,sortV){
       +'<div class="ig-head">'
       +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span>'
       +'</div>'
-      +'<div class="ig-total">'+reorderFlag(all)+'<span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
+      +'<div class="ig-total"><span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
       +'<button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all suppliers and brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
       +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div>'
-      +'</div>'+rowHtml+'</div>';
+      +'</div>'+rowHtml+'</div>'
+      // Beside the card, in the space to its right: the reorder warning and + Order (owner, 2026-11-14).
+      +'<div class="ig-side">'+reorderFlag(all)
+      +'<button class="ig-order write-only" title="Book an order of this item" onclick="openOrderForm({partId:'+all.slice().sort((a,b)=>usedSince3Months(b.id)-usedSince3Months(a.id))[0].id+',qty:'+(r=>r&&r.need-pendingOrdered(all.map(p=>p.id))>0.0005?Math.round((r.need-pendingOrdered(all.map(p=>p.id)))*1000)/1000:0)(reorderOf(all))+'})">+ Order</button></div>';
   }).join('');
 }
 
