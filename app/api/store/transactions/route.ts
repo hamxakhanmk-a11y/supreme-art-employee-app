@@ -6,6 +6,7 @@ import { guardAuth, guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema, roundQty, batchBalances, ordinal } from "@/lib/store";
 import { storeModulesFor, storePartsDenied, storeTxnsDenied } from "@/lib/storeAccess";
+import { orderForStockIn } from "@/lib/storeOrders";
 
 // GET — every movement, including those of parts that were deleted: their history is kept.
 export async function GET() {
@@ -123,6 +124,8 @@ export async function POST(req: NextRequest) {
       if (!o || Number(o.part_id) !== partId) return NextResponse.json({ error: "That order is not for this item." }, { status: 400 });
       if (o.cancelled_at) return NextResponse.json({ error: "That order was cancelled." }, { status: 400 });
     }
+    // A stock in with a P.O. No. counts against the open order for this item on that P.O. (Orders tab).
+    if (type === "in" && !orderId && poNo) orderId = await orderForStockIn(partId, poNo);
     const saved = await db.execute(sql`
       WITH upd AS (
         UPDATE parts SET qty = ROUND((qty ${type === "in" ? sql`+` : sql`-`} ${qty})::numeric, 3)::double precision

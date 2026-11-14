@@ -3061,7 +3061,7 @@ async function saveBulkStock(type){
   }
 
   let saved=0;
-  const failed=[];
+  const failed=[],linked=[];
   for(const r of merged){
     try{
       const body=Object.assign({type,partId:r.partId,qty:r.qty,date,challanNo},shared);
@@ -3071,9 +3071,11 @@ async function saveBulkStock(type){
       const p=state.parts.find(x=>x.id===r.partId);
       if(p)p.qty=Math.round((type==='in'?p.qty+r.qty:p.qty-r.qty)*1000)/1000;
       state.transactions.unshift(txn);
+      if(txn.orderId)linked.push(txn);
       saved++;
     }catch(e){failed.push(getPartName(r.partId)+': '+e.message);}
   }
+  if(linked.length)await loadOrders();
   refresh();
   if(failed.length){
     await errorDialog(saved?'Saved '+saved+' of '+merged.length+' rows':'Could not save this entry',failed.join(' · '));
@@ -3081,7 +3083,7 @@ async function saveBulkStock(type){
   }
   closeModal(type==='in'?'bulkIn':'bulkOut');
   const what=type==='in'?'Stock in recorded':'Stock issued';
-  await successDialog(what,saved+(saved===1?' part':' parts')+' saved'+(challanNo?' against challan '+challanNo:'')+'.');
+  await successDialog(what,saved+(saved===1?' part':' parts')+' saved'+(challanNo?' against challan '+challanNo:'')+'.'+(linked.length?'\n\n'+ordersLinkedText(linked):''));
 }
 
 async function saveStockIn(){
@@ -3107,6 +3109,8 @@ async function saveStockIn(){
     closeModal('addIn');
     ['f-in-qty','f-in-supplier','f-in-notes','f-in-challan','f-in-po','f-in-invoice'].forEach(id=>document.getElementById(id).value='');
     refresh();
+    // Matched by its P.O. No. to an order (Orders tab): that order now shows it received.
+    if(txn.orderId){await loadOrders();refresh();await successDialog('Marked on the order',ordersLinkedText([txn]));}
   }catch(e){await errorDialog('Could not record stock in',e.message);}
 }
 
@@ -3849,7 +3853,8 @@ async function printSticker(){
   // The PO, invoice and batch numbers stay with the stock in they belong to, so a reprint has them.
   if(_st.txnId&&(po!==_st.po||inv!==_st.inv||label!==_st.label)){
     try{
-      await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:inv,batchLabel:label});
+      const det=await apiFetch('/api/store/transactions/details','PUT',{id:_st.txnId,poNo:po,invoiceNo:inv,batchLabel:label});
+      if(det&&det.orderId){const tt=state.transactions.find(x=>x.id===_st.txnId);if(tt&&!tt.orderId){tt.orderId=det.orderId;loadOrders().then(refresh);}}
       const t=state.transactions.find(x=>x.id===_st.txnId);
       if(t){t.poNo=po;t.invoiceNo=inv;t.batchLabel=label;}
       window._bcMap=null;
@@ -4138,6 +4143,16 @@ function orderStatus(o){
   if(part)return {key:'partial',label:'Part received',cls:'partial'};
   if(o.expectedDate){const d=daysApart(today(),o.expectedDate);return {key:'pending',label:d===0?'Due today':'Due in '+d+' day'+(d===1?'':'s'),cls:'pending'};}
   return {key:'pending',label:'Pending',cls:'pending'};
+}
+// What a stock in did to the orders it was matched to: "P.O. 10501 - Pantone Yellow PY-12: 13 of 13 kg received, complete".
+function ordersLinkedText(txns){
+  const ids=[...new Set(txns.map(t=>t.orderId).filter(Boolean))];
+  return ids.map(id=>{
+    const o=(state.orders||[]).find(x=>x.id===id);
+    if(!o)return '';
+    const u=orderUnit(o),done=orderPending(o)<=0.0005;
+    return 'P.O. '+(o.poNo||'—')+' — '+orderName(o)+': '+fmtQty(o.receivedQty)+' of '+fmtQty(o.qty)+' '+u+' received'+(done?', order complete.':', '+fmtQty(orderPending(o))+' '+u+' still to come.');
+  }).filter(Boolean).join('\n');
 }
 function orderName(o){const p=o.partId?partOf(o.partId):null;return p?skuPrefix(p)+p.name:(o.itemName||'Unknown item');}
 function orderUnit(o){const p=o.partId?partOf(o.partId):null;return p?p.unit||'':o.unit||'';}

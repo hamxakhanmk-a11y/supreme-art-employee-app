@@ -5,6 +5,7 @@ import { guardWrite } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { ensureStoreSchema } from "@/lib/store";
 import { storeTxnsDenied } from "@/lib/storeAccess";
+import { orderForStockIn } from "@/lib/storeOrders";
 
 // The purchase order and invoice numbers of a stock in, and the batch number as written on its
 // sticker, kept from the sticker window. Only these fields change; nothing about the quantity or
@@ -28,9 +29,14 @@ export async function PUT(req: NextRequest) {
       UPDATE transactions SET po_no = ${poNo}, invoice_no = ${invoiceNo},
              batch_label = ${hasLabel ? sql`${batchLabel}` : sql`batch_label`}
       WHERE id = ${id} AND type = 'in'
-      RETURNING id, po_no AS "poNo", invoice_no AS "invoiceNo", batch_label AS "batchLabel"`);
+      RETURNING id, part_id AS "partId", order_id AS "orderId", po_no AS "poNo", invoice_no AS "invoiceNo", batch_label AS "batchLabel"`);
     const row = ((res as any).rows ?? (res as any))[0];
     if (!row) return NextResponse.json({ error: "That stock in was not found" }, { status: 404 });
+    // A P.O. No. given later (on the sticker) counts this stock in against that P.O.'s open order too.
+    if (!row.orderId && poNo) {
+      const orderId = await orderForStockIn(Number(row.partId), poNo);
+      if (orderId) { await db.execute(sql`UPDATE transactions SET order_id = ${orderId} WHERE id = ${id}`); row.orderId = orderId; }
+    }
     await logActivity({ user: guard, action: "store.consumables.txn.details", summary: `set PO "${poNo || "—"}" and invoice "${invoiceNo || "—"}" on a stock in` });
     return NextResponse.json(row);
   } catch (e: any) {
