@@ -467,6 +467,10 @@ body:not(.role-admin) .admin-only{display:none!important}
 #page-issuance .txn-card{max-height:calc(100vh - 210px);overflow:auto}
 #page-issuance .txn-card thead th{position:sticky;top:0;z-index:3;background:#f7f2e9;box-shadow:inset 0 -1px 0 #e3d8c6}
 #issuance-table tr.iss-cat-head td{position:sticky;top:34px;z-index:2}
+/* Reorder warning (owner, 2026-11-14): issued in the last 3 months is more than is in stock. */
+.reorder-flag{display:inline-flex;align-items:baseline;gap:6px;margin-left:8px;padding:2px 9px;border-radius:999px;background:#fff4e0;border:1px solid #f0b86b;color:#9a4d00;font-size:11.5px;font-weight:800;white-space:nowrap;cursor:help}
+.reorder-flag small{font-size:10.5px;font-weight:600;color:#8a6a3e}
+td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:0;border-radius:8px;padding:3px 8px}
 </style>
 </head>
 <body>
@@ -3913,6 +3917,34 @@ async function sbRename(){
 
 // One card per product: its name, category, brand count and total, then a row per supplier + brand
 // with that brand's own stock and its + Stock / − Stock / Edit / Delete.
+// Reorder (owner, 2026-11-14): what was issued in the last 3 months against what is in stock now. When the
+// last 3 months used more than there is, the difference is what to reorder (12 kg in stock, 25 kg used = 13 kg).
+function reorderSince(){
+  const d=new Date(today()+'T00:00:00'),day=d.getDate();
+  d.setDate(1);d.setMonth(d.getMonth()-3);
+  d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// Issued per part since then. Worked out once per screen drawn.
+function usedSince3Months(partId){
+  if(!window._useMap){
+    const since=reorderSince(),to=today(),m=new Map();
+    state.transactions.forEach(t=>{if(t.type==='out'&&t.date>=since&&t.date<=to)m.set(t.partId,(m.get(t.partId)||0)+Number(t.qty||0));});
+    window._useMap=m;
+    queueMicrotask(()=>{window._useMap=null;});
+  }
+  return window._useMap.get(partId)||0;
+}
+// One part, or every brand of an Inks & Consumables product together. Nothing when their units differ.
+function reorderOf(parts){
+  const units=[...new Set(parts.map(p=>p.unit||''))];
+  if(units.length!==1)return null;
+  const r=n=>Math.round(n*1000)/1000;
+  const used=r(parts.reduce((t,p)=>t+usedSince3Months(p.id),0)),stock=r(parts.reduce((t,p)=>t+Number(p.qty||0),0));
+  return {used,stock,need:r(used-stock),unit:units[0]};
+}
+function reorderTip(o){return 'Issued '+fmtQty(o.used)+' '+o.unit+' in the last 3 months (since '+fmtDate(reorderSince())+'); '+fmtQty(o.stock)+' '+o.unit+' in stock now, so '+fmtQty(o.need)+' '+o.unit+' more is needed to cover another 3 months like it.';}
+
 function renderInkGroups(visible,sortV){
   const host=document.getElementById('inv-groups');
   if(!host)return;
@@ -3953,7 +3985,9 @@ function renderInkGroups(visible,sortV){
     }).join('');
     return '<div class="ig">'
       +'<div class="ig-head">'
-      +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span></div>'
+      +'<div class="ig-title"><span class="ig-name">'+e(all[0].name)+'</span>'+(all[0].category?'<span class="ig-chip">'+e(all[0].category)+'</span>':'')+'<span class="ig-badge">'+n+(n===1?' brand':' brands')+'</span>'
+      +((ro=>ro&&ro.need>0.0005?'<span class="reorder-flag" title="'+e(reorderTip(ro))+'">\u26A0 Reorder '+fmtQty(ro.need)+' '+e(ro.unit)+'<small>used '+fmtQty(ro.used)+' in 3 months \u00B7 '+fmtQty(ro.stock)+' in stock</small></span>':'')(reorderOf(all)))
+      +'</div>'
       +'<div class="ig-total"><span class="tot"><b>'+(t.mixed?'\u2014':fmtQty(t.sum))+'</b><small>'+e(t.mixed?'mixed units':t.unit)+' total</small></span>'
       +'<button class="ig-b ghost" data-k="'+e(k)+'" title="Every stock in and out of this product, all suppliers and brands" onclick="openGroupHistory(this.dataset.k)">History</button>'
       +'<button class="ig-b ghost write-only" data-k="'+e(k)+'" title="Add another supplier / brand of this product" onclick="openAddBrand(this.dataset.k)">+ Brand</button></div>'
@@ -4098,10 +4132,15 @@ function renderInventory(){
   });
 
   const lowN=parts.filter(p=>p.qty!==0&&p.qty<=p.minQty).length, outN=parts.filter(p=>p.qty===0).length;
+  // To reorder: products (Inks & Consumables, every brand together) or parts whose last 3 months beat their stock.
+  const reN=inks
+    ?[...new Set(parts.map(inkKey))].filter(k=>{const o=reorderOf(state.parts.filter(p=>inkKey(p)===k));return o&&o.need>0.0005;}).length
+    :parts.filter(p=>{const o=reorderOf([p]);return o&&o.need>0.0005;}).length;
   stChips('inv-chips',[
     [stCount(parts.length,state.parts.length),inks?'Items':'Parts'],
     lowN?[lowN,'Low','low','Low stock']:null,
-    outN?[outN,'Out','out','Out of stock']:null
+    outN?[outN,'Out','out','Out of stock']:null,
+    reN?[reN,'Reorder','low','Used more in the last 3 months than is in stock']:null
   ]);
   const sortV=(document.getElementById('inv-sort')||{value:''}).value;
   if(inks){renderInkGroups(parts,sortV);return;}
@@ -4113,12 +4152,12 @@ function renderInventory(){
     const mid=inks
       ? '<th>Brand</th><th>Supplier</th><th>Rack No.</th>'
       : '<th>Machine</th>';
-    th.innerHTML=`<tr><th>#</th><th>SKU / Part No.</th><th>Part Name</th><th>Category</th>${mid}<th>Unit</th><th>Qty on Hand</th><th>Min Qty</th><th>Status</th><th class="no-print">Actions</th></tr>`;
+    th.innerHTML=`<tr><th>#</th><th>SKU / Part No.</th><th>Part Name</th><th>Category</th>${mid}<th>Unit</th><th>Qty on Hand</th><th>Min Qty</th><th>Status</th><th title="Issued in the last 3 months less what is in stock">Reorder</th><th class="no-print">Actions</th></tr>`;
   }
 
   const tb=document.getElementById('inv-table');
   if(!tb)return;
-  const span=inks?12:10;
+  const span=inks?13:11;
   if(!parts.length){tb.innerHTML=`<tr><td colspan="${span}"><div class="empty"><i class="ti ti-search"></i>No parts found</div></td></tr>`;return;}
   tb.innerHTML=parts.map((p,i)=>{
     const s=stockStatus(p);
@@ -4145,6 +4184,7 @@ function renderInventory(){
       <td style="font-weight:700;font-size:15px">${fmtQty(p.qty)}</td>
       <td style="color:#888">${p.minQty}</td>
       <td><span class="badge ${s.cls}">${s.label}</span></td>
+      <td>${(o=>o&&o.need>0.0005?`<span class="reorder-flag" title="${_escHtml(reorderTip(o))}">\u26A0 ${fmtQty(o.need)} ${_escHtml(o.unit)}<small>used ${fmtQty(o.used)} in 3 mo.</small></span>`:'<span style="color:#bbb">\u2014</span>')(reorderOf([p]))}</td>
       <td class="no-print">
         <div class="row-actions">
           <button class="btn btn-sm" title="Every stock in and out of this part" onclick="openPartHistory(${p.id})"><i class="ti ti-history"></i> History</button>
