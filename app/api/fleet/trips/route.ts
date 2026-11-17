@@ -10,6 +10,20 @@ import { gateWhen } from "@/lib/gateTime";
 
 const MODULE = "station";
 
+// The driver's trip that covers a moment (started by then, not yet back), described for a message, or null.
+async function driverTripAt(driverId: number, stamp: unknown): Promise<string | null> {
+  const res = await db.execute(sql`
+    SELECT v.vehicle_no AS "vehicleNo",
+           to_char(t.out_at AT TIME ZONE 'Asia/Karachi', 'DD Mon HH24:MI') AS "outAt",
+           CASE WHEN t.in_at IS NULL THEN NULL ELSE to_char(t.in_at AT TIME ZONE 'Asia/Karachi', 'DD Mon HH24:MI') END AS "inAt"
+    FROM fleet_trips t JOIN vehicles v ON v.id = t.vehicle_id
+    WHERE t.driver_id = ${driverId} AND t.out_at <= ${stamp} AND (t.in_at IS NULL OR t.in_at > ${stamp})
+    ORDER BY t.out_at DESC LIMIT 1`);
+  const r = ((res as { rows?: Record<string, unknown>[] }).rows ?? (res as unknown as Record<string, unknown>[]))[0];
+  if (!r) return null;
+  return `in ${r.vehicleNo} from ${r.outAt}${r.inAt ? ` to ${r.inAt}` : " and still out"}`;
+}
+
 // Names travelling on a trip. Each is either an employee (id + name) or a
 // plain name for someone off the payroll — the same shape the store's
 // "Issued To" settled on.
@@ -87,12 +101,25 @@ export async function POST(req: NextRequest) {
       listedName = allowed.name || "";
     }
 
+    // Now, or the date and time typed for a trip written up after the fact.
+    const when = gateWhen(b);
+    if (when.error) return NextResponse.json({ error: when.error }, { status: 400 });
+    const backdated = when.manual;
+
     // Only employees can be "already out": a name with no employee behind it
     // isn't one person the system can follow across vehicles.
     if (driverId) {
-      const [driverOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
-        .where(and(eq(fleetTrips.driverId, driverId), isNull(fleetTrips.inAt))).limit(1);
-      if (driverOut) return NextResponse.json({ error: "That driver is already out in another vehicle" }, { status: 409 });
+      if (!backdated) {
+        // At the gate now: not while they are out on another trip now (one being written up afterwards aside).
+        const [driverOut] = await db.select({ id: fleetTrips.id }).from(fleetTrips)
+          .where(and(eq(fleetTrips.driverId, driverId), isNull(fleetTrips.inAt), eq(fleetTrips.backdated, false))).limit(1);
+        if (driverOut) return NextResponse.json({ error: "That driver is already out in another vehicle" }, { status: 409 });
+      } else {
+        // An earlier trip being written up: only refused when the driver really was out at that moment -
+        // another trip of theirs had started and not yet come back. Being out on today's trip is no bar.
+        const clash = await driverTripAt(driverId, when.stamp);
+        if (clash) return NextResponse.json({ error: `That driver was out at that time - ${clash}. Check the date and time.` }, { status: 409 });
+      }
     }
 
     // Resolved now and stored on the trip, so the log book still reads after
@@ -104,10 +131,6 @@ export async function POST(req: NextRequest) {
       if (drv) driverName = `${drv.first} ${drv.last}`.trim();
     }
     if (!driverName) return NextResponse.json({ error: "That driver has no name recorded" }, { status: 400 });
-
-    // Now, or the date and time typed for a trip written up after the fact.
-    const when = gateWhen(b);
-    if (when.error) return NextResponse.json({ error: when.error }, { status: 400 });
 
     // Against the readings either side of that moment, so a trip entered the
     // next morning isn't refused for being lower than today's.
@@ -125,6 +148,7 @@ export async function POST(req: NextRequest) {
       purpose: String(b?.purpose || "").trim(),
       meterOut,
       remarks: String(b?.remarks || "").trim(),
+      backdated,
     }).returning();
 
     const officers = cleanOfficers(b?.officers);
@@ -178,6 +202,18 @@ export async function PUT(req: NextRequest) {
     const orderRows: any[] = (order as any).rows ?? (order as any);
     if (orderRows[0]?.early === true || orderRows[0]?.early === "t") {
       return NextResponse.json({ error: "That is before the vehicle went out — check the date and time." }, { status: 400 });
+    }
+
+    // The driver's next trip (in any vehicle) started after this one left: this one has to be back by then.
+    if (trip.driverId) {
+      const nextRes = await db.execute(sql`
+        SELECT v.vehicle_no AS "vehicleNo", to_char(t.out_at AT TIME ZONE 'Asia/Karachi', 'DD Mon YYYY HH24:MI') AS at
+        FROM fleet_trips t JOIN vehicles v ON v.id = t.vehicle_id
+        WHERE t.driver_id = ${trip.driverId} AND t.id <> ${trip.id}
+          AND t.out_at > ${trip.outAt.toISOString()}::timestamptz AND t.out_at < ${when.stamp}
+        ORDER BY t.out_at LIMIT 1`);
+      const next = ((nextRes as { rows?: Record<string, unknown>[] }).rows ?? (nextRes as unknown as Record<string, unknown>[]))[0];
+      if (next) return NextResponse.json({ error: `${trip.driverName || "The driver"} went out again in ${next.vehicleNo} on ${next.at}, so this trip has to come back before that. Check the date and time.` }, { status: 409 });
     }
 
     // Nothing recorded later may read lower than this.

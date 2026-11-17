@@ -46,6 +46,8 @@ export async function openTripForDriver(driverId: number): Promise<OpenTripInfo 
     FROM fleet_trips t
     JOIN vehicles v ON v.id = t.vehicle_id
     WHERE t.driver_id = ${driverId} AND t.in_at IS NULL
+    -- The trip they are out on now first; one being written up afterwards only if there is no other.
+    ORDER BY t.backdated, t.out_at DESC
     LIMIT 1
   `);
   const rows: any[] = (res as any).rows ?? (res as any);

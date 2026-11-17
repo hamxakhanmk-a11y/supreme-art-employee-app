@@ -78,8 +78,13 @@ DO $$ BEGIN
   -- slow gate terminal are exactly how a double punch happens.
   CREATE UNIQUE INDEX IF NOT EXISTS fleet_trips_open_vehicle_key
     ON fleet_trips (vehicle_id) WHERE in_at IS NULL;
-  CREATE UNIQUE INDEX IF NOT EXISTS fleet_trips_open_driver_key
-    ON fleet_trips (driver_id) WHERE in_at IS NULL AND driver_id IS NOT NULL;
+  -- A trip written up afterwards (backdated) doesn't count as out now: a driver out on today's trip can
+  -- still have last week's written up in another vehicle (owner, 2026-11-17). Whether two trips of a
+  -- driver overlap in time is checked when each end is entered.
+  ALTER TABLE fleet_trips ADD COLUMN IF NOT EXISTS backdated boolean NOT NULL DEFAULT false;
+  DROP INDEX IF EXISTS fleet_trips_open_driver_key;
+  CREATE UNIQUE INDEX IF NOT EXISTS fleet_trips_open_driver_live_key
+    ON fleet_trips (driver_id) WHERE in_at IS NULL AND driver_id IS NOT NULL AND NOT backdated;
   CREATE INDEX IF NOT EXISTS fleet_trips_vehicle_date_idx
     ON fleet_trips (vehicle_id, date);
 

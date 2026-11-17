@@ -753,6 +753,9 @@ export const fleetTrips = pgTable("fleet_trips", {
   // history disagreeing with itself. Recomputed on every write to either.
   kmCovered: integer("km_covered"),
   remarks: text("remarks").default(""),
+  // Written up afterwards (a date or time typed at the terminal): an earlier trip being entered, not someone
+  // at the gate now - so it doesn't count as "out right now" while its return is still to be typed.
+  backdated: boolean("backdated").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
