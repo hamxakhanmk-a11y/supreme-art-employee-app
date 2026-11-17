@@ -515,6 +515,13 @@ td>.reorder-flag{margin-left:0;flex-direction:column;align-items:flex-start;gap:
 .ord-line-row .lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase}.ord-line-row .unit{color:#888;font-size:12px;margin-right:8px}
 .ord-line-row select{flex:1;min-width:220px}
 .ord-line-note{font-size:11.5px;margin-top:5px;color:#666}.ord-line.in .ord-line-note{color:#1c6b33}.ord-line.new .ord-line-note{color:#a32d2d}
+/* Clickable chips (quick filters) */
+.st-chip-btn{cursor:pointer;user-select:none;transition:transform .08s,box-shadow .12s,filter .12s}
+.st-chip-btn:hover{filter:brightness(.96);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.st-chip-btn:active{transform:scale(.97)}
+.st-chip-btn.on{box-shadow:0 0 0 2px currentColor inset;outline:2px solid #7C1F1F;outline-offset:1px}
+.st-chip-btn.on.low{outline-color:#854F0B}.st-chip-btn.on.out{outline-color:#A32D2D}
+.st-chip-x{font-style:normal;font-weight:800;margin-left:2px;font-size:13px;opacity:.7}
 </style>
 </head>
 <body>
@@ -2462,7 +2469,7 @@ function getSectionData(sec){
       const cat=!c||p.category===c;
       const mach=!m||(m==='__none__'?machList.length===0:machList.includes(m));
       const rack=!rk||(rk==='__none__'?!(p.rackNo||'').trim():(p.rackNo||'').trim()===rk);
-      return txt&&cat&&mach&&rack;
+      return txt&&cat&&mach&&rack&&invQuickPass(p);
     });
   }
   if(sec==='stockin'){
@@ -4394,6 +4401,22 @@ async function saveReceiveOrder(){
   finally{btn.disabled=false;}
 }
 
+// Inventory quick filters (owner, 2026-11-17): click the Low, Out or Reorder chip to show only those; click it again,
+// or the Items chip, to show everything. Reorder in Inks & Consumables is by product (every brand of it).
+let _invQuick='';
+function invQuick(k){_invQuick=_invQuick===k?'':k;renderInventory();}
+function invNeedsReorder(p){
+  const g=isInks()?state.parts.filter(x=>inkKey(x)===inkKey(p)):[p];
+  const o=reorderOf(g);
+  return !!o&&o.need-(isInks()?pendingOrdered(g.map(x=>x.id)):0)>0.0005;
+}
+function invQuickPass(p){
+  if(_invQuick==='low')return p.qty!==0&&p.qty<=p.minQty;
+  if(_invQuick==='out')return p.qty===0;
+  if(_invQuick==='reorder')return invNeedsReorder(p);
+  return true;
+}
+
 function renderInkGroups(visible,sortV){
   const host=document.getElementById('inv-groups');
   if(!host)return;
@@ -4513,10 +4536,12 @@ function openGroupHistory(k,brandId){
 
 // ---- List toolbar helpers: count chips and sorting ----
 // list: [[value,label,cls?,title?],...] (falsy entries skipped)
+// A chip: [count, label, colour class, tooltip, onclick, on]. With an onclick it is a button (a quick filter);
+// on: the filter it sets is the one showing.
 function stChips(id,list){
   const h=document.getElementById(id);
   if(!h)return;
-  h.innerHTML=list.filter(Boolean).map(c=>'<span class="st-chip'+(c[2]?' '+c[2]:'')+'"'+(c[3]?' title="'+_escHtml(c[3])+'"':'')+'><b>'+_escHtml(String(c[0]))+'</b><small>'+_escHtml(c[1])+'</small></span>').join('');
+  h.innerHTML=list.filter(Boolean).map(c=>'<span class="st-chip'+(c[2]?' '+c[2]:'')+(c[4]?' st-chip-btn':'')+(c[5]?' on':'')+'"'+(c[3]?' title="'+_escHtml(c[3])+'"':'')+(c[4]?' role="button" tabindex="0" onclick="'+c[4]+'"':'')+'><b>'+_escHtml(String(c[0]))+'</b><small>'+_escHtml(c[1])+'</small>'+(c[5]?'<i class="st-chip-x" title="Show all">\u00D7</i>':'')+'</span>').join('');
 }
 function stNameCmp(a,b){return String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base',numeric:true});}
 function stCount(n,total){return n===total?n:n+' of '+total;}
@@ -4587,11 +4612,16 @@ function renderInventory(){
   const reN=inks
     ?[...new Set(parts.map(inkKey))].filter(k=>{const g=state.parts.filter(p=>inkKey(p)===k),o=reorderOf(g);return o&&o.need-pendingOrdered(g.map(p=>p.id))>0.0005;}).length
     :parts.filter(p=>{const o=reorderOf([p]);return o&&o.need>0.0005;}).length;
+  // A quick filter whose items are all gone (stocked in since) lets go by itself.
+  if((_invQuick==='low'&&!lowN)||(_invQuick==='out'&&!outN)||(_invQuick==='reorder'&&!reN))_invQuick='';
+  const all=parts.length;
+  if(_invQuick){const keep=parts.filter(invQuickPass);parts.length=0;parts.push(...keep);}
+  const tip=k=>_invQuick===k?' - click to show everything again':' - click to show only these';
   stChips('inv-chips',[
-    [stCount(parts.length,state.parts.length),inks?'Items':'Parts'],
-    lowN?[lowN,'Low','low','Low stock']:null,
-    outN?[outN,'Out','out','Out of stock']:null,
-    reN?[reN,'Reorder','out',inks?'Used more in the last 3 months than is in stock and on order':'Used more in the last 3 months than is in stock']:null
+    [_invQuick?parts.length+' of '+stCount(all,state.parts.length):stCount(all,state.parts.length),inks?'Items':'Parts','',_invQuick?'Show everything':'',_invQuick?"invQuick('')":''],
+    lowN?[lowN,'Low','low','Low stock'+tip('low'),"invQuick('low')",_invQuick==='low']:null,
+    outN?[outN,'Out','out','Out of stock'+tip('out'),"invQuick('out')",_invQuick==='out']:null,
+    reN?[reN,'Reorder','out',(inks?'Used more in the last 3 months than is in stock and on order':'Used more in the last 3 months than is in stock')+tip('reorder'),"invQuick('reorder')",_invQuick==='reorder']:null
   ]);
   const sortV=(document.getElementById('inv-sort')||{value:''}).value;
   if(inks){renderInkGroups(parts,sortV);return;}
