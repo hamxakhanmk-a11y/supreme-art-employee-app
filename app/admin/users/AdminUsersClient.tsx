@@ -22,6 +22,7 @@ interface User {
   active: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  signedIn?: number;   // devices signed in on now
 }
 interface RoleMeta { key: string; label: string; color: string; builtin: boolean }
 
@@ -96,6 +97,16 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
       alert(d.error || "Update failed");
       return;
     }
+    refresh();
+  }
+
+  // Log this person out of every device now: their open pages go to the login within seconds.
+  async function logoutUser(id: number, name: string) {
+    if (!confirm(`Log "${name}" out of every device now? Any page they have open closes within a few seconds.`)) return;
+    const r = await fetch(`/api/users/${id}/logout`, { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { alert(d.error || "Could not log them out"); return; }
+    alert(d.ended ? `${name} has been logged out (${d.ended} device${d.ended === 1 ? "" : "s"}).` : `${name} was not signed in anywhere.`);
     refresh();
   }
 
@@ -213,6 +224,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {u.email} · Last login: {fmtDate(u.lastLoginAt)}
+                    {u.signedIn ? <span style={{ color: "#15803D", fontWeight: 700 }}> · ● signed in{u.signedIn > 1 ? ` on ${u.signedIn} devices` : ""}</span> : null}
                   </div>
                 </div>
                 <select value={u.role}
@@ -227,6 +239,12 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                   {!roleList.some(r => r.key === u.role) && <option value={u.role}>{labelFor(u.role)}</option>}
                   {roleList.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
                 </select>
+                {!isSelf && !!u.signedIn && (
+                  <button onClick={() => logoutUser(u.id, u.name)} style={{ ...btnOutlineDanger, flexShrink: 0 }}
+                    title="End all of their sign-ins now - their open pages go to the login within seconds">
+                    Log out
+                  </button>
+                )}
                 {!isSelf && (
                   u.active ? (
                     <button onClick={() => patch(u.id, { active: false })} style={{ ...btnOutlineDanger, flexShrink: 0 }}>

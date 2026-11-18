@@ -27,16 +27,30 @@ const DEFAULT: MeState = {
 
 const MeContext = createContext<MeState>(DEFAULT);
 
+// How often an open page on screen checks it is still signed in, so a person logged out from Admin → Users (or
+// disabled) leaves without reloading. Each check is one small request, and only while the page is on screen.
+const ALIVE_EVERY_MS = 15000;
+
+// Off to the login page, saying why. Once only, however many checks notice at the same moment.
+let leaving = false;
+function signedOutNow() {
+  if (leaving || typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/login")) return;
+  leaving = true;
+  const next = window.location.pathname + window.location.search;
+  window.location.replace("/login?error=signed_out&next=" + encodeURIComponent(next));
+}
+
 export function MeProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<MeState>(DEFAULT);
 
   useEffect(() => {
-    let alive = true;
+    let on = true;
     const load = () => {
       fetch("/api/auth/me")
         .then(r => r.json())
         .then(d => {
-          if (!alive) return;
+          if (!on) return;
           if (d.authenticated) {
             setMe({
               loading: false,
@@ -47,25 +61,48 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
               canEdit: d.canEdit ?? true,
             });
           } else {
-            setMe({ ...DEFAULT, loading: false });
+            setMe(prev => { if (prev.authenticated) signedOutNow(); return { ...DEFAULT, loading: false }; });
           }
         })
-        .catch(() => { if (alive) setMe({ ...DEFAULT, loading: false }); });
+        .catch(() => { if (on) setMe({ ...DEFAULT, loading: false }); });
     };
 
     load();
+
+    // Signed out elsewhere (Admin → Users → Log out, or disabled): any of this app's requests answered 401 means
+    // the sign-in is gone - leave at once rather than on the next check.
+    const origFetch = window.fetch;
+    const watched: typeof window.fetch = async (input, init) => {
+      const res = await origFetch(input, init);
+      if (res.status === 401) {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const path = url.startsWith("http") ? new URL(url).pathname : url;
+        if (path.startsWith("/api/") && !path.startsWith("/api/auth/google")) signedOutNow();
+      }
+      return res;
+    };
+    window.fetch = watched;
+    // And a small check every few seconds while the page is on screen, so an idle page leaves too.
+    const alive = () => {
+      if (document.visibilityState !== "visible") return;
+      origFetch("/api/auth/alive", { cache: "no-store" }).then(r => { if (r.status === 401) signedOutNow(); }).catch(() => {});
+    };
+    const timer = window.setInterval(alive, ALIVE_EVERY_MS);
+
     // Permissions are fetched once and held for the life of the tab — if an
     // admin grants a module while this tab has been open the whole time,
     // nothing here would ever notice. Re-checking whenever the tab regains
     // focus/visibility means "grant access, tell the person to switch back
     // to the tab" is enough, instead of requiring them to know to hard-reload.
-    const onFocus = () => load();
-    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    const onFocus = () => { load(); alive(); };
+    const onVisible = () => { if (document.visibilityState === "visible") { load(); alive(); } };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
-      alive = false;
+      on = false;
+      window.clearInterval(timer);
+      if (window.fetch === watched) window.fetch = origFetch;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
     };

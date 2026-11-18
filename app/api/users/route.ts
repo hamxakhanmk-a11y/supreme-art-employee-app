@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { desc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users } from "@/lib/schema";
+import { users, sessions } from "@/lib/schema";
 import { ADMIN_ROLES, requireAuth } from "@/lib/auth";
 import { isAssignableRole } from "@/lib/permissions";
 
@@ -17,6 +17,8 @@ export async function GET() {
   const rows = await db.select({
     id: users.id, email: users.email, name: users.name, role: users.role,
     active: users.active, lastLoginAt: users.lastLoginAt, createdAt: users.createdAt,
+    // Devices this person is signed in on now (Admin → Users → Log out ends them).
+    signedIn: sql<number>`(SELECT COUNT(*)::int FROM ${sessions} s WHERE s.user_id = ${users.id} AND s.expires_at > now())`,
   }).from(users).orderBy(desc(users.createdAt));
 
   // The Super Admin role is the owner’s alone to see. This endpoint is

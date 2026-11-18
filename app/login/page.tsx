@@ -5,6 +5,7 @@ import AuthShell from "@/components/AuthShell";
 
 const ERRORS: Record<string, string> = {
   not_allowed: "That Google account isn't authorized for this portal. Ask an admin to add your email.",
+  signed_out: "You have been signed out. Sign in again to continue.",
   disabled: "Your account has been disabled. Contact an administrator.",
   unverified: "Your Google email isn't verified. Verify it with Google and try again.",
   not_configured: "Google sign-in isn't set up yet. Ask the administrator to configure it.",
