@@ -111,7 +111,7 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
   }
 
   async function del(id: number, name: string) {
-    if (!confirm(`Remove "${name}" from the allowlist? They'll lose access at their next sign-in.`)) return;
+    if (!confirm(`Remove "${name}" from the allowlist? They are logged out of every device now - any page they have open closes within a few seconds.`)) return;
     const r = await fetch(`/api/users/${id}`, { method: "DELETE" });
     if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || "Delete failed"); return; }
     refresh();
@@ -247,7 +247,8 @@ export default function AdminUsersClient({ currentUserId }: { currentUserId: num
                 )}
                 {!isSelf && (
                   u.active ? (
-                    <button onClick={() => patch(u.id, { active: false })} style={{ ...btnOutlineDanger, flexShrink: 0 }}>
+                    <button onClick={() => patch(u.id, { active: false })} style={{ ...btnOutlineDanger, flexShrink: 0 }}
+                      title="Block their access - they are logged out of every device now and their open pages close within seconds">
                       Disable
                     </button>
                   ) : (

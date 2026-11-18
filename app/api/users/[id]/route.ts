@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users } from "@/lib/schema";
+import { sessions, users } from "@/lib/schema";
 import { ADMIN_ROLES, requireAuth } from "@/lib/auth";
 import { isAssignableRole } from "@/lib/permissions";
 
@@ -55,6 +55,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   updates.updatedAt = new Date();
   await db.update(users).set(updates).where(eq(users.id, userId));
+  // Disabled: every sign-in of theirs ends now, so their open pages leave within seconds (and enabling them
+  // again doesn't bring the old sign-ins back - they sign in afresh).
+  if (updates.active === false) await db.delete(sessions).where(eq(sessions.userId, userId));
   return NextResponse.json({ ok: true });
 }
 
@@ -74,6 +77,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "At least one active Super Admin must remain." }, { status: 400 });
     }
   }
+  // Removed: their sign-ins go first (the table also cascades), so their open pages leave within seconds.
+  await db.delete(sessions).where(eq(sessions.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
   return NextResponse.json({ ok: true });
 }

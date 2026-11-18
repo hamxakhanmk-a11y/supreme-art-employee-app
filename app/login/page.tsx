@@ -25,9 +25,13 @@ export default function LoginPage() {
   useEffect(() => {
     fetch("/api/auth/me").then(r => r.json()).then(d => {
       if (d.authenticated) router.replace(next);
+      // Arrived with a sign-in that was ended (a reload or a link after being logged out, disabled or removed):
+      // through /api/auth/logout first, which wipes the app's data from this browser and comes back here.
+      // Not again once back ("signed_out"), so this can never go round in circles.
+      else if (d.stale && errorCode !== "signed_out") window.location.replace("/api/auth/logout?reason=signed_out&next=" + encodeURIComponent(next));
       else setChecking(false);
     }).catch(() => setChecking(false));
-  }, [router, next]);
+  }, [router, next, errorCode]);
 
   const startUrl = `/api/auth/google/start?next=${encodeURIComponent(next)}`;
 
