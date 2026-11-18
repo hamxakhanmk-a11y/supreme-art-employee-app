@@ -31,14 +31,16 @@ const MeContext = createContext<MeState>(DEFAULT);
 // disabled) leaves without reloading. Each check is one small request, and only while the page is on screen.
 const ALIVE_EVERY_MS = 15000;
 
-// Off to the login page, saying why. Once only, however many checks notice at the same moment.
+// Off to the login page, saying why - by way of /api/auth/logout, which has the browser wipe this site's data on
+// that computer (cookies, saved data, saved copies of pages) first. replace(), so Back doesn't return to the page.
+// Once only, however many checks notice at the same moment.
 let leaving = false;
 function signedOutNow() {
   if (leaving || typeof window === "undefined") return;
   if (window.location.pathname.startsWith("/login")) return;
   leaving = true;
   const next = window.location.pathname + window.location.search;
-  window.location.replace("/login?error=signed_out&next=" + encodeURIComponent(next));
+  window.location.replace("/api/auth/logout?reason=signed_out&next=" + encodeURIComponent(next));
 }
 
 export function MeProvider({ children }: { children: React.ReactNode }) {
@@ -89,6 +91,18 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
     };
     const timer = window.setInterval(alive, ALIVE_EVERY_MS);
 
+    // Back (or Forward) can bring a page straight out of the browser's memory without asking the server, still
+    // showing what was on it. Kept hidden until the sign-in is checked: signed out, it goes to the login unseen.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      const root = document.documentElement;
+      root.style.visibility = "hidden";
+      origFetch("/api/auth/alive", { cache: "no-store" })
+        .then(r => { if (r.status === 401) signedOutNow(); else { root.style.visibility = ""; load(); } })
+        .catch(() => { root.style.visibility = ""; });
+    };
+    window.addEventListener("pageshow", onPageShow);
+
     // Permissions are fetched once and held for the life of the tab — if an
     // admin grants a module while this tab has been open the whole time,
     // nothing here would ever notice. Re-checking whenever the tab regains
@@ -102,6 +116,7 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
     return () => {
       on = false;
       window.clearInterval(timer);
+      window.removeEventListener("pageshow", onPageShow);
       if (window.fetch === watched) window.fetch = origFetch;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
