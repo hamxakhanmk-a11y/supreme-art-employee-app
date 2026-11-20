@@ -18,13 +18,14 @@ type Level = "none" | "view" | "edit";
 // purchase.* or reports.*). Order follows the top navigation.
 const GROUP_ORDER = [
   "Profile", "Employees", "Attendance", "Forms & Leave", "Salary", "Purchase",
-  "Station", "Procurement", "Store", "Reports",
+  "Station", "Procurement", "Finance", "Store", "Reports",
 ];
 function groupOf(key: string): string {
   if (key.startsWith("reports.")) return "Reports";
   if (key.startsWith("purchase")) return "Purchase";
   if (/^(demand|po|grn|suppliers)(\.|$)/.test(key)) return "Procurement";
   if (key.startsWith("station")) return "Station";
+  if (key.startsWith("payables")) return "Finance";
   if (key.startsWith("store")) return "Store";
   if (key.startsWith("employees")) return "Employees";
   if (key.startsWith("attendance")) return "Attendance";
