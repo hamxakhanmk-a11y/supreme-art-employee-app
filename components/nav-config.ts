@@ -43,7 +43,6 @@ export const MODULES_BASE: ModuleDef[] = [
   // demand/po/grn, so a role holding only the Supplier Directory would get a
   // tab that dead-ends. They reach the report from the Profile sidebar.
   { key: "procurement", label: "Procurement", anyModule: ["demand", "po", "grn"] },
-  { key: "finance",    label: "Finance",    module: "payables" },
   { key: "store",      label: "Store",      module: "store" },
   { key: "activity",   label: "Activity Log", module: "reports.activity" },
   { key: "users",      label: "Users",      superadminOnly: true },
@@ -59,7 +58,6 @@ export const MODULE_HOME: Record<string, string> = {
   kpi: "/kpi",
   purchase: "/purchase",
   station: "/station",
-  finance: "/finance/payables",
   procurement: "/procurement",
   store: "/store",
   activity: "/reports/activity",
@@ -150,12 +148,6 @@ export function getSubNav(path: string, module: string): SubNavItem[] {
         { href: "/reports/procurement", label: "📊 Report", variant: "report", needs: "reports.procurement" },
         { href: "/reports/procurement/suppliers", label: "📊 Supplier Directory", variant: "report", needs: SUPPLIER_KEYS },
       ];
-    case "finance":
-      return [
-        { href: "/finance/payables", label: "Payables" },
-        { href: "/finance/payments", label: "Payments" },
-        { href: "/finance/suppliers", label: "Supplier Balances" },
-      ];
     case "store":
       // Store has its own overview landing + iframe-owned sidebar for the
       // internal sections, so no employee-app sub-nav is shown here.
@@ -184,7 +176,6 @@ export function pathToModule(path: string): string {
   if (path.startsWith("/purchase")) return "purchase";
   if (path.startsWith("/station")) return "station";
   if (path.startsWith("/procurement")) return "procurement";
-  if (path.startsWith("/finance")) return "finance";
   if (path.startsWith("/store")) return "store";
   if (path.startsWith("/attendance")) return "attendance";
   if (path.startsWith("/admin/")) return "users";

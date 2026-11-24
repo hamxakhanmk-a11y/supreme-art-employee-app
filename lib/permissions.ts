@@ -86,12 +86,7 @@ export type ModuleKey =
   | "store.reconcile"
   | "capa"
   | "capa.delete"
-  | "capa.closed"
-  // Finance → Payables (after the GRR): the section, and its actions each a grant of their own
-  | "payables"
-  | "payables.approve"
-  | "payables.pay"
-  | "payables.void";
+  | "capa.closed";
 
 export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "dashboard.owner", label: "Owner Dashboard", hint: "The owner's dashboard on Profile — expense, CNIC expiry, late comers, who / what is out" },
@@ -166,10 +161,6 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
   { key: "capa.delete", label: "CAPA · Delete", hint: "Delete an open CAPA" },
   { key: "capa.closed", label: "CAPA · Change Closed", hint: "Reopen, change or delete a CAPA after it is closed (with CAPA · Delete to delete it)" },
-  { key: "payables",         label: "Payables",                hint: "Finance → Payables: GRRs whose invoice is in, payments and supplier balances — edit checks invoices against the PO and GRR, puts them on hold and releases them" },
-  { key: "payables.approve", label: "Payables · Approve",      hint: "Approve a checked invoice for payment (or send it back), and set the date Payables starts from" },
-  { key: "payables.pay",     label: "Payables · Record Payment", hint: "Record a payment against approved invoices — cheque, bank transfer or cash, in full or in parts" },
-  { key: "payables.void",    label: "Payables · Void Payment", hint: "Void a payment recorded by mistake — what it paid is owed again" },
 ];
 
 // Dormant features remain valid permission keys so saving another role cannot
@@ -229,7 +220,6 @@ export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
   if (key === "store.delete" || key === "store.reconcile" || key === "capa.closed") return "action";
-  if (key === "payables.approve" || key === "payables.pay" || key === "payables.void") return "action";
   if (key in BUTTON_SPLIT) return "action";
   return "section";
 }
@@ -294,9 +284,6 @@ export const MODULE_PARENT: Record<string, ModuleKey> = {
   "store.delete": "store",
   "store.reconcile": "store",
   "capa.closed": "capa",
-  "payables.approve": "payables",
-  "payables.pay": "payables",
-  "payables.void": "payables",
   // Parts of a page that only show inside it.
   "employees.salary": "employees",
   "employees.banking": "employees",
@@ -341,7 +328,7 @@ export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.k
 // procurement and engineer start narrow — tune them in Role Permissions.
 // Grants that belong to the Super Admin until the owner ticks them for a role:
 // a role without a stored row would otherwise inherit "everything" below.
-const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses", "suppliers.orders", "capa.closed", "payables.approve", "payables.void"];
+const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses", "suppliers.orders", "capa.closed"];
 const EVERYTHING_BUT_OWNER_ONLY = ALL_MODULE_KEYS.filter(k => !OWNER_ONLY_BY_DEFAULT.includes(k));
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
   superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
@@ -352,7 +339,7 @@ export const DEFAULT_PERMS: Record<string, RolePerm> = {
   engineer:    { modules: ["purchase", "suppliers"], canEdit: true },
   // Finance starts on salary + its report plus the purchase register — tune it
   // in Role Permissions.
-  finance:     { modules: ["salary", "reports.salary", "purchase", "payables", "payables.pay"], canEdit: true },
+  finance:     { modules: ["salary", "reports.salary", "purchase"], canEdit: true },
   // Design starts blank — tune it in Role Permissions.
   design:      { modules: [], canEdit: true },
   // Accounts starts blank — tune it in Role Permissions.
