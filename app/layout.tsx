@@ -10,7 +10,7 @@ import NavRecorder from "@/components/NavRecorder";
 
 export const metadata: Metadata = {
   title: "Supreme Art ERP",
-  description: "Supreme Art enterprise portal — HR, forms, reports, salary, KPI, procurement, station, and store.",
+  description: "Supreme Art enterprise portal — HR, forms, reports, salary, KPI, procurement and station.",
 };
 
 export default function RootLayout({

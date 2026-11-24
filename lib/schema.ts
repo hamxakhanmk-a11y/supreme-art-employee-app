@@ -606,6 +606,8 @@ export const grns = pgTable("grns", {
 
 // =====================
 // PARTS STORE (spare-parts inventory)
+// MOVED to the Job Tracker (2026-11-24): the Store's pages and routes are gone from this app. These tables STAY -
+// the Job Tracker copies the data from them (read-only user store_reader). Do not drop them.
 // Migrated from the standalone supreme-art-store-app. Column names match
 // the live store DB exactly so historical data restores 1:1.
 // Rows are scoped by `module` ('machinery' | 'consumables'); each module

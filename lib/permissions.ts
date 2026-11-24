@@ -71,19 +71,7 @@ export type ModuleKey =
   | "suppliers"
   | "suppliers.orders"
   | "suppliers.received"
-  | "store"
-  | "store.machinery"
-  | "store.consumables"
-  // stock in / stock out are their own grants, so a store keeper can be given just one
-  | "store.stockin"
-  | "store.stockout"
-  | "store.reverse"
-  | "store.partdelete"
-  | "store.settings"
-  | "store.orders"
-  // store actions that are their own grants, separate from store edit
-  | "store.delete"
-  | "store.reconcile"
+  // (The Store and its grants moved to the Job Tracker, 2026-11-24.)
   | "capa"
   | "capa.delete"
   | "capa.closed";
@@ -147,17 +135,6 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "suppliers",  label: "Supplier Directory · By product", hint: "Each product's suppliers & their rates — edit allows correcting the rate" },
   { key: "suppliers.orders",   label: "Supplier Directory · Every order", hint: "Every PO line with its order values — gross, tax, net value, discount" },
   { key: "suppliers.received", label: "Supplier Directory · Received only", hint: "What actually came in on GRRs, valued at the PO rate" },
-  { key: "store",      label: "Parts Store",  hint: "Store inventory — edit adds and edits parts" },
-  { key: "store.machinery",   label: "Store · Machinery",   hint: "The Machinery store — its parts, stock in / out and history" },
-  { key: "store.consumables", label: "Store · Consumables", hint: "The Consumables store — its parts, stock in / out and history" },
-  { key: "store.stockin",   label: "Store · Stock In",            hint: "Stock in, one part or in bulk" },
-  { key: "store.stockout",  label: "Store · Stock Out / Issue",   hint: "Stock out / issue, one part or in bulk" },
-  { key: "store.reverse",   label: "Store · Reverse Entry",       hint: "Reverse a stock in / out — the quantity goes back" },
-  { key: "store.partdelete", label: "Store · Delete Part / Trash", hint: "Move a part to Trash, restore it, or delete it for good" },
-  { key: "store.orders",    label: "Store · Orders", hint: "Inks & Consumables → Orders: book an order with a supplier, change, cancel or delete it (receiving it is Stock In)" },
-  { key: "store.settings",  label: "Store · Categories, Machines, Suppliers & Brands", hint: "Add / remove categories and machines, rename suppliers & brands, hide dropdown entries" },
-  { key: "store.delete",    label: "Store · Delete",              hint: "Delete stock in / stock out records from history (the quantity on hand is not changed)" },
-  { key: "store.reconcile", label: "Store · Reconcile / Ignore",  hint: "Reconcile or ignore a part's \"does not add up\" warning" },
   { key: "capa",       label: "CAPA",         hint: "Corrective & preventive action reports (quality complaints)" },
   { key: "capa.delete", label: "CAPA · Delete", hint: "Delete an open CAPA" },
   { key: "capa.closed", label: "CAPA · Change Closed", hint: "Reopen, change or delete a CAPA after it is closed (with CAPA · Delete to delete it)" },
@@ -213,13 +190,13 @@ export type EditKind = "view" | "action" | "section";
 // Pages that are only looked at (like the reports): View or Hidden.
 const VIEW_KEYS = new Set([
   "dashboard.owner", "station.out", "station.outreport", "station.visits",
-  "suppliers.orders", "suppliers.received", "store.machinery", "store.consumables",
+  "suppliers.orders", "suppliers.received",
 ]);
 export function moduleEditKind(key: string): EditKind {
   if (key.startsWith("reports.") || VIEW_KEYS.has(key)) return "view";
   if (key.startsWith("purchase")) return "action";
   if (key === "station.delete") return "action"; // delete is its own grant, split from station edit
-  if (key === "store.delete" || key === "store.reconcile" || key === "capa.closed") return "action";
+  if (key === "capa.closed") return "action";
   if (key in BUTTON_SPLIT) return "action";
   return "section";
 }
@@ -242,17 +219,12 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
     "demand.delete": "demand",
     "po.delete": "po",
     "grn.delete": "grn",
-    "store.stockin": "store",
-    "store.stockout": "store",
   } },
   { name: "button-split-2026-11b", buttons: {
     "employees.add": "employees",
     "attendance.offday": "attendance",
     "po.suppliers": "po",
     "grn.settings": "grn",
-    "store.reverse": "store",
-    "store.partdelete": "store",
-    "store.settings": "store",
     "capa.delete": "capa",
   }, pages: {
     "reports.overtime": "reports.attendance",
@@ -263,8 +235,6 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
   { name: "button-split-2026-11c", buttons: {}, pages: {
     "suppliers.received": "suppliers",
     "station.outreport": "station.out",
-    "store.machinery": "store",
-    "store.consumables": "store",
   }, sections: {
     "employees.salary": "employees",
     "employees.banking": "employees",
@@ -272,8 +242,6 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
     "station.cardlist": "station.cards",
     "station.topups": "station.cards",
   } },
-  // The Orders tab (Inks & Consumables): every role that could edit the Store can book orders.
-  { name: "button-split-2026-11d", pages: {}, buttons: { "store.orders": "store" } },
 ];
 export const BUTTON_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.buttons));
 const PAGE_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.pages));
@@ -281,14 +249,10 @@ const SECTION_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATC
 // The section a button belongs to: the button does nothing for a role that can't open that section.
 export const MODULE_PARENT: Record<string, ModuleKey> = {
   ...BUTTON_SPLIT,
-  "store.delete": "store",
-  "store.reconcile": "store",
   "capa.closed": "capa",
   // Parts of a page that only show inside it.
   "employees.salary": "employees",
   "employees.banking": "employees",
-  "store.machinery": "store",
-  "store.consumables": "store",
 };
 // A default (a role with no saved row yet) gets the split-out pages of what it opens and, when it edits,
 // the split-out buttons too.
@@ -328,7 +292,7 @@ export const EDITABLE_ROLES = BUILTIN_ROLES.filter(r => r.editable).map(r => r.k
 // procurement and engineer start narrow — tune them in Role Permissions.
 // Grants that belong to the Super Admin until the owner ticks them for a role:
 // a role without a stored row would otherwise inherit "everything" below.
-const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["store.delete", "store.reconcile", "dashboard.owner", "reports.expenses", "suppliers.orders", "capa.closed"];
+const OWNER_ONLY_BY_DEFAULT: ModuleKey[] = ["dashboard.owner", "reports.expenses", "suppliers.orders", "capa.closed"];
 const EVERYTHING_BUT_OWNER_ONLY = ALL_MODULE_KEYS.filter(k => !OWNER_ONLY_BY_DEFAULT.includes(k));
 export const DEFAULT_PERMS: Record<string, RolePerm> = {
   superadmin:  { modules: [...ALL_MODULE_KEYS], canEdit: true },
