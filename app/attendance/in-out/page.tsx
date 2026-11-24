@@ -2,7 +2,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { DeviceDayRow } from "@/app/api/attendance/device-day/route";
-import { DUPLICATE_WINDOW_SECONDS } from "@/lib/deviceAttendance";
+import { DUPLICATE_WINDOW_SECONDS, MAX_SHIFT_HOURS } from "@/lib/deviceAttendance";
 
 // Everyone's IN/OUT moves for a day from the fingerprint device, with the time
 // spent out between them. Display only: Mark Today and worked hours are
@@ -93,8 +93,10 @@ export default function InOutPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Daily In / Out</h1>
           <p style={{ color: "#888", marginTop: 4, fontSize: 13, maxWidth: 760 }}>
-            From the fingerprint device. The first punch of the day is IN, and each punch after it switches between OUT and IN.
-            Taps within {DUPLICATE_WINDOW_SECONDS / 60} minutes count once. Doesn&apos;t change Mark Today or worked hours.
+            From the fingerprint device. Each punch is the opposite of the person&apos;s previous one, across midnight, so an
+            overtime OUT at 2 AM belongs to the day the shift started. An IN with no punch for {MAX_SHIFT_HOURS} hours counts as a
+            missed OUT, and the next punch starts a new IN. Taps within {DUPLICATE_WINDOW_SECONDS / 60} minutes count once.
+            Doesn&apos;t change Mark Today or worked hours.
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

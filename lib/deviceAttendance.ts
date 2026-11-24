@@ -1,14 +1,28 @@
-// Turns one person's raw device punches for a day into a sequence of IN/OUT
-// moves and the spells between them. Pure (no db) so it can be tested and used
-// anywhere. Display only for now: it doesn't feed worked hours or yield.
+// Turns one person's raw device punches into IN/OUT moves, groups them into
+// work days, and works out the spells between them. Pure (no db) so it can be
+// tested and used anywhere. Display only for now: it doesn't feed worked
+// hours or yield.
 //
 // The device records punch state 255 ("not set") because nobody presses an
-// In/Out key, so direction is inferred: the first punch of the day is IN and
-// each one after flips it. If the device is ever set up to record the state,
-// a punch's own state wins and the alternation carries on from there.
+// In/Out key, so direction is inferred from the person's previous punch, across
+// midnight: after an OUT the next punch is IN; after an IN it's OUT, unless that
+// IN is so old that they must have forgotten to punch out, in which case the
+// new punch starts afresh as IN. So someone in at 08:00 and out at 02:00 is one
+// shift, and the 02:00 punch is their OUT. If the device ever records the
+// state itself, a punch's own state wins.
+//
+// A work day is the date its shift started on: moves after midnight belong to
+// the day of the IN that opened the shift.
 
 // Taps by the same person within this window count as one punch.
 export const DUPLICATE_WINDOW_SECONDS = 120;
+// An IN with no punch for this long is taken to have a missed OUT.
+export const MAX_SHIFT_HOURS = 20;
+// After an OUT, an IN at least this much later on a new date starts a new work
+// day; a shorter gap (a break, an errand) continues the same one.
+export const NEW_DAY_GAP_HOURS = 4;
+
+const KARACHI_OFFSET_MS = 5 * 3600_000;
 
 export type Direction = "in" | "out";
 
@@ -20,6 +34,8 @@ export type Move = {
   fromDevice: boolean;   // direction came from the device's punch state, not inferred
   verifyMethod: string | null;
   duplicates: number;    // extra taps folded into this one
+  workDay: string;       // YYYY-MM-DD (Karachi) of the shift this move belongs to
+  missedOutBefore: boolean; // the previous IN never got an OUT
 };
 
 export type Spell = { kind: "inside" | "outside"; from: string; to: string | null; minutes: number };
@@ -42,61 +58,86 @@ function stateDirection(state: number | null): Direction | null {
   return null;
 }
 
+export const karachiDate = (t: number) => new Date(t + KARACHI_OFFSET_MS).toISOString().slice(0, 10);
 const minutesBetween = (a: string, b: string) => Math.max(0, Math.round((Date.parse(b) - Date.parse(a)) / 60_000));
 
 /**
- * @param punches one person's punches for one day, any order
- * @param until   end of open spells: now for today, end of day for past days
- * @param ongoing true when `until` is now, so an open spell is still running rather than unfinished
+ * All of one person's moves, in order, with their work day. Pass punches from
+ * at least the day before the days you want, so a shift running past midnight
+ * (or a person still inside) is known.
  */
-export function buildDayTimeline(punches: RawPunch[], until: Date, ongoing: boolean): DayTimeline {
+export function buildMoves(punches: RawPunch[]): Move[] {
   const sorted = punches
     .map(p => ({ ...p, t: new Date(p.punchedAt).getTime() }))
     .sort((a, b) => a.t - b.t);
 
   const moves: Move[] = [];
   let lastKept = -Infinity;
+  let workDay = "";
   for (const p of sorted) {
     if (p.t - lastKept < DUPLICATE_WINDOW_SECONDS * 1000) {
       moves[moves.length - 1].duplicates++;
       continue;
     }
     lastKept = p.t;
+    const prev = moves[moves.length - 1];
+    const gapHours = prev ? (p.t - Date.parse(prev.at)) / 3600_000 : Infinity;
+    const staleIn = prev?.direction === "in" && gapHours >= MAX_SHIFT_HOURS;
     const own = stateDirection(p.punchState);
-    const prev = moves[moves.length - 1]?.direction;
+    const direction: Direction = own ?? (prev?.direction === "in" && !staleIn ? "out" : "in");
+
+    const date = karachiDate(p.t);
+    const newShift = direction === "in" && (!prev || staleIn || (prev.direction === "out" && gapHours >= NEW_DAY_GAP_HOURS));
+    if (!workDay || (newShift && date !== workDay)) workDay = date;
+
     moves.push({
       at: new Date(p.t).toISOString(),
-      direction: own ?? (prev === "in" ? "out" : "in"),
+      direction,
       fromDevice: own !== null,
       verifyMethod: p.verifyMethod,
       duplicates: 0,
+      workDay,
+      missedOutBefore: staleIn && direction === "in",
     });
   }
+  return moves;
+}
 
+const hhmm = (iso: string) => new Date(Date.parse(iso) + KARACHI_OFFSET_MS).toISOString().slice(11, 16);
+
+/**
+ * The spells and totals for one work day.
+ * @param moves the person's moves for that work day, in order (from buildMoves)
+ * @param next  their first move after that day, if any, to tell whether the last IN was left open
+ * @param now   current time, for a shift still running
+ */
+export function buildDayTimeline(moves: Move[], next: Move | undefined, now: Date): DayTimeline {
   const flags: string[] = [];
   const spells: Spell[] = [];
-  const untilIso = until.toISOString();
+  const nowIso = now.toISOString();
+  const last = moves[moves.length - 1];
+  // The day ends on an IN that's recent with nothing after it: still inside.
+  const running = last?.direction === "in" && !next && (now.getTime() - Date.parse(last.at)) / 3600_000 < MAX_SHIFT_HOURS;
   for (let i = 0; i < moves.length; i++) {
     const m = moves[i];
-    const next = moves[i + 1];
-    if (next && next.direction === m.direction) {
-      flags.push(`Two ${m.direction.toUpperCase()}s in a row at ${m.at}`);
+    const after = moves[i + 1];
+    if (after && after.direction === m.direction && !after.missedOutBefore) {
+      flags.push(`Two ${m.direction.toUpperCase()}s in a row at ${hhmm(m.at)}`);
     }
-    // Nothing after the last OUT is counted: they've left for the day, or are
-    // out and haven't come back yet (shown by `current`).
-    if (!next && m.direction === "out") break;
-    // A last IN on a past day has no end we know of (flagged below), so it adds
-    // no time; today it runs until now.
-    spells.push({
-      kind: m.direction === "in" ? "inside" : "outside",
-      from: m.at,
-      to: next ? next.at : null,
-      minutes: next ? minutesBetween(m.at, next.at) : ongoing ? minutesBetween(m.at, untilIso) : 0,
-    });
+    // Nothing after the last OUT is counted: they've left, or are out and
+    // haven't come back yet (shown by `current`).
+    if (!after && m.direction === "out") break;
+    if (after) {
+      // An IN that never got an OUT before the next shift adds no time.
+      const missed = after.missedOutBefore;
+      spells.push({ kind: m.direction === "in" ? "inside" : "outside", from: m.at, to: missed ? null : after.at, minutes: missed ? 0 : minutesBetween(m.at, after.at) });
+      if (missed) flags.push(`No OUT punch after IN at ${hhmm(m.at)}`);
+      continue;
+    }
+    // Last move is an IN: runs until now, or was left open.
+    spells.push({ kind: "inside", from: m.at, to: null, minutes: running ? minutesBetween(m.at, nowIso) : 0 });
+    if (!running) flags.push(`No OUT punch after IN at ${hhmm(m.at)}`);
   }
-
-  const last = moves[moves.length - 1];
-  if (last?.direction === "in" && !ongoing) flags.push("No final OUT punch");
   if (moves.length && moves[0].direction === "out") flags.push("First punch of the day is an OUT");
 
   const sum = (kind: Spell["kind"]) => spells.filter(s => s.kind === kind).reduce((n, s) => n + s.minutes, 0);
@@ -107,7 +148,8 @@ export function buildDayTimeline(punches: RawPunch[], until: Date, ongoing: bool
     lastOut: last?.direction === "out" ? last.at : null,
     insideMinutes: sum("inside"),
     outsideMinutes: sum("outside"),
-    current: last?.direction ?? null,
+    // An IN left open isn't "inside now"; we don't know where they are.
+    current: !last ? null : last.direction === "out" ? "out" : running ? "in" : null,
     flags,
   };
 }

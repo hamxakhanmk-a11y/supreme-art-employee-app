@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { guardView } from "@/lib/auth";
 import { attendanceDevices, attendanceDeviceUsers, devicePunches, employees } from "@/lib/schema";
 import { ensureDeviceTables, errorResponse } from "@/lib/deviceServer";
-import { buildDayTimeline, DayTimeline } from "@/lib/deviceAttendance";
+import { buildDayTimeline, buildMoves, DayTimeline } from "@/lib/deviceAttendance";
 import { karachiNow } from "@/lib/gateTime";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,9 @@ export type DeviceDayRow = {
 };
 
 // GET /api/attendance/device-day?date=YYYY-MM-DD  (Karachi day, default today)
-// Everyone's IN/OUT moves for a day, built from the raw device punches.
+// Everyone's IN/OUT moves for a work day, built from the raw device punches.
+// A work day includes a shift's punches after midnight (e.g. an OUT at 02:00
+// after overtime), so punches are read from the day before to the day after.
 // Punches from device users not linked to an employee are listed by their
 // device name. Active employees with no punches come back in `noPunches`.
 // -> { date, today, lastSyncAt, rows: DeviceDayRow[], noPunches[] }
@@ -34,11 +36,14 @@ export async function GET(req: NextRequest) {
   const date = req.nextUrl.searchParams.get("date") ?? today;
   if (!DATE_RE.test(date)) return NextResponse.json({ error: "date must be YYYY-MM-DD" }, { status: 400 });
 
-  // Karachi has no DST, so a local day is a fixed +05:00 window.
-  const from = new Date(`${date}T00:00:00+05:00`);
-  const to = new Date(from.getTime() + 24 * 3600 * 1000);
+  // Karachi has no DST, so a local day is a fixed +05:00 window. Read the day
+  // before (to know who was still inside) through the day after (overnight OUTs).
+  const DAY_MS = 24 * 3600 * 1000;
+  const dayStart = new Date(`${date}T00:00:00+05:00`);
+  const from = new Date(dayStart.getTime() - DAY_MS);
+  const to = new Date(dayStart.getTime() + 2 * DAY_MS);
   const isToday = date === today;
-  const until = isToday ? new Date() : to;
+  const now = new Date();
 
   try {
     await ensureDeviceTables();
@@ -94,9 +99,15 @@ export async function GET(req: NextRequest) {
       g.punches.push(p);
     }
 
-    const rows: DeviceDayRow[] = [...groups.values()]
-      .map(({ punches: ps, ...g }) => ({ ...g, timeline: buildDayTimeline(ps, until, isToday) }))
-      .sort((a, b) => (a.timeline.moves[0]?.at ?? "").localeCompare(b.timeline.moves[0]?.at ?? ""));
+    const rows: DeviceDayRow[] = [];
+    for (const { punches: ps, ...g } of groups.values()) {
+      const moves = buildMoves(ps);
+      const day = moves.filter(m => m.workDay === date);
+      if (!day.length) continue;
+      const next = moves.find(m => m.workDay > date);
+      rows.push({ ...g, timeline: buildDayTimeline(day, next, now) });
+    }
+    rows.sort((a, b) => a.timeline.moves[0].at.localeCompare(b.timeline.moves[0].at));
 
     const seen = new Set(rows.map(r => r.employeeId).filter(id => id !== null));
     const noPunches = active
