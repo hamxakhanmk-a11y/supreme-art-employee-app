@@ -8,8 +8,15 @@
 // midnight: after an OUT the next punch is IN; after an IN it's OUT, unless that
 // IN is so old that they must have forgotten to punch out, in which case the
 // new punch starts afresh as IN. So someone in at 08:00 and out at 02:00 is one
-// shift, and the 02:00 punch is their OUT. If the device ever records the
-// state itself, a punch's own state wins.
+// shift, and the 02:00 punch is their OUT.
+//
+// The state the device stores on a punch is ignored (TRUST_DEVICE_STATE). From
+// 18 to 24 Nov 2026 the device's punch state mode was switched on without being
+// set up, so it stamped one fixed state (Check-In, then OT-Out) on every punch;
+// trusting those turned arrivals into OUTs and carried the error into the next
+// day. The mode is off again. Set this to true only once the device is set up to
+// record real In/Out states and workers use them.
+export const TRUST_DEVICE_STATE = false;
 //
 // A work day is the date its shift started on: moves after midnight belong to
 // the day of the IN that opened the shift.
@@ -83,7 +90,7 @@ export function buildMoves(punches: RawPunch[]): Move[] {
     const prev = moves[moves.length - 1];
     const gapHours = prev ? (p.t - Date.parse(prev.at)) / 3600_000 : Infinity;
     const staleIn = prev?.direction === "in" && gapHours >= MAX_SHIFT_HOURS;
-    const own = stateDirection(p.punchState);
+    const own = TRUST_DEVICE_STATE ? stateDirection(p.punchState) : null;
     const direction: Direction = own ?? (prev?.direction === "in" && !staleIn ? "out" : "in");
 
     const date = karachiDate(p.t);
