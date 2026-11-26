@@ -111,6 +111,43 @@ export function buildMoves(punches: RawPunch[]): Move[] {
 }
 
 const hhmm = (iso: string) => new Date(Date.parse(iso) + KARACHI_OFFSET_MS).toISOString().slice(11, 16);
+/** HH:MM in Karachi time, as the attendance register stores check-in/out. */
+export const karachiHHMM = hhmm;
+
+// Overtime is recorded in steps of this many minutes, rounded down (the
+// Overtime page takes hours in steps of 0.5).
+export const OVERTIME_STEP_MINUTES = 30;
+
+/**
+ * Overtime for one work day from the device: time inside after the shift end
+ * (e.g. 16:45) on that day, including after midnight. Only time inside counts,
+ * so a dinner break out and back in isn't overtime. Sunday is the off day, so
+ * all time inside counts. Not rounded.
+ */
+export function deviceOvertimeMinutes(spells: Spell[], workDay: string, shiftEnd: string): number {
+  const sunday = new Date(`${workDay}T00:00:00Z`).getUTCDay() === 0;
+  const cutoff = sunday ? -Infinity : Date.parse(`${workDay}T${shiftEnd}:00+05:00`);
+  let total = 0;
+  for (const s of spells) {
+    if (s.kind !== "inside" || s.minutes <= 0) continue;
+    const from = Date.parse(s.from);
+    const to = from + s.minutes * 60_000;
+    const start = Math.max(from, cutoff);
+    if (to > start) total += (to - start) / 60_000;
+  }
+  return Math.floor(total);
+}
+
+// A work day whose first IN is at or after this time (Karachi) is a night
+// shift, e.g. 16:40 to 08:00. The day-shift rules (lateness after 08:10,
+// overtime after 16:45) don't fit it, so the device fills nothing for it and
+// HR enters it by hand.
+export const NIGHT_SHIFT_FROM = "12:00";
+export const isNightShift = (firstIn: string | null) => !!firstIn && hhmm(firstIn) >= NIGHT_SHIFT_FROM;
+
+/** Overtime minutes as hours for the Overtime page, rounded down to OVERTIME_STEP_MINUTES. */
+export const overtimeHours = (minutes: number) =>
+  (Math.floor(minutes / OVERTIME_STEP_MINUTES) * OVERTIME_STEP_MINUTES) / 60;
 
 /**
  * The spells and totals for one work day.

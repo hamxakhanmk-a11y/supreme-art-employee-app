@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useCanEdit, ViewOnlyNotice } from "@/components/MeProvider";
 import { downloadCSV } from "@/lib/csv";
 import PrintHeader from "@/components/PrintHeader";
-import { DEFAULT_CHECK_IN, lateMinutes, formatLate } from "@/lib/attendance";
+import { DEFAULT_CHECK_IN, lateMinutes, formatLate, SHIFT_END } from "@/lib/attendance";
+import { karachiHHMM, NIGHT_SHIFT_FROM } from "@/lib/deviceAttendance";
+import type { DeviceDayRow } from "@/app/api/attendance/device-day/route";
 
 type Row = {
   id: number;
@@ -31,6 +33,30 @@ const DEFAULT_CHECK_OUT = "16:45";
 
 // Statuses shown as inline pills in each row (Half-day is its own button).
 const ROW_PILLS = ["present", "absent", "leave"] as const;
+
+// "Fill from device" only touches these statuses; absent, leave and holiday
+// with punches are shown to HR to sort out by hand.
+const DEVICE_FILLABLE: Row["status"][] = [null, "present", "half-day"];
+
+// The register times the fingerprint device gives for one day: check-in is the
+// first IN; check-out is the last OUT, but no later than the shift end, since
+// overtime is recorded separately on the Overtime page (from time inside only).
+// A missing OUT falls back to the shift end.
+function deviceTimes(d: DeviceDayRow | undefined, date: string) {
+  const t = d?.timeline;
+  if (!t?.firstIn || d?.nightShift) return null;
+  const shiftEnd = Date.parse(`${date}T${SHIFT_END}:00+05:00`);
+  const checkOut = t.lastOut && Date.parse(t.lastOut) < shiftEnd ? karachiHHMM(t.lastOut) : DEFAULT_CHECK_OUT;
+  return { checkIn: karachiHHMM(t.firstIn), checkOut };
+}
+
+// Last OUT as shown to HR, marked when it's after midnight.
+function deviceOutLabel(d: DeviceDayRow | undefined, date: string) {
+  const out = d?.timeline.lastOut;
+  if (!out) return d?.timeline.current === "in" ? "still in" : "no OUT";
+  const nextDay = Date.parse(out) >= Date.parse(`${date}T00:00:00+05:00`) + 86_400_000;
+  return `${karachiHHMM(out)}${nextDay ? " +1 day" : ""}`;
+}
 
 export default function AttendancePage() {
   const canEdit = useCanEdit("attendance");
@@ -89,6 +115,24 @@ export default function AttendancePage() {
 
   useEffect(() => { fetchData(date); }, [date, fetchData]);
 
+  // Fingerprint device punches for the day, by employee. Optional: if it
+  // fails, the page works exactly as before.
+  const [device, setDevice] = useState<{ date: string; byEmp: Map<number, DeviceDayRow> } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/attendance/device-day?date=${date}`, { cache: "no-store" })
+      .then(res => (res.ok ? res.json() : null))
+      .then((j: { rows: DeviceDayRow[] } | null) => {
+        if (cancelled || !j) return;
+        const byEmp = new Map<number, DeviceDayRow>();
+        for (const r of j.rows) if (r.employeeId !== null) byEmp.set(r.employeeId, r);
+        setDevice({ date, byEmp });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [date]);
+  const deviceFor = (id: number) => (device?.date === date ? device.byEmp.get(id) : undefined);
+
   const updateRow = (id: number, patch: Partial<Row>) =>
     setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
 
@@ -142,6 +186,35 @@ export default function AttendancePage() {
       await persist(emp, patch);
     }
     setMarkingAll(false);
+  };
+
+  // Rows the device can fill, and rows with punches that HR marked absent or
+  // on leave (left alone, shown as a warning).
+  const deviceFills = rows.flatMap(r => {
+    const t = deviceTimes(deviceFor(r.id), date);
+    if (!t || !DEVICE_FILLABLE.includes(r.status)) return [];
+    const status = r.status ?? "present";
+    if (r.status === status && r.checkIn === t.checkIn && r.checkOut === t.checkOut) return [];
+    return [{ emp: r, patch: { status, ...t } as Partial<Row> }];
+  });
+  const deviceConflicts = rows.filter(r => deviceFor(r.id)?.timeline.firstIn && !deviceFor(r.id)!.nightShift && !DEVICE_FILLABLE.includes(r.status));
+  const deviceNightShifts = rows.filter(r => deviceFor(r.id)?.nightShift);
+
+  const [fillingFromDevice, setFillingFromDevice] = useState(false);
+  const fillFromDevice = async () => {
+    if (closed || !deviceFills.length) return;
+    if (!confirm(
+      `Set check-in and check-out from the fingerprint device for ${deviceFills.length} employee(s)?\n\n` +
+      `Unmarked employees with punches are marked Present. Check-in is their first punch, so lateness after ${DEFAULT_CHECK_IN} counts. ` +
+      `Check-out is their last punch, or ${DEFAULT_CHECK_OUT} if they stayed later: record overtime on the Overtime page.`,
+    )) return;
+    setFillingFromDevice(true);
+    setError(null);
+    for (const { emp, patch } of deviceFills) {
+      updateRow(emp.id, patch);
+      await persist(emp, patch);
+    }
+    setFillingFromDevice(false);
   };
 
   // Half-day works even on closed days — employees often file the form
@@ -280,6 +353,20 @@ export default function AttendancePage() {
               {markingAll ? "Marking…" : `✓ Mark All Present (${summary.unmarked})`}
             </button>
           )}
+          {!closed && deviceFills.length > 0 && (
+            <button onClick={fillFromDevice} disabled={fillingFromDevice}
+              title="Check-in and check-out from the fingerprint device's first and last punch"
+              style={{
+                padding: "8px 16px", borderRadius: 8,
+                border: "1px solid var(--brand)",
+                background: "#fff", color: "var(--brand)",
+                fontSize: 13, fontWeight: 700, letterSpacing: 0.3,
+                cursor: fillingFromDevice ? "wait" : "pointer",
+                opacity: fillingFromDevice ? 0.7 : 1,
+              }}>
+              {fillingFromDevice ? "Filling…" : `☝ Fill from device (${deviceFills.length})`}
+            </button>
+          )}
           {!closed && rows.length - summary.unmarked > 0 && (
             <button onClick={unmarkAll} disabled={unmarkingAll}
               style={{
@@ -378,6 +465,21 @@ export default function AttendancePage() {
         <StatChip label="Half-day" count={summary.halfday}  color="#1D4ED8" bg="#dfe8fc" />
         <StatChip label="Unmarked" count={summary.unmarked} color="#888"    bg="#f3f3f3" />
       </div>
+
+      {deviceConflicts.length > 0 && (
+        <div className="card no-print" style={{ borderColor: "#B45309", color: "#7C2D12", marginBottom: 16, fontSize: 13 }}>
+          <strong>Punched on the device but marked {[...new Set(deviceConflicts.map(r => r.status))].join(" / ")}:</strong>{" "}
+          {deviceConflicts.map(r => `${r.firstName} ${r.lastName}`).join(", ")}. Check these by hand; Fill from device leaves them as they are.
+        </div>
+      )}
+
+      {deviceNightShifts.length > 0 && (
+        <div className="card no-print" style={{ borderColor: "#B45309", color: "#7C2D12", marginBottom: 16, fontSize: 13 }}>
+          <strong>Night shift (first punch after {NIGHT_SHIFT_FROM}):</strong>{" "}
+          {deviceNightShifts.map(r => `${r.firstName} ${r.lastName}`).join(", ")}. Fill from device skips them, since day-shift lateness and overtime
+          don&apos;t apply. Enter their times by hand.
+        </div>
+      )}
 
       {error && (
         <div className="card" style={{ borderColor: "var(--danger)", color: "var(--danger)", marginBottom: 16 }}>
@@ -484,12 +586,22 @@ export default function AttendancePage() {
                     {lateMinutes(r.checkIn) > 0 && (
                       <div style={{ fontSize: 10, color: "#DC2626", fontWeight: 700, marginTop: 2 }}>Late {formatLate(lateMinutes(r.checkIn))}</div>
                     )}
+                    {deviceFor(r.id)?.timeline.firstIn && (
+                      <div className="no-print" style={{ fontSize: 10.5, color: "#888", marginTop: 2 }} title="First punch on the fingerprint device">
+                        Device {karachiHHMM(deviceFor(r.id)!.timeline.firstIn!)}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <input type="time" value={r.checkOut ?? ""} disabled={closed}
                       onChange={e => updateRow(r.id, { checkOut: e.target.value })}
                       onBlur={() => persist(r, {})}
                       style={{ padding: "5px 8px", fontSize: 12 }} />
+                    {deviceFor(r.id)?.timeline.firstIn && (
+                      <div className="no-print" style={{ fontSize: 10.5, color: "#888", marginTop: 2 }} title="Last punch on the fingerprint device">
+                        Device {deviceOutLabel(deviceFor(r.id), date)}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <input type="text" value={r.notes ?? ""} disabled={closed}

@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { guardView } from "@/lib/auth";
 import { attendanceDevices, attendanceDeviceUsers, devicePunches, employees } from "@/lib/schema";
 import { ensureDeviceTables, errorResponse } from "@/lib/deviceServer";
-import { buildDayTimeline, buildMoves, DayTimeline } from "@/lib/deviceAttendance";
+import { buildDayTimeline, buildMoves, DayTimeline, deviceOvertimeMinutes, isNightShift } from "@/lib/deviceAttendance";
+import { SHIFT_END } from "@/lib/attendance";
 import { karachiNow } from "@/lib/gateTime";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ export type DeviceDayRow = {
   department: string | null;
   deviceUserIds: string[];
   timeline: DayTimeline;
+  nightShift: boolean;        // first IN at or after NIGHT_SHIFT_FROM: nothing is filled from the device
+  overtimeMinutes: number;    // inside after SHIFT_END (all of it on Sunday), not rounded; 0 on a night shift
 };
 
 // GET /api/attendance/device-day?date=YYYY-MM-DD  (Karachi day, default today)
@@ -79,7 +82,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Group by employee when linked, so someone enrolled twice is one person.
-    const groups = new Map<string, Omit<DeviceDayRow, "timeline"> & { punches: typeof punches }>();
+    const groups = new Map<string, Omit<DeviceDayRow, "timeline" | "nightShift" | "overtimeMinutes"> & { punches: typeof punches }>();
     for (const p of punches) {
       const key = p.employeeId !== null ? `e${p.employeeId}` : `d${p.deviceSerial}/${p.deviceUserId}`;
       let g = groups.get(key);
@@ -105,7 +108,9 @@ export async function GET(req: NextRequest) {
       const day = moves.filter(m => m.workDay === date);
       if (!day.length) continue;
       const next = moves.find(m => m.workDay > date);
-      rows.push({ ...g, timeline: buildDayTimeline(day, next, now) });
+      const timeline = buildDayTimeline(day, next, now);
+      const nightShift = isNightShift(timeline.firstIn);
+      rows.push({ ...g, timeline, nightShift, overtimeMinutes: nightShift ? 0 : deviceOvertimeMinutes(timeline.spells, date, SHIFT_END) });
     }
     rows.sort((a, b) => a.timeline.moves[0].at.localeCompare(b.timeline.moves[0].at));
 

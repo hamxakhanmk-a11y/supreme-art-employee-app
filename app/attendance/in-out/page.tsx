@@ -3,6 +3,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { DeviceDayRow } from "@/app/api/attendance/device-day/route";
 import { DUPLICATE_WINDOW_SECONDS, MAX_SHIFT_HOURS } from "@/lib/deviceAttendance";
+import { SHIFT_END } from "@/lib/attendance";
 
 // Everyone's IN/OUT moves for a day from the fingerprint device, with the time
 // spent out between them. Display only: Mark Today and worked hours are
@@ -141,7 +142,7 @@ export default function InOutPage() {
               <thead>
                 <tr>
                   <th>Employee</th><th>First IN</th><th>Last OUT</th><th>Punches</th>
-                  <th>Time out</th><th>Inside</th>{data.today && <th>Now</th>}<th></th>
+                  <th>Time out</th><th>Inside</th><th title={`Time inside after ${SHIFT_END} (all of it on Sunday)`}>Overtime</th>{data.today && <th>Now</th>}<th></th>
                 </tr>
               </thead>
               <tbody>
@@ -176,6 +177,7 @@ export default function InOutPage() {
                         </td>
                         <td style={{ fontVariantNumeric: "tabular-nums" }}>{duration(t.outsideMinutes)}</td>
                         <td style={{ fontVariantNumeric: "tabular-nums" }}>{duration(t.insideMinutes)}</td>
+                        <td style={{ fontVariantNumeric: "tabular-nums", fontWeight: r.overtimeMinutes ? 700 : 400 }}>{r.nightShift ? <span style={{ color: "#B45309", fontSize: 12 }} title="First punch after 12:00: day-shift overtime doesn't apply">Night shift</span> : duration(r.overtimeMinutes)}</td>
                         {data.today && (
                           <td>
                             <span className={`badge ${t.current === "in" ? "badge-active" : "badge-inactive"}`}>{t.current === "in" ? "In" : "Out"}</span>
@@ -185,7 +187,7 @@ export default function InOutPage() {
                       </tr>
                       {isOpen && (
                         <tr>
-                          <td colSpan={data.today ? 8 : 7} style={{ background: "var(--bg, #faf7f2)", whiteSpace: "normal" }}>
+                          <td colSpan={data.today ? 9 : 8} style={{ background: "var(--bg, #faf7f2)", whiteSpace: "normal" }}>
                             <div style={{ display: "grid", gap: 4, fontSize: 12.5, padding: "4px 0" }}>
                               {t.spells.map(s => (
                                 <div key={s.from} style={{ fontVariantNumeric: "tabular-nums" }}>
