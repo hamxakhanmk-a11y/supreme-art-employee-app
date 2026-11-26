@@ -288,12 +288,23 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status==="closed"?"Closed":p.receivedAt?`Received ${fmtDate(String(p.receivedAt).slice(0,10))} · ${p.status==="received"?"GRR done":p.status==="partial"?"GRR part done":"GRR to make"}`:"Pending",p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} chips={<StatChip label="Purchase orders" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search PO, supplier, item…" />} sort={<SortBy options={PO_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
-        <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
-        <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
-        <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
-        {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
-      </>} />
+      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status==="closed"?"Closed":p.receivedAt?`Received ${fmtDate(String(p.receivedAt).slice(0,10))} · ${p.status==="received"?"GRR done":p.status==="partial"?"GRR part done":"GRR to make"}`:"Pending",p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} chips={<StatChip label="Purchase orders" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search PO, supplier, item…" />} sort={<SortBy options={PO_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} />
+      <div className="no-print" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+        <div className="tabs" role="tablist" aria-label="Goods received">
+          {([["all", "All"], ["pending", "Pending"], ["received", "Received"]] as const).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={recvTab === k} className={`tab${recvTab === k ? " active" : ""}`} onClick={() => setRecvTab(k)}
+              title={k === "pending" ? "Goods not in yet" : k === "received" ? "Goods physically in — marked received; the GRR follows" : "Every PO"}>
+              {label} <span style={{ opacity: 0.8 }}>{recvCounts[k]}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
+          <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
+          <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
+          {counts.unmarked > 0 && <FilterTab label="Unmarked" n={counts.unmarked} active={taxFilter === "unmarked"} onClick={() => setTaxFilter("unmarked")} color="#64748B" />}
+        </div>
+      </div>
       {taxFilter === "unreg" && (
         <div className="no-print"><UnregLimitChecker rows={rows} suppliers={supplierList} /></div>
       )}
@@ -494,15 +505,6 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
           </div>
         </div>
       )}
-
-      <div className="tabs no-print" role="tablist" aria-label="Goods received" style={{ marginBottom: 10 }}>
-        {([["all", "All"], ["pending", "Pending"], ["received", "Received"]] as const).map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={recvTab === k} className={`tab${recvTab === k ? " active" : ""}`} onClick={() => setRecvTab(k)}
-            title={k === "pending" ? "Goods not in yet" : k === "received" ? "Goods physically in — marked received; the GRR follows" : "Every PO"}>
-            {label} <span style={{ opacity: 0.8 }}>{recvCounts[k]}</span>
-          </button>
-        ))}
-      </div>
 
       <div className="card fit-card">
         <table>
