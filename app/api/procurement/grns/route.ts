@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
 import { guardWrite, getSession } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
-import { ensureProcurementTables, nextGrnNo, recomputePoStatus, cleanInspection } from "@/lib/procurement";
+import { ensureProcurementTables, nextGrnNo, recomputePoStatus, cleanInspection, docNoLabel } from "@/lib/procurement";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,12 @@ export async function POST(req: Request) {
   let poNo: number | null = null;
   if (b.poId) {
     const [p] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, Number(b.poId)));
-    if (p) { poId = p.id; poNo = p.poNo; registered = p.registered; }
+    if (p) {
+      if (!p.receivedAt) {
+        return NextResponse.json({ error: `PO #${docNoLabel(p.poNo, p.registered)} isn't marked received yet — mark it received on the PO tab when the goods arrive, then make its GRR.` }, { status: 400 });
+      }
+      poId = p.id; poNo = p.poNo; registered = p.registered;
+    }
   }
   // Manual "PO Ref No" — overrides / fills the number when typed by hand.
   if (b.poNo != null && String(b.poNo).trim() !== "") {

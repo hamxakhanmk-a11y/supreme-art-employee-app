@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { grns, purchaseOrders } from "@/lib/schema";
-import { desc, notInArray } from "drizzle-orm";
+import { and, desc, isNotNull, notInArray } from "drizzle-orm";
 import { requireModule } from "@/lib/pageGuard";
 import { ensureProcurementTables, loadChecklist, parseItems, computePoReceipts, type PoItem, type GrnItem } from "@/lib/procurement";
 import GrnClient from "./GrnClient";
@@ -12,9 +12,10 @@ export default async function GrnPage() {
   await ensureProcurementTables();
   const [rows, pos, checklist] = await Promise.all([
     db.select().from(grns).orderBy(desc(grns.grnNo)),
-    // POs still awaiting goods — fully received & closed ones drop out of the picker.
+    // POs whose goods are in (marked received on the PO tab) and not yet all on GRRs — fully received &
+    // closed ones drop out of the picker.
     db.select().from(purchaseOrders)
-      .where(notInArray(purchaseOrders.status, ["received", "closed"]))
+      .where(and(notInArray(purchaseOrders.status, ["received", "closed"]), isNotNull(purchaseOrders.receivedAt)))
       .orderBy(desc(purchaseOrders.poNo)),
     loadChecklist(),
   ]);

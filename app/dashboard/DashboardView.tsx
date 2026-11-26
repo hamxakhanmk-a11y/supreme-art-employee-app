@@ -4,7 +4,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { CnicAlert, LateComer, DaysOff, CardOut } from "@/lib/ownerDashboard";
+import type { CnicAlert, LateComer, DaysOff, CardOut, GoodsIn } from "@/lib/ownerDashboard";
 import type { RateIncrease } from "@/lib/rateChanges";
 import type { OutNow } from "@/lib/stationServer";
 import { formatLate } from "@/lib/attendance";
@@ -27,6 +27,7 @@ export interface DashData {
   cards: Loaded<CardOut[]>;
   rates: Loaded<RateIncrease[]>;   // PO rate increases on POs placed in the last month
   ratesFrom: string;               // that month's first day
+  goods: Loaded<GoodsIn[]>;        // POs marked received in the Expense period, plus any still waiting for a GRR
 }
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -34,7 +35,7 @@ const rate = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2
 const pct = (n: number) => `${n >= 10 ? Math.round(n) : Math.round(n * 10) / 10}%`;
 
 export default function DashboardView({ data }: { data: DashData }) {
-  const { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates, ratesFrom } = data;
+  const { expRange: er, attRange: ar, received, today, exp, cnic, late, lateToday, off, people, vehicles, cards, rates, ratesFrom, goods } = data;
   // Each band's period is kept in the address under its own names, next to the other band's.
   const recv: Record<string, string> = received ? { erecv: "1" } : {};
   const expKeep = { afrom: ar.from, ato: ar.to, ...recv }, attKeep = { efrom: er.from, eto: er.to, ...recv };
@@ -132,6 +133,24 @@ export default function DashboardView({ data }: { data: DashData }) {
                 right={<span className="od-red">{rate(r.before.rate)} → {rate(r.now.rate)} · +{pct(r.pct)}</span>} />)}</List>
                 : <div className="od-sub">No product was ordered at a higher rate in the last month.</div>}</>
           ), true)}
+          {tile("goods", "proc", "Goods received", goods, (d: GoodsIn[]) => d.filter(g => g.inRange).length,
+            (d: GoodsIn[]) => {
+              const todayN = d.filter(g => g.receivedAt === today).length, waiting = d.filter(g => g.grr === "todo").length;
+              return <>{todayN ? <><b>{todayN} today</b> · </> : null}{waiting ? <b className="od-warn-text">{waiting} waiting for GRR</b> : "all on GRRs"}</>;
+            }, (d: GoodsIn[]) => {
+              const grrText = { todo: "GRR to make", part: "GRR part done", done: "GRR done" } as const;
+              const row = (g: GoodsIn) => <Row key={g.poId}
+                left={<><Link href={`/procurement/po/${g.poId}`}>PO {g.po}</Link>{g.supplier ? <span className="od-dim"> · {g.supplier}</span> : null}
+                  <div className="od-dim od-rate-was">{g.items}</div></>}
+                right={<span className={g.grr === "todo" ? "od-red" : g.grr === "part" ? "od-amber" : ""}>{g.receivedAt === today ? "today" : dmy(g.receivedAt)} · {grrText[g.grr]}</span>} />;
+              const inRange = d.filter(g => g.inRange), older = d.filter(g => !g.inRange);
+              return <>
+                <div className="od-sub">POs whose goods were marked received on the PO tab from {dmy(er.from)} to {dmy(er.to)} — known the day they arrive, before the GRR.</div>
+                {inRange.length ? <List>{inRange.map(row)}</List> : <div className="od-sub">Nothing marked received in this period.</div>}
+                {older.length > 0 && <><div className="od-sub od-split">Received earlier, still waiting for a GRR:</div><List>{older.map(row)}</List></>}
+                <Link href="/procurement/po" className="od-poplink">Purchase orders ›</Link>
+              </>;
+            })}
         </div>
       </div>
 

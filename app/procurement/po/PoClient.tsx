@@ -15,6 +15,7 @@ interface Po {
   supplierConcernedPerson: string | null; supplierNtn: string | null; supplierStrn: string | null;
   expectedDate: string | null; terms: string | null; orderPlacedBy: string | null;
   items: string; status: string; registered: boolean | null; discount: number | null; discountText?: string | null;
+  receivedAt?: string | null; receivedBy?: string | null;   // goods physically in (Mark received), before the GRR
 }
 interface OpenDemand {
   id: number; demandNo: number; demandBy: string | null; items: string;
@@ -57,6 +58,10 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
   const canEdit = useCanEdit("po");
   const canDelete = useCanEdit("po.delete");
   const canSuppliers = useCanEdit("po.suppliers");
+  const canReceive = useCanEdit("po.receive");
+  // Pending = goods not in yet; Received = marked received (its GRR follows).
+  const [recvTab, setRecvTab] = usePageState<"all" | "pending" | "received">("recvTab", "all");
+  const [marking, setMarking] = useState<Po | null>(null);
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editNo, setEditNo] = useState<number | null>(null);
@@ -252,11 +257,20 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
     unreg: datedRows.filter(p => p.registered === false).length,
     unmarked: datedRows.filter(p => p.registered == null).length,
   };
-  const shownRows = datedRows.filter(p =>
+  const taxRows = datedRows.filter(p =>
     taxFilter === "all" ? true
     : taxFilter === "reg" ? p.registered === true
     : taxFilter === "unreg" ? p.registered === false
     : p.registered == null);
+  const recvCounts = { all: taxRows.length, pending: taxRows.filter(p => !p.receivedAt).length, received: taxRows.filter(p => !!p.receivedAt).length };
+  const shownRows = taxRows.filter(p => recvTab === "all" ? true : recvTab === "pending" ? !p.receivedAt : !!p.receivedAt);
+
+  async function undoReceived(p: Po) {
+    if (!confirm(`Take PO #${docNoLabel(p.poNo, p.registered)} back to pending? (Only while no GRR has been made.)`)) return;
+    const r = await fetch(`/api/procurement/pos/${p.id}/receive`, { method: "DELETE" });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.error || "Couldn't change it."); return; }
+    router.refresh();
+  }
 
   // Search PO#, supplier, demand ref, order-placed-by and every line description.
   const qs = q.trim().toLowerCase();
@@ -274,7 +288,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
 
   return (
     <div className="fade-up">
-      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status,p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} chips={<StatChip label="Purchase orders" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search PO, supplier, item…" />} sort={<SortBy options={PO_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
+      <ReportExportControls range={reportRange} filename="po-register" sheet={{sheetName:"Purchase Orders", title:"PURCHASE ORDER REGISTER", headers:["Supplier","PO #","Demand #","Date","Delivery","Items","Total (Rs)","Status","Order placed by","Tax status"], colWidths:[34,12,12,14,14,10,18,20,24,18], rows:shown.map(p=>[p.supplierName,docNoLabel(p.poNo,p.registered),p.demandNo,fmtDate(p.date),fmtDate(p.expectedDate),parseItems<PoItem>(p.items).length,poGrandTotal(parseItems<PoItem>(p.items),p.discount),p.status==="closed"?"Closed":p.receivedAt?`Received ${fmtDate(String(p.receivedAt).slice(0,10))} · ${p.status==="received"?"GRR done":p.status==="partial"?"GRR part done":"GRR to make"}`:"Pending",p.orderPlacedBy,p.registered===true?"Registered":p.registered===false?"Unregistered":"Unmarked"])}} chips={<StatChip label="Purchase orders" value={shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} />} search={<SearchBox width={270} value={q} onChange={setQ} placeholder="🔍  Search PO, supplier, item…" />} sort={<SortBy options={PO_SORT_OPTIONS} value={sort} onChange={setSort} minWidth={170} />} actions={canEdit ? (open ? <button onClick={() => setOpen(false)} className="btn btn-primary">✕ Close</button> : <>{taxFilter !== "unreg" && <button onClick={() => startCreate(true)} className="btn btn-primary">＋ Registered PO</button>}{taxFilter !== "reg" && <button onClick={() => startCreate(false)} className="btn" style={{ borderColor: "#9A3412", color: "#9A3412" }}>＋ Unregistered PO</button>}</>) : null} tabs={<>
         <FilterTab label="All" n={counts.all} active={taxFilter === "all"} onClick={() => setTaxFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={taxFilter === "reg"} onClick={() => setTaxFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={taxFilter === "unreg"} onClick={() => setTaxFilter("unreg")} color="#9A3412" />
@@ -481,6 +495,15 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
         </div>
       )}
 
+      <div className="tabs no-print" role="tablist" aria-label="Goods received" style={{ marginBottom: 10 }}>
+        {([["all", "All"], ["pending", "Pending"], ["received", "Received"]] as const).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={recvTab === k} className={`tab${recvTab === k ? " active" : ""}`} onClick={() => setRecvTab(k)}
+            title={k === "pending" ? "Goods not in yet" : k === "received" ? "Goods physically in — marked received; the GRR follows" : "Every PO"}>
+            {label} <span style={{ opacity: 0.8 }}>{recvCounts[k]}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="card fit-card">
         <table>
           <thead>
@@ -488,7 +511,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
           </thead>
           <tbody>
             {shown.length === 0 ? (
-              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: "center", padding: 24, color: "var(--text3)" }}>{qs ? "No purchase orders match your search." : recvTab === "pending" ? "Nothing pending — every PO here is received." : recvTab === "received" ? "No PO marked received yet." : `No purchase orders${taxFilter !== "all" ? " in this list" : ""} yet.`}</td></tr>
             ) : shown.map(p => (
               <tr
                 key={p.id}
@@ -512,7 +535,7 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
                 <td>{fmtDate(p.expectedDate)}</td>
                 <td className="num">{parseItems<PoItem>(p.items).length}</td>
                 <td><TaxCell p={p} /></td>
-                <td><StatusBadge status={p.status} /></td>
+                <td onClick={e => e.stopPropagation()}><ReceiveCell p={p} canReceive={canReceive} onMark={() => setMarking(p)} onUndo={() => undoReceived(p)} /></td>
                 <td className="no-print" style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                   <Link href={`/procurement/po/${p.id}`} className="btn btn-xs" style={{ marginRight: 4 }}>View</Link>
                   {canEdit && <button onClick={() => openEdit(p)} className="btn btn-xs" style={{ marginRight: 4 }}>Edit</button>}
@@ -522,6 +545,68 @@ export default function PoClient({ rows, openDemands, suppliers }: { rows: Po[];
             ))}
           </tbody>
         </table>
+      </div>
+      {marking && <MarkReceived p={marking} onClose={() => setMarking(null)} onSaved={() => { setMarking(null); router.refresh(); }} />}
+    </div>
+  );
+}
+
+// The status as a button: Pending → Mark received (the goods are physically in; the GRR follows). Once marked,
+// the date, and where its GRR stands underneath.
+function ReceiveCell({ p, canReceive, onMark, onUndo }: { p: Po; canReceive: boolean; onMark: () => void; onUndo: () => void }) {
+  if (p.status === "closed") return <StatusBadge status="closed" />;
+  const pill: React.CSSProperties = { padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", border: "1.5px solid" };
+  if (!p.receivedAt) {
+    return canReceive
+      ? <button type="button" onClick={onMark} title="The goods have arrived — mark this PO received, then its GRR can be made"
+          style={{ ...pill, cursor: "pointer", background: "#e0f2fe", color: "#185FA5", borderColor: "#185FA5" }}>Pending · Mark received</button>
+      : <span style={{ ...pill, background: "#e0f2fe", color: "#185FA5", borderColor: "transparent" }}>Pending</span>;
+  }
+  const grr = p.status === "received" ? { t: "GRR done", c: "#15803D" } : p.status === "partial" ? { t: "GRR part done", c: "#B45309" } : { t: "GRR to make", c: "#B91C1C" };
+  const label = `Received ${fmtDate(String(p.receivedAt).slice(0, 10))}`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-start" }}>
+      {canReceive && p.status === "open"
+        ? <button type="button" onClick={onUndo} title={`Marked by ${p.receivedBy || "—"}. Click to take it back to pending (only while no GRR is made).`}
+            style={{ ...pill, cursor: "pointer", background: "#dcf5dc", color: "#15803D", borderColor: "#15803D" }}>✓ {label}</button>
+        : <span title={p.receivedBy ? `Marked by ${p.receivedBy}` : undefined} style={{ ...pill, background: "#dcf5dc", color: "#15803D", borderColor: "transparent" }}>✓ {label}</span>}
+      <span style={{ fontSize: 10.5, fontWeight: 700, color: grr.c, paddingLeft: 4 }}>{grr.t}</span>
+    </div>
+  );
+}
+
+function MarkReceived({ p, onClose, onSaved }: { p: Po; onClose: () => void; onSaved: () => void }) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
+  const [date, setDate] = useState(today);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const items = parseItems<PoItem>(p.items).filter(it => (it.description || it.item || "").trim());
+  async function save() {
+    setBusy(true); setErr("");
+    const r = await fetch(`/api/procurement/pos/${p.id}/receive`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date }) });
+    setBusy(false);
+    if (r.ok) { onSaved(); return; }
+    const d = await r.json().catch(() => ({})); setErr(d.error || "Couldn't save.");
+  }
+  return (
+    <div onClick={onClose} className="no-print" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} className="card" role="dialog" aria-label="Mark received" style={{ maxWidth: 460, width: "100%", padding: 20 }}>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>Mark PO #{docNoLabel(p.poNo, p.registered)} received</div>
+        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 2 }}>{p.supplierName || "—"}</div>
+        {items.length > 0 && <ul style={{ margin: "10px 0 0", paddingLeft: 18, fontSize: 12.5, color: "var(--text2)" }}>
+          {items.slice(0, 6).map(it => <li key={it.srNo}>{it.description || it.item}{it.quantity ? ` — ${it.quantity}${it.uom ? " " + it.uom : ""}` : ""}</li>)}
+          {items.length > 6 && <li>and {items.length - 6} more</li>}
+        </ul>}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "var(--text2)", marginTop: 12 }}>
+          Goods arrived on
+          <input type="date" className="auth-input" value={date} max={today} min={String(p.date).slice(0, 10)} onChange={e => setDate(e.target.value)} />
+        </label>
+        <p style={{ fontSize: 12, color: "var(--text3)", margin: "8px 0 0" }}>The PO moves to Received and shows up on a new GRR, where the store checks and counts the goods.</p>
+        {err && <p role="alert" style={{ color: "#B91C1C", fontSize: 13, margin: "8px 0 0" }}>{err}</p>}
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button className="btn btn-primary" disabled={busy || !date} onClick={save}>{busy ? "Saving…" : "✓ Mark received"}</button>
+          <button className="btn" onClick={onClose}>Cancel</button>
+        </div>
       </div>
     </div>
   );

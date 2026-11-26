@@ -530,6 +530,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   rateTaxPct: doublePrecision("rate_tax_pct"),
   items: text("items").notNull().default("[]"),      // [{srNo,item,specifications,quality,quantity}]
   status: varchar("status", { length: 20 }).notNull().default("open"), // open | received | closed
+  // The goods physically in (PO tab → Mark received), apart from the GRR, which follows. Only a PO marked
+  // received is offered on a new GRR. Null = still pending.
+  receivedAt: date("received_at"),
+  receivedBy: varchar("received_by", { length: 120 }),
+  receivedMarkedAt: timestamp("received_marked_at"),
   createdByUserId: integer("created_by_user_id"),
   createdByName: varchar("created_by_name", { length: 120 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -699,6 +699,11 @@ DO $$ BEGIN
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate_uom varchar(20);
   ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS rate_tax_pct double precision;
 
+  -- The goods physically received (PO tab → Mark received), apart from the GRR.
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS received_at date;
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS received_by varchar(120);
+  ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS received_marked_at timestamp;
+
   -- One-time data migrations, keyed so each runs exactly once.
   CREATE TABLE IF NOT EXISTS procurement_migrations (
     key text PRIMARY KEY,
@@ -744,6 +749,15 @@ DO $$ BEGIN
     UPDATE purchase_orders SET registered = true WHERE registered IS NULL;
     UPDATE grns SET registered = true WHERE registered IS NULL;
     INSERT INTO procurement_migrations(key) VALUES ('restore_registered_flag_v1');
+  END IF;
+
+  -- Mark received arrived after POs already had GRRs: those count as received on their first GRR's date,
+  -- so they stay on the new-GRR list for what is still to come.
+  IF NOT EXISTS (SELECT 1 FROM procurement_migrations WHERE key = 'po_received_from_grr_v1') THEN
+    UPDATE purchase_orders p SET received_at = g.first_date, received_by = 'GRR', received_marked_at = now()
+      FROM (SELECT po_id, MIN(date) AS first_date FROM grns WHERE po_id IS NOT NULL GROUP BY po_id) g
+      WHERE g.po_id = p.id AND p.received_at IS NULL;
+    INSERT INTO procurement_migrations(key) VALUES ('po_received_from_grr_v1');
   END IF;
 END $$;`);
   ensured = true;

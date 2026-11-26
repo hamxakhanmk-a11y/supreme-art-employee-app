@@ -199,11 +199,16 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
         <FilterTab label="All" n={counts.all} active={listFilter === "all"} onClick={() => setListFilter("all")} />
         <FilterTab label="Registered" n={counts.reg} active={listFilter === "reg"} onClick={() => setListFilter("reg")} color="#166534" />
         <FilterTab label="Unregistered" n={counts.unreg} active={listFilter === "unreg"} onClick={() => setListFilter("unreg")} color="#9A3412" />
-        <span style={{ width: 1, height: 18, background: "var(--border2)", margin: "0 4px" }} />
-        <FilterTab label="All" n={invCounts.all} active={invFilter === "all"} onClick={() => setInvFilter("all")} />
-        <FilterTab label="Final (invoice in)" n={invCounts.final} active={invFilter === "final"} onClick={() => setInvFilter("final")} color="#166534" />
-        <FilterTab label="Pending invoice" n={invCounts.pending} active={invFilter === "pending"} onClick={() => setInvFilter("pending")} color="#B45309" />
       </>} />
+
+      <div className="tabs no-print" role="tablist" aria-label="Invoice" style={{ marginBottom: 10 }}>
+        {([["all", "All"], ["pending", "Invoice pending"], ["final", "Finalized"]] as const).map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={invFilter === k} className={`tab${invFilter === k ? " active" : ""}`} onClick={() => setInvFilter(k)}
+            title={k === "pending" ? "GRR made, the supplier's invoice number not in yet" : k === "final" ? "Invoice number in — the GRR is complete" : "Every GRR"}>
+            {label} <span style={{ opacity: 0.8 }}>{invCounts[k]}</span>
+          </button>
+        ))}
+      </div>
 
 
       {settingsOpen && canSettings && (
@@ -255,7 +260,7 @@ export default function GrnClient({ rows, openPos, checklist }: { rows: Grn[]; o
                 </div>
               </Field>
             )}
-            <Field label="For PO (optional) — decides the list">
+            <Field label="For PO (optional) — decides the list · only POs marked received on the PO tab">
               <select value={poId} onChange={e => pickPo(e.target.value)} className="auth-input">
                 <option value="">— None (standalone GRR) —</option>
                 <optgroup label="Registered POs">

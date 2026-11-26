@@ -65,6 +65,7 @@ export type ModuleKey =
   | "po"
   | "po.delete"
   | "po.suppliers"
+  | "po.receive"
   | "grn"
   | "grn.delete"
   | "grn.settings"
@@ -125,6 +126,7 @@ export const MODULES: { key: ModuleKey; label: string; hint: string }[] = [
   { key: "po",         label: "Create PO",    hint: "Procurement — create purchase orders" },
   { key: "po.delete",  label: "PO · Delete",  hint: "Delete a purchase order" },
   { key: "po.suppliers", label: "PO · Saved Supplier List", hint: "Save a supplier to the list, or remove one, on the PO form" },
+  { key: "po.receive",   label: "PO · Mark Received", hint: "Mark a PO's goods received when they physically arrive (before the GRR), or undo it while no GRR is made — only received POs can be picked on a new GRR" },
   { key: "grn",        label: "Make GRN",     hint: "Procurement — create goods-receiving reports" },
   { key: "grn.delete", label: "GRR · Delete", hint: "Delete a goods-receiving report" },
   { key: "grn.settings", label: "GRR · Checklist Settings", hint: "The GRR inspection checklist: categories and their points" },
@@ -242,6 +244,8 @@ const SPLIT_BATCHES: { name: string; buttons: Record<string, ModuleKey>; pages: 
     "station.cardlist": "station.cards",
     "station.topups": "station.cards",
   } },
+  // Mark received on the PO tab: every role that could edit POs can mark them received.
+  { name: "button-split-2026-11e", pages: {}, buttons: { "po.receive": "po" } },
 ];
 export const BUTTON_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.buttons));
 const PAGE_SPLIT: Record<string, ModuleKey> = Object.assign({}, ...SPLIT_BATCHES.map(b => b.pages));

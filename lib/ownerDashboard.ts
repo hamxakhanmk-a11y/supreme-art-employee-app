@@ -3,7 +3,7 @@
 import { sql, and, or, gte, lte, lt, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "./db";
 import { employees, attendance, purchaseRequisitions, purchaseOrders, grns } from "./schema";
-import { ensureProcurementTables, loadChecklist } from "./procurement";
+import { ensureProcurementTables, loadChecklist, parseItems, poGrandTotal, docNoLabel, type PoItem } from "./procurement";
 import { ensureFleetSchema } from "./fleet";
 import { lateMinutes } from "./attendance";
 import { karachiNow } from "./gateTime";
@@ -87,6 +87,35 @@ export async function poRateIncreases(from: string, to: string): Promise<RateInc
     supplierName: purchaseOrders.supplierName, items: purchaseOrders.items,
   }).from(purchaseOrders);
   return rateIncreases(pos.map(p => ({ ...p, date: p.date ? String(p.date) : null })), from, to);
+}
+
+// Goods physically in: POs marked received (PO tab) in the period, and every received PO still waiting for
+// its GRR, whenever it came in — known the day the goods arrive, not only once the GRR is made.
+export interface GoodsIn {
+  poId: number; po: string; supplier: string; receivedAt: string; receivedBy: string; items: string;
+  value: number; grr: "todo" | "part" | "done"; inRange: boolean;
+}
+export async function goodsReceived(from: string, to: string): Promise<GoodsIn[]> {
+  await ensureProcurementTables();
+  const rows = await db.select({
+    id: purchaseOrders.id, poNo: purchaseOrders.poNo, registered: purchaseOrders.registered, supplierName: purchaseOrders.supplierName,
+    items: purchaseOrders.items, discount: purchaseOrders.discount, status: purchaseOrders.status,
+    receivedAt: purchaseOrders.receivedAt, receivedBy: purchaseOrders.receivedBy,
+  }).from(purchaseOrders).where(and(isNotNull(purchaseOrders.receivedAt), or(
+    and(gte(purchaseOrders.receivedAt, from), lte(purchaseOrders.receivedAt, to)),
+    sql`${purchaseOrders.status} = 'open'`,
+  )));
+  return rows.map(p => {
+    const items = parseItems<PoItem>(p.items).filter(it => (it.description || it.item || "").trim());
+    const at = String(p.receivedAt).slice(0, 10);
+    return {
+      poId: p.id, po: docNoLabel(p.poNo, p.registered), supplier: (p.supplierName || "").trim(), receivedAt: at, receivedBy: p.receivedBy || "",
+      items: items.map(it => `${it.description || it.item}${it.quantity ? ` (${it.quantity}${it.uom ? " " + it.uom : ""})` : ""}`).join(", "),
+      value: poGrandTotal(items, p.discount),
+      grr: (p.status === "received" || p.status === "closed" ? "done" : p.status === "partial" ? "part" : "todo") as GoodsIn["grr"],
+      inRange: at >= from && at <= to,
+    };
+  }).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || b.poId - a.poId);
 }
 
 export interface CnicAlert { id: number; empCode: string; name: string; designation: string | null; expiry: string; daysLeft: number }
