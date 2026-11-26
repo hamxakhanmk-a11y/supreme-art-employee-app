@@ -926,3 +926,24 @@ export const fleetSettings = pgTable("fleet_settings", {
   key: varchar("key", { length: 60 }).primaryKey(),
   value: text("value").notNull(),
 });
+
+// Mid-day trips found in the fingerprint device's punches (lib/deviceTrips.ts),
+// waiting for an admin on Station → Who's Out → Device trips. Nothing here
+// counts toward hours: approving one as personal or official writes a normal
+// station_leaves row (stationLeaveId), which the register counts as usual.
+// status: pending | approved | left (left for the day, no trip) | dismissed |
+// matched (the gate PIN already recorded it). kind: returned | no-return | still-out.
+// Created on first use by ensureDeviceTripsTable() in lib/deviceTripsServer.ts.
+export const stationDeviceTrips = pgTable("station_device_trips", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),                       // work day
+  outAt: timestamp("out_at", { withTimezone: true }).notNull(),
+  inAt: timestamp("in_at", { withTimezone: true }),
+  kind: varchar("kind", { length: 12 }).notNull(),
+  status: varchar("status", { length: 12 }).notNull().default("pending"),
+  stationLeaveId: integer("station_leave_id"),
+  decidedBy: varchar("decided_by", { length: 120 }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({ uq: uniqueIndex("station_device_trips_emp_out_uq").on(t.employeeId, t.outAt) }));

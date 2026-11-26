@@ -25,7 +25,7 @@ export default async function WhoIsOutPage({ searchParams }: { searchParams: Pro
 
   return (
     <OutTabs
-      tab={sp.tab === "report" ? "report" : "out"}
+      tab={sp.tab === "report" ? "report" : sp.tab === "device" ? "device" : "out"}
       out={<WhoIsOutClient initial={out} initialVehicles={vehicles} date={date} isToday={isToday} embedded />}
       report={<StationReportView from={from} to={to} embedded />}
     />
